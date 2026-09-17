@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ae-devtools bridge panel</title>
+
+  <!--
+    Panel-specific CSP. The CEP extension provides CSInterface.js and
+    CEPEngine_extensions.js at runtime; we do NOT bundle them.
+    See research/02-cep-deep-dive.md for the CEP 12 CORS/CSP defaults.
+
+    `'unsafe-eval'` is REQUIRED for CEP 12: CSInterface.js and
+    CEPEngine_extensions.js use Function() / eval internally to bridge
+    to the native CEP host. Without it, the panel fails to load CSInterface.
+    Tighten with nonces in a future revision once we know exactly which
+    scripts need it.
+
+    Status: UNVERIFIED. No real-AE run in the environment that produced
+    this repository. See ../EXPERIMENT-LOG.md and
+    docs/architecture/research/07-real-ae-validation.md.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" />
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0.5em; }
+    h1   { font-size: 1.1em; margin: 0 0 0.5em 0; }
+    .row { display: flex; gap: 0.5em; margin-bottom: 0.25em; }
+    pre  { background: #f4f4f4; padding: 0.5em; font-size: 12px; overflow: auto; max-height: 8em; }
+    .api-version { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>ae-devtools bridge panel</h1>
+
+  <div class="row">
+    <button id="btn-api-version">getCurrentApiVersion()</button>
+    <span id="api-version" class="api-version">(not yet queried)</span>
+  </div>
+
+  <div class="row">
+    <button id="btn-01">Run 01-version</button>
+    <button id="btn-02">Run 02-active-item</button>
+    <button id="btn-03">Run 03-mutate-then-inspect</button>
+    <button id="btn-04">Run 04-exception</button>
+    <button id="btn-05">Run 05-concurrent-A</button>
+    <button id="btn-06">Run 06-concurrent-B</button>
+    <button id="btn-07">Run 07-snapshot</button>
+    <button id="btn-08">Run 08-identity</button>
+  </div>
+
+  <div class="row">
+    <button id="btn-clear">Clear</button>
+  </div>
+
+  <h2>Result</h2>
+  <pre id="result">(none)</pre>
+
+  <!--
+    CSInterface.js is provided by the host at runtime; do NOT bundle.
+    See research/02-cep-deep-dive.md §CSInterface for the contract.
+    Order matters: load our wrapper BEFORE main.js so it can register.
+  -->
+  <script src="CSInterface.js"></script>
+  <script src="js/csinterface-wrapper.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

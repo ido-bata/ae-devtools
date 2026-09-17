@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CEP 12 manifest for ae-devtools-bridge.
+
+  Status: UNVERIFIED. This manifest was authored against the CEP 12
+  Cookbook. It has not been loaded by a real After Effects instance
+  in the environment that produced this repository (Linux on WSL2,
+  no AE installed). See ../EXPERIMENT-LOG.md Probe 01 and
+  docs/architecture/research/07-real-ae-validation.md.
+
+  Key fields:
+    ExtensionBundleId    : namespace/name; must match the install folder name.
+    ExtensionId          : the slot AE looks up under Window > Extensions.
+    RequiredRuntimeList  : CEP 12.x (per research/corrections-02:
+                            AE 25.0 → CEP 12 is Cookbook-confirmed).
+    HostList             : After Effects (AEFT). Single-host v1.
+    MainPath             : the panel's HTML shell.
+
+  AE 25.0 → CEP 12 is Cookbook-confirmed (CEP 12 HTML Extension
+  Cookbook, FY2024 column, AEFT 25.0). AE 24.x → CEP version is NOT
+  Cookbook-confirmed; the most plausible reading is AE 24.x → CEP 11
+  (community-attributed, elevenpercent.net AutoEdit docs). See
+  research/corrections-02 for the per-version verdicts.
+-->
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:noNamespaceSchemaLocation="../../CEP-Resources/schema/manifest_schema.xsd"
+                  Version="12.0">
+
+  <ExtensionList>
+    <Extension Id="ae-devtools-bridge-panel"
+               Version="0.1.0"
+               RequiredRuntimeList="CSXS-12.0">
+      <DispatchInfoList>
+        <DispatchInfo>
+          <HostList>
+            <!-- After Effects host -->
+            <Host Name="AEFT" Version="[25.0,99.0]" />
+          </HostList>
+          <Resources>
+            <MainPath>./index.html</MainPath>
+            <!--
+              ScriptPath is intentionally omitted for v1 of this panel:
+              the panel's ExtendScript bridge is invoked exclusively via
+              CSInterface.evalScript from JS, not via a separate
+              ExtendScript startup script. See
+              ../EXPERIMENT-LOG.md Probe 01 and
+              docs/architecture/ADR-0001-runtime-bridge.md Decision 2
+              ("all CSInterface.evalScript calls funnel through one
+              chokepoint module").
+            -->
+          </Resources>
+          <Lifecycle>
+            <AutoVisible>true</AutoVisible>
+          </Lifecycle>
+        </DispatchInfo>
+      </DispatchInfoList>
+    </Extension>
+  </ExtensionList>
+
+</ExtensionManifest>

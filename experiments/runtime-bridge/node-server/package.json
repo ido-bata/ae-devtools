@@ -1,0 +1,19 @@
+{
+  "name": "ae-devtools-bridge-daemon-stub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal loopback HTTP daemon stub for ae-devtools. Token-gated, binds 127.0.0.1 only. No panel forwarding in this stub; see ../EXPERIMENT-LOG.md Probe 10.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js",
+    "test": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "author": "ae-devtools",
+  "license": "UNLICENSED"
+}

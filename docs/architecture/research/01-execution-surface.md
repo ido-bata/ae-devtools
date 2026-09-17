@@ -42,7 +42,7 @@ Adobe 公式ドキュメント（CEP-Resources, CSInterface API, ExtendScript To
 
 - Marketplace での正式名称は `ExtendScript Debugger`、Publisher は `Adobe`、ID は `Adobe.extendscript-debug`。バージョン 2.x が安定版、`develop` ブランチで 3.x 系を開発中。
   - 出典: https://marketplace.visualstudio.com/items?itemName=Adobe.extendscript-debug (official) — 2026-09-18 アクセス。
-- 元リポジトリ `Adobe-CEP/extendscript-debugger-vscode` は現時点で Web 上から到達不能（404）。Adobe-CEP org 自体が archived/redirect 状態。**実装ソースを直接確認できないため、内部プロトコルの詳細記述は unverified**。
+- 元リポジトリ `Adobe-CEP/extendscript-debugger-vscode` は現時点で Web 上から到達不能（404）。`Adobe-CEP` org 自体は archived されておらず（`gh api orgs/Adobe-CEP` で `archived_at: null`、`public_repos: 3` を確認）、`CEP-Resources` / `Samples` / `Getting-Started-guides` の 3 リポジトリが 2025–2026 の activity を維持している（research/corrections-01 参照）。**ただし legacy な `extendscript-debug*` リポジトリの実装ソースは直接参照できないため、内部プロトコルの詳細記述は unverified**。
 - Adobe Developer ドキュメント / `extendscript.docsforadobe.dev` の Getting Started によれば、launch/attach は debug type `extendscript-debug`、attach 時は既に起動中のホスト AE にアタッチする。`Evaluate Script in Host...` コマンドと "Eval in Adobe..." ステータスバーボタンでワンショット eval が可能（出典: https://extendscript.docsforadobe.dev/vscode-debugger/getting-started-with-vscode-debugger/ — 2026-09-18 アクセス）。
 - `docsforadobe.dev` の "Debugging in the Toolkit"（ESTK 由来の説明）には、Toolkit がターゲットの ExtendScript engine を **targetengine 名** で選択するモデルが記載されている。AE の targetengine は `"main"` と `"aftereffects"`（Adobe 公式記述は確認できず、community 既知）。
   - 出典: https://extendscript.docsforadobe.dev/extendscript-toolkit/debugging-in-the-toolkit/ — 2026-09-18 アクセス。
@@ -188,5 +188,5 @@ URL とアクセス日と、何を確認したか。
 ## Notes
 
 - 本ドキュメントは **2026-09-18 時点**の調査であり、pre-2022 の CEP 記事は古い前提を含む可能性がある（CEP 9 以前は `--enable-nodejs` が無いため Node が使えない等）。特に CEP 5/6/7 を前提とした古いブログは鵜呑みにしない。
-- Adobe-CEP 公式 GitHub organization 自体、2026-09 時点で Web 上の旧 URL が 404 を返す場合がある。常に Cookbook の GitHub Raw URL を直接参照する。
+- Adobe-CEP 公式 GitHub organization 自体は archived されていない（research/corrections-01 参照）が、legacy な `Adobe-CEP/extendscript-debugger-vscode` および `Adobe-CEP/extendscript-debug`、および `Adobe/extendscript-debug` の 3 リポジトリは 2026-09-18 時点で 404 を返す。常に Cookbook の GitHub Raw URL を直接参照する。
 - 実装判断は vision.md / AGENTS.md のガードレールに従い、**未確定事項を前提として固定しない**。本ドキュメントに書かれた "unknown" は実装フェーズで再検証する。

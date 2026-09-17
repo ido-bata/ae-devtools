@@ -1,5 +1,18 @@
 # Verification Report
 
+> **Superseded by `08-verification-report-r2.md` (2026-09-18).**
+> This document was written against the `fe933c8` research. It still
+> contains two factual claims that were corrected in the real-AE
+> validation round:
+> - The "Adobe-CEP source archived" claim (see `corrections-01-adobe-cep-org.md`
+>   and verdict C24 below — the org is not archived; two specific
+>   legacy repos return 404).
+> - "AE 24/25 → CEP 12" framing (see `corrections-02-cep-ae-mapping.md`
+>   — only AE 25.0 → CEP 12 is Cookbook-confirmed).
+> Read `08-verification-report-r2.md` for the post-correction verification.
+>
+> ---
+>
 > Adversarial review of `docs/architecture/ADR-0001-runtime-bridge.md`
 > against the five research files (`01-execution-surface.md`,
 > `02-cep-deep-dive.md`, `03-state-events.md`,

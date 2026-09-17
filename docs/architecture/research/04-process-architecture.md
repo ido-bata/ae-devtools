@@ -10,7 +10,7 @@ Adobe 公式デバッガ拡張（`Adobe.extendscript-debug`）の実装パター
 
 ### 1.1 リポジトリの出自と現状
 
-Adobe 公式の Marketplace ID は `Adobe.extendscript-debug`、Publisher は `Adobe`。従来のリポジトリ `Adobe-CEP/extendscript-debugger-vscode` と `Adobe/extendscript-debug` は 2026-09 時点でいずれも **404**（GitHub API からも確認済み）。Adobe-CEP org 自体が archived 状態で、ソースを直接参照できない。
+Adobe 公式の Marketplace ID は `Adobe.extendscript-debug`、Publisher は `Adobe`。従来のリポジトリ `Adobe-CEP/extendscript-debugger-vscode` と `Adobe/extendscript-debug` は 2026-09-18 時点でいずれも **404**（GitHub API からも確認済み）。`Adobe-CEP` org 自体は archived されておらず（`gh api orgs/Adobe-CEP` で `archived_at: null`、`public_repos: 3`）、`CEP-Resources` / `Samples` / `Getting-Started-guides` の 3 リポジトリが 2025–2026 の activity を維持している（research/corrections-01 参照）。legacy な `extendscript-debug*` リポジトリのソースを直接参照できない。
 
 - 出典: https://marketplace.visualstudio.com/items?itemName=Adobe.extendscript-debug — 2026-09-18 アクセス。
 - 出典: `gh api repos/Adobe-CEP/extendscript-debugger-vscode` → 404 — 2026-09-18 確認。
@@ -320,7 +320,7 @@ vision.md の「shared core / daemon」像、AGENTS.md の責務分離方針、2
 
 ## 6. Notes
 
-- 本ドキュメントは 2026-09-18 時点の調査であり、Adobe-CEP org のリポジトリが archived 状態であることを前提にしている。将来リポジトリが復活・移動した場合は再検証する。
+- 本ドキュメントは 2026-09-18 時点の調査であり、`Adobe-CEP/extendscript-debugger-vscode` および `Adobe/extendscript-debug` の 2 リポジトリが 404 であることを前提にしている（`Adobe-CEP` org 自体は archived されていない — research/corrections-01 参照）。将来リポジトリが復活・移動した場合は再検証する。
 - Adobe VSCode デバッガの内部構造は **直接のソース確認が取れていない** ため、案A を採用する場合は real-AE での検証が必須。
 - 案B を採用する場合、CEP panel の配布・署名・`PlayerDebugMode` の UX は 02-cep-deep-dive.md の Working assumptions を引き継ぐ。
 - vision.md の「実装言語 / プロセスモデル / IPC 方式はまだ決めていない」と整合させ、本ドキュメントは **設計の固定ではなく材料提供** に留める。AGENTS.md 第 1 項「ユーザーが決めていない仕様を勝手に固定しない」に従う。

@@ -9,6 +9,23 @@
 
 **Proposed.**
 
+This ADR applies two factual corrections versus `fe933c8`:
+
+- The `Adobe-CEP` GitHub organization is **not** archived as of 2026-09-18
+  (`gh api orgs/Adobe-CEP` returns `archived_at: null`, `public_repos: 3`).
+  The two legacy `Adobe-CEP/extendscript-debug*` repos do return 404, but
+  `CEP-Resources` (last commit 2026-02-20), `Samples` (2026-03-24), and
+  `Getting-Started-guides` (last release 2025-06-18) remain active. See
+  `research/corrections-01`. The rejection of M4 (native addon) below is
+  preserved on platform-coverage grounds, not on the basis of org archival.
+- After Effects → CEP version mapping is graded per-version. **AE 25.0 →
+  CEP 12 is Cookbook-confirmed** (CEP 12 HTML Extension Cookbook, FY2024
+  row, AEFT 25.0). **AE 24.x CEP version is NOT Cookbook-confirmed; the
+  most plausible reading is AE 24.x → CEP 11** (third-party `elevenpercent.net`
+  AutoEdit docs: "CEP 11 (2024) or CEP 12 (2025)"). See `research/corrections-02`.
+  Prior phrasing that implied "AE 24/25 → CEP 12" is replaced with this
+  per-version verdict throughout the ADR.
+
 The decision is consistent with `docs/vision.md`'s "shared core / daemon"
 image and with community precedent, but evidence is **insufficient for
 Accepted**: the five research files are explicit that every claim about
@@ -24,6 +41,15 @@ minimum one round of real-AE testing on AE 25.x covering:
 
 Until those three are exercised on a live AE instance, the architectural
 shape below is provisional.
+
+**This round (2026-09-18) could not perform real-AE validation** because
+the working environment is Linux on WSL2 with no After Effects installed.
+See `research/07-real-ae-validation.md` for the validation record and the
+per-experiment pointer to `experiments/runtime-bridge/EXPERIMENT-LOG.md`.
+The Accepted conditions below are therefore split into a **Windows gate**
+(required for Accepted) and a **macOS / Linux gate** (deferred beyond
+Accepted). The ADR can move to Accepted once the Windows gate is clear;
+the macOS / Linux gate is tracked as future work.
 
 ---
 
@@ -61,8 +87,11 @@ following facts that this ADR inherits without re-arguing:
   §T6 / §T12).
 - Adobe's own VSCode ExtendScript Debugger bundles a native addon
   (`esdcorelibinterface.node` + `ESCoreLib`) that bypasses CEP entirely,
-  but ships only for Windows + macOS x64, and the source repository is
-  archived / 404 (research 01 §B, 04 §1.1).
+  but ships only for Windows + macOS x64; the two legacy
+  `Adobe-CEP/extendscript-debug*` repos return 404 (research 01 §B, 04
+  §1.1, `research/corrections-01`). The `Adobe-CEP` org itself remains
+  active and the rejection of the native-addon path is on platform
+  coverage, not on org archival.
 
 The user's five judgment points — AE-side component, boundary placement,
 daemon yes/no, request/response vs job-based, event sync yes/no — are
@@ -85,8 +114,11 @@ process (research 02 §CSInterface, §evalScript signature). **For v1**,
 this is the only layer that holds an `app.project` handle and executes
 ExtendScript. Native-addon-based execution (research 04 §3.5 案A',
 `esdcorelibinterface.node`) is **reserved as a future escape hatch, not
-adopted now**: Adobe's source repository is archived and the addon is
-platform-locked to Windows + macOS x64.
+adopted now**: the two legacy `Adobe-CEP/extendscript-debug*` repos
+return 404 (the `Adobe-CEP` org itself is not archived — see
+`research/corrections-01`), and the addon is platform-locked to
+Windows + macOS x64. The rejection is on platform coverage and source
+unavailability from Adobe's own repos, not on org archival.
 
 The panel is loaded by the user via `Window > Extensions` after a
 one-time install (research 02 §Extension lifecycle). For development,
@@ -242,7 +274,7 @@ deliberately conservative:
 
 | Alternative | Where it failed | Reference |
 |---|---|---|
-| **Native addon (Adobe VSCode Debugger pattern) as primary AE-side component** | Platform coverage limited to Win + macOS x64; Adobe-CEP source archived; not an execution API, a debugger. | research 04 §1, §3.1 (案A) |
+| **Native addon (Adobe VSCode Debugger pattern) as primary AE-side component** | Platform coverage limited to Win + macOS x64; the two legacy `Adobe-CEP/extendscript-debug*` repos return 404 (the `Adobe-CEP` org itself is not archived — see `research/corrections-01`); not an execution API, a debugger. | research 04 §1, §3.1 (案A) |
 | **CEP panel as the server (no external daemon)** | Pushes the entire bridge into CEP-Node 17.7.1; panel becomes single point of failure; module-loading fragility. | research 04 §3.3 (案C) |
 | **File-polling bridge as primary IPC** | Second-scale latency, no push, polling on both sides. Useful as a degraded fallback when WebSocket cannot bind; not a default. | research 04 §2.1, §3.5 (案B' analogue) |
 | **UXP Scripting (AE 25.0+) as primary AE-side component** | AE-side UXP Scripting API surface is not yet publicly documented; cannot commit to a contract that cannot yet be characterized. | research 01 §E, 02 §Unverified items |
@@ -364,6 +396,61 @@ deliberately conservative:
 
 ---
 
+## Accepted conditions — Windows gate vs macOS / Linux gate
+
+Promoting this ADR from **Proposed** to **Accepted** requires exercising the
+decisions against a live After Effects instance. The conditions are split
+into two gates so that a single host platform (Windows) is sufficient for
+acceptance, while platform-specific questions are tracked as future work.
+
+Per-experiment procedures, expected outcomes, and pointers to the
+EXPERIMENT-LOG live in `experiments/runtime-bridge/EXPERIMENT-LOG.md`. The
+detailed validation record for this round (which had no AE available) lives
+in `research/07-real-ae-validation.md`.
+
+### Windows gate (required for Accepted)
+
+Conditions that can be cleared on a Windows AE instance. When all of these
+are observed, the ADR may move to Accepted. The macOS / Linux gate below
+is not required for acceptance; it is tracked as future work.
+
+| # | Condition | Evidence artifact | Why it's on the Windows gate |
+|---|-----------|-------------------|----------------------------|
+| W1 | `CSInterface.evalScript` returns a JSON-stringified snapshot from a CEP 12 panel loaded on Windows AE 25.x with `PlayerDebugMode=1`. | `EXPERIMENT-LOG.md` §01, §02, §07 (returns `app.version`, `app.project.activeItem`, structured snapshot) | Windows is the most common Adobe dev host; `PlayerDebugMode` is documented for Windows registry path. |
+| W2 | `CSInterface.evalScript` callback fires after a panel-triggered mutation (comp / layer creation); the post-mutation snapshot differs from the pre-mutation snapshot. | `EXPERIMENT-LOG.md` §03 (mutate-then-inspect) | Confirms the in-engine mutation path works and `evalScript` is not stuck on a stale snapshot. |
+| W3 | `CSInterface.evalScript` propagates an ExtendScript-side throw back to the panel-side callback as the `EvalScript_ErrMessage()` string (or equivalent). | `EXPERIMENT-LOG.md` §04 (intentional throw) | Confirms the error path is recoverable in the daemon. |
+| W4 | Two `CSInterface.evalScript` calls fired back-to-back serialize cleanly (no overlapping ExtendScript engine work); the second callback observes the first's effects. | `EXPERIMENT-LOG.md` §05 + §06 (concurrent A/B pattern) | This is the "split into small parts" guidance from the CEP 12 Cookbook made observable; central to the daemon's serialization contract (Decision 4). |
+| W5 | `CSInterface.getCurrentApiVersion()` returns `{major, minor, micro}` with the documented numeric shape; not a string; not a single number. | `EXPERIMENT-LOG.md` plus `csinterface-wrapper.js` exercise on Windows AE 25.x | Confirms the corrected API description (research 02 §CSInterface; research/corrections-02). |
+| W6 | Daemon reconnects after AE quit + relaunch, including the panel re-launch UX. | `EXPERIMENT-LOG.md` §daemon-reconnect (added once a Windows machine is available) | Confirms Decision 3 ("daemon required") end-to-end. |
+| W7 | Daemon survives `evalScript` failure: a failing call does not block subsequent calls. | `EXPERIMENT-LOG.md` §daemon-recovery | Confirms the IPC contract's failure-handling shape. |
+
+When W1–W7 are observed, this ADR moves from Proposed to **Accepted**
+without further platform coverage. The macOS / Linux gate below remains
+open but does not gate acceptance.
+
+### macOS / Linux gate (deferred beyond Accepted)
+
+Conditions that require macOS or Linux hardware. These can be deferred
+beyond Accepted; the ADR is shippable for Windows once the Windows gate
+is clear, with the macOS / Linux gate tracked as future work.
+
+| # | Condition | Evidence artifact | Why deferred |
+|---|-----------|-------------------|--------------|
+| M1 | CEP 12 panel on macOS AE 25.x (Intel) loads with `PlayerDebugMode=1` (plist) and executes `evalScript` end-to-end. | `EXPERIMENT-LOG.md` (extended run on macOS) | Requires a macOS machine. |
+| M2 | Apple Silicon (M-series) AE 25.x loads the same CEP 12 panel without Rosetta. | `EXPERIMENT-LOG.md` (extended run on Apple Silicon) | Apple Silicon AE availability is limited; tests platform-native vs Rosetta behavior of CEPHtmlEngine. |
+| M3 | Linux AE availability — if Adobe ever ships AE for Linux, verify CEP panel and daemon run unchanged. | `EXPERIMENT-LOG.md` (extended run on Linux AE) | **AE for Linux is not a real product line** as of 2026-09-18. If it remains unavailable, this row is closed as "N/A — AE for Linux not in scope". |
+| M4 | Loopback ACL changes introduced by recent OS versions (macOS Sequoia, Linux 6.x) that affect multi-user isolation of the daemon's `127.0.0.1` bind. | `EXPERIMENT-LOG.md` (OS-version-specific run) | Deferred to OS-version-specific verification. |
+
+### Recommendation
+
+Move to **Accepted** as soon as the Windows gate (W1–W7) is exercised on a
+real AE 25.x instance. Track macOS / Linux gate items (M1–M4) as future
+work. The decision in this ADR is not invalidated by macOS / Linux gate
+items remaining open; the v1 architecture is the M1 + M3 path, and both
+are exercised on Windows AE for acceptance.
+
+---
+
 ## Risks
 
 The decision above is sound against the public evidence base, but
@@ -374,13 +461,13 @@ visibility:
 and §Open questions 4 above. The architecture in this ADR routes every
 ExtendScript execution through `CSInterface.evalScript` from a CEP panel
 that is, at the protocol level, the same kind of integration that Adobe's
-own ESTK and the (now-archived) VSCode debugger use. Adobe has not
-publicly blessed third-party external-ExtendScript invocation from
-outside the host. The community precedents this ADR cites
-(`Dakkshin/after-effects-mcp`, `a-y-ibrahim/after-effects-mcp`,
-`hodor/ae-mcp`, `leancoderkavy/premiere-pro-mcp`) operate without
-documented Adobe sanction. If Adobe formally objects, the entire
-M1+M3 stack requires revisiting.
+own ESTK and the VSCode debugger use. Adobe has not publicly blessed
+third-party external-ExtendScript invocation from outside the host. The
+community precedents this ADR cites (`Dakkshin/after-effects-mcp`,
+`a-y-ibrahim/after-effects-mcp`, `hodor/ae-mcp`,
+`leancoderkavy/premiere-pro-mcp`) operate without documented Adobe
+sanction. If Adobe formally objects, the entire M1+M3 stack requires
+revisiting.
 
 This is not a documentation gap. It is a constraint the entire
 architecture inherits. It must be answered before public release. It
@@ -465,4 +552,4 @@ with full access dates lives in `docs/architecture/ae-bridge-research.md`
 - `modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices` — MCP security best practices.
 - `github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/` — DNS rebinding guidance.
 - `ox.security/blog/cve-2025-65717-live-server-vscode-vulnerability/` — Live Server CVE writeup.
-- `gh api repos/Adobe-CEP/extendscript-debugger-vscode` — 404 status check 2026-09-18.
+- `gh api repos/Adobe-CEP/extendscript-debugger-vscode` — 404 status check 2026-09-18. **The `Adobe-CEP` org itself is not archived** (`gh api orgs/Adobe-CEP` returns `archived_at: null`, `public_repos: 3`); the 404 applies to the two legacy `extendscript-debug*` repos only. See `research/corrections-01` for the full org / repo status.

@@ -14,19 +14,21 @@ After Effects hosts CEP (Common Extensibility Platform, formerly "Creative Cloud
 Extensibility Platform") as a Chromium Embedded Framework (CEF) panel runtime.
 Adobe maps a specific CEP version to each host application version.
 
-Confirmed integration matrix (Adobe official, retrieved 2026-09-18):
+AE / CEP integration matrix (as understood on 2026-09-18; each row graded for
+source quality per `research/corrections-02`):
 
-| After Effects | Version number | CEP version integrated |
-| ------------- | -------------- | ---------------------- |
-| 2022          | 22.x           | CEP 11                 |
-| 2023          | 23.x           | CEP 11                 |
-| 2024          | 24.x           | CEP 12                 |
-| 2025          | 25.x           | CEP 12                 |
-| 2026          | 26.x           | CEP 12 (no 13 confirmed at time of research) |
+| After Effects | Version number | CEP version integrated | Verdict |
+| ------------- | -------------- | ---------------------- | ------- |
+| 2022          | 22.x           | CEP 11                 | **Not Cookbook-listed, inferred from FY2021 baseline (AE 18.4 → CEP 11).** The CEP 12 Cookbook jumps from AE 18.4 (FY2021, CEP 11) directly to AE 25.0 (FY2024, CEP 12) with no AE 22.x or 23.x row. The mapping is the most plausible reading of the table's silence. |
+| 2023          | 23.x           | CEP 11                 | **Not Cookbook-listed, inferred from FY2021 baseline.** Same gap as 22.x. |
+| 2024          | 24.x           | CEP 11 (community-attributed) | **NOT Cookbook-confirmed.** The CEP 12 Cookbook contains no AE 24.x row. The strongest evidence is third-party (`elevenpercent.net` AutoEdit help docs): "enable debugging for CEP 11 (2024) or CEP 12 (2025)" — i.e. AE 2024 (= 24.x) ships with CEP 11 and AE 2025 (= 25.x) ships with CEP 12. The working hypothesis is **AE 24.x → CEP 11**, not CEP 12. Until Adobe publishes a CEP 11.x / 12.x cookbook that includes an AE 24.x row, this remains community-attributed. |
+| 2025          | 25.x           | CEP 12                 | **Cookbook-confirmed.** Per CEP 12 Cookbook "Applications Integrated with CEP" table, FY2024 column: `AEFT 25.0 (CEP 12)`. AE 25.0 was released October 2024. |
+| 2026          | 26.x           | CEP 12 (undocumented)  | **Undocumented in materials examined.** AE 26.x is a real product line; whether it ships CEP 12 or a future CEP 13 is not stated in the CEP 12 Cookbook or any other Adobe primary source consulted here. Prior research's "no CEP 13 confirmed" should be read as "no CEP 13 evidence found in the sources consulted". |
 
 Adobe's `CEP 12 HTML Extension Cookbook` lists `AEFT 25.0` as the After Effects
-host that integrates CEP 12. There is **no CEP 13 release** for any After Effects
-version publicly documented as of 2026-09-18; issues filed against
+host that integrates CEP 12; no AE 22.x / 23.x / 24.x / 26.x rows appear in the
+table. There is **no evidence of a CEP 13 release** for any After Effects
+version in the materials examined as of 2026-09-18; issues filed against
 `Adobe-CEP/CEP-Resources` requesting CEP 13 remain open.
 
 **CEP 12 vs CEP 11 — what changed (Adobe official):**
@@ -74,6 +76,24 @@ Key entry points (Adobe official `CSInterface` reference):
   user data, temp).
 - `getHostEnvironment()` — returns JSON describing the host application
   name, version, and locale.
+- `getCurrentApiVersion()` — retrieves the **CEP engine version** integrated
+  by the host, **not the host application version** and **not a single
+  numeric version**. Source: `Adobe-CEP/CEP-Resources/CEP_12.x/CSInterface.js`
+  (header version `CSInterface - v12.0.0`); the wrapper calls
+  `JSON.parse(window.__adobe_cep__.getCurrentApiVersion())` and returns an
+  `ApiVersion` object with three numeric fields: `{major, minor, micro}`.
+  For a CEP 12 host the return is e.g. `{major: 12, minor: 0, micro: 0}`;
+  for CEP 11 it would be `{major: 11, minor: 1, micro: 0}` (or whatever
+  build the host ships). The encoding is an object with three numeric
+  fields, **not** a string like `"12.0"` and **not** a single number.
+  Correct usage: compare `apiVersion.major` directly; do not rely on
+  `CSInterface.VERSION_11` / `CSInterface.VERSION_12` constants, which are
+  **not** defined on the current shipped `CSInterface` prototype or class
+  (multiple passes of `CSInterface.js` v12.0.0 and the community TypeScript
+  port `csinterface-ts@1.0.3` confirm this). This API has existed since
+  CSInterface 4.2.0; on CEP 4.0 / 4.1 hosts the call does not exist and
+  extensions targeting those hosts must use `manifest.xml` `RequiredRuntime`
+  instead.
 
 ### evalScript signature (Adobe official)
 
@@ -448,10 +468,17 @@ and should be re-verified before relying on them in ae-devtools:
 
 - **After Effects 2026 (v26.x) — CEP version.** As of 2026-09-18 Adobe
   has not published an updated integration matrix entry for AE 26.
-  Working assumption (to be verified): CEP 12 continues.
+  Whether it ships CEP 12 or a future CEP 13 is undocumented in the
+  materials examined. Do not assert "AE 26.x → CEP 12" as confirmed.
 - **CEP 13 release status.** No public Adobe announcement; issues
   requesting it remain open. Whether AE 2026 will ship CEP 13 is
-  unknown.
+  unknown. Phrased as "no CEP 13 evidence found in the sources
+  consulted", not as a definitive negative.
+- **After Effects 2024 (v24.x) — CEP version.** The CEP 12 Cookbook
+  contains no AE 24.x row. The strongest evidence is third-party
+  (`elevenpercent.net` AutoEdit docs: CEP 11 (2024) / CEP 12 (2025)).
+  The working hypothesis is **AE 24.x → CEP 11**, not CEP 12, until an
+  Adobe primary source confirms otherwise.
 - **Exact multi-AE-instance debug port allocation behavior.** The
   community recommends different ports per instance, but the
   officially blessed allocation strategy (if any) is not in
@@ -477,8 +504,12 @@ Based on the verified material above, the following assumptions are
 reasonable for downstream design work and should be revisited when new
 Adobe documentation appears:
 
-1. Target CEP 12 as the primary supported version. CEP 11 fallback is
-   only needed if AE 2022/2023 must be supported.
+1. Target CEP 12 as the primary supported version (Cookbook-confirmed
+   for AE 25.x / FY2024). CEP 11 fallback is only needed if AE 2022 / 2023
+   / 2024 (24.x, community-attributed CEP 11) must be supported; AE 24.x
+   is **not** Cookbook-confirmed as CEP 11 in the materials examined,
+   and the AutoEdit vendor documentation is the only third-party
+   attribution linking AE 24.x to a specific CEP version.
 2. The "shared core" should be an **external daemon** (Node.js or
    equivalent), not a Node.js module running inside the CEP panel.
    Reasons: full Node version, no module-loading fragility, and the
