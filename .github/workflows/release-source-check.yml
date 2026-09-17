@@ -1,0 +1,93 @@
+name: release-source-check
+
+# Defensive path referenced from docs/release.md §Release PR merge
+# authorization. Branch protection / rulesets on `main` enforce
+# "no direct push", but on some GitHub plans head-branch-pattern
+# constraints are unavailable on the legacy protection model. This
+# workflow guards `release-*` integration PRs as a second layer.
+#
+# AGENTS.md §10 + ADR-0003 + ADR-0012 + docs/release.md を前提とする。
+#
+# 動作:
+# - trigger: PR open / reopen / synchronize / synchronize 後の push
+# - gate: PR が `release-x-y-z` branch 宛てであることを要求する
+# - 違反時: PR を close せず fail check を立て、template comment を残す
+#
+# 重要:
+# - この workflow は **merge を実行しない**. merge は ADR-0012 の
+#   explicit user authorization 境界に従う
+# - close もしない（誤検知時に手動 reopen できる余地を残す）
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - edited
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  source-check:
+    name: "Verify head branch shape"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Inspect head ref
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          printf 'head.ref=%s\n' "$HEAD_REF"
+          printf 'head.repo=%s\n' "$HEAD_REPO"
+          printf 'base.ref=%s\n' "$BASE_REF"
+
+          # Rule 1: base must be `main`
+          if [ "$BASE_REF" != "main" ]; then
+            echo "::error title=Release PR base must be main::release-x-y-z → main の統合経路である必要があります。"
+            exit 1
+          fi
+
+          # Rule 2: head must match release-x-y-z pattern
+          if ! echo "$HEAD_REF" | grep -Eq '^release-[0-9]+-[0-9]+-[0-9]+$'; then
+            echo "::error title=Release PR head must be release-x-y-z::PR head branch は 'release-<major>-<minor>-<patch>' 形式である必要があります。"
+            exit 1
+          fi
+
+          echo "OK: release PR head/base shape satisfies the contract."
+
+      - name: Add release PR guidance comment (first open only)
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # 誤検知時の手動 reopen を阻害しないよう、 comment は idempotent に留める。
+          gh pr comment "$PR_NUMBER" --body "$(cat <<'EOF'
+          ## release-source-check
+
+          This PR targets `main` from a `release-<major>-<minor>-<patch>` head, which satisfies the
+          integration contract in `docs/release.md` and `ADR-0003` / `ADR-0012`.
+
+          **次のステップ**
+          1. release evidence (`docs/release.md` §Release PR) を PR body に集約。
+          2. reviewer / CODEOWNERS approval を取得。
+          3. required checks (CI configured の場合) が green であることを確認。
+          4. ready-to-merge 状態で **停止** し、 explicit user authorization を待つ。
+             agent は **merge を実行しません**。
+
+          -- release-source-check workflow
+          EOF
+          )" || true

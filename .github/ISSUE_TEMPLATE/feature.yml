@@ -1,0 +1,83 @@
+name: Feature
+description: 仕様追加 / 既存拡張の提案
+title: "[Feature]: "
+labels: ["feature"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature request
+        新規仕様 / 既存拡張提案はここで受け付けます。
+        **ガバナンス骨格に関わる変更**（release sprint / recovery / quality profile / branch 運用 等）は
+        `architecture.yml` を使い、別 Issue + ADR amendment で扱ってください。
+
+  - type: input
+    id: target-version
+    attributes:
+      label: "Target release"
+      description: "想定する release branch 例: `release-0-1-0`. 未定なら空のまま提出してください。"
+      placeholder: "release-x-y-z"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: ae-surface
+    attributes:
+      label: "Affected AE surface"
+      description: "変更が主に影響する領域"
+      options:
+        - CEP panel
+        - UXP plugin
+        - ExtendScript
+        - AE Scripting API
+        - MCP server
+        - VSCode Extension
+        - shared core
+        - docs / research
+        - CI / release
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "動機 / 背景"
+      description: "なぜこの変更が必要か / 解決する問題は何か"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "提案"
+      description: "実現方式の概略 / 既存実装との整合 / 影響範囲"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance criteria"
+      description: "完了条件。verification level (Unit / Smoke / Integration / Contract / E2E / Manual) を明記してください。"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "検討した代替案"
+      description: "なぜ採用しないか"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: governance-checks
+    attributes:
+      label: "Governance checks"
+      options:
+        - label: "本 Issue は AGENTS.md §1「ビジョン未確定を勝手に固定しない」を尊重している
+        - label: "AGENTS.md §10 の branch naming 規約（`<issue-number>` のみ）に沿う branch 名を後続 PR で使う予定
+        - label: "Draft PR を first meaningful commit 直後に作成する運用に従う予定
+        - label: "AGENTS.md §11「自明な判断を user に返さない」を意識している

@@ -10,3 +10,44 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Ephemeral local artifacts (per AGENTS.md §16)
+.tmp/
+.reference/
+
+# After Effects bridge shared-secret token (loopback token, regenerated each launch)
+# experiments/runtime-bridge probes write this locally; never commit it.
+.ae-bridge-token
+experiments/runtime-bridge/.ae-bridge-token
+
+# Sandbox / Supervisor snapshots (frozen mutable state per worker)
+# Worker-local; do not commit.
+.checkpoint/
+.checkpoint-*/
+sandbox-snapshot/
+*.sandbox-snapshot
+*.sandbox.tar
+*.sandbox.tar.*
+
+# Local environment files — actuals never committed; .env.example* are allowed
+.env
+.env.development
+.env.production
+.env.test
+.env.*
+
+# Build / coverage / dependency caches (Bun / Node)
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.bun/
+
+# OS / IDE extras
+*.bak
+*~
+
+# Linear / external control-plane caches
+.linear-cache/
+.skill-cache/
