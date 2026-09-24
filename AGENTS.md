@@ -419,3 +419,9 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - `interaction-discipline` — agent ownership / blocker presentation / one-question escalation / tangent defer / persistent prose routing
 - `linear-release-control` — Linear を optional release planning / health / portfolio control plane として使う契約（採用時のみ）
 - `worktree-workflow` — Worktrunk を WSL/Linux の worktree 操作 layer として使う契約 / branch base / port allocation
+
+## Constitution / operating profile
+
+- 最上位 contract: [`constitution/CONSTITUTION.md`](constitution/CONSTITUTION.md)
+- current Operating Model: [`organization/profiles/release-driven-solo.md`](organization/profiles/release-driven-solo.md)
+- 既存の project-specific spec / architecture / ADR は、Constitution と両立する限り generic upstream Practice より具体的な authority として維持する。
