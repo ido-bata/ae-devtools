@@ -62,3 +62,9 @@ AI コーディングエージェント、およびこのリポジトリで作�
 AI コーディングエージェントから After Effects 開発を扱うためのインターフェースであっても、
 「AI が AE を勝手にいじる」ことを主目的にしない。
 エージェントはあくまで **人間の AE 開発を支援する** 側に立つ。この原則は、実装と意思決定において維持する。
+
+## Constitution / operating profile
+
+- 最上位 contract: [`constitution/CONSTITUTION.md`](constitution/CONSTITUTION.md)
+- current Operating Model: [`organization/profiles/release-driven-solo.md`](organization/profiles/release-driven-solo.md)
+- product/design の未確定事項を governance default から推測して固定しない。既存の architecture / spec / explicit decision を具体的 authority として扱う。
