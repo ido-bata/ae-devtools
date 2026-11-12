@@ -1,0 +1,4 @@
+# Raw upstream payloads are cached here for reproducible builds.
+# Never commit them: the inventory stores hashes and short references, not mirrored
+# documentation prose. See README.md "Regeneration".
+.cache/
