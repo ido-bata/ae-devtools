@@ -106,11 +106,21 @@
       ]
     },
     {
+      "id": "comp.comp-info",
+      "provisional": true,
+      "label": "Comp info",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "comp.create",
       "provisional": true,
       "label": "Create a composition",
       "adobeOperation": "Project.items.addComp",
       "tools": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -186,6 +196,15 @@
       ]
     },
     {
+      "id": "comp.list-comps",
+      "provisional": true,
+      "label": "List comps",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "comp.list-layers",
       "provisional": true,
       "label": "List a comp's layers",
@@ -228,6 +247,15 @@
       "adobeOperation": "CompItem DOM (composition settings, items, timing)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-comp-settings",
+      "provisional": true,
+      "label": "Set comp settings",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -327,6 +355,7 @@
       "label": "Apply an effect to a layer",
       "adobeOperation": "Effect Parade addProperty",
       "tools": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -361,6 +390,15 @@
       "tools": [
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.list-effect-params",
+      "provisional": true,
+      "label": "List effect params",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -418,6 +456,7 @@
       "label": "Remove",
       "adobeOperation": "Effect/Property DOM (effects and their parameters)",
       "tools": [
+        "23d1/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -431,6 +470,15 @@
       "adobeOperation": "Effect/Property DOM (effects and their parameters)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.search-effects",
+      "provisional": true,
+      "label": "Search effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -496,6 +544,7 @@
       "label": "Set",
       "adobeOperation": "Property expression DOM (expression text/enabled/error)",
       "tools": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -583,6 +632,7 @@
       "label": "Set",
       "adobeOperation": "Property keyframe DOM (keys and interpolation)",
       "tools": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -634,6 +684,15 @@
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-layer",
+      "provisional": true,
+      "label": "Add layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -798,6 +857,15 @@
       ]
     },
     {
+      "id": "layer.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.list",
       "provisional": true,
       "label": "List",
@@ -880,6 +948,15 @@
       "adobeOperation": "Layer.enabled",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.set-layer",
+      "provisional": true,
+      "label": "Set layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1075,6 +1152,15 @@
       ]
     },
     {
+      "id": "menu.exec-menu",
+      "provisional": true,
+      "label": "Exec menu",
+      "adobeOperation": "app menu commands (findMenuCommandId / executeCommand)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "menu.execute-command",
       "provisional": true,
       "label": "Execute a menu command",
@@ -1235,6 +1321,7 @@
       "label": "Read project metadata",
       "adobeOperation": "Project.file / Project.numItems",
       "tools": [
+        "23d1/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
@@ -1267,6 +1354,7 @@
       "label": "Open a project file",
       "adobeOperation": "app.open(File)",
       "tools": [
+        "23d1/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -1295,6 +1383,7 @@
       "label": "Save",
       "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
       "tools": [
+        "23d1/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1373,6 +1462,15 @@
       ]
     },
     {
+      "id": "render.render",
+      "provisional": true,
+      "label": "Render",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "render.render-aerender",
       "provisional": true,
       "label": "Render aerender",
@@ -1397,6 +1495,15 @@
       "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-templates",
+      "provisional": true,
+      "label": "Render templates",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1500,6 +1607,7 @@
       "label": "Run jsx",
       "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
       "tools": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -1513,6 +1621,24 @@
       "adobeOperation": "Text layer / TextDocument DOM",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "text.set-text",
+      "provisional": true,
+      "label": "Set text",
+      "adobeOperation": "Text layer / TextDocument DOM",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "time.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "adobeOperation": "Comp/layer timing (current time, retiming)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1669,6 +1795,15 @@
       ]
     },
     {
+      "id": "tool.get-property",
+      "provisional": true,
+      "label": "Get property",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.get-results",
       "provisional": true,
       "label": "Get results",
@@ -1677,6 +1812,15 @@
         "Dakkshin/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.import",
+      "provisional": true,
+      "label": "Import",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1713,6 +1857,15 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-fonts",
+      "provisional": true,
+      "label": "List fonts",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1798,6 +1951,15 @@
       ]
     },
     {
+      "id": "tool.remove-keyframes",
+      "provisional": true,
+      "label": "Remove keyframes",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.reverse-keyframes",
       "provisional": true,
       "label": "Reverse keyframes",
@@ -1807,12 +1969,39 @@
       ]
     },
     {
+      "id": "tool.save-frame",
+      "provisional": true,
+      "label": "Save frame",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.see-frame",
       "provisional": true,
       "label": "See frame",
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.select",
+      "provisional": true,
+      "label": "Select",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-property",
+      "provisional": true,
+      "label": "Set property",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1831,6 +2020,15 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.status",
+      "provisional": true,
+      "label": "Status",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -1860,6 +2058,15 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.undo",
+      "provisional": true,
+      "label": "Undo",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "23d1/after-effects-mcp"
       ]
     },
     {
@@ -2019,12 +2226,24 @@
       "gap": true
     },
     {
+      "semanticId": "comp.comp-info",
+      "provisional": true,
+      "label": "Comp info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "comp.create",
       "provisional": true,
       "label": "Create a composition",
       "inAeA8n": true,
       "inAeDevtools": true,
       "competitors": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -2110,6 +2329,17 @@
       "gap": true
     },
     {
+      "semanticId": "comp.list-comps",
+      "provisional": true,
+      "label": "List comps",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "comp.list-layers",
       "provisional": true,
       "label": "List a comp's layers",
@@ -2157,6 +2387,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-comp-settings",
+      "provisional": true,
+      "label": "Set comp settings",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2272,6 +2513,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -2309,6 +2551,17 @@
       "competitors": [
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.list-effect-params",
+      "provisional": true,
+      "label": "List effect params",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2376,6 +2629,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -2391,6 +2645,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.search-effects",
+      "provisional": true,
+      "label": "Search effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2469,6 +2734,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -2574,6 +2840,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -2635,6 +2902,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-layer",
+      "provisional": true,
+      "label": "Add layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2828,6 +3106,17 @@
       "gap": true
     },
     {
+      "semanticId": "layer.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.list",
       "provisional": true,
       "label": "List",
@@ -2924,6 +3213,17 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "layer.set-layer",
+      "provisional": true,
+      "label": "Set layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "layer.set-layer-parent",
@@ -3160,6 +3460,17 @@
       "gap": true
     },
     {
+      "semanticId": "menu.exec-menu",
+      "provisional": true,
+      "label": "Exec menu",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "menu.execute-command",
       "provisional": true,
       "label": "Execute a menu command",
@@ -3348,6 +3659,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
@@ -3384,6 +3696,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -3417,6 +3730,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -3507,6 +3821,17 @@
       "gap": true
     },
     {
+      "semanticId": "render.render",
+      "provisional": true,
+      "label": "Render",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "render.render-aerender",
       "provisional": true,
       "label": "Render aerender",
@@ -3536,6 +3861,17 @@
       "inAeDevtools": false,
       "competitors": [
         "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-templates",
+      "provisional": true,
+      "label": "Render templates",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -3661,6 +3997,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -3676,6 +4013,28 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "text.set-text",
+      "provisional": true,
+      "label": "Set text",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "time.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -3867,6 +4226,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.get-property",
+      "provisional": true,
+      "label": "Get property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.get-results",
       "provisional": true,
       "label": "Get results",
@@ -3876,6 +4246,17 @@
         "Dakkshin/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.import",
+      "provisional": true,
+      "label": "Import",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -3920,6 +4301,17 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-fonts",
+      "provisional": true,
+      "label": "List fonts",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -4024,6 +4416,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.remove-keyframes",
+      "provisional": true,
+      "label": "Remove keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.reverse-keyframes",
       "provisional": true,
       "label": "Reverse keyframes",
@@ -4035,6 +4438,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.save-frame",
+      "provisional": true,
+      "label": "Save frame",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.see-frame",
       "provisional": true,
       "label": "See frame",
@@ -4042,6 +4456,28 @@
       "inAeDevtools": false,
       "competitors": [
         "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.select",
+      "provisional": true,
+      "label": "Select",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-property",
+      "provisional": true,
+      "label": "Set property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -4064,6 +4500,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.status",
+      "provisional": true,
+      "label": "Status",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },
@@ -4099,6 +4546,17 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.undo",
+      "provisional": true,
+      "label": "Undo",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
       ],
       "gap": true
     },

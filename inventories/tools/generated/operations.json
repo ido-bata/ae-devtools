@@ -1,12 +1,12 @@
 {
   "counts": {
-    "total": 286,
-    "read": 96,
-    "write": 163,
-    "execute": 20,
+    "total": 317,
+    "read": 104,
+    "write": 180,
+    "execute": 25,
     "host-callback": 0,
     "build-test": 1,
-    "unknown": 6
+    "unknown": 7
   },
   "operations": [
     {
@@ -5616,6 +5616,623 @@
       "definitionLine": 4196,
       "implementationFile": "src/index.ts",
       "implementationLine": 4205
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_keyframes",
+      "args": [
+        "comp",
+        "layer",
+        "property",
+        "keyframes",
+        "interpolation",
+        "easing",
+        "influence",
+        "spatialInterpolation",
+        "clearExisting"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `AEMCP.setKeys(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "keyframe.set",
+      "status": "source-verified",
+      "definitionFile": "src/tools/animation.ts",
+      "definitionLine": 13,
+      "implementationFile": "src/tools/animation.ts",
+      "implementationLine": 63
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_property",
+      "args": [
+        "comp",
+        "layer",
+        "property"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `setValue(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.set-property",
+      "status": "source-verified",
+      "definitionFile": "src/tools/animation.ts",
+      "definitionLine": 94,
+      "implementationFile": "src/tools/animation.ts",
+      "implementationLine": 109
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_get_property",
+      "args": [
+        "comp",
+        "layer",
+        "property",
+        "time"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `.numKeys` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.get-property",
+      "status": "source-verified",
+      "definitionFile": "src/tools/animation.ts",
+      "definitionLine": 131,
+      "implementationFile": "src/tools/animation.ts",
+      "implementationLine": 150
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_expression",
+      "args": [
+        "comp",
+        "layer",
+        "property",
+        "expression"
+      ],
+      "access": "write",
+      "accessBasis": "assigns through a host accessor chain: `prop.expression =`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "expression.set",
+      "status": "source-verified",
+      "definitionFile": "src/tools/animation.ts",
+      "definitionLine": 181,
+      "implementationFile": "src/tools/animation.ts",
+      "implementationLine": 199
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_remove_keyframes",
+      "args": [
+        "comp",
+        "layer",
+        "property",
+        "from",
+        "to"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `removeKey(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.remove-keyframes",
+      "status": "source-verified",
+      "definitionFile": "src/tools/animation.ts",
+      "definitionLine": 239,
+      "implementationFile": "src/tools/animation.ts",
+      "implementationLine": 253
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_list_comps",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.project.numItems` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "comp.list-comps",
+      "status": "source-verified",
+      "definitionFile": "src/tools/comps.ts",
+      "definitionLine": 9,
+      "implementationFile": "src/tools/comps.ts",
+      "implementationLine": 17
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_comp_info",
+      "args": [
+        "comp",
+        "detail"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `AEMCP.serializeComp(` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "comp.comp-info",
+      "status": "source-verified",
+      "definitionFile": "src/tools/comps.ts",
+      "definitionLine": 37,
+      "implementationFile": "src/tools/comps.ts",
+      "implementationLine": 55
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_create_comp",
+      "args": [
+        "name",
+        "width",
+        "height",
+        "duration",
+        "frameRate",
+        "pixelAspect",
+        "backgroundColor",
+        "open"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `addComp(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "comp.create",
+      "status": "source-verified",
+      "definitionFile": "src/tools/comps.ts",
+      "definitionLine": 67,
+      "implementationFile": "src/tools/comps.ts",
+      "implementationLine": 87
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_comp_settings",
+      "args": [
+        "comp",
+        "name",
+        "width",
+        "height",
+        "duration",
+        "frameRate",
+        "backgroundColor",
+        "workAreaStart",
+        "workAreaDuration",
+        "resolutionFactor"
+      ],
+      "access": "write",
+      "accessBasis": "assigns through a host accessor chain: `comp.name =`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "comp.set-comp-settings",
+      "status": "source-verified",
+      "definitionFile": "src/tools/comps.ts",
+      "definitionLine": 108,
+      "implementationFile": "src/tools/comps.ts",
+      "implementationLine": 131
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_time",
+      "args": [
+        "comp",
+        "time"
+      ],
+      "access": "write",
+      "accessBasis": "assigns through a host accessor chain: `comp.time =`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "time.set-time",
+      "status": "source-verified",
+      "definitionFile": "src/tools/comps.ts",
+      "definitionLine": 152,
+      "implementationFile": "src/tools/comps.ts",
+      "implementationLine": 163
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_search_effects",
+      "args": [
+        "query",
+        "limit"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `app.effects` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "effect.search-effects",
+      "status": "source-verified",
+      "definitionFile": "src/tools/effects.ts",
+      "definitionLine": 9,
+      "implementationFile": "src/tools/effects.ts",
+      "implementationLine": 23
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_apply_effect",
+      "args": [
+        "comp",
+        "layer",
+        "effect",
+        "name",
+        "parameters"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `addProperty(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "effect.apply",
+      "status": "source-verified",
+      "definitionFile": "src/tools/effects.ts",
+      "definitionLine": 47,
+      "implementationFile": "src/tools/effects.ts",
+      "implementationLine": 69
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_list_effect_params",
+      "args": [
+        "comp",
+        "layer",
+        "effect"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `.numProperties` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "effect.list-effect-params",
+      "status": "source-verified",
+      "definitionFile": "src/tools/effects.ts",
+      "definitionLine": 114,
+      "implementationFile": "src/tools/effects.ts",
+      "implementationLine": 131
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_remove_effect",
+      "args": [
+        "comp",
+        "layer",
+        "effect",
+        "disableOnly"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `remove(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "effect.remove",
+      "status": "source-verified",
+      "definitionFile": "src/tools/effects.ts",
+      "definitionLine": 179,
+      "implementationFile": "src/tools/effects.ts",
+      "implementationLine": 192
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_add_layer",
+      "args": [
+        "comp",
+        "type",
+        "name",
+        "text",
+        "fontSize",
+        "font",
+        "color",
+        "boxText",
+        "width",
+        "height",
+        "shape",
+        "cornerRadius",
+        "strokeColor",
+        "strokeWidth",
+        "source",
+        "lightType",
+        "position",
+        "startTime",
+        "duration",
+        "threeD"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `addText(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "layer.add-layer",
+      "status": "source-verified",
+      "definitionFile": "src/tools/layers.ts",
+      "definitionLine": 9,
+      "implementationFile": "src/tools/layers.ts",
+      "implementationLine": 61
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_layer",
+      "args": [
+        "comp",
+        "layer",
+        "name",
+        "position",
+        "anchorPoint",
+        "scale",
+        "rotation",
+        "opacity",
+        "inPoint",
+        "outPoint",
+        "startTime",
+        "parent",
+        "blendingMode",
+        "enabled",
+        "locked",
+        "shy",
+        "solo",
+        "threeD",
+        "motionBlur",
+        "adjustmentLayer",
+        "label"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `setValue(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "layer.set-layer",
+      "status": "source-verified",
+      "definitionFile": "src/tools/layers.ts",
+      "definitionLine": 151,
+      "implementationFile": "src/tools/layers.ts",
+      "implementationLine": 192
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_set_text",
+      "args": [
+        "comp",
+        "layer",
+        "text",
+        "font",
+        "fontSize",
+        "color",
+        "strokeColor",
+        "strokeWidth",
+        "tracking",
+        "leading",
+        "justification",
+        "allCaps"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `setValue(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "text.set-text",
+      "status": "source-verified",
+      "definitionFile": "src/tools/layers.ts",
+      "definitionLine": 237,
+      "implementationFile": "src/tools/layers.ts",
+      "implementationLine": 258
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_layer_op",
+      "args": [
+        "comp",
+        "op",
+        "layer",
+        "layers",
+        "toIndex",
+        "name",
+        "moveAttributes"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `remove(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "layer.layer-op",
+      "status": "source-verified",
+      "definitionFile": "src/tools/layers.ts",
+      "definitionLine": 295,
+      "implementationFile": "src/tools/layers.ts",
+      "implementationLine": 319
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_select",
+      "args": [
+        "comp",
+        "layers"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `.selected =`; no project-content mutation in the located body",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.select",
+      "status": "source-verified",
+      "definitionFile": "src/tools/layers.ts",
+      "definitionLine": 374,
+      "implementationFile": "src/tools/layers.ts",
+      "implementationLine": 390
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_status",
+      "args": [
+        "launch"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `app.version` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.status",
+      "status": "source-verified",
+      "definitionFile": "src/tools/project.ts",
+      "definitionLine": 9,
+      "implementationFile": "src/tools/project.ts",
+      "implementationLine": 33
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_project_info",
+      "args": [
+        "kind",
+        "search"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `app.project.numItems` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "project.info",
+      "status": "source-verified",
+      "definitionFile": "src/tools/project.ts",
+      "definitionLine": 69,
+      "implementationFile": "src/tools/project.ts",
+      "implementationLine": 86
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_open_project",
+      "args": [
+        "path",
+        "discardChanges"
+      ],
+      "access": "execute",
+      "accessBasis": "host lifecycle: closes the current project (`app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES)`) and loads another — `app.open(file)` or `app.newProject()`; replaces the loaded document rather than editing items in it",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "project.open",
+      "status": "source-verified",
+      "definitionFile": "src/tools/project.ts",
+      "definitionLine": 113,
+      "implementationFile": "src/tools/project.ts",
+      "implementationLine": 135
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_save_project",
+      "args": [
+        "path"
+      ],
+      "access": "write",
+      "accessBasis": "persists the project document with `app.project.save(new File(ARGS.path))` / `app.project.save()` (Save As when `path` is given) — writes project content to disk",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "project.save",
+      "status": "source-verified",
+      "definitionFile": "src/tools/project.ts",
+      "definitionLine": 172,
+      "implementationFile": "src/tools/project.ts",
+      "implementationLine": 182
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_import",
+      "args": [
+        "paths",
+        "sequence",
+        "folder"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `importFile(`",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.import",
+      "status": "source-verified",
+      "definitionFile": "src/tools/project.ts",
+      "definitionLine": 200,
+      "implementationFile": "src/tools/project.ts",
+      "implementationLine": 217
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_undo",
+      "args": [
+        "steps"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `executeCommand(`; no project-content mutation in the located body",
+      "route": "MCP stdio → local Node handler in src/tools (no AE host invocation)",
+      "semanticId": "tool.undo",
+      "status": "source-verified",
+      "definitionFile": "src/tools/project.ts",
+      "definitionLine": 250,
+      "implementationFile": "src/tools/project.ts",
+      "implementationLine": 258
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_save_frame",
+      "args": [
+        "comp",
+        "time",
+        "maxSize",
+        "outputPath",
+        "returnImage"
+      ],
+      "access": "execute",
+      "accessBasis": "renders one frame with `comp.saveFrameToPng(time, file)` into a local PNG (mkdirSync/copyFileSync are file output only); no project content is changed despite the registration declaring readOnly: true (registration declares readOnly: true)",
+      "route": "MCP stdio → local Node handler in src/tools (no AE host invocation)",
+      "semanticId": "tool.save-frame",
+      "status": "source-verified",
+      "definitionFile": "src/tools/render.ts",
+      "definitionLine": 62,
+      "implementationFile": "src/tools/render.ts",
+      "implementationLine": 95
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_render",
+      "args": [
+        "comp",
+        "outputPath",
+        "renderSettings",
+        "outputModule",
+        "start",
+        "end",
+        "overwrite",
+        "queueOnly",
+        "timeoutMinutes"
+      ],
+      "access": "write",
+      "accessBasis": "always mutates the render queue: `app.project.renderQueue.items.add(comp)`, sets `item.timeSpanStart` / `output.file = new File(...)`, then — unless `queueOnly` — calls `app.project.renderQueue.render()`; the queue item is project content, the render itself is a host action",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "render.render",
+      "status": "source-verified",
+      "definitionFile": "src/tools/render.ts",
+      "definitionLine": 160,
+      "implementationFile": "src/tools/render.ts",
+      "implementationLine": 193
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_render_templates",
+      "args": [],
+      "access": "write",
+      "accessBasis": "TEMP-OBJECT write with net content unchanged: borrows a queue item via `app.project.renderQueue.items.add(comps[0])` to read `probe.templates`, then `probe.remove()` before returning (registration declares readOnly: true; the probe is the only mutation) (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "render.render-templates",
+      "status": "source-verified",
+      "definitionFile": "src/tools/render.ts",
+      "definitionLine": 258,
+      "implementationFile": "src/tools/render.ts",
+      "implementationLine": 268
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_run_script",
+      "args": [
+        "script",
+        "args",
+        "undoLabel",
+        "timeoutSeconds"
+      ],
+      "access": "unknown",
+      "accessBasis": "dispatcher: the `script` argument is arbitrary ExtendScript passed straight to runJsx(args.script) (setValue/remove(...) and read-only returns alike); access depends on the argument and is not decidable at registration time",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "system.run-jsx",
+      "status": "source-verified",
+      "definitionFile": "src/tools/scripting.ts",
+      "definitionLine": 9,
+      "implementationFile": "src/tools/scripting.ts",
+      "implementationLine": 38
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_exec_menu",
+      "args": [
+        "command"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `executeCommand(`; no project-content mutation in the located body",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "menu.exec-menu",
+      "status": "source-verified",
+      "definitionFile": "src/tools/scripting.ts",
+      "definitionLine": 48,
+      "implementationFile": "src/tools/scripting.ts",
+      "implementationLine": 60
+    },
+    {
+      "toolId": "23d1/after-effects-mcp",
+      "name": "ae_list_fonts",
+      "args": [
+        "query",
+        "limit"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `app.fonts` (registration declares readOnly: true)",
+      "route": "MCP stdio → runJsx bridge (src/bridge.js) → ExtendScript in AE",
+      "semanticId": "tool.list-fonts",
+      "status": "source-verified",
+      "definitionFile": "src/tools/scripting.ts",
+      "definitionLine": 74,
+      "implementationFile": "src/tools/scripting.ts",
+      "implementationLine": 88
     }
   ]
 }

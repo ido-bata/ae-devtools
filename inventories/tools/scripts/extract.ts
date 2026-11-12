@@ -190,6 +190,7 @@ const ADAPTERS = [
   "./adapters/ishu86.ts",
   "./adapters/heroicswan.ts",
   "./adapters/dakkshin-family.ts",
+  "./adapters/23d1.ts",
 ] as const;
 
 export async function runAdapters(): Promise<OperationRow[]> {

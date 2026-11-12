@@ -162,10 +162,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE 'MIT License Copyright (c) 2026 23d1'; package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/23d1_after-effects-mcp",
-      "extraction": "23d1",
-      "notes": "このパスでは行を抽出していない (adapters/23d1.ts 未実装または対象外); source-verified ではない"
+      "extraction": "23d1"
     }
   ],
   "notExamined": [
