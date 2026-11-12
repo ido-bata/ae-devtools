@@ -361,6 +361,23 @@ async function main(): Promise<void> {
       deltas: changelog.deltas.length,
       unresolved: changelog.deltas.filter((d) => d.resolvedId === null).length,
     },
+    /**
+     * Every delta whose symbol could not be tied to an inventory row, so
+     * `counts.unresolved` is always fully enumerated. `changelog.resolverMisses`
+     * alone is not sufficient: it tracks member-level misses only, while a
+     * changelog entry may name a class whose identifier differs (the guide calls
+     * the page "Font object" but the class is `FontObject`), which leaves
+     * `resolvedId` null without being a member miss.
+     */
+    unresolvedEntries: changelog.deltas
+      .filter((d) => d.resolvedId === null)
+      .map((d) => ({
+        aeVersion: d.aeVersion,
+        kind: d.kind,
+        symbol: d.symbol,
+        anchor: d.anchor,
+      })),
+    /** Member-level naming misses, kept for the narrower audit trail. */
     resolverMisses: changelog.resolverMisses,
     releaseNotes: changelog.notes,
     deltas: changelog.deltas,

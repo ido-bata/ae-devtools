@@ -7,6 +7,38 @@
     "deltas": 226,
     "unresolved": 5
   },
+  "unresolvedEntries": [
+    {
+      "aeVersion": "26.3",
+      "kind": "added",
+      "symbol": "ParametricMeshLayer.ParametricMeshType",
+      "anchor": "../layer/parametricmeshlayer.md/#parametricmeshlayerparametricmeshtype"
+    },
+    {
+      "aeVersion": "26.3",
+      "kind": "added",
+      "symbol": "ParametricMeshLayer.ParametricMeshOptions",
+      "anchor": "../layer/parametricmeshlayer.md/#parametricmeshlayerparametricmeshoptions"
+    },
+    {
+      "aeVersion": "26.3",
+      "kind": "added",
+      "symbol": "ParametricMeshLayer.ParametricBevelOptions",
+      "anchor": "../layer/parametricmeshlayer.md#parametricmeshlayerparametricbeveloptions"
+    },
+    {
+      "aeVersion": "24.0",
+      "kind": "added",
+      "symbol": "Fonts",
+      "anchor": "../text/fontsobject.md"
+    },
+    {
+      "aeVersion": "24.0",
+      "kind": "added",
+      "symbol": "Font",
+      "anchor": "../text/fontobject.md"
+    }
+  ],
   "resolverMisses": [
     "ParametricMeshLayer.ParametricMeshType",
     "ParametricMeshLayer.ParametricMeshOptions",
