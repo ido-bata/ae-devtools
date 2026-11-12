@@ -16,6 +16,7 @@
 | [ADR-0002-governance-reconciliation.md](ADR-0002-governance-reconciliation.md) | governance reconciliation init policy（複数 AI エージェント並行駆動向け project-local 開発環境の骨格適用） | **Proposed** | 2026-09-18 |
 | [ADR-0003-weekly-release-sprint.md](ADR-0003-weekly-release-sprint.md) | weekly release sprint / branch naming / Draft PR / stacked PR / release PR | **Proposed** | 2026-09-18 |
 | [ADR-0004-recovery-checkpoint-model.md](ADR-0004-recovery-checkpoint-model.md) | durable recovery checkpoint / soft-hard / recovery algorithm | **Proposed** | 2026-09-18 |
+| [ADR-0005-ae-execution-boundaries-and-cross-repo-ownership.md](ADR-0005-ae-execution-boundaries-and-cross-repo-ownership.md) | AE実行境界と cross-repo 責務（CAP017–CAP020 / transport・共通語彙・所有境界の設計、実機 evidence と両 owner 承認まで Proposed 維持） | **Proposed** | 2026-11-12 |
 | [ADR-0012-release-merge-authorization.md](ADR-0012-release-merge-authorization.md) | explicit user authorization for release PR merge | **Proposed** | 2026-09-18 |
 | [ADR-0014-linear-profile.md](ADR-0014-linear-profile.md) | Linear profile を optional release planning control plane として使う場合の契約 | **Proposed** | 2026-09-18 |
 
