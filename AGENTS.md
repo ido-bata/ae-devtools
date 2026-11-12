@@ -88,6 +88,17 @@ AI コーディングエージェントから After Effects 開発を扱うた�
 
 ---
 
+## Constitution / operating profile
+
+本ファイルの §10 以降は project-local の governance **practice** であり、最上位 contract ではない。
+判断の優先順位は次の層構造に従う。
+
+- 最上位 contract: [`constitution/CONSTITUTION.md`](constitution/CONSTITUTION.md)
+- current Operating Model: [`organization/profiles/release-driven-solo.md`](organization/profiles/release-driven-solo.md)
+- product/design の未確定事項を governance default から推測して固定しない。既存の architecture / spec / explicit decision を具体的 authority として扱う。
+
+下位層は上位層を refine し、下位層の都合で上位の意味を変更しない。
+
 ## 10. project-local governance の枠組み（durable な骨格）
 
 複数 AI コーディングエージェントが **独立 runtime + immutable snapshot / result の境界を保ったまま** 並行作業し、**中断・context 消失・sandbox 消失** からも復旧しながら version-oriented weekly release sprint に統合できる開発基盤を維持する。
@@ -374,6 +385,11 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - 新規 `.py` script を automation / generation / migration / validation / build & test support / temporary analysis 目的で追加しない
 
 ## 17. pointer index（ADR / Skill / docs）
+
+### 最上位 contract
+
+- [`constitution/CONSTITUTION.md`](constitution/CONSTITUTION.md) — 組織として常に維持する性質 / policy hierarchy
+- [`organization/profiles/release-driven-solo.md`](organization/profiles/release-driven-solo.md) — current Operating Model
 
 ### Architecture & governance ADRs
 
