@@ -93,3 +93,52 @@ inventories/tools/
 
 最終件数は `generated/operations.json` の `counts` を正とする（本 README の記述より機械生成が優先）。
 未調査・未検証の候補は `snapshot/tools.json` の `notExamined` に理由つきで残す。
+
+### 2026-11-12 時点の実測値（`bun run extract` の出力）
+
+| 項目 | 件数 |
+| --- | --- |
+| 棚卸し対象ツール（registry 登録） | **13** |
+| `source-verified`（行ごとに file:line つき citations 検証済み） | **13 / 13** |
+| `claimed/unverifiable` | **0**（clone はあるが行を抽出していないツールは今回はなし。対象外ツールは `notExamined` 側に記録） |
+| operation 行（CAP002） | **464** |
+| access 内訳 | read **151** / write **253** / execute **31** / host-callback **0** / build-test **1** / unknown **28** |
+| 正規化 semantic operation ID（CAP003・暫定） | **304**（同一 Adobe API は1件に集計） |
+| gap（ae-a8n / ae-devtools のいずれにも無く competitor のみが持つ操作） | **271** |
+| notExamined（検索で見つかったが本パスでは未調査） | **6** リポジトリ |
+
+`unknown` 28件は「登録時点では read/write が決定できない dispatcher」である（`run_jsx` 系、
+command 引数で分岐する ops、native program、tool-library リプレイ等）。`write` に丸めていない。
+
+### ツール別の行数と access 内訳
+
+| tool | rows | read | write | execute | build-test | unknown |
+| --- | --- | --- | --- | --- | --- | --- |
+| ido-bata/ae-a8n | 26 | 12 | 5 | 9 | 0 | 0 |
+| ido-bata/ae-devtools (runtime-bridge) | 10 | 6 | 2 | 1 | 1 | 0 |
+| BenZed/after-effects | 7 | 3 | 2 | 0 | 0 | 2 |
+| ishu86/after-effects-mcp | 102 | 32 | 66 | 3 | 0 | 1 |
+| HeroicSwan/after-effects-mcp | 48 | 18 | 25 | 5 | 0 | 0 |
+| Dakkshin/after-effects-mcp | 13 | 3 | 9 | 0 | 0 | 1 |
+| TheLlamainator/after-effects-mcp | 30 | 10 | 19 | 0 | 0 | 1 |
+| a-y-ibrahim/after-effects-mcp | 57 | 15 | 37 | 2 | 0 | 3 |
+| 23d1/after-effects-mcp | 31 | 8 | 17 | 5 | 0 | 1 |
+| JUNKDOGE-JOE/after-effects-mcp | 16 | 5 | 3 | 2 | 0 | 6 |
+| VolksRat71/after-effects-mcp-vision | 16 | 0 | 4 | 2 | 0 | 10 |
+| Engine-Room-Games/after-effects-mcp | 89 | 25 | 60 | 1 | 0 | 3 |
+| ido-bata/Ae_LayerNote | 19 | 14 | 4 | 1 | 0 | 0 |
+
+※ `VolksRat71` の read 0 は「read に丸めていない」結果: 同 tool の 15 定義は `command` 引数で
+read/write 両系統に分岐する単一 op に集約されており、登録時点では分類不能のため `unknown`。
+※ `Dakkshin/TheLlamainator/a-y-ibrahim` は同一 bridge 設計の fork 系（dakkshin-family adapter）。
+※ `Engine-Room-Games` の89行は `OpSchemas` の全 op。同リポジトリ自体が read/write/server の
+no-default 分類表 (`OpMutation`) を持ち、本 inventory はそれを読んで検証のうえ採用した
+（`run_jsx`/`run_batch`/`render_queue` は dispatcher として `unknown` 扱い）。
+
+### main を主張しないもの
+
+- **網羅の主張なし。** 検索語は `generated/discovery.json` のとおりで、`notExamined` の6件を含め
+  母集団は開いている。完了率の百分率は計算しない（仕様上も禁止）。
+- **宣伝数の不採用。** 各 README の「N tools / M operations」は確認していない数字であり、
+  inventory の行はすべて source の file:line から機械検証済み (`bun run verify` が 0 problem を確認)。
+- **`host-callback` 0件** は「その面を持つツールを検証済み行として観測していない」ことのみを意味する。
