@@ -31,13 +31,59 @@
       ]
     },
     {
+      "id": "camera.add-camera-layer",
+      "provisional": true,
+      "label": "Add camera layer",
+      "adobeOperation": "Camera layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "camera.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "adobeOperation": "Camera layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.add-composition-marker",
+      "provisional": true,
+      "label": "Add composition marker",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "comp.create",
       "provisional": true,
       "label": "Create a composition",
       "adobeOperation": "Project.items.addComp",
       "tools": [
         "ido-bata/ae-a8n",
-        "ido-bata/ae-devtools"
+        "ido-bata/ae-devtools",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.delete",
+      "provisional": true,
+      "label": "Delete",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -50,12 +96,31 @@
       ]
     },
     {
+      "id": "comp.get-report",
+      "provisional": true,
+      "label": "Get report",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.get-time",
+      "provisional": true,
+      "label": "Get time",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "comp.info",
       "provisional": true,
       "label": "Read composition settings",
       "adobeOperation": "CompItem name/width/height/duration/frameRate",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -74,6 +139,42 @@
       "adobeOperation": "CompItem.openInViewer",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.set-active",
+      "provisional": true,
+      "label": "Set active",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-renderer",
+      "provisional": true,
+      "label": "Set renderer",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.update-settings",
+      "provisional": true,
+      "label": "Update settings",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -109,7 +210,17 @@
       "label": "Apply an effect to a layer",
       "adobeOperation": "Effect Parade addProperty",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.copy-effects",
+      "provisional": true,
+      "label": "Copy effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -131,6 +242,33 @@
       ]
     },
     {
+      "id": "effect.modify-effect-properties",
+      "provisional": true,
+      "label": "Modify effect properties",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.remove",
+      "provisional": true,
+      "label": "Remove",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.reorder-effects",
+      "provisional": true,
+      "label": "Reorder effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "effect.set-parameter",
       "provisional": true,
       "label": "Set an effect parameter",
@@ -140,12 +278,193 @@
       ]
     },
     {
+      "id": "expression.add-expression-control",
+      "provisional": true,
+      "label": "Add expression control",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.apply-expression-template",
+      "provisional": true,
+      "label": "Apply expression template",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.enable-expression",
+      "provisional": true,
+      "label": "Enable expression",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.get",
+      "provisional": true,
+      "label": "Get",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.remove",
+      "provisional": true,
+      "label": "Remove",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.find-missing-footage",
+      "provisional": true,
+      "label": "Find missing footage",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.import",
+      "provisional": true,
+      "label": "Import",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.remove-proxy",
+      "provisional": true,
+      "label": "Remove proxy",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.replace-footage",
+      "provisional": true,
+      "label": "Replace footage",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.set-proxy",
+      "provisional": true,
+      "label": "Set proxy",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "geometry.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Layer geometry options DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.scale-keyframe-timing",
+      "provisional": true,
+      "label": "Scale keyframe timing",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set-keyframe-advanced",
+      "provisional": true,
+      "label": "Set keyframe advanced",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set-path",
+      "provisional": true,
+      "label": "Set path",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-adjustment-layer",
+      "provisional": true,
+      "label": "Add adjustment layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-av-layer",
+      "provisional": true,
+      "label": "Add av layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-null",
+      "provisional": true,
+      "label": "Add null",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-shape",
+      "provisional": true,
+      "label": "Add shape",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.add-solid",
       "provisional": true,
       "label": "Add a solid layer",
       "adobeOperation": "CompItem.layers.addSolid",
       "tools": [
-        "ido-bata/ae-devtools"
+        "ido-bata/ae-devtools",
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -154,7 +473,26 @@
       "label": "Add a text layer",
       "adobeOperation": "CompItem.layers.addText + TextDocument property setValue",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.delete",
+      "provisional": true,
+      "label": "Delete",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.get-3d-info",
+      "provisional": true,
+      "label": "Get 3d info",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -176,12 +514,49 @@
       ]
     },
     {
+      "id": "layer.info",
+      "provisional": true,
+      "label": "Info",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.list",
+      "provisional": true,
+      "label": "List",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.list-effects",
       "provisional": true,
       "label": "List effects on a layer",
       "adobeOperation": "ADBE Effect Parade property iteration",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.modify-layer",
+      "provisional": true,
+      "label": "Modify layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.precompose-layers",
+      "provisional": true,
+      "label": "Precompose layers",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -194,12 +569,165 @@
       ]
     },
     {
+      "id": "layer.set-3d",
+      "provisional": true,
+      "label": "Set 3d",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.set-enabled",
       "provisional": true,
       "label": "Enable/disable a layer",
       "adobeOperation": "Layer.enabled",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "light.add-light-layer",
+      "provisional": true,
+      "label": "Add light layer",
+      "adobeOperation": "Light layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "light.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "adobeOperation": "Light layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.add-layer-marker",
+      "provisional": true,
+      "label": "Add layer marker",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.delete-marker",
+      "provisional": true,
+      "label": "Delete marker",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.get-markers",
+      "provisional": true,
+      "label": "Get markers",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.get-nearest",
+      "provisional": true,
+      "label": "Get nearest",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.navigate",
+      "provisional": true,
+      "label": "Navigate",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.snap",
+      "provisional": true,
+      "label": "Snap",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.add",
+      "provisional": true,
+      "label": "Add",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.delete-mask",
+      "provisional": true,
+      "label": "Delete mask",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.get-mask-path",
+      "provisional": true,
+      "label": "Get mask path",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.list-masks",
+      "provisional": true,
+      "label": "List masks",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.set-mask-keyframes",
+      "provisional": true,
+      "label": "Set mask keyframes",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.set-mask-path",
+      "provisional": true,
+      "label": "Set mask path",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.set-mask-properties",
+      "provisional": true,
+      "label": "Set mask properties",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "material.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Layer material options DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -221,6 +749,24 @@
       ]
     },
     {
+      "id": "path.create",
+      "provisional": true,
+      "label": "Create",
+      "adobeOperation": "Mask/shape path DOM (vertices and tangents)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "path.get",
+      "provisional": true,
+      "label": "Get",
+      "adobeOperation": "Mask/shape path DOM (vertices and tangents)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "project.active-item",
       "provisional": true,
       "label": "Read the active project item projection",
@@ -235,7 +781,17 @@
       "label": "Close the open project",
       "adobeOperation": "Project.close(CloseOptions)",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.create",
+      "provisional": true,
+      "label": "Create",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -244,7 +800,8 @@
       "label": "Read project metadata",
       "adobeOperation": "Project.file / Project.numItems",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -253,7 +810,17 @@
       "label": "List compositions in the project",
       "adobeOperation": "Project item iteration (CompItem properties)",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.list-items",
+      "provisional": true,
+      "label": "List items",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -262,7 +829,35 @@
       "label": "Open a project file",
       "adobeOperation": "app.open(File)",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.organize-project-items",
+      "provisional": true,
+      "label": "Organize project items",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.reduce-project",
+      "provisional": true,
+      "label": "Reduce project",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.save",
+      "provisional": true,
+      "label": "Save",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -284,12 +879,229 @@
       ]
     },
     {
+      "id": "render.add-to-render-queue",
+      "provisional": true,
+      "label": "Add to render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.control-render",
+      "provisional": true,
+      "label": "Control render",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "render.frame",
       "provisional": true,
       "label": "Render one frame to a PNG file",
       "adobeOperation": "CompItem.saveFrameToPng",
       "tools": [
-        "ido-bata/ae-a8n"
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.list-render-queue",
+      "provisional": true,
+      "label": "List render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.list-render-templates",
+      "provisional": true,
+      "label": "List render templates",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.remove-from-render-queue",
+      "provisional": true,
+      "label": "Remove from render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.set-render-queue-item",
+      "provisional": true,
+      "label": "Set render queue item",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "shape.add-operator",
+      "provisional": true,
+      "label": "Add operator",
+      "adobeOperation": "Shape layer group/path DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "text.create-text-animator",
+      "provisional": true,
+      "label": "Create text animator",
+      "adobeOperation": "Text layer / TextDocument DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.apply-easy-ease",
+      "provisional": true,
+      "label": "Apply easy ease",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.batch-set-expressions",
+      "provisional": true,
+      "label": "Batch set expressions",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.collect-files",
+      "provisional": true,
+      "label": "Collect files",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.copy-keyframes",
+      "provisional": true,
+      "label": "Copy keyframes",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-logo-reveal",
+      "provisional": true,
+      "label": "Create logo reveal",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-lower-third",
+      "provisional": true,
+      "label": "Create lower third",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-title-card",
+      "provisional": true,
+      "label": "Create title card",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-transition",
+      "provisional": true,
+      "label": "Create transition",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.get-keyframes",
+      "provisional": true,
+      "label": "Get keyframes",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.import-folder",
+      "provisional": true,
+      "label": "Import folder",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.link-properties",
+      "provisional": true,
+      "label": "Link properties",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.offset-keyframes",
+      "provisional": true,
+      "label": "Offset keyframes",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.queue-in-ame",
+      "provisional": true,
+      "label": "Queue in ame",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.reverse-keyframes",
+      "provisional": true,
+      "label": "Reverse keyframes",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-temporal-ease",
+      "provisional": true,
+      "label": "Set temporal ease",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-work-area",
+      "provisional": true,
+      "label": "Set work area",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "ishu86/after-effects-mcp"
       ]
     },
     {
@@ -331,13 +1143,70 @@
       "gap": false
     },
     {
+      "semanticId": "camera.add-camera-layer",
+      "provisional": true,
+      "label": "Add camera layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "camera.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.add-composition-marker",
+      "provisional": true,
+      "label": "Add composition marker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "comp.create",
       "provisional": true,
       "label": "Create a composition",
       "inAeA8n": true,
       "inAeDevtools": true,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "comp.delete",
+      "provisional": true,
+      "label": "Delete",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "comp.get-layer",
@@ -349,12 +1218,36 @@
       "gap": false
     },
     {
+      "semanticId": "comp.get-report",
+      "provisional": true,
+      "label": "Get report",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.get-time",
+      "provisional": true,
+      "label": "Get time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "comp.info",
       "provisional": true,
       "label": "Read composition settings",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
     },
     {
@@ -374,6 +1267,50 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "comp.set-active",
+      "provisional": true,
+      "label": "Set active",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-renderer",
+      "provisional": true,
+      "label": "Set renderer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.update-settings",
+      "provisional": true,
+      "label": "Update settings",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "devtools.bridge.eval",
@@ -408,8 +1345,21 @@
       "label": "Apply an effect to a layer",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "effect.copy-effects",
+      "provisional": true,
+      "label": "Copy effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "effect.get-parameter",
@@ -430,6 +1380,39 @@
       "gap": false
     },
     {
+      "semanticId": "effect.modify-effect-properties",
+      "provisional": true,
+      "label": "Modify effect properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.remove",
+      "provisional": true,
+      "label": "Remove",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.reorder-effects",
+      "provisional": true,
+      "label": "Reorder effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "effect.set-parameter",
       "provisional": true,
       "label": "Set an effect parameter",
@@ -439,12 +1422,234 @@
       "gap": false
     },
     {
+      "semanticId": "expression.add-expression-control",
+      "provisional": true,
+      "label": "Add expression control",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.apply-expression-template",
+      "provisional": true,
+      "label": "Apply expression template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.enable-expression",
+      "provisional": true,
+      "label": "Enable expression",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.get",
+      "provisional": true,
+      "label": "Get",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.remove",
+      "provisional": true,
+      "label": "Remove",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.find-missing-footage",
+      "provisional": true,
+      "label": "Find missing footage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.import",
+      "provisional": true,
+      "label": "Import",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.remove-proxy",
+      "provisional": true,
+      "label": "Remove proxy",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.replace-footage",
+      "provisional": true,
+      "label": "Replace footage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.set-proxy",
+      "provisional": true,
+      "label": "Set proxy",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "geometry.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.scale-keyframe-timing",
+      "provisional": true,
+      "label": "Scale keyframe timing",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set-keyframe-advanced",
+      "provisional": true,
+      "label": "Set keyframe advanced",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set-path",
+      "provisional": true,
+      "label": "Set path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-adjustment-layer",
+      "provisional": true,
+      "label": "Add adjustment layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-av-layer",
+      "provisional": true,
+      "label": "Add av layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-null",
+      "provisional": true,
+      "label": "Add null",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-shape",
+      "provisional": true,
+      "label": "Add shape",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.add-solid",
       "provisional": true,
       "label": "Add a solid layer",
       "inAeA8n": false,
       "inAeDevtools": true,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
     },
     {
@@ -453,8 +1658,32 @@
       "label": "Add a text layer",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "layer.delete",
+      "provisional": true,
+      "label": "Delete",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-3d-info",
+      "provisional": true,
+      "label": "Get 3d info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "layer.get-shape-paths",
@@ -475,13 +1704,59 @@
       "gap": false
     },
     {
+      "semanticId": "layer.info",
+      "provisional": true,
+      "label": "Info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.list",
+      "provisional": true,
+      "label": "List",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.list-effects",
       "provisional": true,
       "label": "List effects on a layer",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "layer.modify-layer",
+      "provisional": true,
+      "label": "Modify layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.precompose-layers",
+      "provisional": true,
+      "label": "Precompose layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "layer.select",
@@ -493,6 +1768,17 @@
       "gap": false
     },
     {
+      "semanticId": "layer.set-3d",
+      "provisional": true,
+      "label": "Set 3d",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.set-enabled",
       "provisional": true,
       "label": "Enable/disable a layer",
@@ -500,6 +1786,182 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "light.add-light-layer",
+      "provisional": true,
+      "label": "Add light layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "light.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.add-layer-marker",
+      "provisional": true,
+      "label": "Add layer marker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.delete-marker",
+      "provisional": true,
+      "label": "Delete marker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.get-markers",
+      "provisional": true,
+      "label": "Get markers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.get-nearest",
+      "provisional": true,
+      "label": "Get nearest",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.navigate",
+      "provisional": true,
+      "label": "Navigate",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.snap",
+      "provisional": true,
+      "label": "Snap",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.add",
+      "provisional": true,
+      "label": "Add",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.delete-mask",
+      "provisional": true,
+      "label": "Delete mask",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.get-mask-path",
+      "provisional": true,
+      "label": "Get mask path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.list-masks",
+      "provisional": true,
+      "label": "List masks",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.set-mask-keyframes",
+      "provisional": true,
+      "label": "Set mask keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.set-mask-path",
+      "provisional": true,
+      "label": "Set mask path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.set-mask-properties",
+      "provisional": true,
+      "label": "Set mask properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "material.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "menu.execute-command",
@@ -520,6 +1982,28 @@
       "gap": false
     },
     {
+      "semanticId": "path.create",
+      "provisional": true,
+      "label": "Create",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "path.get",
+      "provisional": true,
+      "label": "Get",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "project.active-item",
       "provisional": true,
       "label": "Read the active project item projection",
@@ -534,8 +2018,21 @@
       "label": "Close the open project",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "project.create",
+      "provisional": true,
+      "label": "Create",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "project.info",
@@ -543,7 +2040,9 @@
       "label": "Read project metadata",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
     },
     {
@@ -552,8 +2051,21 @@
       "label": "List compositions in the project",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "project.list-items",
+      "provisional": true,
+      "label": "List items",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "project.open",
@@ -561,8 +2073,43 @@
       "label": "Open a project file",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "project.organize-project-items",
+      "provisional": true,
+      "label": "Organize project items",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.reduce-project",
+      "provisional": true,
+      "label": "Reduce project",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.save",
+      "provisional": true,
+      "label": "Save",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "project.snapshot",
@@ -583,13 +2130,279 @@
       "gap": false
     },
     {
+      "semanticId": "render.add-to-render-queue",
+      "provisional": true,
+      "label": "Add to render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.control-render",
+      "provisional": true,
+      "label": "Control render",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "render.frame",
       "provisional": true,
       "label": "Render one frame to a PNG file",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
       "gap": false
+    },
+    {
+      "semanticId": "render.list-render-queue",
+      "provisional": true,
+      "label": "List render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.list-render-templates",
+      "provisional": true,
+      "label": "List render templates",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.remove-from-render-queue",
+      "provisional": true,
+      "label": "Remove from render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.set-render-queue-item",
+      "provisional": true,
+      "label": "Set render queue item",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "shape.add-operator",
+      "provisional": true,
+      "label": "Add operator",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "text.create-text-animator",
+      "provisional": true,
+      "label": "Create text animator",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.apply-easy-ease",
+      "provisional": true,
+      "label": "Apply easy ease",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.batch-set-expressions",
+      "provisional": true,
+      "label": "Batch set expressions",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.collect-files",
+      "provisional": true,
+      "label": "Collect files",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.copy-keyframes",
+      "provisional": true,
+      "label": "Copy keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-logo-reveal",
+      "provisional": true,
+      "label": "Create logo reveal",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-lower-third",
+      "provisional": true,
+      "label": "Create lower third",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-title-card",
+      "provisional": true,
+      "label": "Create title card",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-transition",
+      "provisional": true,
+      "label": "Create transition",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-keyframes",
+      "provisional": true,
+      "label": "Get keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.import-folder",
+      "provisional": true,
+      "label": "Import folder",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.link-properties",
+      "provisional": true,
+      "label": "Link properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.offset-keyframes",
+      "provisional": true,
+      "label": "Offset keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.queue-in-ame",
+      "provisional": true,
+      "label": "Queue in ame",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.reverse-keyframes",
+      "provisional": true,
+      "label": "Reverse keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-temporal-ease",
+      "provisional": true,
+      "label": "Set temporal ease",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-work-area",
+      "provisional": true,
+      "label": "Set work area",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "ui.alert",

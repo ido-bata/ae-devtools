@@ -104,6 +104,11 @@ export interface AccessCounts {
   unknown: number;
 }
 
+export interface SemanticOpMeta {
+  label: string;
+  adobeOperation: string;
+}
+
 export interface SemanticOp {
   id: string;
   provisional: true;

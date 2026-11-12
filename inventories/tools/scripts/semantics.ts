@@ -12,7 +12,56 @@
  */
 
 import { AE_A8N_ID, AE_DEVTOOLS_ID } from "./registry.ts";
-import type { GapRow, OperationRow, SemanticBundle, SemanticOp, ToolRecord } from "./types.ts";
+import { humanize } from "./normalize.ts";
+import type { GapRow, OperationRow, SemanticBundle, SemanticOp, SemanticOpMeta, ToolRecord } from "./types.ts";
+
+/** Domain -> the Adobe surface a derived id in that domain denotes. */
+const DOMAIN_ADOBE: Record<string, string> = {
+  project: "After Effects Project/Item DOM (project file, items, metadata)",
+  comp: "CompItem DOM (composition settings, items, timing)",
+  layer: "Layer DOM (layer creation and layer properties)",
+  effect: "Effect/Property DOM (effects and their parameters)",
+  property: "Property DOM (property values)",
+  keyframe: "Property keyframe DOM (keys and interpolation)",
+  expression: "Property expression DOM (expression text/enabled/error)",
+  text: "Text layer / TextDocument DOM",
+  shape: "Shape layer group/path DOM",
+  mask: "Mask property DOM",
+  path: "Mask/shape path DOM (vertices and tangents)",
+  marker: "Marker property DOM",
+  render: "Render output (render queue / saveFrameToPng / frame export)",
+  footage: "Footage import and footage item DOM",
+  camera: "Camera layer DOM",
+  light: "Light layer DOM",
+  material: "Layer material options DOM",
+  geometry: "Layer geometry options DOM",
+  time: "Comp/layer timing (current time, retiming)",
+  menu: "app menu commands (findMenuCommandId / executeCommand)",
+  app: "app object (version, lifecycle, environment)",
+  ui: "Host UI dialogs (alert/prompt/confirm)",
+  system: "Bridge/host system surface (ping, health, script execution)",
+  view: "Viewer / frame capture surface",
+  audio: "Audio property DOM",
+  edit: "Footage edit assembly (cut/keep segments)",
+  subtitle: "Subtitle text creation",
+  motion: "Motion graphics / animation preset surface",
+  mogrt: "Motion graphics template (MOGRT) DOM",
+  style: "Style/color settings surface",
+  search: "Project search (item name matching)",
+  preference: "Preferences surface",
+  proxy: "Footage proxy DOM",
+  probe: "ae-devtools probe (no product operation)",
+  devtools: "ae-devtools runtime-bridge surface",
+  tool: "derived from the tool name; Adobe surface not yet pinned (provisional)",
+};
+
+function derivedMeta(id: string): SemanticOpMeta {
+  const domain = id.slice(0, id.indexOf(".") > 0 ? id.indexOf(".") : id.length);
+  return {
+    label: humanize(id),
+    adobeOperation: DOMAIN_ADOBE[domain] ?? DOMAIN_ADOBE.tool ?? "unknown",
+  };
+}
 
 export interface SemanticMeta {
   label: string;
@@ -166,12 +215,6 @@ export const SEMANTIC_META: Record<string, SemanticMeta> = {
 export function buildSemantics(operations: OperationRow[], _tools: ToolRecord[]): SemanticBundle {
   const grouped = new Map<string, Set<string>>();
   for (const row of operations) {
-    const meta = SEMANTIC_META[row.semanticId];
-    if (!meta) {
-      throw new Error(
-        `semantic id not in normalization table: ${row.semanticId} (tool ${row.toolId}, op ${row.name})`,
-      );
-    }
     const set = grouped.get(row.semanticId) ?? new Set<string>();
     set.add(row.toolId);
     grouped.set(row.semanticId, set);
@@ -179,13 +222,16 @@ export function buildSemantics(operations: OperationRow[], _tools: ToolRecord[])
 
   const semanticOps: SemanticOp[] = [...grouped.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([id, toolSet]) => ({
-      id,
-      provisional: true,
-      label: SEMANTIC_META[id]?.label ?? id,
-      adobeOperation: SEMANTIC_META[id]?.adobeOperation ?? "unknown",
-      tools: [...toolSet].sort(),
-    }));
+    .map(([id, toolSet]) => {
+      const meta = SEMANTIC_META[id] ?? derivedMeta(id);
+      return {
+        id,
+        provisional: true,
+        label: meta.label,
+        adobeOperation: meta.adobeOperation,
+        tools: [...toolSet].sort(),
+      };
+    });
 
   const gapMatrix: GapRow[] = semanticOps.map((op) => {
     const inAeA8n = op.tools.includes(AE_A8N_ID);

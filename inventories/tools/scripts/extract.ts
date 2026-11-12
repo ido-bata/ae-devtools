@@ -104,9 +104,23 @@ export const REFRESH_PROCEDURE: RefreshStep[] = [
 // Tool registry -> ToolRecord (with pin enforcement)
 // ---------------------------------------------------------------------------
 
-export function buildToolRecords(): ToolRecord[] {
+export function buildToolRecords(operations: OperationRow[] = []): ToolRecord[] {
+  const byTool = new Map<string, OperationRow[]>();
+  for (const row of operations) {
+    const list = byTool.get(row.toolId) ?? [];
+    list.push(row);
+    byTool.set(row.toolId, list);
+  }
   return TOOL_DEFS.map((def) => {
     const root = resolveSourceRoot(def);
+    const rows = byTool.get(def.id) ?? [];
+    // source-verified only when the adapter produced rows AND every row's
+    // citations resolve (adapters throw otherwise, so rows.length > 0 with no
+    // throw means both file+line pairs were machine-checked).
+    const status: ToolRecord["status"] =
+      rows.length > 0 && rows.every((r) => r.status === "source-verified")
+        ? "source-verified"
+        : "claimed/unverifiable";
     const record: ToolRecord = {
       id: def.id,
       repoUrl: def.repoUrl,
@@ -115,12 +129,16 @@ export function buildToolRecords(): ToolRecord[] {
       license: def.license,
       licenseEvidence: def.licenseEvidence,
       observedAt: OBSERVED_AT,
-      status: "source-verified",
+      status,
       sourceRoot:
         root.kind === "self" ? "." : root.kind === "clone" ? `.reference/${def.cloneDir ?? def.id}` : "$AE_A8N_PATH or .reference/ae-a8n",
       extraction: def.extraction,
     };
     if (def.notes) record.notes = def.notes;
+    if (rows.length === 0) {
+      record.status = "claimed/unverifiable";
+      record.notes = `${record.notes ? `${record.notes} ` : ""}このパスでは行を抽出していない (adapters/${def.extraction}.ts 未実装または対象外); source-verified ではない`;
+    }
     if (root.kind === "clone") {
       const head = gitHead(root.root);
       if (head === null) {
@@ -169,6 +187,7 @@ export function countAccess(rows: OperationRow[]): AccessCounts {
 const ADAPTERS = [
   "./adapters/ae-a8n.ts",
   "./adapters/ae-devtools.ts",
+  "./adapters/ishu86.ts",
 ] as const;
 
 export async function runAdapters(): Promise<OperationRow[]> {
@@ -188,8 +207,8 @@ export interface ExtractResult {
 }
 
 export async function extractAll(): Promise<ExtractResult> {
-  const tools = buildToolRecords();
   const operations = await runAdapters();
+  const tools = buildToolRecords(operations);
   const { buildSemantics } = await import("./semantics.ts");
   const semantics = buildSemantics(operations, tools);
   return { tools, operations, semantics };
@@ -221,10 +240,15 @@ export async function main(): Promise<void> {
   }
   const ops = JSON.parse(outputs.get("generated/operations.json") ?? '{"counts":{}}') as {
     counts: AccessCounts;
+    operations: OperationRow[];
   };
+  const toolsOut = JSON.parse(outputs.get("snapshot/tools.json") ?? '{"tools":[]}') as {
+    tools: ToolRecord[];
+  };
+  const examined = toolsOut.tools.filter((t) => t.status === "source-verified").length;
   const c = ops.counts;
   process.stdout.write(
-    `tools=${TOOL_DEFS.length} operations=${c.total} read=${c.read} write=${c.write} ` +
+    `tools=${examined}/${toolsOut.tools.length} examined operations=${c.total} read=${c.read} write=${c.write} ` +
       `execute=${c.execute} host-callback=${c["host-callback"]} build-test=${c["build-test"]} unknown=${c.unknown}\n`,
   );
 }

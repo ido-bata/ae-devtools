@@ -30,8 +30,12 @@ export interface Classification {
 export interface ClassifyExtras {
   /** Additional patterns treated as reads (tool-specific reader helpers). */
   read?: RegExp[];
+  /** Additional strong mutation calls (tier: write). */
   write?: RegExp[];
+  /** Additional host lifecycle actions (tier: execute). */
   execute?: RegExp[];
+  /** Additional dialogs/selection actions (tier: execute, UI). */
+  executeUi?: RegExp[];
 }
 
 /**
@@ -46,13 +50,31 @@ const HOST_ASSIGN =
 const PLAIN_LOCAL =
   /(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\{|\[|-?\d|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|null\b|true\b|false\b|String\s*\(|Number\s*\(|new\s+[A-Za-z_$][\w$.]*\s*\()/;
 
-/** Mutating AE DOM calls that write project content (tried in order). */
-const WRITE_PATTERNS: RegExp[] = [
+/** Tier 1 execute: dialogs, quit, menu commands, UI selection — win over writes. */
+const EXECUTE_UI_PATTERNS: RegExp[] = [
+  /\b(?:alert|prompt|confirm)\s*\(/,
+  /\bapp\.quit\s*\(/,
+  /\bexecuteCommand\s*\(/,
+  /\.selected\s*=/,
+];
+
+/** Tier 1 write: strong mutation calls on project content. */
+const WRITE_STRONG_PATTERNS: RegExp[] = [
   "addComp|addSolid|addText|addShape|addNull|addCamera|addLight|addFootage|addLayer|addProperty|addEffect|addMask|addTrackMatte",
   "setValue|setValueAtKey|setValuesAtTimes|setTemporalEaseAtKey|setInterpolationTypeAtKey|setSpatialTangentAtKey",
-  "remove|duplicate|importFile",
-  "setSettings|setSetting|createFolder|items\\.add\\w*",
+  "remove|duplicate|importFile|newProject",
+  "saveAs|save\\b|setSettings|setSetting|createFolder|items\\.add\\w*",
 ].map((p) => new RegExp(`\\b(?:${p})\\s*\\(`));
+
+/** Tier 3 execute: host lifecycle/UI actions that are not content writes. */
+const EXECUTE_LIFECYCLE_PATTERNS: RegExp[] = [
+  /app\.open\s*\(/,
+  /\.close\s*\(/,
+  /\bopenInViewer\s*\(/,
+  /\bsaveFrameToPng\s*\(/,
+  /\$\.\s*setenv\s*\(/,
+  /\bapp\.activate\s*\(/,
+];
 
 /**
  * Reads of host/project state (tried in order, most specific first so the
@@ -72,16 +94,6 @@ const READ_PATTERNS: RegExp[] = [
   "get\\w+\\s*\\(",
 ].map((p) => new RegExp(p));
 
-/** Host/UI actions that are not project-content writes (tried in order). */
-const EXECUTE_PATTERNS: RegExp[] = [
-  /\b(?:alert|prompt|confirm)\s*\(/,
-  /\b(?:app\.quit|app\.activate)\s*\(/,
-  /\bexecuteCommand\s*\(/,
-  /\bopenInViewer\s*\(/,
-  /\bsaveFrameToPng\s*\(/,
-  /\.selected\s*=/,
-];
-
 function stripNoise(body: string): string {
   return body
     .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -100,73 +112,64 @@ function quote(text: string): string {
   return text.replace(/\s+/g, " ").trim().slice(0, 90);
 }
 
-function findExecute(src: string, extras: RegExp[]): RegExpMatchArray | null {
-  for (const p of [...EXECUTE_PATTERNS, ...extras]) {
-    const m = src.match(p);
-    if (m) return m;
-  }
-  return null;
-}
-
-function findWrite(src: string, locals: Set<string>, extras: RegExp[]): RegExpMatchArray | null {
-  for (const p of [...WRITE_PATTERNS, ...extras]) {
-    const m = src.match(p);
-    if (m) return m;
-  }
-  // Assignment through an accessor chain on a non-plain (host-derived) base.
-  for (const m of src.matchAll(new RegExp(HOST_ASSIGN, "g"))) {
-    const base = m[1];
-    if (base && locals.has(base)) continue;
-    if (base === "params" || base === "args" || base === "options") continue;
-    return m;
-  }
-  return null;
-}
-
-function findRead(src: string, extras: RegExp[]): RegExpMatchArray | null {
-  for (const p of [...READ_PATTERNS, ...extras]) {
-    const m = src.match(p);
-    if (m) return m;
-  }
-  return null;
-}
-
 /**
  * Classify an implementation body (the source that performs the work).
  * Returns `unknown` when no rule fires — never `write`.
+ *
+ * Tier order: strong write call -> UI execute -> lifecycle execute ->
+ * accessor-chain assignment -> read. A body that both creates content and
+ * flips a selection is a write; a body that only changes selection is
+ * execute (D1-a).
  */
 export function classifyBody(body: string, extras: ClassifyExtras = {}): Classification {
   const src = stripNoise(body);
   const locals = plainLocals(src);
 
-  const exec = findExecute(src, extras.execute ?? []);
-  if (exec) {
+  const strong = firstMatch([...WRITE_STRONG_PATTERNS, ...(extras.write ?? [])], src);
+  if (strong) {
+    return { access: "write", basis: `mutates project content: \`${quote(strong[0])}\`` };
+  }
+
+  const ui = firstMatch([...EXECUTE_UI_PATTERNS, ...(extras.executeUi ?? [])], src);
+  if (ui) {
     return {
       access: "execute",
-      basis: `invokes host/UI action \`${quote(exec[0])}\`; no project-content mutation in the located body`,
+      basis: `invokes host/UI action \`${quote(ui[0])}\`; no project-content mutation in the located body`,
     };
   }
 
-  const write = findWrite(src, locals, extras.write ?? []);
-  if (write) {
+  const lifecycle = firstMatch([...EXECUTE_LIFECYCLE_PATTERNS, ...(extras.execute ?? [])], src);
+  if (lifecycle) {
     return {
-      access: "write",
-      basis: `mutates project content: \`${quote(write[0])}\``,
+      access: "execute",
+      basis: `invokes host lifecycle/UI action \`${quote(lifecycle[0])}\`; no project-content mutation in the located body`,
     };
   }
 
-  const read = findRead(src, extras.read ?? []);
+  for (const m of src.matchAll(new RegExp(HOST_ASSIGN, "g"))) {
+    const base = m[1];
+    if (base && locals.has(base)) continue;
+    if (base === "params" || base === "args" || base === "options") continue;
+    return { access: "write", basis: `assigns through a host accessor chain: \`${quote(m[0])}\`` };
+  }
+
+  const read = firstMatch([...READ_PATTERNS, ...(extras.read ?? [])], src);
   if (read) {
-    return {
-      access: "read",
-      basis: `reads host state: \`${quote(read[0])}\``,
-    };
+    return { access: "read", basis: `reads host state: \`${quote(read[0])}\`` };
   }
 
   return {
     access: "unknown",
     basis: "no recognised read/write/execute pattern in the located implementation body",
   };
+}
+
+function firstMatch(patterns: RegExp[], src: string): RegExpMatchArray | null {
+  for (const p of patterns) {
+    const m = src.match(p);
+    if (m) return m;
+  }
+  return null;
 }
 
 /**

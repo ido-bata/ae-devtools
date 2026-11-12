@@ -35,10 +35,10 @@
       "license": "MIT (LICENSE text) / ISC (package.json) — mismatch kept as ambiguity",
       "licenseEvidence": "LICENSE 'Permission is hereby granted...'; package.json \"license\": \"ISC\" — recorded without resolving",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/BenZed_after-effects",
       "extraction": "benzed",
-      "notes": "Cited by ae-a8n ADR-0001 as prior external AE invocation precedent."
+      "notes": "Cited by ae-a8n ADR-0001 as prior external AE invocation precedent. このパスでは行を抽出していない (adapters/benzed.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "ido-bata/Ae_LayerNote",
@@ -48,9 +48,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'Hyper Brew LLC'; package.json has no license field",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/ido-bata_Ae_LayerNote",
-      "extraction": "layernote"
+      "extraction": "layernote",
+      "notes": "このパスでは行を抽出していない (adapters/layernote.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "ishu86/after-effects-mcp",
@@ -72,9 +73,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License'; package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/HeroicSwan_after-effects-mcp",
-      "extraction": "heroicswan"
+      "extraction": "heroicswan",
+      "notes": "このパスでは行を抽出していない (adapters/heroicswan.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "Dakkshin/after-effects-mcp",
@@ -84,9 +86,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License'; root package.json declares no license field",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/Dakkshin_after-effects-mcp",
-      "extraction": "dakkshin-family"
+      "extraction": "dakkshin-family",
+      "notes": "このパスでは行を抽出していない (adapters/dakkshin-family.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "TheLlamainator/after-effects-mcp",
@@ -96,10 +99,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License'; copyright line copies Dakkshin's original; no package license field",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/TheLlamainator_after-effects-mcp",
       "extraction": "dakkshin-family",
-      "notes": "Fork lineage of Dakkshin/after-effects-mcp (same package name and script set)."
+      "notes": "Fork lineage of Dakkshin/after-effects-mcp (same package name and script set). このパスでは行を抽出していない (adapters/dakkshin-family.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "a-y-ibrahim/after-effects-mcp",
@@ -109,10 +112,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE 'Copyright (c) 2025 Dakkshin (original work)'; package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/a-y-ibrahim_after-effects-mcp",
       "extraction": "dakkshin-family",
-      "notes": "Derivative of the Dakkshin bridge design with additional lib/ helpers."
+      "notes": "Derivative of the Dakkshin bridge design with additional lib/ helpers. このパスでは行を抽出していない (adapters/dakkshin-family.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "JUNKDOGE-JOE/after-effects-mcp",
@@ -122,9 +125,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'ae-mcp contributors'; root has no package.json license field",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/JUNKDOGE-JOE_after-effects-mcp",
-      "extraction": "junkdoge"
+      "extraction": "junkdoge",
+      "notes": "このパスでは行を抽出していない (adapters/junkdoge.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "VolksRat71/after-effects-mcp-vision",
@@ -134,9 +138,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'Dakkshin'; cep/package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/VolksRat71_after-effects-mcp-vision",
-      "extraction": "volksrat"
+      "extraction": "volksrat",
+      "notes": "このパスでは行を抽出していない (adapters/volksrat.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "Engine-Room-Games/after-effects-mcp",
@@ -146,9 +151,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'Engine Room'; workspace package.json declares no license field",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/Engine-Room-Games_after-effects-mcp",
-      "extraction": "engineroom"
+      "extraction": "engineroom",
+      "notes": "このパスでは行を抽出していない (adapters/engineroom.ts 未実装または対象外); source-verified ではない"
     },
     {
       "id": "23d1/after-effects-mcp",
@@ -158,9 +164,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE 'MIT License Copyright (c) 2026 23d1'; package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "source-verified",
+      "status": "claimed/unverifiable",
       "sourceRoot": ".reference/23d1_after-effects-mcp",
-      "extraction": "23d1"
+      "extraction": "23d1",
+      "notes": "このパスでは行を抽出していない (adapters/23d1.ts 未実装または対象外); source-verified ではない"
     }
   ],
   "notExamined": [
