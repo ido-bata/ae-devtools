@@ -39,6 +39,7 @@ export type SourceDescriptor = {
 
 export type AccessClass =
   | "read"
+  | "read-write"
   | "write"
   | "execute"
   | "host-callback"
@@ -161,4 +162,47 @@ export type CapabilityRecordInit = Partial<Omit<CapabilityRecord, "coverage">> &
 /** §1.1 enforcement: SDK symbol rows are never repository-persisted. */
 export function persistenceForKind(kind: CapabilityKind): RowPersistence {
   return kind === "sdk-symbol" ? "build-time-supplied" : "repository";
+}
+
+export type DenominatorState =
+  | { state: "supplied"; count: number }
+  | { state: "not-supplied"; reason: string };
+
+/** Input-side evidence vocabulary, preserved verbatim (issue #11 comment 6813348033). */
+export type EvidenceLevel = {
+  inventory: string;
+  verification: string;
+  realHost: string;
+  statement: string;
+};
+
+export type ImportedSourceName = "scripting" | "tools" | "sdk";
+
+export type ImportedSource = {
+  source: ImportedSourceName;
+  records: CapabilityRecord[];
+  denominator: DenominatorState;
+  evidenceLevel: EvidenceLevel;
+  provenance: Record<string, unknown>;
+};
+
+/**
+ * Conservative risk derived from the access class. Absence of proof stays
+ * `null`/`unknown`; execution of host lifecycle actions is never "none".
+ */
+export function riskForAccess(access: AccessClass): Risk {
+  switch (access) {
+    case "read":
+      return { effect: "none", trust: "read-only", undoable: null, retrySafety: "unknown" };
+    case "read-write":
+    case "write":
+      return { effect: "project-write", trust: "named-operation", undoable: null, retrySafety: "unknown" };
+    case "execute":
+    case "host-callback":
+      return { effect: "host-lifecycle", trust: "native-plugin", undoable: null, retrySafety: "unknown" };
+    case "build-test":
+      return { effect: "none", trust: "named-operation", undoable: null, retrySafety: "unknown" };
+    default:
+      return { effect: "unknown", trust: "named-operation", undoable: null, retrySafety: "unknown" };
+  }
 }
