@@ -102,12 +102,12 @@ inventories/tools/
 | `source-verified`（行ごとに file:line つき citations 検証済み） | **13 / 13** |
 | `claimed/unverifiable` | **0**（clone はあるが行を抽出していないツールは今回はなし。対象外ツールは `notExamined` 側に記録） |
 | operation 行（CAP002） | **464** |
-| access 内訳 | read **151** / write **253** / execute **31** / host-callback **0** / build-test **1** / unknown **28** |
+| access 内訳 | read **151** / write **254** / execute **31** / host-callback **0** / build-test **1** / unknown **27** |
 | 正規化 semantic operation ID（CAP003・暫定） | **304**（同一 Adobe API は1件に集計） |
 | gap（ae-a8n / ae-devtools のいずれにも無く competitor のみが持つ操作） | **271** |
 | notExamined（検索で見つかったが本パスでは未調査） | **6** リポジトリ |
 
-`unknown` 28件は「登録時点では read/write が決定できない dispatcher」である（`run_jsx` 系、
+`unknown` 27件は「登録時点では read/write が決定できない dispatcher」である（`run_jsx` 系、
 command 引数で分岐する ops、native program、tool-library リプレイ等）。`write` に丸めていない。
 
 ### ツール別の行数と access 内訳
@@ -117,7 +117,7 @@ command 引数で分岐する ops、native program、tool-library リプレイ�
 | ido-bata/ae-a8n | 26 | 12 | 5 | 9 | 0 | 0 |
 | ido-bata/ae-devtools (runtime-bridge) | 10 | 6 | 2 | 1 | 1 | 0 |
 | BenZed/after-effects | 7 | 3 | 2 | 0 | 0 | 2 |
-| ishu86/after-effects-mcp | 102 | 32 | 66 | 3 | 0 | 1 |
+| ishu86/after-effects-mcp | 102 | 32 | 67 | 3 | 0 | 0 |
 | HeroicSwan/after-effects-mcp | 48 | 18 | 25 | 5 | 0 | 0 |
 | Dakkshin/after-effects-mcp | 13 | 3 | 9 | 0 | 0 | 1 |
 | TheLlamainator/after-effects-mcp | 30 | 10 | 19 | 0 | 0 | 1 |
@@ -128,8 +128,11 @@ command 引数で分岐する ops、native program、tool-library リプレイ�
 | Engine-Room-Games/after-effects-mcp | 89 | 25 | 60 | 1 | 0 | 3 |
 | ido-bata/Ae_LayerNote | 19 | 14 | 4 | 1 | 0 | 0 |
 
-※ `VolksRat71` の read 0 は「read に丸めていない」結果: 同 tool の 15 定義は `command` 引数で
-read/write 両系統に分岐する単一 op に集約されており、登録時点では分類不能のため `unknown`。
+※ `VolksRat71` の read 0 は「read に丸めていない」結果: 同 tool の16行のうち10行（`TOOLS` 配列の
+15定義のうち9定義と `ae_diagnostics`）が登録時点では分類不能のため `unknown`。多くは `command`
+引数で read/write 両系統に分岐する dispatcher（`ae_layers`/`ae_effects`/`ae_project`/`ae_masks`/
+`ae_timing`/`ae_layout`/`ae_text`/`ae_template`）。`ae_query` は全 command が read だが SECTION
+ごとに別の op 関数へ fan-out し単一実装に集約されないため、tool 粒度では分類不能としている。
 ※ `Dakkshin/TheLlamainator/a-y-ibrahim` は同一 bridge 設計の fork 系（dakkshin-family adapter）。
 ※ `Engine-Room-Games` の89行は `OpSchemas` の全 op。同リポジトリ自体が read/write/server の
 no-default 分類表 (`OpMutation`) を持ち、本 inventory はそれを読んで検証のうえ採用した

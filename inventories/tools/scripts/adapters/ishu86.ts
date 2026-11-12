@@ -54,6 +54,23 @@ const ACCESS_OVERRIDES: Record<string, { access: Access; basis: string }> = {
     access: "write",
     basis: "assigns property.expression in emitted ES3 (success message: expression set successfully)",
   },
+  // TEMP-OBJECT write: borrows a queue item (and creates a probe comp when the
+  // queue is empty) to read templates, then removes both before returning
+  // (renderQueueGenerators.ts generateListRenderTemplates: tempItem.remove() +
+  // tc.remove()). Net project content unchanged; write is kept because the
+  // borrowing mutation is real and a failure mid-probe leaves state behind.
+  list_render_templates: {
+    access: "write",
+    basis:
+      "TEMP-OBJECT write with net content unchanged on the success path: creates probe comp `__rq_template_probe__` + a queue item only when the render queue is empty, reads probe.templates / outputModule(1).templates, then removes the temp item and comp again (generateListRenderTemplates: `tempItem.remove(); tc.remove()`)",
+  },
+  // Delegates straight to generateSetExpression after template substitution
+  // (expressionGenerators.ts:607) — the emitted script assigns property.expression.
+  apply_expression_template: {
+    access: "write",
+    basis:
+      "delegates to generateSetExpression with the substituted template text (expressionGenerators.ts:607 generateApplyExpressionTemplate → `expression: expression`), so the emitted ES3 assigns property.expression — a project write",
+  },
 };
 
 function lineOf(src: string, index: number): number {

@@ -2,11 +2,11 @@
   "counts": {
     "total": 464,
     "read": 151,
-    "write": 253,
+    "write": 254,
     "execute": 31,
     "host-callback": 0,
     "build-test": 1,
-    "unknown": 28
+    "unknown": 27
   },
   "operations": [
     {
@@ -1568,7 +1568,7 @@
       "name": "list_render_templates",
       "args": [],
       "access": "write",
-      "accessBasis": "mutates project content: `addComp(`",
+      "accessBasis": "TEMP-OBJECT write with net content unchanged on the success path: creates probe comp `__rq_template_probe__` + a queue item only when the render queue is empty, reads probe.templates / outputModule(1).templates, then removes the temp item and comp again (generateListRenderTemplates: `tempItem.remove(); tc.remove()`)",
       "route": "MCP stdio → FileCommunicator.executeScript (command-file bridge) → ExtendScript in AE",
       "semanticId": "render.list-render-templates",
       "status": "source-verified",
@@ -2338,8 +2338,8 @@
         "template",
         "params"
       ],
-      "access": "unknown",
-      "accessBasis": "no recognised read/write/execute pattern in the located implementation body",
+      "access": "write",
+      "accessBasis": "delegates to generateSetExpression with the substituted template text (expressionGenerators.ts:607 generateApplyExpressionTemplate → `expression: expression`), so the emitted ES3 assigns property.expression — a project write",
       "route": "MCP stdio → FileCommunicator.executeScript (command-file bridge) → ExtendScript in AE",
       "semanticId": "expression.apply-expression-template",
       "status": "source-verified",
