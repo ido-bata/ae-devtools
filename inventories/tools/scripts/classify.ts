@@ -61,7 +61,7 @@ const EXECUTE_UI_PATTERNS: RegExp[] = [
 /** Tier 1 write: strong mutation calls on project content. */
 const WRITE_STRONG_PATTERNS: RegExp[] = [
   "addComp|addSolid|addText|addShape|addNull|addCamera|addLight|addFootage|addLayer|addProperty|addEffect|addMask|addTrackMatte",
-  "setValue|setValueAtKey|setValuesAtTimes|setTemporalEaseAtKey|setInterpolationTypeAtKey|setSpatialTangentAtKey",
+  "setValue|setValueAtTime|setValueAtTimes|setValueAtKey|setValuesAtTimes|setTemporalEaseAtKey|setInterpolationTypeAtKey|setSpatialTangentAtKey",
   "remove|duplicate|importFile|newProject",
   "saveAs|save\\b|setSettings|setSetting|createFolder|items\\.add\\w*",
 ].map((p) => new RegExp(`\\b(?:${p})\\s*\\(`));

@@ -63,6 +63,7 @@
       "label": "Create a composition",
       "adobeOperation": "Project.items.addComp",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ido-bata/ae-devtools",
         "ishu86/after-effects-mcp"
@@ -119,6 +120,7 @@
       "label": "Read composition settings",
       "adobeOperation": "CompItem name/width/height/duration/frameRate",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -139,6 +141,15 @@
       "adobeOperation": "CompItem.openInViewer",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.render-composition",
+      "provisional": true,
+      "label": "Render composition",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -205,11 +216,30 @@
       ]
     },
     {
+      "id": "edit.build-smart-edit",
+      "provisional": true,
+      "label": "Build smart edit",
+      "adobeOperation": "Footage edit assembly (cut/keep segments)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "edit.build-youtube-edit",
+      "provisional": true,
+      "label": "Build youtube edit",
+      "adobeOperation": "Footage edit assembly (cut/keep segments)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "effect.apply",
       "provisional": true,
       "label": "Apply an effect to a layer",
       "adobeOperation": "Effect Parade addProperty",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -256,6 +286,7 @@
       "label": "Remove",
       "adobeOperation": "Effect/Property DOM (effects and their parameters)",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -274,6 +305,7 @@
       "label": "Set an effect parameter",
       "adobeOperation": "Property.setValue",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n"
       ]
     },
@@ -328,6 +360,7 @@
       "label": "Set",
       "adobeOperation": "Property expression DOM (expression text/enabled/error)",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -346,6 +379,7 @@
       "label": "Import",
       "adobeOperation": "Footage import and footage item DOM",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -400,6 +434,7 @@
       "label": "Set",
       "adobeOperation": "Property keyframe DOM (keys and interpolation)",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -478,12 +513,31 @@
       ]
     },
     {
+      "id": "layer.create-layer",
+      "provisional": true,
+      "label": "Create layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.delete",
       "provisional": true,
       "label": "Delete",
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -493,6 +547,15 @@
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.get-layer",
+      "provisional": true,
+      "label": "Get layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -537,6 +600,7 @@
       "label": "List effects on a layer",
       "adobeOperation": "ADBE Effect Parade property iteration",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -584,6 +648,15 @@
       "adobeOperation": "Layer.enabled",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.set-properties",
+      "provisional": true,
+      "label": "Set properties",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -749,6 +822,69 @@
       ]
     },
     {
+      "id": "motion.audit-motion-coverage",
+      "provisional": true,
+      "label": "Audit motion coverage",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.build-motion-video",
+      "provisional": true,
+      "label": "Build motion video",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.create-motion-blueprint",
+      "provisional": true,
+      "label": "Create motion blueprint",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.create-motion-template",
+      "provisional": true,
+      "label": "Create motion template",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.list-motion-templates",
+      "provisional": true,
+      "label": "List motion templates",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.repair-motion-blueprint",
+      "provisional": true,
+      "label": "Repair motion blueprint",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.validate-motion-blueprint",
+      "provisional": true,
+      "label": "Validate motion blueprint",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "path.create",
       "provisional": true,
       "label": "Create",
@@ -764,6 +900,24 @@
       "adobeOperation": "Mask/shape path DOM (vertices and tangents)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "preference.get-workflow-preferences",
+      "provisional": true,
+      "label": "Get workflow preferences",
+      "adobeOperation": "Preferences surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "preference.set-workflow-preferences",
+      "provisional": true,
+      "label": "Set workflow preferences",
+      "adobeOperation": "Preferences surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -800,6 +954,7 @@
       "label": "Read project metadata",
       "adobeOperation": "Project.file / Project.numItems",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -810,6 +965,7 @@
       "label": "List compositions in the project",
       "adobeOperation": "Project item iteration (CompItem properties)",
       "tools": [
+        "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -943,12 +1099,48 @@
       ]
     },
     {
+      "id": "search.search",
+      "provisional": true,
+      "label": "Search",
+      "adobeOperation": "Project search (item name matching)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "shape.add-operator",
       "provisional": true,
       "label": "Add operator",
       "adobeOperation": "Shape layer group/path DOM",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "subtitle.create-subtitle",
+      "provisional": true,
+      "label": "Create subtitle",
+      "adobeOperation": "Subtitle text creation",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.health",
+      "provisional": true,
+      "label": "Health",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.run-jsx",
+      "provisional": true,
+      "label": "Run jsx",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -961,12 +1153,30 @@
       ]
     },
     {
+      "id": "tool.analyze-cuts",
+      "provisional": true,
+      "label": "Analyze cuts",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.apply-easy-ease",
       "provisional": true,
       "label": "Apply easy ease",
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.audit-editorial-plan",
+      "provisional": true,
+      "label": "Audit editorial plan",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -997,6 +1207,15 @@
       ]
     },
     {
+      "id": "tool.create-editorial-plan",
+      "provisional": true,
+      "label": "Create editorial plan",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.create-logo-reveal",
       "provisional": true,
       "label": "Create logo reveal",
@@ -1012,6 +1231,15 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-review",
+      "provisional": true,
+      "label": "Create review",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -1033,12 +1261,30 @@
       ]
     },
     {
+      "id": "tool.decide-review",
+      "provisional": true,
+      "label": "Decide review",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.get-keyframes",
       "provisional": true,
       "label": "Get keyframes",
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.import-3d-from-blender",
+      "provisional": true,
+      "label": "Import 3d from blender",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -1060,6 +1306,33 @@
       ]
     },
     {
+      "id": "tool.list-blender-jobs",
+      "provisional": true,
+      "label": "List blender jobs",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-instances",
+      "provisional": true,
+      "label": "List instances",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-reviews",
+      "provisional": true,
+      "label": "List reviews",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.offset-keyframes",
       "provisional": true,
       "label": "Offset keyframes",
@@ -1069,12 +1342,30 @@
       ]
     },
     {
+      "id": "tool.prepare-blender-3d-job",
+      "provisional": true,
+      "label": "Prepare blender 3d job",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.queue-in-ame",
       "provisional": true,
       "label": "Queue in ame",
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.reconnect",
+      "provisional": true,
+      "label": "Reconnect",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     },
     {
@@ -1105,12 +1396,57 @@
       ]
     },
     {
+      "id": "tool.transcribe-video",
+      "provisional": true,
+      "label": "Transcribe video",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.transcript-to-cuts",
+      "provisional": true,
+      "label": "Transcript to cuts",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.verify-blender-job",
+      "provisional": true,
+      "label": "Verify blender job",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
       "id": "ui.alert",
       "provisional": true,
       "label": "Raise a modal alert dialog",
       "adobeOperation": "ExtendScript alert()",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "view.capture-frame",
+      "provisional": true,
+      "label": "Capture frame",
+      "adobeOperation": "Viewer / frame capture surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "view.capture-frames",
+      "provisional": true,
+      "label": "Capture frames",
+      "adobeOperation": "Viewer / frame capture surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
       ]
     }
   ],
@@ -1182,6 +1518,7 @@
       "inAeA8n": true,
       "inAeDevtools": true,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -1246,6 +1583,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -1267,6 +1605,17 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "comp.render-composition",
+      "provisional": true,
+      "label": "Render composition",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "comp.set-active",
@@ -1340,12 +1689,35 @@
       "gap": false
     },
     {
+      "semanticId": "edit.build-smart-edit",
+      "provisional": true,
+      "label": "Build smart edit",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "edit.build-youtube-edit",
+      "provisional": true,
+      "label": "Build youtube edit",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "effect.apply",
       "provisional": true,
       "label": "Apply an effect to a layer",
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -1397,6 +1769,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -1418,7 +1791,9 @@
       "label": "Set an effect parameter",
       "inAeA8n": true,
       "inAeDevtools": false,
-      "competitors": [],
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
       "gap": false
     },
     {
@@ -1483,6 +1858,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -1505,6 +1881,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -1571,6 +1948,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -1664,13 +2042,36 @@
       "gap": false
     },
     {
+      "semanticId": "layer.create-layer",
+      "provisional": true,
+      "label": "Create layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.delete",
       "provisional": true,
       "label": "Delete",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -1682,6 +2083,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-layer",
+      "provisional": true,
+      "label": "Get layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -1732,6 +2144,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -1786,6 +2199,17 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "layer.set-properties",
+      "provisional": true,
+      "label": "Set properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "light.add-light-layer",
@@ -1982,6 +2406,83 @@
       "gap": false
     },
     {
+      "semanticId": "motion.audit-motion-coverage",
+      "provisional": true,
+      "label": "Audit motion coverage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.build-motion-video",
+      "provisional": true,
+      "label": "Build motion video",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.create-motion-blueprint",
+      "provisional": true,
+      "label": "Create motion blueprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.create-motion-template",
+      "provisional": true,
+      "label": "Create motion template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.list-motion-templates",
+      "provisional": true,
+      "label": "List motion templates",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.repair-motion-blueprint",
+      "provisional": true,
+      "label": "Repair motion blueprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.validate-motion-blueprint",
+      "provisional": true,
+      "label": "Validate motion blueprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "path.create",
       "provisional": true,
       "label": "Create",
@@ -2000,6 +2501,28 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "preference.get-workflow-preferences",
+      "provisional": true,
+      "label": "Get workflow preferences",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "preference.set-workflow-preferences",
+      "provisional": true,
+      "label": "Set workflow preferences",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2041,6 +2564,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -2052,6 +2576,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -2207,6 +2732,17 @@
       "gap": true
     },
     {
+      "semanticId": "search.search",
+      "provisional": true,
+      "label": "Search",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "shape.add-operator",
       "provisional": true,
       "label": "Add operator",
@@ -2214,6 +2750,39 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "subtitle.create-subtitle",
+      "provisional": true,
+      "label": "Create subtitle",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.health",
+      "provisional": true,
+      "label": "Health",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.run-jsx",
+      "provisional": true,
+      "label": "Run jsx",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2229,6 +2798,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.analyze-cuts",
+      "provisional": true,
+      "label": "Analyze cuts",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.apply-easy-ease",
       "provisional": true,
       "label": "Apply easy ease",
@@ -2236,6 +2816,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.audit-editorial-plan",
+      "provisional": true,
+      "label": "Audit editorial plan",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2273,6 +2864,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.create-editorial-plan",
+      "provisional": true,
+      "label": "Create editorial plan",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.create-logo-reveal",
       "provisional": true,
       "label": "Create logo reveal",
@@ -2291,6 +2893,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-review",
+      "provisional": true,
+      "label": "Create review",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2317,6 +2930,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.decide-review",
+      "provisional": true,
+      "label": "Decide review",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.get-keyframes",
       "provisional": true,
       "label": "Get keyframes",
@@ -2324,6 +2948,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.import-3d-from-blender",
+      "provisional": true,
+      "label": "Import 3d from blender",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2350,6 +2985,39 @@
       "gap": true
     },
     {
+      "semanticId": "tool.list-blender-jobs",
+      "provisional": true,
+      "label": "List blender jobs",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-instances",
+      "provisional": true,
+      "label": "List instances",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-reviews",
+      "provisional": true,
+      "label": "List reviews",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.offset-keyframes",
       "provisional": true,
       "label": "Offset keyframes",
@@ -2361,6 +3029,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.prepare-blender-3d-job",
+      "provisional": true,
+      "label": "Prepare blender 3d job",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.queue-in-ame",
       "provisional": true,
       "label": "Queue in ame",
@@ -2368,6 +3047,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.reconnect",
+      "provisional": true,
+      "label": "Reconnect",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2405,6 +3095,39 @@
       "gap": true
     },
     {
+      "semanticId": "tool.transcribe-video",
+      "provisional": true,
+      "label": "Transcribe video",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.transcript-to-cuts",
+      "provisional": true,
+      "label": "Transcript to cuts",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.verify-blender-job",
+      "provisional": true,
+      "label": "Verify blender job",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "ui.alert",
       "provisional": true,
       "label": "Raise a modal alert dialog",
@@ -2412,6 +3135,28 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "view.capture-frame",
+      "provisional": true,
+      "label": "Capture frame",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "view.capture-frames",
+      "provisional": true,
+      "label": "Capture frames",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
     }
   ]
 }

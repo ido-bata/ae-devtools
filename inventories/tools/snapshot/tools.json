@@ -73,10 +73,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License'; package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/HeroicSwan_after-effects-mcp",
-      "extraction": "heroicswan",
-      "notes": "このパスでは行を抽出していない (adapters/heroicswan.ts 未実装または対象外); source-verified ではない"
+      "extraction": "heroicswan"
     },
     {
       "id": "Dakkshin/after-effects-mcp",
