@@ -22,6 +22,29 @@ Denominator rules:
 3. Unsupported and host-callback-only entries **remain in the denominator**. Exclusions require source, reason, reviewer and revision.
 4. A new Adobe release/tool snapshot creates a new denominator and diff; no silent denominator shrink to reach 100%.
 
+### 1.1 Persistence policy is not uniform across sources
+
+The catalog distinguishes **what this repository may publish** from **what it may measure**. These differ by source.
+
+| Source | Persisted in this repository | Supplied at build time |
+| --- | --- | --- |
+| Public Scripting API (docs) | Per-symbol rows | — |
+| Existing-tool operations (public source, licence permitting) | Per-operation rows with source link | — |
+| Semantic operations | Per-operation rows | — |
+| **AE SDK headers/symbols** | **Aggregate counts, classification totals, provenance and hashes only** | **Per-symbol rows**, generated locally by a consumer who holds the SDK |
+
+Rationale: the AE SDK 26.5 headers carry an `ADOBE CONFIDENTIAL` notice stating that dissemination or reproduction of the material is forbidden without prior written permission from Adobe, and the distribution contains no licence text granting broader use (measured 2026-11-12: 24 of 40 top-level headers carry the identical notice; see [#10](https://github.com/ido-bata/ae-devtools/issues/10)). Publishing a per-symbol dump of those headers would be a reproduction of that material.
+
+The consequence is a contract obligation, not a documentation preference:
+
+1. A reader must not be able to reconstruct an SDK symbol list from this repository alone. That is the test for whether an SDK-derived artifact may be committed.
+2. The SDK itself is never vendored. The extractor reads a user-supplied path.
+3. `unknown` covers the case where no SDK-derived rows were supplied to the current environment. It is not 0% and not 100%.
+4. Coverage and drift reports must state whether SDK-derived input was supplied. A report produced without it may not claim "no drift".
+5. This asymmetry is a default pending an owner/legal decision; if a broader grant is confirmed, the SDK column can be widened without changing the record schema.
+
+Denominators for SDK entrypoints therefore exist per environment, not per repository revision. Where a denominator has not been supplied, it is reported as `unknown` with the reason, never as a completed count.
+
 ## 2. Proposed machine-readable record
 
 ```ts

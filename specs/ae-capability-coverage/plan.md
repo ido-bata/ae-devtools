@@ -84,6 +84,21 @@ No release dates are committed by this plan. P2 and P3 can proceed in parallel *
 
 ## 6. Version/host verification matrix
 
+### 6.1 Supported-release set is decided before it is measured
+
+Nothing in this plan names a supported AE build or SDK release. That set is **not** implied by an installed copy, by a marketing year, or by which SDK happened to be downloaded. It is fixed deliberately, after the source snapshots exist:
+
+1. [#9](https://github.com/ido-bata/ae-devtools/issues/9) and [#10](https://github.com/ido-bata/ae-devtools/issues/10) produce the dated, source-linked symbol snapshots.
+2. The candidate builds and SDK releases are listed with what evidence each one already has.
+3. An owner decision records the **supported-release set** — which AE builds and SDK releases this repository claims, and which are explicitly out of scope — with a named reason per exclusion (FR-13, FR-14).
+4. Only then does a coverage denominator exist for a specific release, and only then may any percentage be published.
+
+Until step 3 is recorded, the state of every coverage number is **undetermined, not zero and not complete**. Reported coverage must be `unknown` rather than 0% or 100%. A later AE or SDK release creates a new denominator and a tracked delta; it never redefines an existing denominator.
+
+This ordering is deliberate: acceptance criterion 1 in [spec.md](spec.md) ("each explicitly supported release") is unmeasurable while the supported set is undefined, so the set is fixed first and the measurement second.
+
+### 6.2 Matrix axes
+
 The test matrix is **generated from inventory**, not guessed in advance. Initial candidate axes to investigate (not yet supported promises):
 
 - Windows 11 and macOS, separately; CPU architecture and GPU backend as applicable.

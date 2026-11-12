@@ -39,10 +39,10 @@ Dependencies: none. Status: **open / not verified**.
 
 Dependencies: #8, #9, #10. Status: **open / not verified**.
 
-- [ ] **CAP013** Define stable IDs, provenance, execution and evidence schema. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [ ] **CAP013** Define stable IDs, provenance, execution and evidence schema, distinguishing rows persisted in the repository from rows supplied at build time (SDK symbols). ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
 - [ ] **CAP014** Import and dedupe scripting/SDK/tool inventories. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
-- [ ] **CAP015** Generate coverage denominators and drift/false-green gates. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
-- [ ] **CAP016** Add versioned capability handshake and refusal tests. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [ ] **CAP015** Generate coverage denominators and drift/false-green gates; a report produced without SDK-derived input reports `unknown`, not "no drift". ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [ ] **CAP016** Add versioned capability handshake and refusal tests; absence of a row in the repository must not be reported as absence of the capability. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
 
 ### [#12](https://github.com/ido-bata/ae-devtools/issues/12) — Cross-repo ADR
 

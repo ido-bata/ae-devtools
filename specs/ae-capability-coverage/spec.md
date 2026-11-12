@@ -2,7 +2,8 @@
 
 - Status: **Proposed / planning**, not an implementation or release claim.
 - Parent: [ae-devtools #6](https://github.com/ido-bata/ae-devtools/issues/6)
-- Authority: [vision](../../docs/vision.md), [ADR-0001 (Proposed)](../../docs/architecture/ADR-0001-runtime-bridge.md), [Constitution](../../constitution/CONSTITUTION.md).
+- Authority: [vision](../../docs/vision.md), [ADR-0001 (Proposed)](../../docs/architecture/ADR-0001-runtime-bridge.md), [Constitution](../../constitution/CONSTITUTION.md), [Operating Model](../../organization/profiles/release-driven-solo.md), this repository's `AGENTS.md`.
+  - The Constitution and Operating Model paths resolve on `main` and on the `release-0-1-0` branch after [#22](https://github.com/ido-bata/ae-devtools/issues/22) / PR #23. Before that integration this document is only reviewable on a branch that contains them; do not treat this spec as authority-bearing where those documents are absent.
 - Related execution contracts: [ae-a8n #97](https://github.com/ido-bata/ae-a8n/issues/97), [#98](https://github.com/ido-bata/ae-a8n/issues/98), [#99](https://github.com/ido-bata/ae-a8n/issues/99).
 - Detail: [research](research.md), [plan](plan.md), [tasks](tasks.md), [capability contract](contracts/capability-catalog.md).
 
