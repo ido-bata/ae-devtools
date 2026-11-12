@@ -812,6 +812,13 @@ function buildAggregate(
       classes: [...CLASSES],
       kinds: [...KINDS],
     },
+    evidenceLevel: {
+      inventory: "source-reviewed",
+      verification: "not-run",
+      realHost: "not-run",
+      statement:
+        "Symbols were extracted from AE SDK 26.5 macOS headers by a deterministic parser. No After Effects process was started; no plug-in was built or loaded; no symbol was executed. Windows headers were not obtained; Windows ABI/layout claims are UNVERIFIED.",
+    },
     totals: {
       headerFilesParsed: perHeader.length,
       headerFilesPresent: perHeader.length,
