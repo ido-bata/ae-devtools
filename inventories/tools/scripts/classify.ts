@@ -48,7 +48,7 @@ const HOST_ASSIGN =
 
 /** `var name = <plain data>` — assignments through these are local, not host writes. */
 const PLAIN_LOCAL =
-  /(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\{|\[|-?\d|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|null\b|true\b|false\b|String\s*\(|Number\s*\(|new\s+[A-Za-z_$][\w$.]*\s*\()/;
+  /(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;{}]+)?=\s*(?:\{|\[|-?\d|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|null\b|true\b|false\b|String\s*\(|Number\s*\(|new\s+[A-Za-z_$][\w$.]*\s*\()/;
 
 /** Tier 1 execute: dialogs, quit, menu commands, UI selection — win over writes. */
 const EXECUTE_UI_PATTERNS: RegExp[] = [

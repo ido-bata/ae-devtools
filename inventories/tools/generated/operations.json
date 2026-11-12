@@ -1,8 +1,8 @@
 {
   "counts": {
     "total": 464,
-    "read": 151,
-    "write": 254,
+    "read": 152,
+    "write": 253,
     "execute": 31,
     "host-callback": 0,
     "build-test": 1,
@@ -1215,8 +1215,8 @@
         "type",
         "properties"
       ],
-      "access": "write",
-      "accessBasis": "assigns through a host accessor chain: `resultProps.layerName =`",
+      "access": "read",
+      "accessBasis": "reads host state: `.numProperties`",
       "route": "MCP stdio → FileCommunicator.executeScript (command-file bridge) → ExtendScript in AE",
       "semanticId": "layer.get-3d-info",
       "status": "source-verified",
