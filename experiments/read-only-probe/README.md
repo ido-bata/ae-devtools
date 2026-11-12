@@ -15,10 +15,10 @@ evidence, the four CAPs of [Issue #13](https://github.com/ido-bata/ae-devtools/i
 
 | CAP | Requirement | Where |
 | --- | --- | --- |
-| **CAP021** | Prove read-only ping/version and target identification (AE version / session / user / channel) on a real host | [`evidence/`](evidence/) + [`EVIDENCE.md`](EVIDENCE.md) |
+| **CAP021** | Prove read-only ping/version and target identification (AE version / session / user / channel) on a real host | [`EVIDENCE.md`](EVIDENCE.md) |
 | **CAP022** | Runtime snapshot schema with reference-invalidation rules and invariants | [`snapshot-schema.md`](snapshot-schema.md) |
 | **CAP023** | Distinguish wrong-target / bridge-missing / modal / timeout / reconnect as UNKNOWN vs REFUSED vs BLOCKED, no auto-retry | [`outcome-model.md`](outcome-model.md) + [`tests/`](tests/) |
-| **CAP024** | Collect AE version / CPU / latency / trace on macOS; feed results back to ADR-0005 V tasks | [`evidence/`](evidence/) + [`EVIDENCE.md`](EVIDENCE.md) |
+| **CAP024** | Collect AE version / CPU / latency / trace on macOS; feed results back to ADR-0005 V tasks | [`EVIDENCE.md`](EVIDENCE.md) |
 
 ## Transport-agnostic by construction
 
@@ -51,11 +51,13 @@ This experiment touched a real machine that has the user's real work on it.
 The following rules were followed and must be followed by any re-run:
 
 1. **Never attach to, modify, launch Apple Events at, or quit an AE instance
-   the user already has open.** In the 2026-11-12 run, AE 2026 (26.5.3) was
-   running with the user's project and was **not touched in any way** — no
-   script delivery, no Apple Events, no focus change, no attach. The probe
-   ran only against an AE **this probe itself launched** (AE 2027 27.0.0,
-   owned session, no project).
+   the user already has open.** When this probe is run, AE 2026 (26.5.3) may be
+   open with the user's work; it must **not be touched in any way** — no
+   script delivery, no Apple Events, no focus change, no attach. Any probe
+   run uses only an AE **the probe's operator launched themselves** (owned
+   session, no project). Note: as of 2026-11-12 **no probe run has been
+   performed and recorded**; the evidence ledger is [`EVIDENCE.md`](EVIDENCE.md)
+   and it records this explicitly.
 2. **Read-only.** The dispatcher answers exactly one method set
    (`probe.echo`, `probe.identify`, `probe.sysinfo`, `probe.snapshot`) — all
    pure `app`/`Folder`/`File` reads that mutate nothing, save nothing,
@@ -75,7 +77,6 @@ The following rules were followed and must be followed by any re-run:
 ```
 experiments/read-only-probe/
 ├── README.md                  # this file
-├── EVIDENCE.md                # CAP021–024 evidence ledger, per-OS rows
 ├── outcome-model.md           # CAP023: UNKNOWN/REFUSED/BLOCKED + wrong-target + no-resend
 ├── snapshot-schema.md         # CAP022: runtime snapshot schema, invalidation, invariants
 ├── probe.mjs                  # Node client: prepare/identify/ping/snapshot/diagnose
@@ -84,10 +85,8 @@ experiments/read-only-probe/
 ├── tests/
 │   ├── run.mjs                # test runner (node:test, zero deps)
 │   └── *.test.mjs             # fake-responder tests incl. no-resend regression
-└── evidence/
-    ├── capture.sh             # macOS evidence capture helper (owned session only)
-    ├── 2026-11-12-macos/      # real-run artifacts from the owned AE 2027 session
-    └── windows-UNVERIFIED.md  # why Windows evidence is unobtainable now
+├── EVIDENCE.md                # evidence ledger: what was measured, what is UNVERIFIED
+└── (no capture artifacts yet: no real-host run has been performed or recorded)
 ```
 
 ## Quick start (macOS, owned session only)
@@ -139,4 +138,4 @@ reached. `fake/mock only` is never presented as working.
   the transport decision. `EVIDENCE.md` §"Feeding ADR-0005 V tasks" reports
   which V items this probe advanced and with what evidence level.
 - **Windows**: blocked (#21; no dedicated Windows host). See
-  `evidence/windows-UNVERIFIED.md`.
+  the EVIDENCE.md §Windows row.
