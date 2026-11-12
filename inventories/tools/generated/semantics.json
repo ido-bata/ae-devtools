@@ -1,0 +1,604 @@
+{
+  "provisional": true,
+  "note": "Provisional normalization owned by ae-devtools#11. One Adobe operation reached through several wrappers is counted once (grouped by semanticId); gap = a competitor reaches an operation that neither ae-a8n nor ae-devtools implements.",
+  "semanticOps": [
+    {
+      "id": "app.quit",
+      "provisional": true,
+      "label": "Quit After Effects",
+      "adobeOperation": "app.quit() with unsaved-changes guard",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "app.set-environment",
+      "provisional": true,
+      "label": "Set process environment variables",
+      "adobeOperation": "$.setenv (ExtendScript process-scoped env)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "app.version-info",
+      "provisional": true,
+      "label": "Read app version/build info",
+      "adobeOperation": "ExtendScript app.version / app.buildNumber",
+      "tools": [
+        "ido-bata/ae-a8n",
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "comp.create",
+      "provisional": true,
+      "label": "Create a composition",
+      "adobeOperation": "Project.items.addComp",
+      "tools": [
+        "ido-bata/ae-a8n",
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "comp.get-layer",
+      "provisional": true,
+      "label": "Read one layer's info",
+      "adobeOperation": "Layer id/name/index/enabled/selected projection",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.info",
+      "provisional": true,
+      "label": "Read composition settings",
+      "adobeOperation": "CompItem name/width/height/duration/frameRate",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.list-layers",
+      "provisional": true,
+      "label": "List a comp's layers",
+      "adobeOperation": "CompItem.numLayers / CompItem.layer(i) projection",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.open-in-viewer",
+      "provisional": true,
+      "label": "Open a comp in the viewer",
+      "adobeOperation": "CompItem.openInViewer",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "devtools.bridge.eval",
+      "provisional": true,
+      "label": "Submit arbitrary ExtendScript over the loopback bridge",
+      "adobeOperation": "none yet — v1 stub does not dispatch to AE",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "devtools.bridge.healthz",
+      "provisional": true,
+      "label": "Loopback bridge listener health probe",
+      "adobeOperation": "none — static HTTP response",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "devtools.probe.error-propagation",
+      "provisional": true,
+      "label": "Force an evalScript error-path failure (probe)",
+      "adobeOperation": "none — $.error probe, no project operation",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "effect.apply",
+      "provisional": true,
+      "label": "Apply an effect to a layer",
+      "adobeOperation": "Effect Parade addProperty",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "effect.get-parameter",
+      "provisional": true,
+      "label": "Read one effect parameter",
+      "adobeOperation": "Property value read",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "effect.list-parameters",
+      "provisional": true,
+      "label": "List an effect's parameters",
+      "adobeOperation": "Effect property iteration (describeProperty)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "effect.set-parameter",
+      "provisional": true,
+      "label": "Set an effect parameter",
+      "adobeOperation": "Property.setValue",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.add-solid",
+      "provisional": true,
+      "label": "Add a solid layer",
+      "adobeOperation": "CompItem.layers.addSolid",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "layer.add-text",
+      "provisional": true,
+      "label": "Add a text layer",
+      "adobeOperation": "CompItem.layers.addText + TextDocument property setValue",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.get-shape-paths",
+      "provisional": true,
+      "label": "Read shape layer paths",
+      "adobeOperation": "ADBE Vector Shape vertices/inTangents/outTangents",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.get-transform",
+      "provisional": true,
+      "label": "Read layer transform values",
+      "adobeOperation": "ADBE Transform Group property values",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.list-effects",
+      "provisional": true,
+      "label": "List effects on a layer",
+      "adobeOperation": "ADBE Effect Parade property iteration",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.select",
+      "provisional": true,
+      "label": "Change UI layer selection",
+      "adobeOperation": "Layer.selected",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.set-enabled",
+      "provisional": true,
+      "label": "Enable/disable a layer",
+      "adobeOperation": "Layer.enabled",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "menu.execute-command",
+      "provisional": true,
+      "label": "Execute a menu command",
+      "adobeOperation": "app.executeCommand",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "menu.find-command",
+      "provisional": true,
+      "label": "Find a menu command id by name",
+      "adobeOperation": "app.findMenuCommandId",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "project.active-item",
+      "provisional": true,
+      "label": "Read the active project item projection",
+      "adobeOperation": "Project.activeItem projection",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "project.close",
+      "provisional": true,
+      "label": "Close the open project",
+      "adobeOperation": "Project.close(CloseOptions)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "project.info",
+      "provisional": true,
+      "label": "Read project metadata",
+      "adobeOperation": "Project.file / Project.numItems",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "project.list-comps",
+      "provisional": true,
+      "label": "List compositions in the project",
+      "adobeOperation": "Project item iteration (CompItem properties)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "project.open",
+      "provisional": true,
+      "label": "Open a project file",
+      "adobeOperation": "app.open(File)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "project.snapshot",
+      "provisional": true,
+      "label": "Structured project state snapshot",
+      "adobeOperation": "Project/comp/selection state read",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "project.walk-tree",
+      "provisional": true,
+      "label": "Walk the project item tree (counts)",
+      "adobeOperation": "Project.item(i) iteration (read-only)",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "render.frame",
+      "provisional": true,
+      "label": "Render one frame to a PNG file",
+      "adobeOperation": "CompItem.saveFrameToPng",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "ui.alert",
+      "provisional": true,
+      "label": "Raise a modal alert dialog",
+      "adobeOperation": "ExtendScript alert()",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    }
+  ],
+  "gapMatrix": [
+    {
+      "semanticId": "app.quit",
+      "provisional": true,
+      "label": "Quit After Effects",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "app.set-environment",
+      "provisional": true,
+      "label": "Set process environment variables",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "app.version-info",
+      "provisional": true,
+      "label": "Read app version/build info",
+      "inAeA8n": true,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.create",
+      "provisional": true,
+      "label": "Create a composition",
+      "inAeA8n": true,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.get-layer",
+      "provisional": true,
+      "label": "Read one layer's info",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.info",
+      "provisional": true,
+      "label": "Read composition settings",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.list-layers",
+      "provisional": true,
+      "label": "List a comp's layers",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.open-in-viewer",
+      "provisional": true,
+      "label": "Open a comp in the viewer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "devtools.bridge.eval",
+      "provisional": true,
+      "label": "Submit arbitrary ExtendScript over the loopback bridge",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "devtools.bridge.healthz",
+      "provisional": true,
+      "label": "Loopback bridge listener health probe",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "devtools.probe.error-propagation",
+      "provisional": true,
+      "label": "Force an evalScript error-path failure (probe)",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.apply",
+      "provisional": true,
+      "label": "Apply an effect to a layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.get-parameter",
+      "provisional": true,
+      "label": "Read one effect parameter",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.list-parameters",
+      "provisional": true,
+      "label": "List an effect's parameters",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.set-parameter",
+      "provisional": true,
+      "label": "Set an effect parameter",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.add-solid",
+      "provisional": true,
+      "label": "Add a solid layer",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.add-text",
+      "provisional": true,
+      "label": "Add a text layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.get-shape-paths",
+      "provisional": true,
+      "label": "Read shape layer paths",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.get-transform",
+      "provisional": true,
+      "label": "Read layer transform values",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.list-effects",
+      "provisional": true,
+      "label": "List effects on a layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.select",
+      "provisional": true,
+      "label": "Change UI layer selection",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.set-enabled",
+      "provisional": true,
+      "label": "Enable/disable a layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "menu.execute-command",
+      "provisional": true,
+      "label": "Execute a menu command",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "menu.find-command",
+      "provisional": true,
+      "label": "Find a menu command id by name",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.active-item",
+      "provisional": true,
+      "label": "Read the active project item projection",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.close",
+      "provisional": true,
+      "label": "Close the open project",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.info",
+      "provisional": true,
+      "label": "Read project metadata",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.list-comps",
+      "provisional": true,
+      "label": "List compositions in the project",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.open",
+      "provisional": true,
+      "label": "Open a project file",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.snapshot",
+      "provisional": true,
+      "label": "Structured project state snapshot",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.walk-tree",
+      "provisional": true,
+      "label": "Walk the project item tree (counts)",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "render.frame",
+      "provisional": true,
+      "label": "Render one frame to a PNG file",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "ui.alert",
+      "provisional": true,
+      "label": "Raise a modal alert dialog",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    }
+  ]
+}

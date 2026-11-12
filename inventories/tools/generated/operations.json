@@ -1,0 +1,622 @@
+{
+  "counts": {
+    "total": 36,
+    "read": 18,
+    "write": 7,
+    "execute": 10,
+    "host-callback": 0,
+    "build-test": 1,
+    "unknown": 0
+  },
+  "operations": [
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "app.info",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.version`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "app.version-info",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 376,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 376,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "ui.alert",
+      "args": [
+        "message"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `alert(`; no project-content mutation in the located body",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "ui.alert",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 422,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 422,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "app.quit",
+      "args": [],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `app.quit(`; no project-content mutation in the located body",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "app.quit",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 433,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 433,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "project.open",
+      "args": [
+        "path"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `app.open(`; no project-content mutation in the located body",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "project.open",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 443,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 443,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "project.close",
+      "args": [
+        "save"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `.close(`; no project-content mutation in the located body",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "project.close",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 459,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 459,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "project.info",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `.numItems`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "project.info",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 470,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 470,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "project.comps",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `.numItems`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "project.list-comps",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 479,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 479,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.info",
+      "args": [
+        "name"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `findComp(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "comp.info",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 498,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 498,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.layers",
+      "args": [
+        "name"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `.numLayers`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "comp.list-layers",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 502,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 502,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.layer",
+      "args": [
+        "comp",
+        "layer"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `findComp(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "comp.get-layer",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 511,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 511,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "layer.effects",
+      "args": [
+        "comp",
+        "layer"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `.numProperties`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "layer.list-effects",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 517,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 517,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "layer.applyEffect",
+      "args": [
+        "comp",
+        "layer",
+        "effect"
+      ],
+      "access": "write",
+      "accessBasis": "delegates to applyEffect(layer, identifier) which adds the effect property to the layer's effect parade (host/a8n-host.js)",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "effect.apply",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 528,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 528,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "effect.parameters",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `.numProperties`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "effect.list-parameters",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 540,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 540,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "effect.getParameter",
+      "args": [
+        "parameter"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `describeProperty(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "effect.get-parameter",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 549,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 549,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "effect.setParameter",
+      "args": [
+        "parameter",
+        "value"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `setValue(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "effect.set-parameter",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 555,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 555,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.renderFrame",
+      "args": [
+        "comp",
+        "frame",
+        "outputDir",
+        "prefix"
+      ],
+      "access": "execute",
+      "accessBasis": "renders one frame to a PNG file via comp.saveFrameToPng (output file only); comp.resolutionFactor is set to full resolution and restored in finally — project content unchanged",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "render.frame",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 582,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 582,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "project.createComp",
+      "args": [
+        "name",
+        "width",
+        "height",
+        "pixelAspect",
+        "duration",
+        "frameRate"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `addComp(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "comp.create",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 711,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 711,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.openInViewer",
+      "args": [
+        "name"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `openInViewer(`; no project-content mutation in the located body",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "comp.open-in-viewer",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 732,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 732,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.addText",
+      "args": [
+        "comp",
+        "text",
+        "name",
+        "font",
+        "fontSize",
+        "fillColor",
+        "position"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `addText(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "layer.add-text",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 738,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 738,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "comp.selectLayers",
+      "args": [
+        "comp",
+        "layers"
+      ],
+      "access": "execute",
+      "accessBasis": "changes UI selection state (layer.selected = ...) on comp.layer(j); the project content is unchanged",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "layer.select",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 776,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 776,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "layer.setEnabled",
+      "args": [
+        "comp",
+        "layer",
+        "enabled"
+      ],
+      "access": "write",
+      "accessBasis": "mutates project content: `layer.enabled =`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "layer.set-enabled",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 802,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 802,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "layer.transform",
+      "args": [
+        "comp",
+        "layer"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `findComp(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "layer.get-transform",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 813,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 813,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "layer.shapePaths",
+      "args": [
+        "comp",
+        "layer"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `findComp(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "layer.get-shape-paths",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 847,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 847,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "app.setEnvironment",
+      "args": [
+        "variables"
+      ],
+      "access": "execute",
+      "accessBasis": "sets a process-scoped environment variable via $.setenv; nothing is persisted to preferences — project content unchanged",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "app.set-environment",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 860,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 860,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "menu.find",
+      "args": [
+        "name"
+      ],
+      "access": "read",
+      "accessBasis": "reads host state: `app.findMenuCommandId(`",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "menu.find-command",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 874,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 874,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-a8n",
+      "name": "menu.execute",
+      "args": [
+        "id"
+      ],
+      "access": "execute",
+      "accessBasis": "invokes host/UI action `executeCommand(`; no project-content mutation in the located body",
+      "route": "ae-a8n file-envelope transport → host/a8n-host.js dispatch → ES3 in After Effects",
+      "semanticId": "menu.execute-command",
+      "status": "source-verified",
+      "definitionFile": "host/a8n-host.js",
+      "definitionLine": 902,
+      "implementationFile": "host/a8n-host.js",
+      "implementationLine": 902,
+      "note": "dispatch entry and ES3 implementation are the same site; args extracted from requireParam/optionalParam calls in the body"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.version",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.version`",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "app.version-info",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/01-version.jsx",
+      "definitionLine": 20,
+      "implementationFile": "experiments/runtime-bridge/extendscript/01-version.jsx",
+      "implementationLine": 20,
+      "note": "returns app.version as JSON; read-only probe"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.active-item",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.project.activeItem`",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "project.active-item",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/02-active-item.jsx",
+      "definitionLine": 16,
+      "implementationFile": "experiments/runtime-bridge/extendscript/02-active-item.jsx",
+      "implementationLine": 16,
+      "note": "JSON projection of app.project.activeItem; read-only probe"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.mutate-then-inspect",
+      "args": [],
+      "access": "write",
+      "accessBasis": "creates temporary comp probe-03-temp via items.addComp, snapshots numItems, then removes it again in cleanup — net project content unchanged on the success path",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "comp.create",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/03-mutate-then-inspect.jsx",
+      "definitionLine": 11,
+      "implementationFile": "experiments/runtime-bridge/extendscript/03-mutate-then-inspect.jsx",
+      "implementationLine": 11,
+      "note": "two-stage probe: mutate, inspect, cleanup; see file for cleanup at the tail of the try block"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.exception",
+      "args": [],
+      "access": "build-test",
+      "accessBasis": "calls $.error(...) to force an evalScript error-path failure; a test-only probe that neither reads nor writes project state",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "devtools.probe.error-propagation",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/04-exception.jsx",
+      "definitionLine": 33,
+      "implementationFile": "experiments/runtime-bridge/extendscript/04-exception.jsx",
+      "implementationLine": 33,
+      "note": "error-propagation probe; no Adobe operation is exercised"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.concurrent-read-a",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.project.numItems`",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "project.walk-tree",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/05-concurrent-A.jsx",
+      "definitionLine": 32,
+      "implementationFile": "experiments/runtime-bridge/extendscript/05-concurrent-A.jsx",
+      "implementationLine": 32,
+      "note": "long-ish safe read (project tree walk) used for concurrency probing"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.concurrent-read-b",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.version`",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "app.version-info",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/06-concurrent-B.jsx",
+      "definitionLine": 16,
+      "implementationFile": "experiments/runtime-bridge/extendscript/06-concurrent-B.jsx",
+      "implementationLine": 16,
+      "note": "short read (app.version) paired with probe 05; same Adobe operation as probe.version"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.snapshot",
+      "args": [],
+      "access": "read",
+      "accessBasis": "reads host state: `app.version`",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "project.snapshot",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/07-snapshot.jsx",
+      "definitionLine": 16,
+      "implementationFile": "experiments/runtime-bridge/extendscript/07-snapshot.jsx",
+      "implementationLine": 16,
+      "note": "structured snapshot of project state; read-only probe"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "probe.identity",
+      "args": [],
+      "access": "write",
+      "accessBasis": "creates temp comp probe-08-temp plus a solid layer via addSolid to capture index/id/name, then removes the comp in cleanup (comp.remove()) — net project content unchanged on the success path",
+      "route": "CEP panel (CSInterface.evalScriptFile) → ExtendScript probe in After Effects",
+      "semanticId": "layer.add-solid",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/extendscript/08-identity.jsx",
+      "definitionLine": 14,
+      "implementationFile": "experiments/runtime-bridge/extendscript/08-identity.jsx",
+      "implementationLine": 14,
+      "note": "stops at create+read; does not exercise rename/reorder/save (see file header)"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "bridge.eval",
+      "args": [
+        "id",
+        "source"
+      ],
+      "access": "execute",
+      "accessBasis": "accepts arbitrary ExtendScript source over the authenticated loopback endpoint; the v1 stub answers no_panel_attached without dispatching to AE (server.js stub branch), so execution is intended but not yet performed",
+      "route": "HTTP loopback (X-AE-Bridge-Token) → CEP panel dispatch (v1 stub: not dispatched)",
+      "semanticId": "devtools.bridge.eval",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/node-server/server.js",
+      "definitionLine": 113,
+      "implementationFile": "experiments/runtime-bridge/node-server/server.js",
+      "implementationLine": 133,
+      "note": "privileged arbitrary-script surface; FR-07 keeps this a separate development action"
+    },
+    {
+      "toolId": "ido-bata/ae-devtools",
+      "name": "bridge.healthz",
+      "args": [],
+      "access": "read",
+      "accessBasis": "returns a static { status: \"ok\" } payload; no privileged data, no AE contact",
+      "route": "HTTP loopback (X-AE-Bridge-Token) → CEP panel dispatch (v1 stub: not dispatched)",
+      "semanticId": "devtools.bridge.healthz",
+      "status": "source-verified",
+      "definitionFile": "experiments/runtime-bridge/node-server/server.js",
+      "definitionLine": 113,
+      "implementationFile": "experiments/runtime-bridge/node-server/server.js",
+      "implementationLine": 113,
+      "note": "token-exempt listener probe"
+    }
+  ]
+}
