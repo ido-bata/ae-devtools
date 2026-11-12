@@ -327,6 +327,8 @@ function semanticFor(op: string): string {
       return "expression.get";
     case "set_expression":
       return "expression.set";
+    case "toggle_expression":
+      return "expression.enable";
     case "clear_expression":
       return "expression.remove";
     case "add_keyframe":
@@ -334,7 +336,33 @@ function semanticFor(op: string): string {
     case "remove_keyframe":
       return "keyframe.set";
     case "get_keyframes":
-      return "tool.get-keyframes";
+      return "keyframe.get";
+    case "list_effects":
+      return "layer.list-effects";
+    case "add_effect":
+      return "effect.apply";
+    case "remove_effect":
+      return "effect.remove";
+    case "set_effect_param":
+      return "effect.set-parameter";
+    case "set_text":
+      return "text.set-text";
+    case "add_text_animator":
+      return "text.create-text-animator";
+    case "add_shape_content":
+      return "shape.add-operator";
+    case "add_mask":
+      return "mask.add";
+    case "set_mask":
+      return "mask.set-mask-properties";
+    case "remove_mask":
+      return "mask.delete-mask";
+    case "add_marker":
+      return "marker.add";
+    case "remove_marker":
+      return "marker.delete-marker";
+    case "find_layers":
+      return "search.search";
     case "add_to_render_queue":
       return "render.add-to-render-queue";
     case "list_render_queue":
@@ -343,20 +371,36 @@ function semanticFor(op: string): string {
       return "render.remove-from-render-queue";
     case "render_queue":
       return "render.render-queue";
-    case "add_marker":
-      return "marker.add";
-    case "remove_marker":
-      return "marker.add";
     case "get_selection":
       return "layer.get-selection";
     case "get_project_summary":
       return "project.info";
     case "import_footage":
       return "footage.import";
+    case "create_footage_layer":
+      return "layer.add-av-layer";
+    case "purge_unused_footage":
+      return "tool.purge-unused-footage";
     case "checkpoint_comp":
       return "tool.project-checkpoint";
     case "revert_comp":
       return "tool.project-revert";
+    case "snapshot_comp":
+      return "project.snapshot";
+    case "diff_comp":
+      return "tool.comp-diff";
+    case "analyze_motion":
+      return "tool.analyze-motion";
+    case "list_available_effects":
+      return "effect.list-available-effects";
+    case "add_essential_property":
+      return "mogrt.add-essential-property";
+    case "export_mogrt":
+      return "mogrt.export";
+    case "get_house_style":
+      return "preference.get-workflow-preferences";
+    case "set_house_style":
+      return "preference.set-workflow-preferences";
     default:
       return `tool.${op.replace(/_/g, "-")}`;
   }

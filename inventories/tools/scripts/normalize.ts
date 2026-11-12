@@ -151,6 +151,7 @@ export const ALIASES: Record<string, string> = {
   get_effect_parameters: "effect.list-parameters",
   // keyframes
   set_layer_keyframe: "keyframe.set",
+  get_keyframes: "keyframe.get",
   set_keyframe: "keyframe.set",
   set_keyframes: "keyframe.set",
   set_path_keyframes: "keyframe.set-path",

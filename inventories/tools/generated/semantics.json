@@ -5,8 +5,8 @@
     {
       "id": "app.instance-lifecycle",
       "provisional": true,
-      "label": "Instance lifecycle",
-      "adobeOperation": "app object (version, lifecycle, environment)",
+      "label": "Discover/start/stop local AE instances",
+      "adobeOperation": "process lifecycle outside AE (launcher control)",
       "tools": [
         "JUNKDOGE-JOE/after-effects-mcp"
       ]
@@ -126,8 +126,8 @@
     {
       "id": "comp.compose-op",
       "provisional": true,
-      "label": "Compose op",
-      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "label": "Precompose / track matte / blend mode / parent / 3D structure ops",
+      "adobeOperation": "CompItem.layers precompose, trackMatteType, blendingMode, parent, threeDLayer",
       "tools": [
         "VolksRat71/after-effects-mcp-vision"
       ]
@@ -383,6 +383,7 @@
       "tools": [
         "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -423,6 +424,7 @@
       "label": "List available effects",
       "adobeOperation": "Effect/Property DOM (effects and their parameters)",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
       ]
@@ -492,6 +494,7 @@
       "adobeOperation": "Effect/Property DOM (effects and their parameters)",
       "tools": [
         "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -522,6 +525,7 @@
       "label": "Set an effect parameter",
       "adobeOperation": "Property.setValue",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -547,6 +551,15 @@
       ]
     },
     {
+      "id": "expression.enable",
+      "provisional": true,
+      "label": "Enable/disable an expression without clearing it",
+      "adobeOperation": "Property.expressionEnabled",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
       "id": "expression.enable-expression",
       "provisional": true,
       "label": "Enable expression",
@@ -569,7 +582,7 @@
     {
       "id": "expression.list-all",
       "provisional": true,
-      "label": "List all",
+      "label": "Collect all expressions in the project",
       "adobeOperation": "Property expression DOM (expression text/enabled/error)",
       "tools": [
         "ido-bata/Ae_LayerNote"
@@ -588,7 +601,7 @@
     {
       "id": "expression.search",
       "provisional": true,
-      "label": "Search",
+      "label": "Search project expressions",
       "adobeOperation": "Property expression DOM (expression text/enabled/error)",
       "tools": [
         "ido-bata/Ae_LayerNote"
@@ -613,8 +626,8 @@
     {
       "id": "expression.stats",
       "provisional": true,
-      "label": "Stats",
-      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "label": "Aggregate statistics over project expressions",
+      "adobeOperation": "Property expression DOM (aggregation read)",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -622,8 +635,8 @@
     {
       "id": "expression.test",
       "provisional": true,
-      "label": "Test",
-      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "label": "Temporarily apply an expression to probe runtime errors",
+      "adobeOperation": "Property.expression temp assignment restored in-call",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -631,8 +644,8 @@
     {
       "id": "expression.validate",
       "provisional": true,
-      "label": "Validate",
-      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "label": "Syntax/semantic expression validation without applying",
+      "adobeOperation": "none — linting of the passed string, no project operation",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -704,6 +717,16 @@
       ]
     },
     {
+      "id": "keyframe.get",
+      "provisional": true,
+      "label": "List keyframes on a property",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
       "id": "keyframe.scale-keyframe-timing",
       "provisional": true,
       "label": "Scale keyframe timing",
@@ -771,6 +794,7 @@
       "label": "Add av layer",
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -892,8 +916,8 @@
     {
       "id": "layer.get-comment",
       "provisional": true,
-      "label": "Get comment",
-      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "label": "Read a layer's comment",
+      "adobeOperation": "Layer.comment",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -921,8 +945,8 @@
     {
       "id": "layer.get-selection",
       "provisional": true,
-      "label": "Get selection",
-      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "label": "Read the current UI layer selection",
+      "adobeOperation": "Comp/layer selectedLayers projection",
       "tools": [
         "Engine-Room-Games/after-effects-mcp",
         "ido-bata/Ae_LayerNote"
@@ -989,6 +1013,7 @@
       "label": "List effects on a layer",
       "adobeOperation": "ADBE Effect Parade property iteration",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
@@ -1007,8 +1032,8 @@
     {
       "id": "layer.list-properties",
       "provisional": true,
-      "label": "List properties",
-      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "label": "List a layer's properties",
+      "adobeOperation": "Layer property group iteration",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -1062,8 +1087,8 @@
     {
       "id": "layer.set-comment",
       "provisional": true,
-      "label": "Set comment",
-      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "label": "Write a layer's comment",
+      "adobeOperation": "Layer.comment",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -1168,6 +1193,7 @@
       "label": "Delete marker",
       "adobeOperation": "Marker property DOM",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1213,6 +1239,7 @@
       "label": "Add",
       "adobeOperation": "Mask property DOM",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1222,6 +1249,7 @@
       "label": "Delete mask",
       "adobeOperation": "Mask property DOM",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1276,6 +1304,7 @@
       "label": "Set mask properties",
       "adobeOperation": "Mask property DOM",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1313,6 +1342,24 @@
       "adobeOperation": "app.findMenuCommandId",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "mogrt.add-essential-property",
+      "provisional": true,
+      "label": "Add an Essential Graphics controller property",
+      "adobeOperation": "MotionGraphicsTemplate controller surface (comp MotionGraphics)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mogrt.export",
+      "provisional": true,
+      "label": "Export a Motion Graphics template",
+      "adobeOperation": "comp.exportAsMotionGraphicsTemplate",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
       ]
     },
     {
@@ -1421,6 +1468,7 @@
       "label": "Get workflow preferences",
       "adobeOperation": "Preferences surface",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp"
       ]
     },
@@ -1430,6 +1478,7 @@
       "label": "Set workflow preferences",
       "adobeOperation": "Preferences surface",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp"
       ]
     },
@@ -1551,6 +1600,7 @@
       "label": "Structured project state snapshot",
       "adobeOperation": "Project/comp/selection state read",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ido-bata/ae-devtools"
       ]
     },
@@ -1615,7 +1665,7 @@
     {
       "id": "render.queue-op",
       "provisional": true,
-      "label": "Queue op",
+      "label": "Render queue add/render/batch/AME queue",
       "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
       "tools": [
         "VolksRat71/after-effects-mcp-vision"
@@ -1701,6 +1751,7 @@
       "label": "Search",
       "adobeOperation": "Project search (item name matching)",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp"
       ]
     },
@@ -1720,6 +1771,7 @@
       "label": "Add operator",
       "adobeOperation": "Shape layer group/path DOM",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1764,8 +1816,8 @@
     {
       "id": "system.get-results",
       "provisional": true,
-      "label": "Get results",
-      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "label": "Read the temp result file of a dispatched script",
+      "adobeOperation": "none — local file read",
       "tools": [
         "BenZed/after-effects"
       ]
@@ -1783,8 +1835,8 @@
     {
       "id": "system.prepare-command",
       "provisional": true,
-      "label": "Prepare command",
-      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "label": "Wrap a function/command for dispatch",
+      "adobeOperation": "none — request-local object construction",
       "tools": [
         "BenZed/after-effects"
       ]
@@ -1792,8 +1844,8 @@
     {
       "id": "system.result-error",
       "provisional": true,
-      "label": "Result error",
-      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "label": "Error type for script results returned from AE",
+      "adobeOperation": "none — result plumbing",
       "tools": [
         "BenZed/after-effects"
       ]
@@ -1812,8 +1864,8 @@
     {
       "id": "system.run-jsx",
       "provisional": true,
-      "label": "Run jsx",
-      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "label": "Run arbitrary caller-supplied ExtendScript",
+      "adobeOperation": "arbitrary ExtendScript eval — access depends on the script",
       "tools": [
         "23d1/after-effects-mcp",
         "BenZed/after-effects",
@@ -1828,8 +1880,8 @@
     {
       "id": "system.write-script-file",
       "provisional": true,
-      "label": "Write script file",
-      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "label": "Write a compiled script to the Scripts Panel folder",
+      "adobeOperation": "none — local file write, AE not launched",
       "tools": [
         "BenZed/after-effects"
       ]
@@ -1840,6 +1892,7 @@
       "label": "Create text animator",
       "adobeOperation": "Text layer / TextDocument DOM",
       "tools": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1849,7 +1902,8 @@
       "label": "Set text",
       "adobeOperation": "Text layer / TextDocument DOM",
       "tools": [
-        "23d1/after-effects-mcp"
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp"
       ]
     },
     {
@@ -1873,62 +1927,17 @@
     {
       "id": "time.timing-op",
       "provisional": true,
-      "label": "Timing op",
+      "label": "Layer in/out, comp duration/fps, markers, time remap",
       "adobeOperation": "Comp/layer timing (current time, retiming)",
       "tools": [
         "VolksRat71/after-effects-mcp-vision"
       ]
     },
     {
-      "id": "tool.add-effect",
-      "provisional": true,
-      "label": "Add effect",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.add-essential-property",
-      "provisional": true,
-      "label": "Add essential property",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.add-mask",
-      "provisional": true,
-      "label": "Add mask",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.add-shape-content",
-      "provisional": true,
-      "label": "Add shape content",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.add-text-animator",
-      "provisional": true,
-      "label": "Add text animator",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.ae-guide",
       "provisional": true,
-      "label": "Ae guide",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Serve a bundled usage guide topic",
+      "adobeOperation": "none — server-local documentation read",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -1936,8 +1945,8 @@
     {
       "id": "tool.analyze-cuts",
       "provisional": true,
-      "label": "Analyze cuts",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Analyze footage for cuts (silence/scene detection)",
+      "adobeOperation": "none — external media analysis outside AE",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -1945,8 +1954,8 @@
     {
       "id": "tool.analyze-motion",
       "provisional": true,
-      "label": "Analyze motion",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Summarize an animation from key reads",
+      "adobeOperation": "Property keyframe DOM (key/ease reads, server-side summary)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -1954,8 +1963,8 @@
     {
       "id": "tool.animate-from-data",
       "provisional": true,
-      "label": "Animate from data",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Generate animation from external data",
+      "adobeOperation": "Property keyframe DOM (bulk generated keys)",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
       ]
@@ -1963,8 +1972,8 @@
     {
       "id": "tool.apply-easy-ease",
       "provisional": true,
-      "label": "Apply easy ease",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Apply easy-ease to keyframes",
+      "adobeOperation": "Property keyframe DOM (setTemporalEaseAtKey/interpolation)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -1972,8 +1981,8 @@
     {
       "id": "tool.archive-issue",
       "provisional": true,
-      "label": "Archive issue",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Archive an issue-journal entry",
+      "adobeOperation": "none — local file store rewrite",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -1981,8 +1990,8 @@
     {
       "id": "tool.audit-editorial-plan",
       "provisional": true,
-      "label": "Audit editorial plan",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Audit an editorial plan for problems",
+      "adobeOperation": "none — request-local plan analysis",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -1990,8 +1999,8 @@
     {
       "id": "tool.await-job",
       "provisional": true,
-      "label": "Await job",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Block on a running render/batch job",
+      "adobeOperation": "none — server job registry wait",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -1999,8 +2008,8 @@
     {
       "id": "tool.batch-set-expressions",
       "provisional": true,
-      "label": "Batch set expressions",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set expressions on many properties at once",
+      "adobeOperation": "Property expression DOM (bulk writes)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2008,8 +2017,8 @@
     {
       "id": "tool.cancel-job",
       "provisional": true,
-      "label": "Cancel job",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Cancel a running render/batch job",
+      "adobeOperation": "aerender/batch process termination (host-side)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2017,8 +2026,8 @@
     {
       "id": "tool.check-setup",
       "provisional": true,
-      "label": "Check setup",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Report panel/bridge installation status",
+      "adobeOperation": "none — install-state inspection",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2026,17 +2035,26 @@
     {
       "id": "tool.collect-files",
       "provisional": true,
-      "label": "Collect files",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Collect the project's source files into one folder",
+      "adobeOperation": "app.project item file copy + relink on disk",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
     },
     {
+      "id": "tool.comp-diff",
+      "provisional": true,
+      "label": "Diff a comp against a stored fingerprint",
+      "adobeOperation": "structural layer fingerprint comparison (read)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.contact-sheet",
       "provisional": true,
-      "label": "Contact sheet",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Compose captured frames into one contact sheet",
+      "adobeOperation": "none — local image compositing",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
       ]
@@ -2044,8 +2062,8 @@
     {
       "id": "tool.copy-animation",
       "provisional": true,
-      "label": "Copy animation",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Copy a layer's animation onto other layers",
+      "adobeOperation": "Property keyframe DOM (key copy incl. eases/expressions)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2053,8 +2071,8 @@
     {
       "id": "tool.copy-keyframes",
       "provisional": true,
-      "label": "Copy keyframes",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Copy keyframes between properties",
+      "adobeOperation": "Property keyframe DOM (key copy)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2062,8 +2080,8 @@
     {
       "id": "tool.create-adjustment-layer",
       "provisional": true,
-      "label": "Create adjustment layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create an adjustment layer",
+      "adobeOperation": "CompItem.layers.addSolid with adjustment flag",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2071,8 +2089,8 @@
     {
       "id": "tool.create-camera-layer",
       "provisional": true,
-      "label": "Create camera layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create a camera layer",
+      "adobeOperation": "CompItem.layers.addCamera",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2080,26 +2098,17 @@
     {
       "id": "tool.create-editorial-plan",
       "provisional": true,
-      "label": "Create editorial plan",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Generate an editorial plan document",
+      "adobeOperation": "none — local file write",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.create-footage-layer",
-      "provisional": true,
-      "label": "Create footage layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.create-light-layer",
       "provisional": true,
-      "label": "Create light layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create a light layer",
+      "adobeOperation": "CompItem.layers.addLight",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2107,8 +2116,8 @@
     {
       "id": "tool.create-logo-reveal",
       "provisional": true,
-      "label": "Create logo reveal",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Build a logo reveal animation",
+      "adobeOperation": "layer/keyframe creation driven by a shipped template",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2116,8 +2125,8 @@
     {
       "id": "tool.create-lower-third",
       "provisional": true,
-      "label": "Create lower third",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Build a lower-third graphic",
+      "adobeOperation": "layer/keyframe/shape creation driven by a shipped template",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2125,8 +2134,8 @@
     {
       "id": "tool.create-null-layer",
       "provisional": true,
-      "label": "Create null layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create a null layer",
+      "adobeOperation": "CompItem.layers.addNull",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2134,8 +2143,8 @@
     {
       "id": "tool.create-precomp-layer",
       "provisional": true,
-      "label": "Create precomp layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Insert an existing comp into another as a layered comp",
+      "adobeOperation": "CompItem.layers.add(comp)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2143,8 +2152,8 @@
     {
       "id": "tool.create-review",
       "provisional": true,
-      "label": "Create review",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Record a review item in the local review store",
+      "adobeOperation": "none — local file write",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2152,8 +2161,8 @@
     {
       "id": "tool.create-shape-layer",
       "provisional": true,
-      "label": "Create shape layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create a shape layer",
+      "adobeOperation": "CompItem.layers.addShape",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2161,8 +2170,8 @@
     {
       "id": "tool.create-solid-layer",
       "provisional": true,
-      "label": "Create solid layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create a solid layer",
+      "adobeOperation": "CompItem.layers.addSolid",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2170,8 +2179,8 @@
     {
       "id": "tool.create-text-layer",
       "provisional": true,
-      "label": "Create text layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create a text layer",
+      "adobeOperation": "CompItem.layers.addText + TextDocument property writes",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2179,8 +2188,8 @@
     {
       "id": "tool.create-title-card",
       "provisional": true,
-      "label": "Create title card",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Build a title card animation",
+      "adobeOperation": "layer/keyframe creation driven by a shipped template",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2188,8 +2197,8 @@
     {
       "id": "tool.create-transition",
       "provisional": true,
-      "label": "Create transition",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Build a transition between layers",
+      "adobeOperation": "layer/keyframe creation driven by a shipped template",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2197,8 +2206,8 @@
     {
       "id": "tool.debugalert",
       "provisional": true,
-      "label": "Debugalert",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Raise a debug alert dialog",
+      "adobeOperation": "ExtendScript alert() (debug)",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -2206,8 +2215,8 @@
     {
       "id": "tool.decide-review",
       "provisional": true,
-      "label": "Decide review",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Record a decision on a review item",
+      "adobeOperation": "none — local file write",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2215,8 +2224,8 @@
     {
       "id": "tool.delete-checkpoints",
       "provisional": true,
-      "label": "Delete checkpoints",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Delete stored comp checkpoints",
+      "adobeOperation": "project item removal (checkpoint comps)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2224,8 +2233,8 @@
     {
       "id": "tool.delete-layer",
       "provisional": true,
-      "label": "Delete layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Delete a layer",
+      "adobeOperation": "Layer DOM (layer removal)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2233,26 +2242,17 @@
     {
       "id": "tool.diagnostics",
       "provisional": true,
-      "label": "Diagnostics",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Project diagnostics (missing footage, fonts, broken expressions)",
+      "adobeOperation": "Project state scans assembled manually",
       "tools": [
         "VolksRat71/after-effects-mcp-vision"
       ]
     },
     {
-      "id": "tool.diff-comp",
-      "provisional": true,
-      "label": "Diff comp",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.duplicate-layer",
       "provisional": true,
-      "label": "Duplicate layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Duplicate a layer",
+      "adobeOperation": "Layer.duplicate",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2260,44 +2260,17 @@
     {
       "id": "tool.execute-script",
       "provisional": true,
-      "label": "Execute script",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Execute arbitrary ExtendScript",
+      "adobeOperation": "arbitrary ExtendScript eval",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.export-mogrt",
-      "provisional": true,
-      "label": "Export mogrt",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.find-layers",
-      "provisional": true,
-      "label": "Find layers",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.get-comp-tree",
       "provisional": true,
-      "label": "Get comp tree",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.get-house-style",
-      "provisional": true,
-      "label": "Get house style",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Read a comp with its nested layer tree",
+      "adobeOperation": "CompItem/layer recursion (pre-comp walk)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2305,27 +2278,17 @@
     {
       "id": "tool.get-job",
       "provisional": true,
-      "label": "Get job",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Inspect a render/batch job record",
+      "adobeOperation": "none — server job registry read",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.get-keyframes",
-      "provisional": true,
-      "label": "Get keyframes",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp",
-        "ishu86/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.get-layer-full",
       "provisional": true,
-      "label": "Get layer full",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Read one layer's full state",
+      "adobeOperation": "Layer property/effect/marker/text projection",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2333,8 +2296,8 @@
     {
       "id": "tool.get-property",
       "provisional": true,
-      "label": "Get property",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Read a named property by path",
+      "adobeOperation": "Property value read by matchName path",
       "tools": [
         "23d1/after-effects-mcp",
         "ido-bata/Ae_LayerNote"
@@ -2343,8 +2306,8 @@
     {
       "id": "tool.get-results",
       "provisional": true,
-      "label": "Get results",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Fetch a bridge job result",
+      "adobeOperation": "none — job result retrieval",
       "tools": [
         "Dakkshin/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -2354,8 +2317,8 @@
     {
       "id": "tool.import",
       "provisional": true,
-      "label": "Import",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Import a file into the project",
+      "adobeOperation": "app.project.importFile",
       "tools": [
         "23d1/after-effects-mcp"
       ]
@@ -2363,8 +2326,8 @@
     {
       "id": "tool.import-3d-from-blender",
       "provisional": true,
-      "label": "Import 3d from blender",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Import a Blender scene as AE layers",
+      "adobeOperation": "footage import + layer creation driven by external data",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2372,8 +2335,8 @@
     {
       "id": "tool.import-folder",
       "provisional": true,
-      "label": "Import folder",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Import every file in a folder",
+      "adobeOperation": "app.project.importFile (folder walk)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2381,8 +2344,8 @@
     {
       "id": "tool.init-project",
       "provisional": true,
-      "label": "Init project",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Initialize a project folder on disk",
+      "adobeOperation": "none — local folder write",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2390,8 +2353,8 @@
     {
       "id": "tool.layout-op",
       "provisional": true,
-      "label": "Layout op",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Measure/align/distribute/stack/pin/fit/stagger layout helpers",
+      "adobeOperation": "Layer Transform property writes derived from sourceRectAtTime reads",
       "tools": [
         "VolksRat71/after-effects-mcp-vision"
       ]
@@ -2399,26 +2362,17 @@
     {
       "id": "tool.link-properties",
       "provisional": true,
-      "label": "Link properties",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Link one property to another with an expression",
+      "adobeOperation": "Property expression DOM (pick-whip style link)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.list-available-effects",
-      "provisional": true,
-      "label": "List available effects",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.list-blender-jobs",
       "provisional": true,
-      "label": "List blender jobs",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List queued Blender render jobs",
+      "adobeOperation": "none — local job registry read",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2426,17 +2380,8 @@
     {
       "id": "tool.list-checkpoints",
       "provisional": true,
-      "label": "List checkpoints",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.list-effects",
-      "provisional": true,
-      "label": "List effects",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List stored comp checkpoints",
+      "adobeOperation": "project item iteration (read)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2444,8 +2389,8 @@
     {
       "id": "tool.list-fonts",
       "provisional": true,
-      "label": "List fonts",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List available fonts",
+      "adobeOperation": "app.fonts enumeration",
       "tools": [
         "23d1/after-effects-mcp"
       ]
@@ -2453,8 +2398,8 @@
     {
       "id": "tool.list-instances",
       "provisional": true,
-      "label": "List instances",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List AE instances registered with a broker",
+      "adobeOperation": "none — broker-local registry read",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2462,8 +2407,8 @@
     {
       "id": "tool.list-known-issues",
       "provisional": true,
-      "label": "List known issues",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List issue-journal entries",
+      "adobeOperation": "none — local file store read",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2471,8 +2416,8 @@
     {
       "id": "tool.list-layers",
       "provisional": true,
-      "label": "List layers",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List a comp's layers (compact)",
+      "adobeOperation": "CompItem.numLayers / layer projection",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2480,8 +2425,8 @@
     {
       "id": "tool.list-presets",
       "provisional": true,
-      "label": "List presets",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List available animation presets",
+      "adobeOperation": "Effects & Presets surface (preset scan)",
       "tools": [
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
@@ -2490,8 +2435,8 @@
     {
       "id": "tool.list-reviews",
       "provisional": true,
-      "label": "List reviews",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "List review items from the local review store",
+      "adobeOperation": "none — local file store read",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2499,8 +2444,8 @@
     {
       "id": "tool.log-issue",
       "provisional": true,
-      "label": "Log issue",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Record an issue-journal entry",
+      "adobeOperation": "none — local file write",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2508,8 +2453,8 @@
     {
       "id": "tool.mark-issue-reported",
       "provisional": true,
-      "label": "Mark issue reported",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Mark an issue-journal entry reported",
+      "adobeOperation": "none — local file rewrite",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2517,8 +2462,8 @@
     {
       "id": "tool.match-reference",
       "provisional": true,
-      "label": "Match reference",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Match a reference look/motion",
+      "adobeOperation": "effect/property writes derived from analysis",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
       ]
@@ -2526,8 +2471,8 @@
     {
       "id": "tool.offset-keyframes",
       "provisional": true,
-      "label": "Offset keyframes",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Shift keyframes in time",
+      "adobeOperation": "Property keyframe DOM (key time shift)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2535,8 +2480,8 @@
     {
       "id": "tool.parent-layer",
       "provisional": true,
-      "label": "Parent layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set or clear a layer's parent",
+      "adobeOperation": "Layer.parent",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2544,8 +2489,8 @@
     {
       "id": "tool.place-audio-cues",
       "provisional": true,
-      "label": "Place audio cues",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Import audio and place cue layers",
+      "adobeOperation": "footage import + AVLayer timing writes",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2553,8 +2498,8 @@
     {
       "id": "tool.populate-template",
       "provisional": true,
-      "label": "Populate template",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Populate a comp template with data",
+      "adobeOperation": "layer property writes driven by data",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
       ]
@@ -2562,8 +2507,8 @@
     {
       "id": "tool.prepare-blender-3d-job",
       "provisional": true,
-      "label": "Prepare blender 3d job",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Queue a Blender render for later AE import",
+      "adobeOperation": "none — external Blender job submission",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2571,8 +2516,8 @@
     {
       "id": "tool.project-checkpoint",
       "provisional": true,
-      "label": "Project checkpoint",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Create/list project checkpoints",
+      "adobeOperation": "project save snapshot to disk (file-system level)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp",
         "JUNKDOGE-JOE/after-effects-mcp"
@@ -2581,8 +2526,8 @@
     {
       "id": "tool.project-revert",
       "provisional": true,
-      "label": "Project revert",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Revert the project to a saved checkpoint",
+      "adobeOperation": "project open/close lifecycle around a saved file",
       "tools": [
         "Engine-Room-Games/after-effects-mcp",
         "JUNKDOGE-JOE/after-effects-mcp"
@@ -2591,8 +2536,8 @@
     {
       "id": "tool.purge-unused-footage",
       "provisional": true,
-      "label": "Purge unused footage",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Remove unused footage items from the project",
+      "adobeOperation": "app.project.reduceProject / unused item removal",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2600,8 +2545,8 @@
     {
       "id": "tool.query-project",
       "provisional": true,
-      "label": "Query project",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Multi-command project query dispatcher",
+      "adobeOperation": "Project/comp/layer/property read projections",
       "tools": [
         "VolksRat71/after-effects-mcp-vision"
       ]
@@ -2609,8 +2554,8 @@
     {
       "id": "tool.queue-in-ame",
       "provisional": true,
-      "label": "Queue in ame",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Hand a comp to Adobe Media Encoder",
+      "adobeOperation": "AME queue handoff (external app)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2618,8 +2563,8 @@
     {
       "id": "tool.read-tree",
       "provisional": true,
-      "label": "Read tree",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Structured paginated project tree read",
+      "adobeOperation": "Project/comp/layer/property reflection",
       "tools": [
         "JUNKDOGE-JOE/after-effects-mcp"
       ]
@@ -2627,44 +2572,26 @@
     {
       "id": "tool.reconnect",
       "provisional": true,
-      "label": "Reconnect",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Re-inject a bridge bootstrap into AE",
+      "adobeOperation": "host lifecycle (AfterFX -r bootstrap run)",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.remove-effect",
-      "provisional": true,
-      "label": "Remove effect",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.remove-keyframes",
       "provisional": true,
-      "label": "Remove keyframes",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Remove keyframes from a property",
+      "adobeOperation": "Property keyframe removal",
       "tools": [
         "23d1/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.remove-mask",
-      "provisional": true,
-      "label": "Remove mask",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.reorder-layer",
       "provisional": true,
-      "label": "Reorder layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Move a layer in the render stack",
+      "adobeOperation": "Layer move before/after (index invalidation)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2672,8 +2599,8 @@
     {
       "id": "tool.retime-keyframes",
       "provisional": true,
-      "label": "Retime keyframes",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Move/stretch/reverse/stagger existing keyframes",
+      "adobeOperation": "Property keyframe DOM (key time rewrites)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2681,8 +2608,8 @@
     {
       "id": "tool.reverse-keyframes",
       "provisional": true,
-      "label": "Reverse keyframes",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Reverse keyframe order in time",
+      "adobeOperation": "Property keyframe DOM (key time reversal)",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2690,8 +2617,8 @@
     {
       "id": "tool.save-frame",
       "provisional": true,
-      "label": "Save frame",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Save a frame to an image file",
+      "adobeOperation": "CompItem.saveFrameToPng",
       "tools": [
         "23d1/after-effects-mcp"
       ]
@@ -2699,8 +2626,8 @@
     {
       "id": "tool.scanfolder",
       "provisional": true,
-      "label": "Scanfolder",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Scan a folder and return file names",
+      "adobeOperation": "none — local filesystem read",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -2708,8 +2635,8 @@
     {
       "id": "tool.see-frame",
       "provisional": true,
-      "label": "See frame",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Preview a frame as an image",
+      "adobeOperation": "CompItem.saveFrameToPng (preview-oriented)",
       "tools": [
         "a-y-ibrahim/after-effects-mcp"
       ]
@@ -2717,8 +2644,8 @@
     {
       "id": "tool.select",
       "provisional": true,
-      "label": "Select",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Change UI selection of layers",
+      "adobeOperation": "Layer.selected",
       "tools": [
         "23d1/after-effects-mcp"
       ]
@@ -2726,26 +2653,8 @@
     {
       "id": "tool.set-effect-enabled",
       "provisional": true,
-      "label": "Set effect enabled",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.set-effect-param",
-      "provisional": true,
-      "label": "Set effect param",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.set-house-style",
-      "provisional": true,
-      "label": "Set house style",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Enable/disable an effect",
+      "adobeOperation": "Effect.enabled",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2753,8 +2662,8 @@
     {
       "id": "tool.set-interpolation",
       "provisional": true,
-      "label": "Set interpolation",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set one keyframe's interpolation/flags",
+      "adobeOperation": "Property keyframe DOM (setInterpolationTypeAtKey)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2762,17 +2671,8 @@
     {
       "id": "tool.set-layer",
       "provisional": true,
-      "label": "Set layer",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.set-mask",
-      "provisional": true,
-      "label": "Set mask",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Update layer metadata (name/enabled/locked/shy/solo/3D/blend/label/in-out)",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2780,8 +2680,8 @@
     {
       "id": "tool.set-property",
       "provisional": true,
-      "label": "Set property",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set a named property by path",
+      "adobeOperation": "Property.setValue by matchName path",
       "tools": [
         "23d1/after-effects-mcp",
         "VolksRat71/after-effects-mcp-vision"
@@ -2790,8 +2690,8 @@
     {
       "id": "tool.set-shape-path",
       "provisional": true,
-      "label": "Set shape path",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Write shape path vertices/tangents",
+      "adobeOperation": "ADBE Vector Shape (shape.setValue)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2799,8 +2699,8 @@
     {
       "id": "tool.set-shape-property",
       "provisional": true,
-      "label": "Set shape property",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set a shape property (fill/stroke/group/gradient)",
+      "adobeOperation": "Shape layer property setValue",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2808,8 +2708,8 @@
     {
       "id": "tool.set-spatial-tangents",
       "provisional": true,
-      "label": "Set spatial tangents",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set a keyframe's spatial tangents",
+      "adobeOperation": "Property keyframe DOM (setSpatialTangentsAtKey)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2817,27 +2717,18 @@
     {
       "id": "tool.set-temporal-ease",
       "provisional": true,
-      "label": "Set temporal ease",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set a keyframe's in/out temporal ease",
+      "adobeOperation": "Property keyframe DOM (setTemporalEaseAtKey)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
     {
-      "id": "tool.set-text",
-      "provisional": true,
-      "label": "Set text",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.set-transform",
       "provisional": true,
-      "label": "Set transform",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set transform properties (position/scale/rotation/anchor/opacity)",
+      "adobeOperation": "ADBE Transform Group property writes",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2845,8 +2736,8 @@
     {
       "id": "tool.set-work-area",
       "provisional": true,
-      "label": "Set work area",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Set a comp's work area",
+      "adobeOperation": "CompItem.workAreaStart/workAreaDuration",
       "tools": [
         "ishu86/after-effects-mcp"
       ]
@@ -2854,17 +2745,8 @@
     {
       "id": "tool.setup-panel",
       "provisional": true,
-      "label": "Setup panel",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
-      "id": "tool.snapshot-comp",
-      "provisional": true,
-      "label": "Snapshot comp",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Install the CEP panel on disk",
+      "adobeOperation": "none — local install (panel files / debug preference)",
       "tools": [
         "Engine-Room-Games/after-effects-mcp"
       ]
@@ -2872,8 +2754,8 @@
     {
       "id": "tool.status",
       "provisional": true,
-      "label": "Status",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Report host/bridge connection status",
+      "adobeOperation": "none — host status read",
       "tools": [
         "23d1/after-effects-mcp"
       ]
@@ -2881,8 +2763,8 @@
     {
       "id": "tool.test-animation",
       "provisional": true,
-      "label": "Test animation",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Run a canned bridge animation test",
+      "adobeOperation": "arbitrary ExtendScript eval (test payload)",
       "tools": [
         "Dakkshin/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
@@ -2890,19 +2772,10 @@
       ]
     },
     {
-      "id": "tool.toggle-expression",
-      "provisional": true,
-      "label": "Toggle expression",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
-      "tools": [
-        "Engine-Room-Games/after-effects-mcp"
-      ]
-    },
-    {
       "id": "tool.tool-library-save",
       "provisional": true,
-      "label": "Tool library save",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Persist a reusable script artifact in the local tool library",
+      "adobeOperation": "none — local file store, no AE contact",
       "tools": [
         "JUNKDOGE-JOE/after-effects-mcp"
       ]
@@ -2910,8 +2783,8 @@
     {
       "id": "tool.tool-library-search",
       "provisional": true,
-      "label": "Tool library search",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Search the local tool library",
+      "adobeOperation": "none — local file store read",
       "tools": [
         "JUNKDOGE-JOE/after-effects-mcp"
       ]
@@ -2919,8 +2792,8 @@
     {
       "id": "tool.transcribe-video",
       "provisional": true,
-      "label": "Transcribe video",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Transcribe video audio to text (local)",
+      "adobeOperation": "none — external transcription, no AE contact",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2928,8 +2801,8 @@
     {
       "id": "tool.transcript-to-cuts",
       "provisional": true,
-      "label": "Transcript to cuts",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Derive cut segments from a transcript",
+      "adobeOperation": "none — local file processing",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2937,8 +2810,8 @@
     {
       "id": "tool.undo",
       "provisional": true,
-      "label": "Undo",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Trigger an app-level undo",
+      "adobeOperation": "app.undo / undo group close",
       "tools": [
         "23d1/after-effects-mcp"
       ]
@@ -2946,8 +2819,8 @@
     {
       "id": "tool.validate-expressions",
       "provisional": true,
-      "label": "Validate expressions",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Force-evaluate expressions and report errors",
+      "adobeOperation": "Property expression DOM (expressionError reads)",
       "tools": [
         "JUNKDOGE-JOE/after-effects-mcp"
       ]
@@ -2955,8 +2828,8 @@
     {
       "id": "tool.verify-blender-job",
       "provisional": true,
-      "label": "Verify blender job",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Check a Blender render job's state",
+      "adobeOperation": "none — local job registry read",
       "tools": [
         "HeroicSwan/after-effects-mcp"
       ]
@@ -2964,8 +2837,8 @@
     {
       "id": "tool.workspace-bind",
       "provisional": true,
-      "label": "Workspace bind",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Bind a task to an AE project and manage write access",
+      "adobeOperation": "host capability state (no direct project mutation)",
       "tools": [
         "JUNKDOGE-JOE/after-effects-mcp"
       ]
@@ -2973,8 +2846,8 @@
     {
       "id": "tool.writetextfile",
       "provisional": true,
-      "label": "Writetextfile",
-      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "label": "Write a text file at an absolute path",
+      "adobeOperation": "none — local filesystem write",
       "tools": [
         "ido-bata/Ae_LayerNote"
       ]
@@ -3014,7 +2887,7 @@
     {
       "semanticId": "app.instance-lifecycle",
       "provisional": true,
-      "label": "Instance lifecycle",
+      "label": "Discover/start/stop local AE instances",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3154,7 +3027,7 @@
     {
       "semanticId": "comp.compose-op",
       "provisional": true,
-      "label": "Compose op",
+      "label": "Precompose / track matte / blend mode / parent / 3D structure ops",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3450,6 +3323,7 @@
       "competitors": [
         "23d1/after-effects-mcp",
         "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -3495,6 +3369,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
       ],
@@ -3576,6 +3451,7 @@
       "inAeDevtools": false,
       "competitors": [
         "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp",
@@ -3612,6 +3488,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "TheLlamainator/after-effects-mcp",
         "a-y-ibrahim/after-effects-mcp"
@@ -3637,6 +3514,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.enable",
+      "provisional": true,
+      "label": "Enable/disable an expression without clearing it",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
       ],
       "gap": true
     },
@@ -3667,7 +3555,7 @@
     {
       "semanticId": "expression.list-all",
       "provisional": true,
-      "label": "List all",
+      "label": "Collect all expressions in the project",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3690,7 +3578,7 @@
     {
       "semanticId": "expression.search",
       "provisional": true,
-      "label": "Search",
+      "label": "Search project expressions",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3719,7 +3607,7 @@
     {
       "semanticId": "expression.stats",
       "provisional": true,
-      "label": "Stats",
+      "label": "Aggregate statistics over project expressions",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3730,7 +3618,7 @@
     {
       "semanticId": "expression.test",
       "provisional": true,
-      "label": "Test",
+      "label": "Temporarily apply an expression to probe runtime errors",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3741,7 +3629,7 @@
     {
       "semanticId": "expression.validate",
       "provisional": true,
-      "label": "Validate",
+      "label": "Syntax/semantic expression validation without applying",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -3830,6 +3718,18 @@
       "gap": true
     },
     {
+      "semanticId": "keyframe.get",
+      "provisional": true,
+      "label": "List keyframes on a property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "keyframe.scale-keyframe-timing",
       "provisional": true,
       "label": "Scale keyframe timing",
@@ -3910,6 +3810,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -4054,7 +3955,7 @@
     {
       "semanticId": "layer.get-comment",
       "provisional": true,
-      "label": "Get comment",
+      "label": "Read a layer's comment",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -4089,7 +3990,7 @@
     {
       "semanticId": "layer.get-selection",
       "provisional": true,
-      "label": "Get selection",
+      "label": "Read the current UI layer selection",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -4168,6 +4069,7 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
@@ -4188,7 +4090,7 @@
     {
       "semanticId": "layer.list-properties",
       "provisional": true,
-      "label": "List properties",
+      "label": "List a layer's properties",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -4253,7 +4155,7 @@
     {
       "semanticId": "layer.set-comment",
       "provisional": true,
-      "label": "Set comment",
+      "label": "Write a layer's comment",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -4380,6 +4282,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -4435,6 +4338,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -4446,6 +4350,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -4512,6 +4417,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -4555,6 +4461,28 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "mogrt.add-essential-property",
+      "provisional": true,
+      "label": "Add an Essential Graphics controller property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mogrt.export",
+      "provisional": true,
+      "label": "Export a Motion Graphics template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "mogrt.template-op",
@@ -4685,6 +4613,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
@@ -4696,6 +4625,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
@@ -4834,7 +4764,9 @@
       "label": "Structured project state snapshot",
       "inAeA8n": false,
       "inAeDevtools": true,
-      "competitors": [],
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
       "gap": false
     },
     {
@@ -4907,7 +4839,7 @@
     {
       "semanticId": "render.queue-op",
       "provisional": true,
-      "label": "Queue op",
+      "label": "Render queue add/render/batch/AME queue",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5012,6 +4944,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "HeroicSwan/after-effects-mcp"
       ],
       "gap": true
@@ -5035,6 +4968,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -5088,7 +5022,7 @@
     {
       "semanticId": "system.get-results",
       "provisional": true,
-      "label": "Get results",
+      "label": "Read the temp result file of a dispatched script",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5111,7 +5045,7 @@
     {
       "semanticId": "system.prepare-command",
       "provisional": true,
-      "label": "Prepare command",
+      "label": "Wrap a function/command for dispatch",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5122,7 +5056,7 @@
     {
       "semanticId": "system.result-error",
       "provisional": true,
-      "label": "Result error",
+      "label": "Error type for script results returned from AE",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5146,7 +5080,7 @@
     {
       "semanticId": "system.run-jsx",
       "provisional": true,
-      "label": "Run jsx",
+      "label": "Run arbitrary caller-supplied ExtendScript",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5164,7 +5098,7 @@
     {
       "semanticId": "system.write-script-file",
       "provisional": true,
-      "label": "Write script file",
+      "label": "Write a compiled script to the Scripts Panel folder",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5179,6 +5113,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -5190,7 +5125,8 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
-        "23d1/after-effects-mcp"
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp"
       ],
       "gap": true
     },
@@ -5219,7 +5155,7 @@
     {
       "semanticId": "time.timing-op",
       "provisional": true,
-      "label": "Timing op",
+      "label": "Layer in/out, comp duration/fps, markers, time remap",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5228,64 +5164,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.add-effect",
-      "provisional": true,
-      "label": "Add effect",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.add-essential-property",
-      "provisional": true,
-      "label": "Add essential property",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.add-mask",
-      "provisional": true,
-      "label": "Add mask",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.add-shape-content",
-      "provisional": true,
-      "label": "Add shape content",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.add-text-animator",
-      "provisional": true,
-      "label": "Add text animator",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.ae-guide",
       "provisional": true,
-      "label": "Ae guide",
+      "label": "Serve a bundled usage guide topic",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5296,7 +5177,7 @@
     {
       "semanticId": "tool.analyze-cuts",
       "provisional": true,
-      "label": "Analyze cuts",
+      "label": "Analyze footage for cuts (silence/scene detection)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5307,7 +5188,7 @@
     {
       "semanticId": "tool.analyze-motion",
       "provisional": true,
-      "label": "Analyze motion",
+      "label": "Summarize an animation from key reads",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5318,7 +5199,7 @@
     {
       "semanticId": "tool.animate-from-data",
       "provisional": true,
-      "label": "Animate from data",
+      "label": "Generate animation from external data",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5329,7 +5210,7 @@
     {
       "semanticId": "tool.apply-easy-ease",
       "provisional": true,
-      "label": "Apply easy ease",
+      "label": "Apply easy-ease to keyframes",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5340,7 +5221,7 @@
     {
       "semanticId": "tool.archive-issue",
       "provisional": true,
-      "label": "Archive issue",
+      "label": "Archive an issue-journal entry",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5351,7 +5232,7 @@
     {
       "semanticId": "tool.audit-editorial-plan",
       "provisional": true,
-      "label": "Audit editorial plan",
+      "label": "Audit an editorial plan for problems",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5362,7 +5243,7 @@
     {
       "semanticId": "tool.await-job",
       "provisional": true,
-      "label": "Await job",
+      "label": "Block on a running render/batch job",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5373,7 +5254,7 @@
     {
       "semanticId": "tool.batch-set-expressions",
       "provisional": true,
-      "label": "Batch set expressions",
+      "label": "Set expressions on many properties at once",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5384,7 +5265,7 @@
     {
       "semanticId": "tool.cancel-job",
       "provisional": true,
-      "label": "Cancel job",
+      "label": "Cancel a running render/batch job",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5395,7 +5276,7 @@
     {
       "semanticId": "tool.check-setup",
       "provisional": true,
-      "label": "Check setup",
+      "label": "Report panel/bridge installation status",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5406,7 +5287,7 @@
     {
       "semanticId": "tool.collect-files",
       "provisional": true,
-      "label": "Collect files",
+      "label": "Collect the project's source files into one folder",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5415,9 +5296,20 @@
       "gap": true
     },
     {
+      "semanticId": "tool.comp-diff",
+      "provisional": true,
+      "label": "Diff a comp against a stored fingerprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.contact-sheet",
       "provisional": true,
-      "label": "Contact sheet",
+      "label": "Compose captured frames into one contact sheet",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5428,7 +5320,7 @@
     {
       "semanticId": "tool.copy-animation",
       "provisional": true,
-      "label": "Copy animation",
+      "label": "Copy a layer's animation onto other layers",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5439,7 +5331,7 @@
     {
       "semanticId": "tool.copy-keyframes",
       "provisional": true,
-      "label": "Copy keyframes",
+      "label": "Copy keyframes between properties",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5450,7 +5342,7 @@
     {
       "semanticId": "tool.create-adjustment-layer",
       "provisional": true,
-      "label": "Create adjustment layer",
+      "label": "Create an adjustment layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5461,7 +5353,7 @@
     {
       "semanticId": "tool.create-camera-layer",
       "provisional": true,
-      "label": "Create camera layer",
+      "label": "Create a camera layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5472,7 +5364,7 @@
     {
       "semanticId": "tool.create-editorial-plan",
       "provisional": true,
-      "label": "Create editorial plan",
+      "label": "Generate an editorial plan document",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5481,20 +5373,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.create-footage-layer",
-      "provisional": true,
-      "label": "Create footage layer",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.create-light-layer",
       "provisional": true,
-      "label": "Create light layer",
+      "label": "Create a light layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5505,7 +5386,7 @@
     {
       "semanticId": "tool.create-logo-reveal",
       "provisional": true,
-      "label": "Create logo reveal",
+      "label": "Build a logo reveal animation",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5516,7 +5397,7 @@
     {
       "semanticId": "tool.create-lower-third",
       "provisional": true,
-      "label": "Create lower third",
+      "label": "Build a lower-third graphic",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5527,7 +5408,7 @@
     {
       "semanticId": "tool.create-null-layer",
       "provisional": true,
-      "label": "Create null layer",
+      "label": "Create a null layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5538,7 +5419,7 @@
     {
       "semanticId": "tool.create-precomp-layer",
       "provisional": true,
-      "label": "Create precomp layer",
+      "label": "Insert an existing comp into another as a layered comp",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5549,7 +5430,7 @@
     {
       "semanticId": "tool.create-review",
       "provisional": true,
-      "label": "Create review",
+      "label": "Record a review item in the local review store",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5560,7 +5441,7 @@
     {
       "semanticId": "tool.create-shape-layer",
       "provisional": true,
-      "label": "Create shape layer",
+      "label": "Create a shape layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5571,7 +5452,7 @@
     {
       "semanticId": "tool.create-solid-layer",
       "provisional": true,
-      "label": "Create solid layer",
+      "label": "Create a solid layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5582,7 +5463,7 @@
     {
       "semanticId": "tool.create-text-layer",
       "provisional": true,
-      "label": "Create text layer",
+      "label": "Create a text layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5593,7 +5474,7 @@
     {
       "semanticId": "tool.create-title-card",
       "provisional": true,
-      "label": "Create title card",
+      "label": "Build a title card animation",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5604,7 +5485,7 @@
     {
       "semanticId": "tool.create-transition",
       "provisional": true,
-      "label": "Create transition",
+      "label": "Build a transition between layers",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5615,7 +5496,7 @@
     {
       "semanticId": "tool.debugalert",
       "provisional": true,
-      "label": "Debugalert",
+      "label": "Raise a debug alert dialog",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5626,7 +5507,7 @@
     {
       "semanticId": "tool.decide-review",
       "provisional": true,
-      "label": "Decide review",
+      "label": "Record a decision on a review item",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5637,7 +5518,7 @@
     {
       "semanticId": "tool.delete-checkpoints",
       "provisional": true,
-      "label": "Delete checkpoints",
+      "label": "Delete stored comp checkpoints",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5648,7 +5529,7 @@
     {
       "semanticId": "tool.delete-layer",
       "provisional": true,
-      "label": "Delete layer",
+      "label": "Delete a layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5659,7 +5540,7 @@
     {
       "semanticId": "tool.diagnostics",
       "provisional": true,
-      "label": "Diagnostics",
+      "label": "Project diagnostics (missing footage, fonts, broken expressions)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5668,20 +5549,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.diff-comp",
-      "provisional": true,
-      "label": "Diff comp",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.duplicate-layer",
       "provisional": true,
-      "label": "Duplicate layer",
+      "label": "Duplicate a layer",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5692,7 +5562,7 @@
     {
       "semanticId": "tool.execute-script",
       "provisional": true,
-      "label": "Execute script",
+      "label": "Execute arbitrary ExtendScript",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5701,42 +5571,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.export-mogrt",
-      "provisional": true,
-      "label": "Export mogrt",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.find-layers",
-      "provisional": true,
-      "label": "Find layers",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.get-comp-tree",
       "provisional": true,
-      "label": "Get comp tree",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.get-house-style",
-      "provisional": true,
-      "label": "Get house style",
+      "label": "Read a comp with its nested layer tree",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5747,7 +5584,7 @@
     {
       "semanticId": "tool.get-job",
       "provisional": true,
-      "label": "Get job",
+      "label": "Inspect a render/batch job record",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5756,21 +5593,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.get-keyframes",
-      "provisional": true,
-      "label": "Get keyframes",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp",
-        "ishu86/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.get-layer-full",
       "provisional": true,
-      "label": "Get layer full",
+      "label": "Read one layer's full state",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5781,7 +5606,7 @@
     {
       "semanticId": "tool.get-property",
       "provisional": true,
-      "label": "Get property",
+      "label": "Read a named property by path",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5793,7 +5618,7 @@
     {
       "semanticId": "tool.get-results",
       "provisional": true,
-      "label": "Get results",
+      "label": "Fetch a bridge job result",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5806,7 +5631,7 @@
     {
       "semanticId": "tool.import",
       "provisional": true,
-      "label": "Import",
+      "label": "Import a file into the project",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5817,7 +5642,7 @@
     {
       "semanticId": "tool.import-3d-from-blender",
       "provisional": true,
-      "label": "Import 3d from blender",
+      "label": "Import a Blender scene as AE layers",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5828,7 +5653,7 @@
     {
       "semanticId": "tool.import-folder",
       "provisional": true,
-      "label": "Import folder",
+      "label": "Import every file in a folder",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5839,7 +5664,7 @@
     {
       "semanticId": "tool.init-project",
       "provisional": true,
-      "label": "Init project",
+      "label": "Initialize a project folder on disk",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5850,7 +5675,7 @@
     {
       "semanticId": "tool.layout-op",
       "provisional": true,
-      "label": "Layout op",
+      "label": "Measure/align/distribute/stack/pin/fit/stagger layout helpers",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5861,7 +5686,7 @@
     {
       "semanticId": "tool.link-properties",
       "provisional": true,
-      "label": "Link properties",
+      "label": "Link one property to another with an expression",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5870,20 +5695,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.list-available-effects",
-      "provisional": true,
-      "label": "List available effects",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.list-blender-jobs",
       "provisional": true,
-      "label": "List blender jobs",
+      "label": "List queued Blender render jobs",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5894,18 +5708,7 @@
     {
       "semanticId": "tool.list-checkpoints",
       "provisional": true,
-      "label": "List checkpoints",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.list-effects",
-      "provisional": true,
-      "label": "List effects",
+      "label": "List stored comp checkpoints",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5916,7 +5719,7 @@
     {
       "semanticId": "tool.list-fonts",
       "provisional": true,
-      "label": "List fonts",
+      "label": "List available fonts",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5927,7 +5730,7 @@
     {
       "semanticId": "tool.list-instances",
       "provisional": true,
-      "label": "List instances",
+      "label": "List AE instances registered with a broker",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5938,7 +5741,7 @@
     {
       "semanticId": "tool.list-known-issues",
       "provisional": true,
-      "label": "List known issues",
+      "label": "List issue-journal entries",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5949,7 +5752,7 @@
     {
       "semanticId": "tool.list-layers",
       "provisional": true,
-      "label": "List layers",
+      "label": "List a comp's layers (compact)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5960,7 +5763,7 @@
     {
       "semanticId": "tool.list-presets",
       "provisional": true,
-      "label": "List presets",
+      "label": "List available animation presets",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5972,7 +5775,7 @@
     {
       "semanticId": "tool.list-reviews",
       "provisional": true,
-      "label": "List reviews",
+      "label": "List review items from the local review store",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5983,7 +5786,7 @@
     {
       "semanticId": "tool.log-issue",
       "provisional": true,
-      "label": "Log issue",
+      "label": "Record an issue-journal entry",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -5994,7 +5797,7 @@
     {
       "semanticId": "tool.mark-issue-reported",
       "provisional": true,
-      "label": "Mark issue reported",
+      "label": "Mark an issue-journal entry reported",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6005,7 +5808,7 @@
     {
       "semanticId": "tool.match-reference",
       "provisional": true,
-      "label": "Match reference",
+      "label": "Match a reference look/motion",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6016,7 +5819,7 @@
     {
       "semanticId": "tool.offset-keyframes",
       "provisional": true,
-      "label": "Offset keyframes",
+      "label": "Shift keyframes in time",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6027,7 +5830,7 @@
     {
       "semanticId": "tool.parent-layer",
       "provisional": true,
-      "label": "Parent layer",
+      "label": "Set or clear a layer's parent",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6038,7 +5841,7 @@
     {
       "semanticId": "tool.place-audio-cues",
       "provisional": true,
-      "label": "Place audio cues",
+      "label": "Import audio and place cue layers",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6049,7 +5852,7 @@
     {
       "semanticId": "tool.populate-template",
       "provisional": true,
-      "label": "Populate template",
+      "label": "Populate a comp template with data",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6060,7 +5863,7 @@
     {
       "semanticId": "tool.prepare-blender-3d-job",
       "provisional": true,
-      "label": "Prepare blender 3d job",
+      "label": "Queue a Blender render for later AE import",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6071,7 +5874,7 @@
     {
       "semanticId": "tool.project-checkpoint",
       "provisional": true,
-      "label": "Project checkpoint",
+      "label": "Create/list project checkpoints",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6083,7 +5886,7 @@
     {
       "semanticId": "tool.project-revert",
       "provisional": true,
-      "label": "Project revert",
+      "label": "Revert the project to a saved checkpoint",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6095,7 +5898,7 @@
     {
       "semanticId": "tool.purge-unused-footage",
       "provisional": true,
-      "label": "Purge unused footage",
+      "label": "Remove unused footage items from the project",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6106,7 +5909,7 @@
     {
       "semanticId": "tool.query-project",
       "provisional": true,
-      "label": "Query project",
+      "label": "Multi-command project query dispatcher",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6117,7 +5920,7 @@
     {
       "semanticId": "tool.queue-in-ame",
       "provisional": true,
-      "label": "Queue in ame",
+      "label": "Hand a comp to Adobe Media Encoder",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6128,7 +5931,7 @@
     {
       "semanticId": "tool.read-tree",
       "provisional": true,
-      "label": "Read tree",
+      "label": "Structured paginated project tree read",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6139,7 +5942,7 @@
     {
       "semanticId": "tool.reconnect",
       "provisional": true,
-      "label": "Reconnect",
+      "label": "Re-inject a bridge bootstrap into AE",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6148,20 +5951,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.remove-effect",
-      "provisional": true,
-      "label": "Remove effect",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.remove-keyframes",
       "provisional": true,
-      "label": "Remove keyframes",
+      "label": "Remove keyframes from a property",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6170,20 +5962,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.remove-mask",
-      "provisional": true,
-      "label": "Remove mask",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.reorder-layer",
       "provisional": true,
-      "label": "Reorder layer",
+      "label": "Move a layer in the render stack",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6194,7 +5975,7 @@
     {
       "semanticId": "tool.retime-keyframes",
       "provisional": true,
-      "label": "Retime keyframes",
+      "label": "Move/stretch/reverse/stagger existing keyframes",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6205,7 +5986,7 @@
     {
       "semanticId": "tool.reverse-keyframes",
       "provisional": true,
-      "label": "Reverse keyframes",
+      "label": "Reverse keyframe order in time",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6216,7 +5997,7 @@
     {
       "semanticId": "tool.save-frame",
       "provisional": true,
-      "label": "Save frame",
+      "label": "Save a frame to an image file",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6227,7 +6008,7 @@
     {
       "semanticId": "tool.scanfolder",
       "provisional": true,
-      "label": "Scanfolder",
+      "label": "Scan a folder and return file names",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6238,7 +6019,7 @@
     {
       "semanticId": "tool.see-frame",
       "provisional": true,
-      "label": "See frame",
+      "label": "Preview a frame as an image",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6249,7 +6030,7 @@
     {
       "semanticId": "tool.select",
       "provisional": true,
-      "label": "Select",
+      "label": "Change UI selection of layers",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6260,29 +6041,7 @@
     {
       "semanticId": "tool.set-effect-enabled",
       "provisional": true,
-      "label": "Set effect enabled",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.set-effect-param",
-      "provisional": true,
-      "label": "Set effect param",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.set-house-style",
-      "provisional": true,
-      "label": "Set house style",
+      "label": "Enable/disable an effect",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6293,7 +6052,7 @@
     {
       "semanticId": "tool.set-interpolation",
       "provisional": true,
-      "label": "Set interpolation",
+      "label": "Set one keyframe's interpolation/flags",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6304,18 +6063,7 @@
     {
       "semanticId": "tool.set-layer",
       "provisional": true,
-      "label": "Set layer",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.set-mask",
-      "provisional": true,
-      "label": "Set mask",
+      "label": "Update layer metadata (name/enabled/locked/shy/solo/3D/blend/label/in-out)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6326,7 +6074,7 @@
     {
       "semanticId": "tool.set-property",
       "provisional": true,
-      "label": "Set property",
+      "label": "Set a named property by path",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6338,7 +6086,7 @@
     {
       "semanticId": "tool.set-shape-path",
       "provisional": true,
-      "label": "Set shape path",
+      "label": "Write shape path vertices/tangents",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6349,7 +6097,7 @@
     {
       "semanticId": "tool.set-shape-property",
       "provisional": true,
-      "label": "Set shape property",
+      "label": "Set a shape property (fill/stroke/group/gradient)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6360,7 +6108,7 @@
     {
       "semanticId": "tool.set-spatial-tangents",
       "provisional": true,
-      "label": "Set spatial tangents",
+      "label": "Set a keyframe's spatial tangents",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6371,7 +6119,7 @@
     {
       "semanticId": "tool.set-temporal-ease",
       "provisional": true,
-      "label": "Set temporal ease",
+      "label": "Set a keyframe's in/out temporal ease",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6381,20 +6129,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.set-text",
-      "provisional": true,
-      "label": "Set text",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.set-transform",
       "provisional": true,
-      "label": "Set transform",
+      "label": "Set transform properties (position/scale/rotation/anchor/opacity)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6405,7 +6142,7 @@
     {
       "semanticId": "tool.set-work-area",
       "provisional": true,
-      "label": "Set work area",
+      "label": "Set a comp's work area",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6416,18 +6153,7 @@
     {
       "semanticId": "tool.setup-panel",
       "provisional": true,
-      "label": "Setup panel",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
-      "semanticId": "tool.snapshot-comp",
-      "provisional": true,
-      "label": "Snapshot comp",
+      "label": "Install the CEP panel on disk",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6438,7 +6164,7 @@
     {
       "semanticId": "tool.status",
       "provisional": true,
-      "label": "Status",
+      "label": "Report host/bridge connection status",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6449,7 +6175,7 @@
     {
       "semanticId": "tool.test-animation",
       "provisional": true,
-      "label": "Test animation",
+      "label": "Run a canned bridge animation test",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6460,20 +6186,9 @@
       "gap": true
     },
     {
-      "semanticId": "tool.toggle-expression",
-      "provisional": true,
-      "label": "Toggle expression",
-      "inAeA8n": false,
-      "inAeDevtools": false,
-      "competitors": [
-        "Engine-Room-Games/after-effects-mcp"
-      ],
-      "gap": true
-    },
-    {
       "semanticId": "tool.tool-library-save",
       "provisional": true,
-      "label": "Tool library save",
+      "label": "Persist a reusable script artifact in the local tool library",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6484,7 +6199,7 @@
     {
       "semanticId": "tool.tool-library-search",
       "provisional": true,
-      "label": "Tool library search",
+      "label": "Search the local tool library",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6495,7 +6210,7 @@
     {
       "semanticId": "tool.transcribe-video",
       "provisional": true,
-      "label": "Transcribe video",
+      "label": "Transcribe video audio to text (local)",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6506,7 +6221,7 @@
     {
       "semanticId": "tool.transcript-to-cuts",
       "provisional": true,
-      "label": "Transcript to cuts",
+      "label": "Derive cut segments from a transcript",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6517,7 +6232,7 @@
     {
       "semanticId": "tool.undo",
       "provisional": true,
-      "label": "Undo",
+      "label": "Trigger an app-level undo",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6528,7 +6243,7 @@
     {
       "semanticId": "tool.validate-expressions",
       "provisional": true,
-      "label": "Validate expressions",
+      "label": "Force-evaluate expressions and report errors",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6539,7 +6254,7 @@
     {
       "semanticId": "tool.verify-blender-job",
       "provisional": true,
-      "label": "Verify blender job",
+      "label": "Check a Blender render job's state",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6550,7 +6265,7 @@
     {
       "semanticId": "tool.workspace-bind",
       "provisional": true,
-      "label": "Workspace bind",
+      "label": "Bind a task to an AE project and manage write access",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
@@ -6561,7 +6276,7 @@
     {
       "semanticId": "tool.writetextfile",
       "provisional": true,
-      "label": "Writetextfile",
+      "label": "Write a text file at an absolute path",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [

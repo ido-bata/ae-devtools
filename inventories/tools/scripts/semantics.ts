@@ -75,7 +75,199 @@ export interface SemanticMeta {
  * adding its ids to this table (that is the normalization act itself).
  */
 export const SEMANTIC_META: Record<string, SemanticMeta> = {
-  // --- ae-a8n host dispatch -------------------------------------------------
+  // --- layer/property/keyframe ids used by several operator-style tools ----
+  "tool.set-layer": {
+    label: "Update layer metadata (name/enabled/locked/shy/solo/3D/blend/label/in-out)",
+    adobeOperation: "Layer DOM (layer creation and layer properties)",
+  },
+  "tool.delete-layer": {
+    label: "Delete a layer",
+    adobeOperation: "Layer DOM (layer removal)",
+  },
+  "tool.duplicate-layer": {
+    label: "Duplicate a layer",
+    adobeOperation: "Layer.duplicate",
+  },
+  "tool.parent-layer": {
+    label: "Set or clear a layer's parent",
+    adobeOperation: "Layer.parent",
+  },
+  "tool.reorder-layer": {
+    label: "Move a layer in the render stack",
+    adobeOperation: "Layer move before/after (index invalidation)",
+  },
+  "tool.create-text-layer": {
+    label: "Create a text layer",
+    adobeOperation: "CompItem.layers.addText + TextDocument property writes",
+  },
+  "tool.create-solid-layer": {
+    label: "Create a solid layer",
+    adobeOperation: "CompItem.layers.addSolid",
+  },
+  "tool.create-shape-layer": {
+    label: "Create a shape layer",
+    adobeOperation: "CompItem.layers.addShape",
+  },
+  "tool.create-null-layer": {
+    label: "Create a null layer",
+    adobeOperation: "CompItem.layers.addNull",
+  },
+  "tool.create-adjustment-layer": {
+    label: "Create an adjustment layer",
+    adobeOperation: "CompItem.layers.addSolid with adjustment flag",
+  },
+  "tool.create-precomp-layer": {
+    label: "Insert an existing comp into another as a layered comp",
+    adobeOperation: "CompItem.layers.add(comp)",
+  },
+  "tool.create-camera-layer": {
+    label: "Create a camera layer",
+    adobeOperation: "CompItem.layers.addCamera",
+  },
+  "tool.create-light-layer": {
+    label: "Create a light layer",
+    adobeOperation: "CompItem.layers.addLight",
+  },
+  "tool.set-transform": {
+    label: "Set transform properties (position/scale/rotation/anchor/opacity)",
+    adobeOperation: "ADBE Transform Group property writes",
+  },
+  "tool.set-property": {
+    label: "Set a named property by path",
+    adobeOperation: "Property.setValue by matchName path",
+  },
+  "tool.get-property": {
+    label: "Read a named property by path",
+    adobeOperation: "Property value read by matchName path",
+  },
+  "tool.get-layer-full": {
+    label: "Read one layer's full state",
+    adobeOperation: "Layer property/effect/marker/text projection",
+  },
+  "tool.list-layers": {
+    label: "List a comp's layers (compact)",
+    adobeOperation: "CompItem.numLayers / layer projection",
+  },
+  "tool.get-comp-tree": {
+    label: "Read a comp with its nested layer tree",
+    adobeOperation: "CompItem/layer recursion (pre-comp walk)",
+  },
+  "tool.set-interpolation": {
+    label: "Set one keyframe's interpolation/flags",
+    adobeOperation: "Property keyframe DOM (setInterpolationTypeAtKey)",
+  },
+  "tool.set-temporal-ease": {
+    label: "Set a keyframe's in/out temporal ease",
+    adobeOperation: "Property keyframe DOM (setTemporalEaseAtKey)",
+  },
+  "tool.set-spatial-tangents": {
+    label: "Set a keyframe's spatial tangents",
+    adobeOperation: "Property keyframe DOM (setSpatialTangentsAtKey)",
+  },
+  "tool.set-shape-path": {
+    label: "Write shape path vertices/tangents",
+    adobeOperation: "ADBE Vector Shape (shape.setValue)",
+  },
+  "tool.set-shape-property": {
+    label: "Set a shape property (fill/stroke/group/gradient)",
+    adobeOperation: "Shape layer property setValue",
+  },
+  "tool.set-effect-enabled": {
+    label: "Enable/disable an effect",
+    adobeOperation: "Effect.enabled",
+  },
+  "tool.set-work-area": {
+    label: "Set a comp's work area",
+    adobeOperation: "CompItem.workAreaStart/workAreaDuration",
+  },
+  "tool.remove-keyframes": {
+    label: "Remove keyframes from a property",
+    adobeOperation: "Property keyframe removal",
+  },
+  "tool.retime-keyframes": {
+    label: "Move/stretch/reverse/stagger existing keyframes",
+    adobeOperation: "Property keyframe DOM (key time rewrites)",
+  },
+  "tool.copy-animation": {
+    label: "Copy a layer's animation onto other layers",
+    adobeOperation: "Property keyframe DOM (key copy incl. eases/expressions)",
+  },
+  "tool.copy-keyframes": {
+    label: "Copy keyframes between properties",
+    adobeOperation: "Property keyframe DOM (key copy)",
+  },
+  "tool.offset-keyframes": {
+    label: "Shift keyframes in time",
+    adobeOperation: "Property keyframe DOM (key time shift)",
+  },
+  "tool.reverse-keyframes": {
+    label: "Reverse keyframe order in time",
+    adobeOperation: "Property keyframe DOM (key time reversal)",
+  },
+  "tool.apply-easy-ease": {
+    label: "Apply easy-ease to keyframes",
+    adobeOperation: "Property keyframe DOM (setTemporalEaseAtKey/interpolation)",
+  },
+  "tool.batch-set-expressions": {
+    label: "Set expressions on many properties at once",
+    adobeOperation: "Property expression DOM (bulk writes)",
+  },
+  "tool.link-properties": {
+    label: "Link one property to another with an expression",
+    adobeOperation: "Property expression DOM (pick-whip style link)",
+  },
+  "tool.select": {
+    label: "Change UI selection of layers",
+    adobeOperation: "Layer.selected",
+  },
+  "tool.save-frame": {
+    label: "Save a frame to an image file",
+    adobeOperation: "CompItem.saveFrameToPng",
+  },
+  "tool.see-frame": {
+    label: "Preview a frame as an image",
+    adobeOperation: "CompItem.saveFrameToPng (preview-oriented)",
+  },
+  "tool.undo": {
+    label: "Trigger an app-level undo",
+    adobeOperation: "app.undo / undo group close",
+  },
+  "tool.execute-script": {
+    label: "Execute arbitrary ExtendScript",
+    adobeOperation: "arbitrary ExtendScript eval",
+  },
+  "tool.import": {
+    label: "Import a file into the project",
+    adobeOperation: "app.project.importFile",
+  },
+  "tool.import-folder": {
+    label: "Import every file in a folder",
+    adobeOperation: "app.project.importFile (folder walk)",
+  },
+  "tool.list-fonts": {
+    label: "List available fonts",
+    adobeOperation: "app.fonts enumeration",
+  },
+  "tool.list-presets": {
+    label: "List available animation presets",
+    adobeOperation: "Effects & Presets surface (preset scan)",
+  },
+  "tool.purge-unused-footage": {
+    label: "Remove unused footage items from the project",
+    adobeOperation: "app.project.reduceProject / unused item removal",
+  },
+  "tool.collect-files": {
+    label: "Collect the project's source files into one folder",
+    adobeOperation: "app.project item file copy + relink on disk",
+  },
+  "tool.queue-in-ame": {
+    label: "Hand a comp to Adobe Media Encoder",
+    adobeOperation: "AME queue handoff (external app)",
+  },
+  "tool.place-audio-cues": {
+    label: "Import audio and place cue layers",
+    adobeOperation: "footage import + AVLayer timing writes",
+  },  // --- ae-a8n host dispatch -------------------------------------------------
   "app.version-info": {
     label: "Read app version/build info",
     adobeOperation: "ExtendScript app.version / app.buildNumber",
@@ -210,6 +402,308 @@ export const SEMANTIC_META: Record<string, SemanticMeta> = {
     adobeOperation: "none — static HTTP response",
   },
   // --- competitor rows append their ids below as adapters land -------------
+  // --- shared ids introduced by later adapters ------------------------------
+  "layer.get-selection": {
+    label: "Read the current UI layer selection",
+    adobeOperation: "Comp/layer selectedLayers projection",
+  },
+  "keyframe.get": {
+    label: "List keyframes on a property",
+    adobeOperation: "Property keyframe DOM (keys and interpolation)",
+  },
+  "expression.enable": {
+    label: "Enable/disable an expression without clearing it",
+    adobeOperation: "Property.expressionEnabled",
+  },
+  "expression.list-all": {
+    label: "Collect all expressions in the project",
+    adobeOperation: "Property expression DOM (expression text/enabled/error)",
+  },
+  "expression.search": {
+    label: "Search project expressions",
+    adobeOperation: "Property expression DOM (expression text/enabled/error)",
+  },
+  "expression.validate": {
+    label: "Syntax/semantic expression validation without applying",
+    adobeOperation: "none — linting of the passed string, no project operation",
+  },
+  "expression.test": {
+    label: "Temporarily apply an expression to probe runtime errors",
+    adobeOperation: "Property.expression temp assignment restored in-call",
+  },
+  "expression.stats": {
+    label: "Aggregate statistics over project expressions",
+    adobeOperation: "Property expression DOM (aggregation read)",
+  },
+  "layer.get-comment": {
+    label: "Read a layer's comment",
+    adobeOperation: "Layer.comment",
+  },
+  "layer.set-comment": {
+    label: "Write a layer's comment",
+    adobeOperation: "Layer.comment",
+  },
+  "layer.list-properties": {
+    label: "List a layer's properties",
+    adobeOperation: "Layer property group iteration",
+  },
+  "mogrt.add-essential-property": {
+    label: "Add an Essential Graphics controller property",
+    adobeOperation: "MotionGraphicsTemplate controller surface (comp MotionGraphics)",
+  },
+  "mogrt.export": {
+    label: "Export a Motion Graphics template",
+    adobeOperation: "comp.exportAsMotionGraphicsTemplate",
+  },
+  "app.instance-lifecycle": {
+    label: "Discover/start/stop local AE instances",
+    adobeOperation: "process lifecycle outside AE (launcher control)",
+  },
+  "comp.compose-op": {
+    label: "Precompose / track matte / blend mode / parent / 3D structure ops",
+    adobeOperation: "CompItem.layers precompose, trackMatteType, blendingMode, parent, threeDLayer",
+  },
+  "render.queue-op": {
+    label: "Render queue add/render/batch/AME queue",
+    adobeOperation: "Render output (render queue / saveFrameToPng / frame export)",
+  },
+  "time.timing-op": {
+    label: "Layer in/out, comp duration/fps, markers, time remap",
+    adobeOperation: "Comp/layer timing (current time, retiming)",
+  },
+  "tool.layout-op": {
+    label: "Measure/align/distribute/stack/pin/fit/stagger layout helpers",
+    adobeOperation: "Layer Transform property writes derived from sourceRectAtTime reads",
+  },
+  "tool.query-project": {
+    label: "Multi-command project query dispatcher",
+    adobeOperation: "Project/comp/layer/property read projections",
+  },
+  "tool.read-tree": {
+    label: "Structured paginated project tree read",
+    adobeOperation: "Project/comp/layer/property reflection",
+  },
+  "tool.diagnostics": {
+    label: "Project diagnostics (missing footage, fonts, broken expressions)",
+    adobeOperation: "Project state scans assembled manually",
+  },
+  "tool.project-checkpoint": {
+    label: "Create/list project checkpoints",
+    adobeOperation: "project save snapshot to disk (file-system level)",
+  },
+  "tool.project-revert": {
+    label: "Revert the project to a saved checkpoint",
+    adobeOperation: "project open/close lifecycle around a saved file",
+  },
+  "tool.validate-expressions": {
+    label: "Force-evaluate expressions and report errors",
+    adobeOperation: "Property expression DOM (expressionError reads)",
+  },
+  "tool.tool-library-save": {
+    label: "Persist a reusable script artifact in the local tool library",
+    adobeOperation: "none — local file store, no AE contact",
+  },
+  "tool.tool-library-search": {
+    label: "Search the local tool library",
+    adobeOperation: "none — local file store read",
+  },
+  "tool.workspace-bind": {
+    label: "Bind a task to an AE project and manage write access",
+    adobeOperation: "host capability state (no direct project mutation)",
+  },
+  "system.run-jsx": {
+    label: "Run arbitrary caller-supplied ExtendScript",
+    adobeOperation: "arbitrary ExtendScript eval — access depends on the script",
+  },
+  "system.write-script-file": {
+    label: "Write a compiled script to the Scripts Panel folder",
+    adobeOperation: "none — local file write, AE not launched",
+  },
+  "system.get-results": {
+    label: "Read the temp result file of a dispatched script",
+    adobeOperation: "none — local file read",
+  },
+  "system.prepare-command": {
+    label: "Wrap a function/command for dispatch",
+    adobeOperation: "none — request-local object construction",
+  },
+  "system.result-error": {
+    label: "Error type for script results returned from AE",
+    adobeOperation: "none — result plumbing",
+  },
+  // --- one-word curations for remaining derived ids (gap-matrix clarity) ---
+  "tool.ae-guide": {
+    label: "Serve a bundled usage guide topic",
+    adobeOperation: "none — server-local documentation read",
+  },
+  "tool.analyze-cuts": {
+    label: "Analyze footage for cuts (silence/scene detection)",
+    adobeOperation: "none — external media analysis outside AE",
+  },
+  "tool.analyze-motion": {
+    label: "Summarize an animation from key reads",
+    adobeOperation: "Property keyframe DOM (key/ease reads, server-side summary)",
+  },
+  "tool.animate-from-data": {
+    label: "Generate animation from external data",
+    adobeOperation: "Property keyframe DOM (bulk generated keys)",
+  },
+  "tool.archive-issue": {
+    label: "Archive an issue-journal entry",
+    adobeOperation: "none — local file store rewrite",
+  },
+  "tool.audit-editorial-plan": {
+    label: "Audit an editorial plan for problems",
+    adobeOperation: "none — request-local plan analysis",
+  },
+  "tool.await-job": {
+    label: "Block on a running render/batch job",
+    adobeOperation: "none — server job registry wait",
+  },
+  "tool.cancel-job": {
+    label: "Cancel a running render/batch job",
+    adobeOperation: "aerender/batch process termination (host-side)",
+  },
+  "tool.check-setup": {
+    label: "Report panel/bridge installation status",
+    adobeOperation: "none — install-state inspection",
+  },
+  "tool.comp-diff": {
+    label: "Diff a comp against a stored fingerprint",
+    adobeOperation: "structural layer fingerprint comparison (read)",
+  },
+  "tool.contact-sheet": {
+    label: "Compose captured frames into one contact sheet",
+    adobeOperation: "none — local image compositing",
+  },
+  "tool.create-editorial-plan": {
+    label: "Generate an editorial plan document",
+    adobeOperation: "none — local file write",
+  },
+  "tool.create-logo-reveal": {
+    label: "Build a logo reveal animation",
+    adobeOperation: "layer/keyframe creation driven by a shipped template",
+  },
+  "tool.create-lower-third": {
+    label: "Build a lower-third graphic",
+    adobeOperation: "layer/keyframe/shape creation driven by a shipped template",
+  },
+  "tool.create-review": {
+    label: "Record a review item in the local review store",
+    adobeOperation: "none — local file write",
+  },
+  "tool.create-title-card": {
+    label: "Build a title card animation",
+    adobeOperation: "layer/keyframe creation driven by a shipped template",
+  },
+  "tool.create-transition": {
+    label: "Build a transition between layers",
+    adobeOperation: "layer/keyframe creation driven by a shipped template",
+  },
+  "tool.debugalert": {
+    label: "Raise a debug alert dialog",
+    adobeOperation: "ExtendScript alert() (debug)",
+  },
+  "tool.decide-review": {
+    label: "Record a decision on a review item",
+    adobeOperation: "none — local file write",
+  },
+  "tool.delete-checkpoints": {
+    label: "Delete stored comp checkpoints",
+    adobeOperation: "project item removal (checkpoint comps)",
+  },
+  "tool.get-job": {
+    label: "Inspect a render/batch job record",
+    adobeOperation: "none — server job registry read",
+  },
+  "tool.get-results": {
+    label: "Fetch a bridge job result",
+    adobeOperation: "none — job result retrieval",
+  },
+  "tool.import-3d-from-blender": {
+    label: "Import a Blender scene as AE layers",
+    adobeOperation: "footage import + layer creation driven by external data",
+  },
+  "tool.init-project": {
+    label: "Initialize a project folder on disk",
+    adobeOperation: "none — local folder write",
+  },
+  "tool.list-blender-jobs": {
+    label: "List queued Blender render jobs",
+    adobeOperation: "none — local job registry read",
+  },
+  "tool.list-checkpoints": {
+    label: "List stored comp checkpoints",
+    adobeOperation: "project item iteration (read)",
+  },
+  "tool.list-instances": {
+    label: "List AE instances registered with a broker",
+    adobeOperation: "none — broker-local registry read",
+  },
+  "tool.list-known-issues": {
+    label: "List issue-journal entries",
+    adobeOperation: "none — local file store read",
+  },
+  "tool.list-reviews": {
+    label: "List review items from the local review store",
+    adobeOperation: "none — local file store read",
+  },
+  "tool.log-issue": {
+    label: "Record an issue-journal entry",
+    adobeOperation: "none — local file write",
+  },
+  "tool.mark-issue-reported": {
+    label: "Mark an issue-journal entry reported",
+    adobeOperation: "none — local file rewrite",
+  },
+  "tool.match-reference": {
+    label: "Match a reference look/motion",
+    adobeOperation: "effect/property writes derived from analysis",
+  },
+  "tool.populate-template": {
+    label: "Populate a comp template with data",
+    adobeOperation: "layer property writes driven by data",
+  },
+  "tool.prepare-blender-3d-job": {
+    label: "Queue a Blender render for later AE import",
+    adobeOperation: "none — external Blender job submission",
+  },
+  "tool.reconnect": {
+    label: "Re-inject a bridge bootstrap into AE",
+    adobeOperation: "host lifecycle (AfterFX -r bootstrap run)",
+  },
+  "tool.scanfolder": {
+    label: "Scan a folder and return file names",
+    adobeOperation: "none — local filesystem read",
+  },
+  "tool.setup-panel": {
+    label: "Install the CEP panel on disk",
+    adobeOperation: "none — local install (panel files / debug preference)",
+  },
+  "tool.status": {
+    label: "Report host/bridge connection status",
+    adobeOperation: "none — host status read",
+  },
+  "tool.test-animation": {
+    label: "Run a canned bridge animation test",
+    adobeOperation: "arbitrary ExtendScript eval (test payload)",
+  },
+  "tool.transcribe-video": {
+    label: "Transcribe video audio to text (local)",
+    adobeOperation: "none — external transcription, no AE contact",
+  },
+  "tool.transcript-to-cuts": {
+    label: "Derive cut segments from a transcript",
+    adobeOperation: "none — local file processing",
+  },
+  "tool.verify-blender-job": {
+    label: "Check a Blender render job's state",
+    adobeOperation: "none — local job registry read",
+  },
+  "tool.writetextfile": {
+    label: "Write a text file at an absolute path",
+    adobeOperation: "none — local filesystem write",
+  },
 };
 
 export function buildSemantics(operations: OperationRow[], _tools: ToolRecord[]): SemanticBundle {
