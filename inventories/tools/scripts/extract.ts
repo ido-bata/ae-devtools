@@ -187,10 +187,15 @@ export function countAccess(rows: OperationRow[]): AccessCounts {
 const ADAPTERS = [
   "./adapters/ae-a8n.ts",
   "./adapters/ae-devtools.ts",
+  "./adapters/benzed.ts",
   "./adapters/ishu86.ts",
   "./adapters/heroicswan.ts",
   "./adapters/dakkshin-family.ts",
   "./adapters/23d1.ts",
+  "./adapters/junkdoge.ts",
+  "./adapters/volksrat.ts",
+  "./adapters/engineroom.ts",
+  "./adapters/layernote.ts",
 ] as const;
 
 export async function runAdapters(): Promise<OperationRow[]> {

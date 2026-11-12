@@ -35,10 +35,10 @@
       "license": "MIT (LICENSE text) / ISC (package.json) — mismatch kept as ambiguity",
       "licenseEvidence": "LICENSE 'Permission is hereby granted...'; package.json \"license\": \"ISC\" — recorded without resolving",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/BenZed_after-effects",
       "extraction": "benzed",
-      "notes": "Cited by ae-a8n ADR-0001 as prior external AE invocation precedent. このパスでは行を抽出していない (adapters/benzed.ts 未実装または対象外); source-verified ではない"
+      "notes": "Cited by ae-a8n ADR-0001 as prior external AE invocation precedent."
     },
     {
       "id": "ido-bata/Ae_LayerNote",
@@ -48,10 +48,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'Hyper Brew LLC'; package.json has no license field",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/ido-bata_Ae_LayerNote",
-      "extraction": "layernote",
-      "notes": "このパスでは行を抽出していない (adapters/layernote.ts 未実装または対象外); source-verified ではない"
+      "extraction": "layernote"
     },
     {
       "id": "ishu86/after-effects-mcp",
@@ -123,10 +122,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'ae-mcp contributors'; root has no package.json license field",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/JUNKDOGE-JOE_after-effects-mcp",
-      "extraction": "junkdoge",
-      "notes": "このパスでは行を抽出していない (adapters/junkdoge.ts 未実装または対象外); source-verified ではない"
+      "extraction": "junkdoge"
     },
     {
       "id": "VolksRat71/after-effects-mcp-vision",
@@ -136,10 +134,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'Dakkshin'; cep/package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/VolksRat71_after-effects-mcp-vision",
-      "extraction": "volksrat",
-      "notes": "このパスでは行を抽出していない (adapters/volksrat.ts 未実装または対象外); source-verified ではない"
+      "extraction": "volksrat"
     },
     {
       "id": "Engine-Room-Games/after-effects-mcp",
@@ -149,10 +146,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License', copyright 'Engine Room'; workspace package.json declares no license field",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/Engine-Room-Games_after-effects-mcp",
-      "extraction": "engineroom",
-      "notes": "このパスでは行を抽出していない (adapters/engineroom.ts 未実装または対象外); source-verified ではない"
+      "extraction": "engineroom"
     },
     {
       "id": "23d1/after-effects-mcp",
