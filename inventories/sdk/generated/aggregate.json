@@ -1,0 +1,1152 @@
+{
+  "schema": "ae-devtools.sdk-inventory.aggregate/v0-provisional",
+  "schemaStatus": "provisional",
+  "catalogContract": "Provisional shapes only. The final capability-ID grammar and catalog schema are owned by issue #11 and are not fixed here.",
+  "redistribution": {
+    "headersNotice": "Headers carry an 'ADOBE CONFIDENTIAL ... reproduction of this material is strictly forbidden' notice; the SDK package ships no license, EULA or readme grant.",
+    "licenseFileInPackage": false,
+    "committedContent": "Aggregate counts, per-header hashes and provenance only. No symbol identifiers, no header text, no struct layouts.",
+    "detailContent": "Per-symbol rows are generated locally into a git-ignored path and are never published. Reproducing the symbol list requires the operator's own licensed SDK."
+  },
+  "release": {
+    "identifier": "26.5",
+    "distribution": "macOS",
+    "headersRoot": "Headers"
+  },
+  "coverageSemantics": {
+    "denominatorDefinition": "Every callable, registrable or declarable symbol the headers expose: suites, suite slots, selectors, entry-point prototypes and blocks, callback types and slots, version/PiPL declarations, and named data types. Named data types stay in the denominator and are counted as unsupported-or-unknown/pure-data-type so the total is never silently shrunk.",
+    "classificationNote": "Classes come from declaration context, not identifier spelling. Suite membership plus a registration-string macro yields external-command; selector and entry-point wiring yields in-host-plugin-command; host procedure tables and prototypes registered with the host yield host-callback. Anything the headers do not attribute stays unknown.",
+    "classes": [
+      "external-command",
+      "in-host-plugin-command",
+      "host-callback",
+      "build-test-lifecycle",
+      "unsupported-or-unknown"
+    ],
+    "kinds": [
+      "suite",
+      "suite-slot",
+      "selector",
+      "entry-point",
+      "entry-point-slot",
+      "callback-type",
+      "callback-slot",
+      "version-or-pipl",
+      "type"
+    ]
+  },
+  "totals": {
+    "headerFilesParsed": 70,
+    "headerFilesPresent": 70,
+    "headersAtTopLevel": 40,
+    "symbols": 4677,
+    "byClass": {
+      "build-test-lifecycle": 74,
+      "external-command": 3766,
+      "host-callback": 154,
+      "in-host-plugin-command": 131,
+      "unsupported-or-unknown": 552
+    },
+    "unknown": 552,
+    "unknownByReason": {
+      "deprecated-header-only": 0,
+      "pure-data-type": 534,
+      "reserved-selector": 5,
+      "unattributed-callable": 13
+    },
+    "byKind": {
+      "callback-slot": 98,
+      "callback-type": 69,
+      "entry-point": 29,
+      "entry-point-slot": 58,
+      "selector": 49,
+      "suite": 227,
+      "suite-slot": 3539,
+      "type": 534,
+      "version-or-pipl": 74
+    },
+    "byEvidence": {
+      "host-dispatches-entry-point": 87,
+      "host-invoked-callback": 154,
+      "host-to-plugin-selector": 0,
+      "none": 634,
+      "suite-registration-string": 3728,
+      "version-or-pipl-declaration": 74
+    },
+    "byRuleFamily": {
+      "entry-block": 79,
+      "host-proc-table": 121,
+      "nested-in-host-proc-table": 19,
+      "prototype+entry-point-comment": 8,
+      "registered-with-host-via-suite": 2,
+      "selector-enum-undocumented": 44,
+      "slot-type-of-suite": 12,
+      "suite+registration-string": 225,
+      "suite-slot+registration-string": 3503,
+      "suite-slot-unregistered": 36,
+      "suite-unregistered": 2,
+      "unknown": 552,
+      "version-macro": 74
+    },
+    "deprecatedHeaderSymbols": 2318
+  },
+  "perHeader": [
+    {
+      "path": "A.h",
+      "bytes": 6315,
+      "sha256": "2161eac72fb672ee0d95ec50ce09d510e60738b61020ef0d473ab28f131e07c7",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 40,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 40
+      },
+      "unknown": 40
+    },
+    {
+      "path": "AEConfig.h",
+      "bytes": 2595,
+      "sha256": "7c7f5d929780b36b43670e85f3bcdcdb5a953ee2907ed1e0e1b2d6f05f571ee5",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AEFX_SuiteHandlerTemplate.h",
+      "bytes": 3744,
+      "sha256": "323d754828a52ff2f97bee97cc150c29b86a8aaeadefc67f5005e474739c3d80",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_AdvEffectSuites.h",
+      "bytes": 10997,
+      "sha256": "fae58816869a8bb4e9634abc142e4654aee5d996a78eb48450d1d4733e9073c8",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 54,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 50,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 4
+      },
+      "unknown": 4
+    },
+    {
+      "path": "AE_BlendModes.h",
+      "bytes": 4345,
+      "sha256": "0a67a4b39c8e8ea6757f7df372569e8ec38437e63b930adf51fe9d2c09c038bc",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      },
+      "unknown": 2
+    },
+    {
+      "path": "AE_CacheOnLoadSuite.h",
+      "bytes": 1850,
+      "sha256": "bba22317f9f5a1e07231937a6c2a40a570a0d5fcabb42bd13c8baf551456da10",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_ChannelSuites.h",
+      "bytes": 17981,
+      "sha256": "1c4f5edc286a57c38a35d7f3eb56ee37dc27634ffd7074a2d98658cdd9b4192b",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_ComputeCacheSuite.h",
+      "bytes": 8403,
+      "sha256": "71e28b3328438d34edc5ffa5e8c7db4717222a33640ecb0aa45bde71ca9cbf41",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 19,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 7,
+        "host-callback": 4,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 8
+      },
+      "unknown": 8
+    },
+    {
+      "path": "AE_CreatorInfo.h",
+      "bytes": 1880,
+      "sha256": "ea3041a072e9cefa561dee17993571982ef84a8a9a3f3a4c704a4e79acabaca7",
+      "notice": "adobe-permissive",
+      "symbols": 1,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "AE_Effect.h",
+      "bytes": 146107,
+      "sha256": "665f2affb322b97e483ac30494dd9dcb91b94ca3aa07116a9014124f0b5ca6d0",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 234,
+      "byClass": {
+        "build-test-lifecycle": 70,
+        "external-command": 0,
+        "host-callback": 14,
+        "in-host-plugin-command": 31,
+        "unsupported-or-unknown": 119
+      },
+      "unknown": 119
+    },
+    {
+      "path": "AE_EffectCB.h",
+      "bytes": 46186,
+      "sha256": "b23e7add285ca1fdf41d7a3eabb9c82b75856e9155cb2eb6b3d81f900b1c44b8",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 84,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 69,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 15
+      },
+      "unknown": 15
+    },
+    {
+      "path": "AE_EffectCBSuites.h",
+      "bytes": 31635,
+      "sha256": "f61e1d9c1d227ec047740957f09745b93c23008670442e34c3a27c0529612065",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 148,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 148,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_EffectGPUSuites.h",
+      "bytes": 9978,
+      "sha256": "7a9374bb980cb82633802c03c3c9e530072a2d88b47b74b32baa2626df3ed97e",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 17,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 16,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "AE_EffectPixelFormat.h",
+      "bytes": 5683,
+      "sha256": "ddb6d3383cadec85fd8771b965103f871e58af6e3056b9acc1a17f6672ddd112",
+      "notice": "no-notice",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      },
+      "unknown": 2
+    },
+    {
+      "path": "AE_EffectSuites.h",
+      "bytes": 28320,
+      "sha256": "16c1f06cb683a9dcf6208f97629c76be7fd3fb09278d7fd0ca4818d5c88abf35",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 73,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 63,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 10
+      },
+      "unknown": 10
+    },
+    {
+      "path": "AE_EffectSuitesHelper.h",
+      "bytes": 6735,
+      "sha256": "03379a80aa00adc3b36b3bbb9f5c1bd0ad3181341e5754e62d552df20c713fca",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 8,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      },
+      "unknown": 2
+    },
+    {
+      "path": "AE_EffectSuitesOld.h",
+      "bytes": 12631,
+      "sha256": "853313284dcb9fc792cae7d0b2600b8a4ced307be58191dfa31d8915ed0a94e2",
+      "notice": "other-copyright-only",
+      "symbols": 38,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 38,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_EffectUI.h",
+      "bytes": 20658,
+      "sha256": "6e3920c80118597baa574040f0070d37a15d3ad5da8b90e276b2c7e4ee32ea97",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 46,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 8,
+        "in-host-plugin-command": 14,
+        "unsupported-or-unknown": 24
+      },
+      "unknown": 24
+    },
+    {
+      "path": "AE_EffectVers.h",
+      "bytes": 657,
+      "sha256": "97c2e18c0fdf0cb31eba1a867a2ebbf0bb3c5436d6628b2a5aac02d6f75edefe",
+      "notice": "no-notice",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 4,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_GeneralPlug.h",
+      "bytes": 242278,
+      "sha256": "24414adeae741a2f6328f4eb9aa24c4bb271a1e5214192f7ad927892f7d6a49b",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 988,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 832,
+        "host-callback": 11,
+        "in-host-plugin-command": 7,
+        "unsupported-or-unknown": 138
+      },
+      "unknown": 138
+    },
+    {
+      "path": "AE_GeneralPlugOld.h",
+      "bytes": 466823,
+      "sha256": "4bbe79112e1d099b3fc020170a4e6b5bead2f5db95e961a42ad312ed1feab637",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 2280,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2274,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 5
+      },
+      "unknown": 5
+    },
+    {
+      "path": "AE_GeneralPlugPanels.h",
+      "bytes": 4865,
+      "sha256": "ece332e735d745258898c9248e38553c7f0792a1cb9e379c99810d1a13491d34",
+      "notice": "no-notice",
+      "symbols": 18,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 1,
+        "in-host-plugin-command": 3,
+        "unsupported-or-unknown": 8
+      },
+      "unknown": 8
+    },
+    {
+      "path": "AE_GeneralPlugPost.h",
+      "bytes": 576,
+      "sha256": "a09415e16460621d7148a8ed53e97997a11b21d2a687cc69fa1d5c751118e2e3",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_GeneralPlugPre.h",
+      "bytes": 672,
+      "sha256": "8f8a9f4c015a1a46288d62a123319c306c28af145406c47c44e8b41552dca40d",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_HashSuite.h",
+      "bytes": 1619,
+      "sha256": "04a510bee05de682dec6fe9d163a2447d984fe99d235ab02ba57909b0cf8adda",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 3,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 3,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_Hook.h",
+      "bytes": 4763,
+      "sha256": "85894f75151f7a5b8f47090707c0afcccfc5fb50b115b70ea8dff70b318b81ee",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 12,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 4,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 8
+      },
+      "unknown": 8
+    },
+    {
+      "path": "AE_IO.h",
+      "bytes": 28255,
+      "sha256": "3c976aa1ac5e4267c2d5ee2b08945ebf3a65a79ee00d89d0026473dbfa78b03d",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 89,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 2,
+        "in-host-plugin-command": 49,
+        "unsupported-or-unknown": 38
+      },
+      "unknown": 38
+    },
+    {
+      "path": "AE_IO_ColorMetadata.h",
+      "bytes": 2289,
+      "sha256": "f4b8f0f27167eb24ec1679e65bafd0d3ce1d7038c374fe837aa9137139bac051",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 3,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 3
+      },
+      "unknown": 3
+    },
+    {
+      "path": "AE_IO_FileExt.h",
+      "bytes": 1613,
+      "sha256": "88607271188b31b59d04149e6c04bebdd9b167aeffebfe4d46ac4c981f27dc28",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 1,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "AE_Macros.h",
+      "bytes": 4810,
+      "sha256": "d9cdfbbdbdd9cf1a1212fac2837de82c7755d405444586f214564bb74f07e4fe",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "AE_PluginData.h",
+      "bytes": 6980,
+      "sha256": "a059c698bbc7aeadc4bf7a3f228d0ad56936c456cfc7ada5f186d1359bcafa5b",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 6,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "FIEL_Public.h",
+      "bytes": 3077,
+      "sha256": "0bbad8120c5104dd3936308f2d6d43df7c5154eecd9abdb1ce7ac78d95cf53be",
+      "notice": "no-notice",
+      "symbols": 3,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 3
+      },
+      "unknown": 3
+    },
+    {
+      "path": "Mach-O_prefix.h",
+      "bytes": 719,
+      "sha256": "dfc18e39b5b5a0953c97d6b3b24da5db618837ac1715bcc4e27d1caa14ca0405",
+      "notice": "adobe-permissive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "PF_Masks.h",
+      "bytes": 955,
+      "sha256": "c456685f0991994cadf9fdc653d3cf5624e124b8ffbcc743dc5321062e3963e3",
+      "notice": "no-notice",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "PR_Public.h",
+      "bytes": 13101,
+      "sha256": "acccec00ef996d4817e0a96ef896f4291cd5e0ec553796ecc391d1d4699ad887",
+      "notice": "no-notice",
+      "symbols": 43,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 20,
+        "in-host-plugin-command": 11,
+        "unsupported-or-unknown": 12
+      },
+      "unknown": 12
+    },
+    {
+      "path": "PT_Public.h",
+      "bytes": 4168,
+      "sha256": "d450e7470daccff9ced009f6d465f22ac9279a95790a574f19750323f3950417",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 12,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 10,
+        "unsupported-or-unknown": 2
+      },
+      "unknown": 2
+    },
+    {
+      "path": "PrSDKAESupport.h",
+      "bytes": 18824,
+      "sha256": "8c45c4605383e8d6ff5e419a8266f26df38a82a59e986a9b0efd05d24f5d40ac",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 100,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 80,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 20
+      },
+      "unknown": 20
+    },
+    {
+      "path": "PrSDKPixelFormat.h",
+      "bytes": 12300,
+      "sha256": "0e23d4b1c49a40c4df8226dfb0d8414fe8c69e8bf86d28ecdab6f08377b9b783",
+      "notice": "adobe-permissive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPAccess.h",
+      "bytes": 16280,
+      "sha256": "7f63ce94fb04a5659979899dffee9ed67f1eb9d938a63fd5de11418329dfa574",
+      "notice": "other-restrictive",
+      "symbols": 17,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 13,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 3
+      },
+      "unknown": 3
+    },
+    {
+      "path": "SP/SPAdapts.h",
+      "bytes": 18482,
+      "sha256": "9df12abb968a64a2e16510fecd5ebf4ffa7585879afc7b39adcde16e9ffcad77",
+      "notice": "other-restrictive",
+      "symbols": 12,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 11,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "SP/SPBasic.h",
+      "bytes": 7328,
+      "sha256": "a1258cfd57eedbe5ecbfcebf2bc7df8a3826f495f8e3cc549dce55e60e73395b",
+      "notice": "other-restrictive",
+      "symbols": 8,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 8,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPBckDbg.h",
+      "bytes": 4400,
+      "sha256": "91d6db1094d012e41c71de03322d0112b6f3ba243a25972aa271e4835d5c0e79",
+      "notice": "other-restrictive",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPBlocks.h",
+      "bytes": 4576,
+      "sha256": "a02ac3071663e08383fdd094a64bb0e8db3b2ffccc6a48b373bb7047a4ea93d9",
+      "notice": "other-restrictive",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 4,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPCOM.h",
+      "bytes": 185,
+      "sha256": "3476c4acc71d40d31dfdc00ed151210f51e48dedb51d46b6f2d2afd5bd1079ba",
+      "notice": "other-copyright-only",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPCaches.h",
+      "bytes": 5101,
+      "sha256": "99632ce0fa53f3288b7e088c4fea91d8cced2074c19511face04b40a106826e7",
+      "notice": "other-restrictive",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "SP/SPConfig.h",
+      "bytes": 2465,
+      "sha256": "ceb3caacddef02f167858a47319f06295c88fa3bebbd0a8869281295c4ef3a7c",
+      "notice": "other-restrictive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPErrorCodes.h",
+      "bytes": 6065,
+      "sha256": "a88648c1fb2f30f23c7423ab9509541746b370b35f7c4ba17ba064d5d6b45ef5",
+      "notice": "other-restrictive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPErrors.h",
+      "bytes": 1772,
+      "sha256": "c0064aa1d4aec34d24ebd1ebf976739d1a301984707d4818c64830a6bff921e8",
+      "notice": "other-restrictive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPFiles.h",
+      "bytes": 22076,
+      "sha256": "b86fe5383f7e39687b37dd81ebf5f9e3bc070bf0ada107103c22ea5956bf23d3",
+      "notice": "other-restrictive",
+      "symbols": 40,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 26,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 14
+      },
+      "unknown": 14
+    },
+    {
+      "path": "SP/SPHost.h",
+      "bytes": 5072,
+      "sha256": "8cd330b0d1b1ac4c71cd52dcdf9f3e3fd893e1f18a447179ab82be8ec7b4c4f6",
+      "notice": "other-restrictive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPInterf.h",
+      "bytes": 7164,
+      "sha256": "2d75b1f4ff6bd22ba0a145d392e770b37fa2ede7ff6213d60f003c9031ddb9c6",
+      "notice": "other-restrictive",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 5,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "SP/SPMData.h",
+      "bytes": 2480,
+      "sha256": "ea91dc7eeb7da1763093458b8dcd647a709c053e0d65d3e88f37f1b7d696f501",
+      "notice": "other-restrictive",
+      "symbols": 1,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "SP/SPObject.h",
+      "bytes": 626,
+      "sha256": "fa20e0803225993592d8a454b0bd889b7d10ad8774b80178ff01e3c740495c81",
+      "notice": "other-copyright-only",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPPiPL.h",
+      "bytes": 12086,
+      "sha256": "ffcbcb74082b1be2c3dc6cd73564fa24f2c86788bcbc6c5011de0eb2d0048250",
+      "notice": "other-restrictive",
+      "symbols": 13,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 13
+      },
+      "unknown": 13
+    },
+    {
+      "path": "SP/SPPlugs.h",
+      "bytes": 32084,
+      "sha256": "8de03821b78b4eb47d792a39cd2b406bba5773f38423f24a3a6cf6383f8f6664",
+      "notice": "other-restrictive",
+      "symbols": 61,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 58,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      },
+      "unknown": 2
+    },
+    {
+      "path": "SP/SPProps.h",
+      "bytes": 15865,
+      "sha256": "1405501598502c4bc11a3dfd76798fde7c4e7b0ae70cdb944f190d38d9b30497",
+      "notice": "other-restrictive",
+      "symbols": 17,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 16,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      },
+      "unknown": 1
+    },
+    {
+      "path": "SP/SPRuntme.h",
+      "bytes": 23886,
+      "sha256": "efed76d7c887838b4e7b3d167d0c4383eff085d0c83a4f5597a920b32971d7e9",
+      "notice": "other-restrictive",
+      "symbols": 43,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 18,
+        "host-callback": 17,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 8
+      },
+      "unknown": 8
+    },
+    {
+      "path": "SP/SPSTSPrp.h",
+      "bytes": 1835,
+      "sha256": "6cde8d0a6ad403e85ec05c2463429ce8ecba23b949336c48da58012c0ea558a6",
+      "notice": "other-restrictive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPStrngs.h",
+      "bytes": 5133,
+      "sha256": "aa2a980eea3a54cf8b32b12afe00f662d2694cb6775bc7181df59ce5b5e6debf",
+      "notice": "other-restrictive",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 4,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPSuites.h",
+      "bytes": 12671,
+      "sha256": "cffe563967efa0f333c8a961b0bec06afb6b87cb4386d0f78e7b963ab1c3e273",
+      "notice": "other-restrictive",
+      "symbols": 16,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 16,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/SPTypes.h",
+      "bytes": 4703,
+      "sha256": "c673607a0ab7102fdbce141d0bdca00c91cd2bad8d95dd98b5db2fdd67a165db",
+      "notice": "other-restrictive",
+      "symbols": 19,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 19
+      },
+      "unknown": 19
+    },
+    {
+      "path": "SP/artemis/config/platform.hpp",
+      "bytes": 10119,
+      "sha256": "69ffef4b537e8c29b24dfc0e0b91fcb0d7b68de34b23c4c3a0eb102ea3366e6f",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SP/photoshop/config/platform.hpp",
+      "bytes": 4058,
+      "sha256": "69138fe992bc53e1f41ff169b2f6dc8571d936c5c164da06d7fa7ea9a407a25f",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SimpleSuiteHelper.h",
+      "bytes": 2386,
+      "sha256": "70c90e4533f6afcd5d2bcd8ac4f752751df1bcc7ab95fdc4f97d7772acec81bb",
+      "notice": "adobe-permissive",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "SuiteHelper.h",
+      "bytes": 2209,
+      "sha256": "76ba61b258b5cde373c8b22084b61cb1b4d417994bcd9d010b6dbde03158e05a",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "adobesdk/DrawbotSuite.h",
+      "bytes": 21495,
+      "sha256": "6a32e411b355a0b10eca50b49ef9e954e31d6c013d74b23c954a192e19ed09fe",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 51,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 46,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 5
+      },
+      "unknown": 5
+    },
+    {
+      "path": "adobesdk/config/AdobesdkTypes.h",
+      "bytes": 2128,
+      "sha256": "ca1eb2a2356e7c7bd4c2fa5cba075227496ef9fe11f6b97b1d475a21522ffa90",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 6
+      },
+      "unknown": 6
+    },
+    {
+      "path": "adobesdk/config/PostConfig.h",
+      "bytes": 43,
+      "sha256": "d8498d3669469dca2439f7cac36093226ea7f191eda9d9928a8f77a7b40bce2e",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "adobesdk/config/PreConfig.h",
+      "bytes": 134,
+      "sha256": "078079dc305335cbe7866030e61ef1a937172019ad95103aa5b93bca27a3c35b",
+      "notice": "no-notice",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      },
+      "unknown": 0
+    },
+    {
+      "path": "adobesdk/drawbotsuite/DrawbotSuiteTypes.h",
+      "bytes": 4536,
+      "sha256": "0cfa5194dd659312fe9e15e1f9d7c26f37c328b35589ab997b87eebbb1fb0547",
+      "notice": "adobe-confidential-no-reproduction",
+      "symbols": 11,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 11
+      },
+      "unknown": 11
+    }
+  ],
+  "denominatorCaveats": [
+    "The count is the number of symbol rows this extractor can attribute structurally. It is not a claim that the SDK's public surface is fully enumerated.",
+    "unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.",
+    "Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.",
+    "Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.",
+    "No behavioural claim about any AE build is implied. Nothing here was executed against After Effects."
+  ]
+}
