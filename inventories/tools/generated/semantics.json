@@ -31,12 +31,60 @@
       ]
     },
     {
+      "id": "audio.analyze-audio-waveform",
+      "provisional": true,
+      "label": "Analyze audio waveform",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "audio.animate-to-audio",
+      "provisional": true,
+      "label": "Animate to audio",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "audio.get-audio-info",
+      "provisional": true,
+      "label": "Get audio info",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "audio.set-audio-levels",
+      "provisional": true,
+      "label": "Set audio levels",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "camera.add-camera-layer",
       "provisional": true,
       "label": "Add camera layer",
       "adobeOperation": "Camera layer DOM",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "camera.create-camera",
+      "provisional": true,
+      "label": "Create camera",
+      "adobeOperation": "Camera layer DOM",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -63,7 +111,10 @@
       "label": "Create a composition",
       "adobeOperation": "Project.items.addComp",
       "tools": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ido-bata/ae-devtools",
         "ishu86/after-effects-mcp"
@@ -126,12 +177,30 @@
       ]
     },
     {
+      "id": "comp.inspect-comp",
+      "provisional": true,
+      "label": "Inspect comp",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "comp.list-layers",
       "provisional": true,
       "label": "List a comp's layers",
       "adobeOperation": "CompItem.numLayers / CompItem.layer(i) projection",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.localize-comp",
+      "provisional": true,
+      "label": "Localize comp",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -159,6 +228,15 @@
       "adobeOperation": "CompItem DOM (composition settings, items, timing)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-composition-properties",
+      "provisional": true,
+      "label": "Set composition properties",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -234,12 +312,25 @@
       ]
     },
     {
+      "id": "effect.add-any-effect",
+      "provisional": true,
+      "label": "Add any effect",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "effect.apply",
       "provisional": true,
       "label": "Apply an effect to a layer",
       "adobeOperation": "Effect Parade addProperty",
       "tools": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ido-bata/ae-a8n",
         "ishu86/after-effects-mcp"
       ]
@@ -263,12 +354,53 @@
       ]
     },
     {
+      "id": "effect.list-available-effects",
+      "provisional": true,
+      "label": "List available effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "effect.list-parameters",
       "provisional": true,
       "label": "List an effect's parameters",
       "adobeOperation": "Effect property iteration (describeProperty)",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "effect.mcp-aftereffects-apply-effect",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.mcp-aftereffects-apply-effect-template",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect template",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.mcp-aftereffects-get-effects-help",
+      "provisional": true,
+      "label": "Mcp aftereffects get effects help",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -287,6 +419,8 @@
       "adobeOperation": "Effect/Property DOM (effects and their parameters)",
       "tools": [
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -306,6 +440,8 @@
       "adobeOperation": "Property.setValue",
       "tools": [
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ido-bata/ae-a8n"
       ]
     },
@@ -360,7 +496,10 @@
       "label": "Set",
       "adobeOperation": "Property expression DOM (expression text/enabled/error)",
       "tools": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -380,7 +519,17 @@
       "adobeOperation": "Footage import and footage item DOM",
       "tools": [
         "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.relink-footage",
+      "provisional": true,
+      "label": "Relink footage",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -434,8 +583,21 @@
       "label": "Set",
       "adobeOperation": "Property keyframe DOM (keys and interpolation)",
       "tools": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set-effect-keyframe",
+      "provisional": true,
+      "label": "Set effect keyframe",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -513,6 +675,26 @@
       ]
     },
     {
+      "id": "layer.center-layers",
+      "provisional": true,
+      "label": "Center layers",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.create-adjustment-layer",
+      "provisional": true,
+      "label": "Create adjustment layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.create-layer",
       "provisional": true,
       "label": "Create layer",
@@ -522,12 +704,22 @@
       ]
     },
     {
+      "id": "layer.create-text-layer",
+      "provisional": true,
+      "label": "Create text layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.delete",
       "provisional": true,
       "label": "Delete",
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
         "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -537,7 +729,8 @@
       "label": "Duplicate",
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
-        "HeroicSwan/after-effects-mcp"
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -556,6 +749,16 @@
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
         "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.get-layer-clip-frames",
+      "provisional": true,
+      "label": "Get layer clip frames",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -586,6 +789,15 @@
       ]
     },
     {
+      "id": "layer.inspect-layer",
+      "provisional": true,
+      "label": "Inspect layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.list",
       "provisional": true,
       "label": "List",
@@ -606,6 +818,16 @@
       ]
     },
     {
+      "id": "layer.list-layer-effects",
+      "provisional": true,
+      "label": "List layer effects",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.modify-layer",
       "provisional": true,
       "label": "Modify layer",
@@ -620,7 +842,17 @@
       "label": "Precompose layers",
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.reorder-layer",
+      "provisional": true,
+      "label": "Reorder layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -651,12 +883,31 @@
       ]
     },
     {
+      "id": "layer.set-layer-parent",
+      "provisional": true,
+      "label": "Set layer parent",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.set-mask",
+      "provisional": true,
+      "label": "Set mask",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "layer.set-properties",
       "provisional": true,
       "label": "Set properties",
       "adobeOperation": "Layer DOM (layer creation and layer properties)",
       "tools": [
-        "HeroicSwan/after-effects-mcp"
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -678,12 +929,32 @@
       ]
     },
     {
+      "id": "marker.add",
+      "provisional": true,
+      "label": "Add",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "marker.add-layer-marker",
       "provisional": true,
       "label": "Add layer marker",
       "adobeOperation": "Marker property DOM",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.add-markers-bulk",
+      "provisional": true,
+      "label": "Add markers bulk",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -819,6 +1090,16 @@
       "adobeOperation": "app.findMenuCommandId",
       "tools": [
         "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "motion.apply-preset",
+      "provisional": true,
+      "label": "Apply preset",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -976,6 +1257,7 @@
       "label": "List items",
       "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
       "tools": [
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1040,6 +1322,7 @@
       "label": "Add to render queue",
       "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
       "tools": [
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ]
     },
@@ -1090,6 +1373,33 @@
       ]
     },
     {
+      "id": "render.render-aerender",
+      "provisional": true,
+      "label": "Render aerender",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-queue",
+      "provisional": true,
+      "label": "Render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-status",
+      "provisional": true,
+      "label": "Render status",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "render.set-render-queue-item",
       "provisional": true,
       "label": "Set render queue item",
@@ -1099,12 +1409,31 @@
       ]
     },
     {
+      "id": "render.start-render",
+      "provisional": true,
+      "label": "Start render",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "search.search",
       "provisional": true,
       "label": "Search",
       "adobeOperation": "Project search (item name matching)",
       "tools": [
         "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "search.search-presets",
+      "provisional": true,
+      "label": "Search presets",
+      "adobeOperation": "Project search (item name matching)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1126,6 +1455,26 @@
       ]
     },
     {
+      "id": "system.check-bridge",
+      "provisional": true,
+      "label": "Check bridge",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.get-help",
+      "provisional": true,
+      "label": "Get help",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "system.health",
       "provisional": true,
       "label": "Health",
@@ -1135,12 +1484,26 @@
       ]
     },
     {
+      "id": "system.run-bridge-test",
+      "provisional": true,
+      "label": "Run bridge test",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "system.run-jsx",
       "provisional": true,
       "label": "Run jsx",
       "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
       "tools": [
-        "HeroicSwan/after-effects-mcp"
+        "Dakkshin/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1159,6 +1522,15 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.animate-from-data",
+      "provisional": true,
+      "label": "Animate from data",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1195,6 +1567,15 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.contact-sheet",
+      "provisional": true,
+      "label": "Contact sheet",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1270,12 +1651,32 @@
       ]
     },
     {
+      "id": "tool.execute-script",
+      "provisional": true,
+      "label": "Execute script",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.get-keyframes",
       "provisional": true,
       "label": "Get keyframes",
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.get-results",
+      "provisional": true,
+      "label": "Get results",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1324,6 +1725,16 @@
       ]
     },
     {
+      "id": "tool.list-presets",
+      "provisional": true,
+      "label": "List presets",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.list-reviews",
       "provisional": true,
       "label": "List reviews",
@@ -1333,12 +1744,30 @@
       ]
     },
     {
+      "id": "tool.match-reference",
+      "provisional": true,
+      "label": "Match reference",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.offset-keyframes",
       "provisional": true,
       "label": "Offset keyframes",
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.populate-template",
+      "provisional": true,
+      "label": "Populate template",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1378,6 +1807,15 @@
       ]
     },
     {
+      "id": "tool.see-frame",
+      "provisional": true,
+      "label": "See frame",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
       "id": "tool.set-temporal-ease",
       "provisional": true,
       "label": "Set temporal ease",
@@ -1393,6 +1831,17 @@
       "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
       "tools": [
         "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.test-animation",
+      "provisional": true,
+      "label": "Test animation",
+      "adobeOperation": "derived from the tool name; Adobe surface not yet pinned (provisional)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ]
     },
     {
@@ -1479,6 +1928,53 @@
       "gap": false
     },
     {
+      "semanticId": "audio.analyze-audio-waveform",
+      "provisional": true,
+      "label": "Analyze audio waveform",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "audio.animate-to-audio",
+      "provisional": true,
+      "label": "Animate to audio",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "audio.get-audio-info",
+      "provisional": true,
+      "label": "Get audio info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "audio.set-audio-levels",
+      "provisional": true,
+      "label": "Set audio levels",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "camera.add-camera-layer",
       "provisional": true,
       "label": "Add camera layer",
@@ -1486,6 +1982,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "camera.create-camera",
+      "provisional": true,
+      "label": "Create camera",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -1518,7 +2025,10 @@
       "inAeA8n": true,
       "inAeDevtools": true,
       "competitors": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -1589,6 +2099,17 @@
       "gap": false
     },
     {
+      "semanticId": "comp.inspect-comp",
+      "provisional": true,
+      "label": "Inspect comp",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "comp.list-layers",
       "provisional": true,
       "label": "List a comp's layers",
@@ -1596,6 +2117,17 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "comp.localize-comp",
+      "provisional": true,
+      "label": "Localize comp",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "comp.open-in-viewer",
@@ -1625,6 +2157,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-composition-properties",
+      "provisional": true,
+      "label": "Set composition properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -1711,13 +2254,28 @@
       "gap": true
     },
     {
+      "semanticId": "effect.add-any-effect",
+      "provisional": true,
+      "label": "Add any effect",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "effect.apply",
       "provisional": true,
       "label": "Apply an effect to a layer",
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": false
@@ -1743,6 +2301,18 @@
       "gap": false
     },
     {
+      "semanticId": "effect.list-available-effects",
+      "provisional": true,
+      "label": "List available effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "effect.list-parameters",
       "provisional": true,
       "label": "List an effect's parameters",
@@ -1750,6 +2320,43 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "effect.mcp-aftereffects-apply-effect",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.mcp-aftereffects-apply-effect-template",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.mcp-aftereffects-get-effects-help",
+      "provisional": true,
+      "label": "Mcp aftereffects get effects help",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "effect.modify-effect-properties",
@@ -1770,6 +2377,8 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -1792,7 +2401,9 @@
       "inAeA8n": true,
       "inAeDevtools": false,
       "competitors": [
-        "HeroicSwan/after-effects-mcp"
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": false
     },
@@ -1858,7 +2469,10 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -1882,7 +2496,19 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.relink-footage",
+      "provisional": true,
+      "label": "Relink footage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -1948,8 +2574,23 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "Dakkshin/after-effects-mcp",
         "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set-effect-keyframe",
+      "provisional": true,
+      "label": "Set effect keyframe",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2042,6 +2683,30 @@
       "gap": false
     },
     {
+      "semanticId": "layer.center-layers",
+      "provisional": true,
+      "label": "Center layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.create-adjustment-layer",
+      "provisional": true,
+      "label": "Create adjustment layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.create-layer",
       "provisional": true,
       "label": "Create layer",
@@ -2053,6 +2718,17 @@
       "gap": true
     },
     {
+      "semanticId": "layer.create-text-layer",
+      "provisional": true,
+      "label": "Create text layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.delete",
       "provisional": true,
       "label": "Delete",
@@ -2060,6 +2736,7 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -2071,7 +2748,8 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
-        "HeroicSwan/after-effects-mcp"
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2094,6 +2772,18 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-layer-clip-frames",
+      "provisional": true,
+      "label": "Get layer clip frames",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2127,6 +2817,17 @@
       "gap": true
     },
     {
+      "semanticId": "layer.inspect-layer",
+      "provisional": true,
+      "label": "Inspect layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.list",
       "provisional": true,
       "label": "List",
@@ -2150,6 +2851,18 @@
       "gap": false
     },
     {
+      "semanticId": "layer.list-layer-effects",
+      "provisional": true,
+      "label": "List layer effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.modify-layer",
       "provisional": true,
       "label": "Modify layer",
@@ -2167,7 +2880,19 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.reorder-layer",
+      "provisional": true,
+      "label": "Reorder layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2201,13 +2926,36 @@
       "gap": false
     },
     {
+      "semanticId": "layer.set-layer-parent",
+      "provisional": true,
+      "label": "Set layer parent",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.set-mask",
+      "provisional": true,
+      "label": "Set mask",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "layer.set-properties",
       "provisional": true,
       "label": "Set properties",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
-        "HeroicSwan/after-effects-mcp"
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2234,6 +2982,18 @@
       "gap": true
     },
     {
+      "semanticId": "marker.add",
+      "provisional": true,
+      "label": "Add",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "marker.add-layer-marker",
       "provisional": true,
       "label": "Add layer marker",
@@ -2241,6 +3001,18 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.add-markers-bulk",
+      "provisional": true,
+      "label": "Add markers bulk",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2404,6 +3176,18 @@
       "inAeDevtools": false,
       "competitors": [],
       "gap": false
+    },
+    {
+      "semanticId": "motion.apply-preset",
+      "provisional": true,
+      "label": "Apply preset",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
     },
     {
       "semanticId": "motion.audit-motion-coverage",
@@ -2588,6 +3372,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -2661,6 +3446,7 @@
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
+        "a-y-ibrahim/after-effects-mcp",
         "ishu86/after-effects-mcp"
       ],
       "gap": true
@@ -2721,6 +3507,39 @@
       "gap": true
     },
     {
+      "semanticId": "render.render-aerender",
+      "provisional": true,
+      "label": "Render aerender",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-queue",
+      "provisional": true,
+      "label": "Render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-status",
+      "provisional": true,
+      "label": "Render status",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "render.set-render-queue-item",
       "provisional": true,
       "label": "Set render queue item",
@@ -2732,6 +3551,17 @@
       "gap": true
     },
     {
+      "semanticId": "render.start-render",
+      "provisional": true,
+      "label": "Start render",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "search.search",
       "provisional": true,
       "label": "Search",
@@ -2739,6 +3569,18 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "search.search-presets",
+      "provisional": true,
+      "label": "Search presets",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2765,6 +3607,30 @@
       "gap": true
     },
     {
+      "semanticId": "system.check-bridge",
+      "provisional": true,
+      "label": "Check bridge",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.get-help",
+      "provisional": true,
+      "label": "Get help",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "system.health",
       "provisional": true,
       "label": "Health",
@@ -2776,13 +3642,29 @@
       "gap": true
     },
     {
+      "semanticId": "system.run-bridge-test",
+      "provisional": true,
+      "label": "Run bridge test",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "system.run-jsx",
       "provisional": true,
       "label": "Run jsx",
       "inAeA8n": false,
       "inAeDevtools": false,
       "competitors": [
-        "HeroicSwan/after-effects-mcp"
+        "Dakkshin/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2805,6 +3687,17 @@
       "inAeDevtools": false,
       "competitors": [
         "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.animate-from-data",
+      "provisional": true,
+      "label": "Animate from data",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2849,6 +3742,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.contact-sheet",
+      "provisional": true,
+      "label": "Contact sheet",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -2941,6 +3845,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.execute-script",
+      "provisional": true,
+      "label": "Execute script",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.get-keyframes",
       "provisional": true,
       "label": "Get keyframes",
@@ -2948,6 +3863,19 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-results",
+      "provisional": true,
+      "label": "Get results",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -3007,6 +3935,18 @@
       "gap": true
     },
     {
+      "semanticId": "tool.list-presets",
+      "provisional": true,
+      "label": "List presets",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.list-reviews",
       "provisional": true,
       "label": "List reviews",
@@ -3018,6 +3958,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.match-reference",
+      "provisional": true,
+      "label": "Match reference",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.offset-keyframes",
       "provisional": true,
       "label": "Offset keyframes",
@@ -3025,6 +3976,17 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.populate-template",
+      "provisional": true,
+      "label": "Populate template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },
@@ -3073,6 +4035,17 @@
       "gap": true
     },
     {
+      "semanticId": "tool.see-frame",
+      "provisional": true,
+      "label": "See frame",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
       "semanticId": "tool.set-temporal-ease",
       "provisional": true,
       "label": "Set temporal ease",
@@ -3091,6 +4064,19 @@
       "inAeDevtools": false,
       "competitors": [
         "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.test-animation",
+      "provisional": true,
+      "label": "Test animation",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
       ],
       "gap": true
     },

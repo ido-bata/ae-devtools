@@ -85,10 +85,9 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License'; root package.json declares no license field",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/Dakkshin_after-effects-mcp",
-      "extraction": "dakkshin-family",
-      "notes": "このパスでは行を抽出していない (adapters/dakkshin-family.ts 未実装または対象外); source-verified ではない"
+      "extraction": "dakkshin-family"
     },
     {
       "id": "TheLlamainator/after-effects-mcp",
@@ -98,10 +97,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE first line 'MIT License'; copyright line copies Dakkshin's original; no package license field",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/TheLlamainator_after-effects-mcp",
       "extraction": "dakkshin-family",
-      "notes": "Fork lineage of Dakkshin/after-effects-mcp (same package name and script set). このパスでは行を抽出していない (adapters/dakkshin-family.ts 未実装または対象外); source-verified ではない"
+      "notes": "Fork lineage of Dakkshin/after-effects-mcp (same package name and script set)."
     },
     {
       "id": "a-y-ibrahim/after-effects-mcp",
@@ -111,10 +110,10 @@
       "license": "MIT",
       "licenseEvidence": "LICENSE 'Copyright (c) 2025 Dakkshin (original work)'; package.json \"license\": \"MIT\"",
       "observedAt": "2026-11-12",
-      "status": "claimed/unverifiable",
+      "status": "source-verified",
       "sourceRoot": ".reference/a-y-ibrahim_after-effects-mcp",
       "extraction": "dakkshin-family",
-      "notes": "Derivative of the Dakkshin bridge design with additional lib/ helpers. このパスでは行を抽出していない (adapters/dakkshin-family.ts 未実装または対象外); source-verified ではない"
+      "notes": "Derivative of the Dakkshin bridge design with additional lib/ helpers."
     },
     {
       "id": "JUNKDOGE-JOE/after-effects-mcp",

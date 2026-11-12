@@ -189,6 +189,7 @@ const ADAPTERS = [
   "./adapters/ae-devtools.ts",
   "./adapters/ishu86.ts",
   "./adapters/heroicswan.ts",
+  "./adapters/dakkshin-family.ts",
 ] as const;
 
 export async function runAdapters(): Promise<OperationRow[]> {
