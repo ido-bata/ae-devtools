@@ -471,8 +471,17 @@ function extractFile(
   /* --- 2. selectors ------------------------------------------------ */
   for (const e of enums) {
     const body = code.slice(e.bodyStart - 1, e.bodyEnd + 1);
-    const prelude = code.slice(Math.max(0, e.bodyStart - 2000), e.bodyStart);
-    const documented = /command selectors|sent to the effect|these command/i.test(prelude);
+    /**
+     * Documentation evidence must come from the *raw* text: blankNonCode() erases
+     * comments, and the "these commands are sent to the effect" prose that
+     * justifies the selector class lives entirely inside a comment block above
+     * the enum. bodyStart indexes both strings identically.
+     */
+    const docPrelude = text.slice(Math.max(0, e.bodyStart - 6000), e.bodyStart);
+    const documented =
+      /command selectors/i.test(docPrelude) ||
+      /sent to the effect/i.test(docPrelude) ||
+      /this command will be sent/i.test(docPrelude);
     const re = /([A-Za-z_]\w*)\s*(?:=[^,}]*)?(?:,|\})/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(body))) {

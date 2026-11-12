@@ -68,8 +68,8 @@
     "byEvidence": {
       "host-dispatches-entry-point": 87,
       "host-invoked-callback": 154,
-      "host-to-plugin-selector": 0,
-      "none": 634,
+      "host-to-plugin-selector": 30,
+      "none": 604,
       "suite-registration-string": 3728,
       "version-or-pipl-declaration": 74
     },
@@ -79,7 +79,8 @@
       "nested-in-host-proc-table": 19,
       "prototype+entry-point-comment": 8,
       "registered-with-host-via-suite": 2,
-      "selector-enum-undocumented": 44,
+      "selector-enum+documented-commands": 30,
+      "selector-enum-undocumented": 14,
       "slot-type-of-suite": 12,
       "suite+registration-string": 225,
       "suite-slot+registration-string": 3503,
