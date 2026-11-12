@@ -30,7 +30,7 @@ type AggregateFile = {
 type ProvenanceFile = {
   acquisition: { archiveSha256: string | null };
   license?: Record<string, unknown>;
-  corpus?: Record<string, unknown>;
+  corpus?: { combinedSha256?: string; headerFiles?: number; totalBytes?: number };
 };
 
 export type SdkAggregateImport = Omit<ImportedSource, "provenance"> & {

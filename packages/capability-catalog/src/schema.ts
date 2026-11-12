@@ -23,7 +23,13 @@ export type CapabilityKind = (typeof CAPABILITY_KINDS)[number];
 export type RowPersistence = "repository" | "build-time-supplied";
 
 export type SourcePublisher = "adobe" | "community" | "third-party" | "local";
-export type SourceAuthority = "primary" | "community-maintained" | "source-verified" | "claim-only";
+export const AUTHORITY_VALUES = [
+  "primary",
+  "community-maintained",
+  "source-verified",
+  "claim-only",
+] as const;
+export type SourceAuthority = (typeof AUTHORITY_VALUES)[number];
 
 export type SourceDescriptor = {
   publisher: SourcePublisher;
@@ -93,15 +99,19 @@ export type EvidenceRef = {
   platform?: "win32" | "darwin";
 };
 
-export type InventoryAxis = "discovered" | "source-reviewed" | "unverified";
+export const INVENTORY_AXES = ["discovered", "source-reviewed", "unverified"] as const;
+export type InventoryAxis = (typeof INVENTORY_AXES)[number];
 export type ReachabilityAxis = "reachable" | "not-reachable" | "unknown";
-export type ImplementationAxis =
-  | "none"
-  | "adapter-present"
-  | "implemented"
-  | "unsupported"
-  | "unknown";
-export type VerificationAxis = "not-run" | "automated-fake" | "verified-real-host";
+export const IMPLEMENTATION_AXES = [
+  "none",
+  "adapter-present",
+  "implemented",
+  "unsupported",
+  "unknown",
+] as const;
+export type ImplementationAxis = (typeof IMPLEMENTATION_AXES)[number];
+export const VERIFICATION_AXES = ["not-run", "automated-fake", "verified-real-host"] as const;
+export type VerificationAxis = (typeof VERIFICATION_AXES)[number];
 
 /**
  * The three flavours of `unknown` from comment 6813348033 stay distinct and

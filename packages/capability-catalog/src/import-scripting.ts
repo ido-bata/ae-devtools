@@ -5,6 +5,9 @@
 
 import { scriptingId } from "./ids.ts";
 import {
+  AUTHORITY_VALUES,
+  INVENTORY_AXES,
+  VERIFICATION_AXES,
   riskForAccess,
   type AccessClass,
   type CapabilityRecord,
@@ -49,10 +52,6 @@ const ACCESS_MAP: Record<string, AccessClass> = {
   write: "write",
 };
 
-const INVENTORY_AXES: readonly InventoryAxis[] = ["discovered", "source-reviewed", "unverified"];
-const VERIFICATION_AXES: readonly VerificationAxis[] = ["not-run", "automated-fake", "verified-real-host"];
-const AUTHORITIES: readonly SourceAuthority[] = ["primary", "community-maintained", "source-verified", "claim-only"];
-
 function requireAxis<T extends string>(value: string, allowed: readonly T[], what: string): T {
   if (!(allowed as readonly string[]).includes(value)) {
     throw new Error(`unmapped ${what}: ${JSON.stringify(value)}`);
@@ -87,7 +86,7 @@ function scriptingRecord(
     throw new Error(`scripting id drift between owner/member and id: ${row.id}`);
   }
   const access = requireAccess(row.access);
-  const authority = requireAxis<SourceAuthority>(row.authority, AUTHORITIES, "row authority");
+  const authority = requireAxis<SourceAuthority>(row.authority, AUTHORITY_VALUES, "row authority");
   const lock = lockByKey.get(row.sourceKey);
   const domain = row.notes?.find((note) => note.startsWith("domain="))?.slice("domain=".length) ?? "unknown";
 
