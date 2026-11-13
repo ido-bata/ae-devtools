@@ -1,6 +1,6 @@
-# Proposed contract — AE capability catalog, coverage and negotiation
+# Contract — AE capability catalog, coverage and negotiation
 
-- Status: **Proposed**, to be finalized in [#11](https://github.com/ido-bata/ae-devtools/issues/11) after source inventories [#8–#10](https://github.com/ido-bata/ae-devtools/issues/8).
+- Status: **Finalized for CAP013–CAP016** by [#11](https://github.com/ido-bata/ae-devtools/issues/11). The machine-readable schema lives in `packages/capability-catalog/src/schema.ts` and the handshake in `packages/capability-catalog/src/handshake.ts`; this document remains the normative description. Sections below that were "proposed" are now binding for the catalog package; changes to the public schema require explicit major/minor compatibility rules, migration tests and a source-linked ADR/Issue (§7).
 - Parent [#6](https://github.com/ido-bata/ae-devtools/issues/6); [spec](../spec.md); [plan](../plan.md).
 - The catalog is **metadata and evidence**, not an execution authorization token or a promise of availability.
 
@@ -45,58 +45,18 @@ The consequence is a contract obligation, not a documentation preference:
 
 Denominators for SDK entrypoints therefore exist per environment, not per repository revision. Where a denominator has not been supplied, it is reported as `unknown` with the reason, never as a completed count.
 
-## 2. Proposed machine-readable record
+## 2. Machine-readable record (finalized)
 
-```ts
-type CapabilityRecord = {
-  id: string;
-  kind: "scripting-symbol" | "sdk-symbol" | "tool-operation" | "semantic-operation";
-  source: {
-    publisher: "adobe" | "community" | "third-party" | "local";
-    uri: string;
-    version: string;
-    revision?: string;
-    symbol?: string;
-    license?: string;
-    observedAt: string;
-    authority: "primary" | "community-maintained" | "source-verified" | "claim-only";
-  };
-  category: string;  // project/layer/animation/render/AEGP/effect/IO/etc
-  access: "read" | "write" | "execute" | "host-callback" | "build-test";
-  execution: {
-    class: "extendscript" | "aegp-native" | "effect-native" |
-           "native-io" | "cep" | "uxp" | "aerender" | "os-automation" | "unknown";
-    lifecycle: string; // e.g. AE-main-thread, render-callback, plugin-register
-    adapter?: string;
-    canRemoteInvoke: boolean | null; // null = unverified
-  };
-  compatibility: {
-    aeBuilds?: string[];
-    sdkVersions?: string[];
-    os?: Array<"win32" | "darwin">;
-    architectures?: string[];
-    requiredPlugins?: string[];
-    requiredPermissions?: string[];
-  };
-  risk: {
-    effect: "none" | "project-write" | "filesystem" | "host-lifecycle" | "unknown";
-    trust: "read-only" | "named-operation" | "privileged-dev-code" | "native-plugin";
-    undoable: boolean | null;
-    retrySafety: "idempotent-proven" | "never" | "unknown";
-  };
-  coverage: {
-    inventory: "discovered" | "source-reviewed" | "unverified";
-    implementation: "none" | "adapter-present" | "implemented" | "unsupported" | "unknown";
-    verification: "not-run" | "automated-fake" | "verified-real-host";
-    evidenceRefs: string[];
-    unsupportedReason?: string;
-    issueRefs?: string[];
-  };
-  aliases?: string[];
-};
-```
+The canonical TypeScript type is `CapabilityRecord` in `packages/capability-catalog/src/schema.ts`. Relative to the illustrative sketch this contract previously carried, the finalized schema makes these bindings explicit:
 
-The schema is illustrative until #11; field spelling is not yet a public npm contract. `null` is meaningful: absence of proof must not be coerced to false or true.
+- `persistence: "repository" | "build-time-supplied"` is a required field on every record; `sdk-symbol` rows are always `build-time-supplied` and are refused by the manifest generator (`src/generate.ts`).
+- `coverage` gains `reachability` (`reachable | not-reachable | unknown`) alongside `inventory`, `implementation`, `verification`; the input-side `inventory`/`verification` axes are preserved verbatim and never collapsed.
+- `coverage.unknownKind` distinguishes the three `unknown` flavours from issue #11 comment 6813348033: `undiscovered`, `unclassifiable`, `denominator-unsupplied`.
+- `coverage.evidenceRefs` is a typed list (`source-doc | source-impl | automated-test | real-host`, optional `platform`) so the drift gate can verify a coverage claim never outruns its artifact (`src/evidence.ts`).
+- `access` additionally admits `"read-write"` and `"unknown"`; `links` records cross-source dedupe (`semantic-grouping | underlying-symbol`) so one underlying capability is counted once.
+- `contractVersion` is `{ major, minor }`, currently `1.0`; ID grammar is frozen in `src/ids.ts` (`ae.scripting.*`, `ae.sdk.*`, `ae.operation.*`, `ae.tool.*`).
+
+Field spelling is now the catalog package's internal contract; promotion to a public npm contract still requires the §7 compatibility rules.
 
 ## 3. Example (illustrative, not a support claim)
 
@@ -138,20 +98,21 @@ The schema is illustrative until #11; field spelling is not yet a public npm con
 
 The ae-a8n #98 fake dispatcher is **not** enough to set `verified-real-host`; it can be linked as a separate automated test artifact once a source SHA is recorded.
 
-## 4. Capability discovery / handshake (proposed)
+## 4. Capability discovery / handshake (finalized)
 
-Read-only discovery returns:
+Implemented in `packages/capability-catalog/src/handshake.ts` (`CONTRACT_SCHEMA = "ae-devtools.capability-handshake/v1"`, `contractVersion 1.0`). Read-only discovery returns a `HandshakeResponse` containing:
 
-- `contractVersion`, `catalogRevision`, `hostId`, `AE build/version`, `OS/arch`, `executionMode` (`local`, `remote`, `isolated-user` experimental), `transport`, `SDK/plugin identities`.
-- `targetIdentity` and `ownership` evidence (`owned`, `explicitly-attached`, `unknown`), plus `nonInterference` separately (`proven`, `by-construction`, `unproven`).
-- `availableCapabilities[]` with IDs, version bounds, declared permissions, adapter and actual proof level. Unknown/unsupported capabilities must be omitted from `available` and represented in diagnostics.
-- `provenance`: exact code/plugin binary SHA, source package version, probe timestamp, session identity and evidence references.
+- `contractVersion`, `catalogRevision`, `hostId`, `host` (`ae` version/build/scriptingVersion when known, `os`, `arch`, `executionMode` (`local`, `remote`, `isolated-user` experimental), `transport`).
+- `target` (`identity`, `ownership` ∈ `owned | explicitly-attached | unknown`, `nonInterference` ∈ `proven | by-construction | unproven`).
+- `inventorySupply` per source (`supplied | not-supplied`) and `availableCapabilities[]` with IDs, declared permissions, adapter/execution class, actual proof level (`verified-real-host | automated-test | source-reviewed | unverified`), and the executability axes `implementation` / `verification` so a client can distinguish discovery from dispatchability. Capabilities whose inventory was not supplied are omitted from `available` and represented in `diagnostics` (`inventory-not-supplied`, `capability-unassessed`) — never reported as absent.
+- `diagnostics[]` (`code`, optional `source`, `effect`), including `no-real-host-evidence` and `supported-release-set-not-recorded`.
+- `provenance`: catalog revision, host id, generation timestamp, per-source evidence levels (the §1.1 `inventory`/`verification`/`realHost` axes preserved), SDK aggregate totals with `denominatorCaveats`, and session/evidence references as they become available.
 
-Client behavior:
+Client behavior (enforced by `negotiate` / `assertDispatchAllowed`, with refusal tests in `tests/handshake.test.ts`):
 
-1. Negotiate major contract version before any write; unknown major refuses with a typed error.
-2. Compare target identity, required permission, operation trust class and host version before dispatch.
-3. A capability advertisement is **not** authorization to run an operation. ae-a8n's ownership, static extension and consent checks still apply per call.
+1. Negotiate major contract version before any write; incompatible major refuses `incompatible-contract-version`, a client minor newer than the server refuses `unsupported-minor-version`, a foreign schema refuses `malformed-response`.
+2. Compare target identity, required permission, operation trust class and host version before dispatch; failures refuse `unknown-capability`, `capability-unassessed`, `missing-permission` or `ownership-unproven`.
+3. A capability advertisement is **not** authorization to run an operation. The two functions have distinct responsibilities: `negotiate` is metadata *preflight* only — a `compatible` result means contract version, capability existence and declared permission line up; it assesses neither executability nor ownership. `assertDispatchAllowed` is the per-dispatch *authorization* gate and fails closed, in order: malformed response → `malformed-response`; `implementation !== "implemented"` → `not-implemented`; `verification === "not-run"` → `unverified`; `execution.canRemoteInvoke !== true` → `no-execution-path`; a dispatch that omits its permission class or names an undeclared one → `missing-permission` (permission is **required**, never skipped); ownership is proven only by the handshake's own `target.ownership` — a caller-supplied ownership claim that contradicts the attested evidence, or an attested `unknown`, refuses `ownership-unproven`. Caller claims corroborate; they never override server attestation. The gate authorizes against an **authentic** `HandshakeResponse` produced by `buildHandshake`/the host handshake; a caller-assembled lookalike is indistinguishable here, so transport integrity (ADR-0005) and ae-a8n's consent checks are the layers above this gate, and `negotiate` version preflight is the caller's responsibility to run first. Structurally malformed advertisements (missing `verification`/`execution`/`permissions`, non-array `availableCapabilities`) refuse rather than throw. ae-a8n's ownership, static extension and consent checks still apply per call.
 4. Cache is scoped to host/session/AE build/adapter/plugin hashes and invalidated on restart, project/session change or proof expiry.
 5. No implicit fallback from dedicated-host to console or from named operation to arbitrary script execution.
 

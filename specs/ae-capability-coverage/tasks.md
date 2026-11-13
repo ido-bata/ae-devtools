@@ -39,10 +39,10 @@ Dependencies: none. Status: **open / not verified**.
 
 Dependencies: #8, #9, #10. Status: **open / not verified**.
 
-- [ ] **CAP013** Define stable IDs, provenance, execution and evidence schema, distinguishing rows persisted in the repository from rows supplied at build time (SDK symbols). ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
-- [ ] **CAP014** Import and dedupe scripting/SDK/tool inventories. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
-- [ ] **CAP015** Generate coverage denominators and drift/false-green gates; a report produced without SDK-derived input reports `unknown`, not "no drift". ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
-- [ ] **CAP016** Add versioned capability handshake and refusal tests; absence of a row in the repository must not be reported as absence of the capability. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [x] **CAP013** Define stable IDs, provenance, execution and evidence schema, distinguishing rows persisted in the repository from rows supplied at build time (SDK symbols). ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [x] **CAP014** Import and dedupe scripting/SDK/tool inventories. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [x] **CAP015** Generate coverage denominators and drift/false-green gates; a report produced without SDK-derived input reports `unknown`, not "no drift". ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
+- [x] **CAP016** Add versioned capability handshake and refusal tests; absence of a row in the repository must not be reported as absence of the capability. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
 
 ### [#12](https://github.com/ido-bata/ae-devtools/issues/12) — Cross-repo ADR
 
@@ -57,10 +57,10 @@ Dependencies: #8–#10 initial; ae-a8n #97–#99. Status: **open / not verified*
 
 Dependencies: #12; ae-a8n #98. Status: **open / not verified**.
 
-- [ ] **CAP021** Prove AE host version/ping and target identity. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
-- [ ] **CAP022** Define runtime snapshot and handle invalidation rules. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
-- [ ] **CAP023** Test missing/wrong/busy/timeout/reconnect failure paths. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
-- [ ] **CAP024** Capture real-host OS/AE/CPU/latency/trace evidence. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP021** Prove AE host version/ping and target identity. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP022** Define runtime snapshot and handle invalidation rules. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP023** Test missing/wrong/busy/timeout/reconnect failure paths. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP024** Capture real-host OS/AE/CPU/latency/trace evidence. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
 
 ### [#14](https://github.com/ido-bata/ae-devtools/issues/14) — Script runtime
 
