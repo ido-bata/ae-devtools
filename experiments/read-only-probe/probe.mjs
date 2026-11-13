@@ -34,7 +34,7 @@
  */
 import { randomBytes } from "node:crypto";
 import {
-  lstat, mkdir, open, readFile, rename, writeFile,
+  lstat, link, mkdir, open, readFile, rename, rm, writeFile,
 } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -149,42 +149,110 @@ async function checkAndBurnId(paths, id) {
   return { ok: true };
 }
 
-/** one-in-flight: the marker's deadline bounds the guard (MAX_TIMEOUT). */
+/**
+ * one-in-flight claim, atomic across independent processes.
+ *
+ * Two files, deliberately asymmetric:
+ *
+ * - `in-flight.json` is a WRITE-ONCE claim, published with link(2) after the
+ *   full payload is staged in a per-id temp file. It either does not exist
+ *   or always contains complete JSON — readers never observe a half-written
+ *   claim, and exactly one contender can win the link (EEXIST). The file is
+ *   never mutated afterwards, so no process can ever clobber another
+ *   flight's claim.
+ * - `in-flight.release` records terminal release ({claimId, state}) via
+ *   temp+rename. It is keyed by the claim's unique `claimId`, so a stale
+ *   release can never match a newer claim. A claim is active while
+ *   `deadlineMs` is in the future AND no release names its claimId.
+ *
+ * A released or deadline-expired claim is stale: the slot is stolen by
+ * rename(2), which is atomic and single-winner — losers get ENOENT and loop
+ * to re-claim. A still-active claim inside its deadline returns
+ * ONE_IN_FLIGHT and this command writes nothing.
+ */
 async function claimInFlight(paths, id, timeout) {
   const inFlightFile = join(paths.root, "in-flight.json");
-  let existing;
-  try {
-    existing = await readJson(inFlightFile);
-    if (existing?.state === "SENT" || existing?.state === "SENT_NOT_ACKNOWLEDGED") {
-      if (Date.now() < existing.deadlineMs) {
-        return {
-          ok: false,
-          blocker: {
-            code: "ONE_IN_FLIGHT",
-            message: `request ${existing.id} is still in flight until deadline ${existing.deadlineMs}; this command wrote nothing`,
-          },
-        };
-      }
-      // The previous request's guard window has passed. UNKNOWN it stays;
-      // a NEW request id is allowed (this is a new command, not a resend).
+  const releaseFile = join(paths.root, "in-flight.release");
+  const claimId = hex(8);
+  const deadlineMs = Date.now() + timeout;
+  const payload = JSON.stringify({
+    id, claimId, state: "SENT_NOT_ACKNOWLEDGED",
+    startedAt: nowIso(), deadlineMs,
+  }) + "\n";
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const tmpPath = `${inFlightFile}.tmp-${id}`;
+    await writeFile(tmpPath, payload, { mode: 0o600 });
+    let linked = false;
+    try {
+      await link(tmpPath, inFlightFile);
+      linked = true;
+    } catch (error) {
+      if (error?.code !== "EEXIST") throw error;
     }
-  } catch {
-    // no in-flight file → nothing in flight
+    await rm(tmpPath, { force: true });
+    if (linked) return { ok: true, inFlightFile, releaseFile, claimId };
+
+    let existing = null;
+    try {
+      existing = await readJson(inFlightFile);
+    } catch {
+      // Unreadable marker: our own publishes are atomic, so this means
+      // external tampering. It cannot prove a live flight; steal it.
+    }
+    let released = false;
+    if (typeof existing?.claimId === "string") {
+      try {
+        const release = await readJson(releaseFile);
+        released = release?.claimId === existing.claimId;
+      } catch {
+        // no release file → not released
+      }
+    }
+    const blocking = existing !== null && !released &&
+      typeof existing.deadlineMs === "number" &&
+      Date.now() < existing.deadlineMs;
+    if (blocking) {
+      return {
+        ok: false,
+        blocker: {
+          code: "ONE_IN_FLIGHT",
+          message: `request ${existing.id} is still in flight until deadline ${existing.deadlineMs}; this command wrote nothing`,
+        },
+      };
+    }
+    const stalePath = `${inFlightFile}.stale-${hex(4)}`;
+    try {
+      await rename(inFlightFile, stalePath);
+      await rm(stalePath, { force: true });
+    } catch {
+      // another contender stole the slot first; loop and re-claim
+    }
   }
-  await writeFile(inFlightFile, JSON.stringify({
-    id, state: "SENT_NOT_ACKNOWLEDGED", startedAt: nowIso(),
-    deadlineMs: Date.now() + timeout,
-  }) + "\n", { mode: 0o600 });
-  return { ok: true, inFlightFile, priorInFlight: existing };
+  return {
+    ok: false,
+    blocker: {
+      code: "ONE_IN_FLIGHT",
+      message: "could not claim the in-flight slot under contention; this command wrote nothing",
+    },
+  };
 }
 
-async function markInFlight(paths, inFlightFile, state) {
+/**
+ * Terminal release for the flight this process owns. Writes the release
+ * record keyed by claimId via temp+rename — atomic and idempotent, and a
+ * late write can only ever name THIS claim, never a newer one.
+ */
+async function releaseFlight(paths, claimId, finalState) {
   try {
-    const data = await readJson(inFlightFile);
-    data.state = state;
-    await writeFile(inFlightFile, JSON.stringify(data) + "\n", { mode: 0o600 });
+    const releaseFile = join(paths.root, "in-flight.release");
+    const tmpPath = `${releaseFile}.tmp-${claimId}`;
+    await writeFile(tmpPath, JSON.stringify({
+      claimId, state: finalState, releasedAt: nowIso(),
+    }) + "\n", { mode: 0o600 });
+    await rename(tmpPath, releaseFile);
   } catch {
-    // never let bookkeeping failures change an outcome
+    // bookkeeping failure must not change the outcome; the claim's own
+    // deadline still bounds the guard
   }
 }
 
@@ -328,10 +396,9 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
   const startedAt = Date.now();
   const startedIso = nowIso();
   const id = hex(16);
-  if (!(await checkAndBurnId(paths, id)).ok) {
-    // practically impossible (128-bit random), but the invariant must hold
-    return { outcome: "BLOCKED", blocker: { code: "DUPLICATE_ID", message: "id collision; rerun the command" } };
-  }
+  // Claim the in-flight slot FIRST: the claim is the serialization point,
+  // so the id registry's read-modify-write below can never race across
+  // processes. A BLOCKED command burns nothing.
   const claimed = await claimInFlight(paths, id, timeout);
   if (!claimed.ok) {
     return {
@@ -341,6 +408,17 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
       command: name,
       ts: nowIso(),
       note: "this command wrote nothing; the in-flight request keeps its own id and deadline",
+    };
+  }
+  if (!(await checkAndBurnId(paths, id)).ok) {
+    // practically impossible (128-bit random), but the invariant must hold
+    await releaseFlight(paths, claimed.claimId, "RELEASED");
+    return {
+      outcome: "BLOCKED",
+      blocker: { code: "DUPLICATE_ID", message: "id collision; rerun the command" },
+      requestState: "NOT_SENT",
+      command: name,
+      ts: nowIso(),
     };
   }
   const end = Date.now() + timeout;
@@ -359,7 +437,6 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
     await handle.close();
   }
   await rename(partPath, requestPath);
-  await markInFlight(paths, claimed.inFlightFile, "SENT");
 
   // A pin is never bypassed silently: only an explicit `identify
   // --pin-session` (allowRepin) checks against nothing and re-pins.
@@ -407,7 +484,7 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
           startedAt: startedIso, endedAt: nowIso(), durationMs,
           ts: nowIso(),
         };
-        await markInFlight(paths, claimed.inFlightFile, "ACKED");
+        await releaseFlight(paths, claimed.claimId, "ACKED");
         await appendTrace(paths, event);
         return event;
       }
@@ -426,7 +503,7 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
         hostClock: reply.hostClock ?? null,
         pinned: !!pinnedNow, result: reply.result ?? null,
       };
-      await markInFlight(paths, claimed.inFlightFile, "ACKED");
+      await releaseFlight(paths, claimed.claimId, "ACKED");
       await appendTrace(paths, event);
       return event;
     }
@@ -446,7 +523,7 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
     // guard immediately. UNKNOWN stays guarded until its deadline because
     // the request may still complete late.
     if (verdict.outcome === "REFUSED") {
-      await markInFlight(paths, claimed.inFlightFile, "ACKED");
+      await releaseFlight(paths, claimed.claimId, "ACKED");
     }
     await appendTrace(paths, event);
     return event;
