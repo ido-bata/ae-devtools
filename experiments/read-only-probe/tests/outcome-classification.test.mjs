@@ -85,6 +85,32 @@ test("REFUSED: a host-issued refusal (EXPIRED) is REFUSED, never UNKNOWN", async
   }
 });
 
+test("REFUSED releases the in-flight guard: the next command is not BLOCKED", async () => {
+  const root = mkdtempSync(join(tmpdir(), "probe-refused-release-"));
+  try {
+    const { channel } = makeChannel(root);
+    const stop = fakeResponder(channel, (id) => ({
+      v: 1, id, token: TOKEN, channelId: "chan-cccccccc",
+      dispatchId: "disp-1", ok: false,
+      refusal: { code: "EXPIRED", message: "request refused before execution" },
+    }));
+    try {
+      const first = await run(["ping", channel, "5000"]);
+      assert.equal(first.event.outcome, "REFUSED");
+      // regression: a host REFUSED is terminal+ACKed; the guard must clear
+      // immediately instead of blocking until the deadline.
+      const second = await run(["ping", channel, "5000"]);
+      assert.notEqual(second.event.outcome, "BLOCKED");
+      assert.equal(second.event.outcome, "REFUSED");
+      assert.notEqual(second.event.requestId, first.event.requestId);
+    } finally {
+      stop();
+    }
+  } finally {
+    cleanup(root);
+  }
+});
+
 test("UNKNOWN: bridge missing / busy AE (indistinguishable) is UNKNOWN — not BLOCKED, not REFUSED", async () => {
   const root = mkdtempSync(join(tmpdir(), "probe-classify-unknown-"));
   try {

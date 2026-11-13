@@ -422,6 +422,12 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
         ? "no attributable reply before deadline or unattributable reply; do not resend this request id"
         : undefined,
     };
+    // A host REFUSED is terminal and acknowledged: release the in-flight
+    // guard immediately. UNKNOWN stays guarded until its deadline because
+    // the request may still complete late.
+    if (verdict.outcome === "REFUSED") {
+      await markInFlight(paths, claimed.inFlightFile, "ACKED");
+    }
     await appendTrace(paths, event);
     return event;
   }
