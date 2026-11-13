@@ -1,0 +1,80 @@
+{
+  "note": "Provisional inventory metadata. The capability-ID grammar and catalog schema are owned by ido-bata/ae-devtools#11 and are NOT frozen here.",
+  "provisionalIds": true,
+  "generatedFrom": "inventories/scripting/scripts/build.ts",
+  "sourceLock": "sources.lock.json",
+  "denominators": {
+    "scriptingMembers": 656,
+    "scriptingClasses": 48,
+    "enums": 49,
+    "enumValues": 322,
+    "byKind": {
+      "attribute": 406,
+      "global-function": 8,
+      "method": 242
+    },
+    "byDomain": {
+      "application": 41,
+      "collection": 17,
+      "comp": 36,
+      "item": 52,
+      "keyframe": 13,
+      "layer": 78,
+      "mask": 7,
+      "output": 12,
+      "preferences": 15,
+      "project": 59,
+      "property": 97,
+      "render-queue": 34,
+      "shape": 14,
+      "source": 18,
+      "system": 13,
+      "text": 127,
+      "ui": 23
+    },
+    "membersWithStatedVersion": 172,
+    "membersVersionUnstated": 484,
+    "membersMarkedUndocumentedByCommunity": 6,
+    "adobeOfficialClaims": 15,
+    "adobeOfficialSymbolLevelClaims": 0,
+    "constraints": 22,
+    "versionDeltas": 226,
+    "versionDeltasUnresolved": 5,
+    "tierDivergences": 9,
+    "realHostRequirements": 12
+  },
+  "sourceTiers": {
+    "adobe-official": {
+      "publisher": "Adobe",
+      "authority": "primary",
+      "symbolLevelReference": false,
+      "note": "Adobe publishes operational constraints for scripting but no symbol-level scripting reference. Recorded as a CAP008 finding, not as a coverage claim."
+    },
+    "community-reference": {
+      "publisher": "docsforadobe (community)",
+      "authority": "community-maintained",
+      "revision": "7137a990db4bd8dc9f5869b8ca431c7dfed52bdc",
+      "note": "Not an Adobe-official mirror. Agreement between tiers is not verification."
+    }
+  },
+  "referenceHosts": [
+    {
+      "product": "Adobe After Effects 2026",
+      "version": "26.5.3",
+      "os": "darwin",
+      "role": "local install present; NOT used for runtime verification in this issue"
+    },
+    {
+      "product": "Adobe After Effects 2027",
+      "version": "27.0.0",
+      "os": "darwin",
+      "role": "local install present; NOT used for runtime verification in this issue"
+    }
+  ],
+  "evidenceLevel": {
+    "inventory": "source-reviewed",
+    "verification": "not-run",
+    "realHost": "not-run",
+    "statement": "Symbols were extracted from a pinned source revision. No After Effects process was started and no symbol was executed. Anything a real host would have to confirm is listed as such in cap008-requirements.md."
+  }
+}

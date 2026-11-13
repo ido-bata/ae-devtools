@@ -1,0 +1,51 @@
+{
+  "lockVersion": 1,
+  "note": "Content hashes of the exact upstream bytes used to build this inventory. Raw payloads are intentionally not committed. Regenerate with `bun run refresh`.",
+  "sources": [
+    {
+      "key": "adobe-automation",
+      "tier": "adobe-official",
+      "revision": "http-2026-11-12",
+      "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/automate-in-after-effects/automate-animation/automation.html",
+      "sha256": "9c7da025f94f520b0b37004bb6b0de3cd15c01414f88dde3b757ad9a1c7e6855",
+      "bytes": 413151,
+      "fetchedAt": "2026-11-12"
+    },
+    {
+      "key": "adobe-legacy-extendscript-engine",
+      "tier": "adobe-official",
+      "revision": "http-2026-11-12",
+      "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/work-with-expressions/expression-basics/legacy-and-extend-script-engine.html",
+      "sha256": "4d5bc0adddaeb913a795c22869bcbfd6173d0acbc6c30ffb2f7e8fc8abfc3d7e",
+      "bytes": 478305,
+      "fetchedAt": "2026-11-12"
+    },
+    {
+      "key": "adobe-scripts",
+      "tier": "adobe-official",
+      "revision": "http-2026-11-12",
+      "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/automate-in-after-effects/automate-animation/scripts.html",
+      "sha256": "d4638b86f6742ca5a517569a110ce1d6ffaa018f299371c1f8f42b7733dfe8ce",
+      "bytes": 445045,
+      "fetchedAt": "2026-11-12"
+    },
+    {
+      "key": "adobe-variable-font-axes",
+      "tier": "adobe-official",
+      "revision": "http-2026-11-12",
+      "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/variable-font-axes/work-with-variable-font-axes/scripting-support-for-variable-font-axes.html",
+      "sha256": "35bd372cc05adde0755bd3dd662c3e6ea97c7a63cbd2d0ead7ed27f6f7d7eec1",
+      "bytes": 428722,
+      "fetchedAt": "2026-11-12"
+    },
+    {
+      "key": "dfad",
+      "tier": "community-reference",
+      "revision": "7137a990db4bd8dc9f5869b8ca431c7dfed52bdc",
+      "fetchUrl": "https://codeload.github.com/docsforadobe/after-effects-scripting-guide/tar.gz/7137a990db4bd8dc9f5869b8ca431c7dfed52bdc",
+      "sha256": "9c3da01d9baeb2ee7afa1dceaa66c0234e54f3bd6f003ac0096aba06b66bdbcb",
+      "bytes": 430925,
+      "fetchedAt": "2026-11-12"
+    }
+  ]
+}
