@@ -109,12 +109,19 @@ must uphold, and the fake-responder tests enforce for this harness:
 2. **One in flight:** a second request while the first is
    `SENT`/`SENT_NOT_ACKNOWLEDGED` is refused client-side (`BLOCKED`,
    `code=ONE_IN_FLIGHT`) without writing anything. The guard must hold
-   across **independent processes**, not just within one client: the
-   claim is an atomic create (`link(2)`), release is one atomic file per
-   unique `claimId` (`in-flight.release-<claimId>`), stale/expired claims
-   are stolen by atomic `rename(2)`, and the claim deadline is the same
-   deadline as send+poll — enforced by
-   `tests/one-in-flight-processes.test.mjs`.
+   across **independent processes**, not just within one client: each
+   command publishes its own uniquely-named claim
+   (`in-flight.claim-<claimId>.json`, atomic temp+rename) and then elects a
+   winner by scanning the channel — the active claim (deadline in the
+   future, no `in-flight.release-<claimId>`) with the smallest publish
+   time wins, losers delete only their own claim and write nothing.
+   There is deliberately no steal-by-rename: removing or replacing a
+   shared claim path always leaves an absent-window in which a fresh
+   claim could be displaced. Expired/released claims are dead weight swept
+   by the next winner; they can never block. The claim deadline is the
+   same deadline as send+poll — enforced by
+   `tests/one-in-flight-processes.test.mjs`, including a concurrent
+   reclaim-of-expired-claim regression.
 3. **No automatic retry:** no timer, loop, or error path re-issues a
    request. Timeout yields `UNKNOWN` and returns. The only re-run is a
    human-issued, new-id command.

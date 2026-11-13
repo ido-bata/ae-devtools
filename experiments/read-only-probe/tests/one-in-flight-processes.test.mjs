@@ -12,7 +12,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -77,5 +77,58 @@ test("N concurrent probe processes produce exactly one in-flight request", async
     assert.equal(traceLines.length, 1, "exactly one trace event (the winner)");
   } finally {
     cleanup(root);
+  }
+});
+
+test("concurrent reclaim of an expired claim: exactly one winner, fresh claims never stolen", async () => {
+  // Regression for the stale-claim TOCTOU: several processes may judge the
+  // same expired claim stale at once. Only one may steal it and claim the
+  // slot; every other must see the NEW valid claim and be BLOCKED — a
+  // steal rename must never move a claim it did not verify as stale.
+  const ROUNDS = 5;
+  const N = 8;
+  for (let round = 0; round < ROUNDS; round++) {
+    const root = mkdtempSync(join(tmpdir(), `probe-reclaim-${round}-`));
+    try {
+      const { channel } = makeChannel(root);
+      // Seed an expired claim, shaped like a real one (claimId + deadline).
+      writeFileSync(join(channel, "in-flight.json"), JSON.stringify({
+        id: "e".repeat(32), claimId: "deadbeef",
+        state: "SENT_NOT_ACKNOWLEDGED",
+        startedAt: new Date(Date.now() - 60_000).toISOString(),
+        deadlineMs: Date.now() - 1_000,
+      }) + "\n", { mode: 0o600 });
+      const results = await Promise.all(
+        Array.from({ length: N }, () => runProbe(channel, 400)),
+      );
+      for (const r of results) {
+        assert.ok(r.event, `probe produced no JSON event: ${r.out} ${r.err}`);
+      }
+      const requests = requestIdInbox(channel);
+      assert.equal(
+        requests.length, 1,
+        `round ${round}: reclaim race produced ${requests.length} in-flight requests`,
+      );
+      const blocked = results.filter(
+        (r) => r.event.outcome === "BLOCKED" && r.event.blocker?.code === "ONE_IN_FLIGHT",
+      );
+      assert.equal(
+        blocked.length, N - 1,
+        `round ${round}: expected ${N - 1} ONE_IN_FLIGHT blockers, got ${blocked.length}`,
+      );
+      // The winner's claim must still be intact: its request id is the one
+      // in the inbox and its outcome is UNKNOWN (no responder), not a
+      // stolen-claim anomaly.
+      const winner = results.find((r) => r.event.requestId === requests[0]);
+      assert.ok(winner);
+      assert.equal(winner.event.outcome, "UNKNOWN");
+      // No probe/stale/temp litter may remain.
+      const leftovers = readdirSync(channel).filter(
+        (f) => f.includes(".probe-") || f.includes(".stale-") || f.includes(".tmp-"),
+      );
+      assert.deepEqual(leftovers, [], `round ${round}: claim litter left behind`);
+    } finally {
+      cleanup(root);
+    }
   }
 });

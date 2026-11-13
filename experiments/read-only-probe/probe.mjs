@@ -34,7 +34,7 @@
  */
 import { randomBytes } from "node:crypto";
 import {
-  lstat, link, mkdir, open, readdir, readFile, rename, rm, writeFile,
+  lstat, mkdir, open, readdir, readFile, rename, rm, writeFile,
 } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -150,113 +150,145 @@ async function checkAndBurnId(paths, id) {
 }
 
 /**
- * one-in-flight claim, atomic across independent processes.
+ * one-in-flight claim, correct across independent processes.
  *
- * Two files, deliberately asymmetric:
+ * Design: per-claim files + deterministic election. There is deliberately
+ * NO steal-by-rename — every approach that removes or replaces a shared
+ * claim path has an absent-window TOCTOU (a contender can claim the slot
+ * while the stealer still believes it owns a different claim).
  *
- * - `in-flight.json` is a WRITE-ONCE claim, published with link(2) after the
- *   full payload is staged in a per-id temp file. It either does not exist
- *   or always contains complete JSON — readers never observe a half-written
- *   claim, and exactly one contender can win the link (EEXIST). The file is
- *   never mutated afterwards, so no process can ever clobber another
- *   flight's claim.
- * - `in-flight.release-<claimId>` records terminal release, one file per
- *   claim, created atomically. Releases can never overwrite or mask each
- *   other, and a stale release can never match a newer claim (claimIds are
- *   unique). A claim is active while `deadlineMs` is in the future AND no
- *   release file names its claimId.
+ * - Each command publishes its own claim as `in-flight.claim-<claimId>.json`
+ *   via temp+rename. The name is unique, so publication is atomic and never
+ *   contended; the file appears complete or not at all.
+ * - The command then scans the channel and computes the winner: the ACTIVE
+ *   claim (deadlineMs in the future, no matching `in-flight.release-<id>`)
+ *   with the smallest (ctimeMs, claimKey). ctimeMs is the publish time —
+ *   rename(2) stamps it — so ordering is publish order, not creation
+ *   order; a later publisher can never outrank an earlier visible claim.
+ * - Exactly one winner exists per scan snapshot, and the globally earliest
+ *   publisher always wins: every later publisher sees its file and loses.
+ *   Losers delete only their OWN uniquely-named claim file and return
+ *   BLOCKED ONE_IN_FLIGHT without writing anything.
+ * - `in-flight.release-<claimId>` (O_EXCL create) marks terminal release;
+ *   `in-flight.json` is still honoured as a legacy claim shape so fixtures
+ *   and pre-change channels keep working.
+ * - Dead claims (expired deadline, released, ACKed legacy, unreadable
+ *   claim-* files) are swept best-effort by the winner — they can never
+ *   block, so removal is hygiene only.
  *
  * `deadlineMs` is the caller's single deadline for claim + send + poll, so
  * the slot cannot expire while this process still legitimately holds it.
- *
- * A released or deadline-expired claim is stale: the slot is stolen by
- * rename(2), which is atomic and single-winner — losers get ENOENT and loop
- * to re-claim. A still-active claim inside its deadline returns
- * ONE_IN_FLIGHT and this command writes nothing.
- *
- * Requires hard-link support on the channel filesystem (local POSIX dirs;
- * Windows is UNVERIFIED for this experiment).
  */
+const CLAIM_PREFIX = "in-flight.claim-";
+const RELEASE_PREFIX = "in-flight.release-";
+const LEGACY_CLAIM_NAME = "in-flight.json";
+
+async function releaseExists(paths, claimId) {
+  try {
+    await lstat(join(paths.root, `${RELEASE_PREFIX}${claimId}`));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Evaluate all claim files in the channel. Returns the winning claimKey,
+ * whether it is ours, the blocker to report, and dead files to sweep.
+ */
+async function evaluateClaims(paths, ownClaimId) {
+  const ownName = `${CLAIM_PREFIX}${ownClaimId}.json`;
+  let names = [];
+  try {
+    names = await readdir(paths.root);
+  } catch {
+    return { winnerIsOwn: true, blocker: null, dead: [] };
+  }
+  const now = Date.now();
+  const active = [];
+  const dead = [];
+  for (const name of names) {
+    const isClaimFile = name.startsWith(CLAIM_PREFIX) && name.endsWith(".json");
+    const isLegacy = name === LEGACY_CLAIM_NAME;
+    if (!isClaimFile && !isLegacy) continue;
+    const file = join(paths.root, name);
+    let data = null;
+    try {
+      data = await readJson(file);
+    } catch {
+      data = null;   // atomic publish means unreadable = tampered/dead
+    }
+    let ctimeMs = 0;
+    try {
+      ctimeMs = (await lstat(file)).ctimeMs;
+    } catch {
+      // vanished mid-scan; treat as dead
+    }
+    const claimKey = typeof data?.claimId === "string" ? data.claimId
+      : typeof data?.id === "string" ? data.id : name;
+    const released = typeof data?.claimId === "string" && await releaseExists(paths, data.claimId);
+    const legacyAcked = isLegacy && data?.state === "ACKED";
+    const isActive = data !== null && !released && !legacyAcked &&
+      typeof data.deadlineMs === "number" && now < data.deadlineMs;
+    if (!isActive) {
+      dead.push(name);
+      continue;
+    }
+    active.push({ name, claimKey, isOwn: name === ownName, data, ctimeMs });
+  }
+  active.sort((a, b) =>
+    a.ctimeMs - b.ctimeMs || (a.claimKey < b.claimKey ? -1 : a.claimKey > b.claimKey ? 1 : 0));
+  const winner = active[0];
+  if (winner === undefined || winner.isOwn) {
+    return { winnerIsOwn: true, blocker: null, dead };
+  }
+  return {
+    winnerIsOwn: false,
+    blocker: {
+      code: "ONE_IN_FLIGHT",
+      message: `request ${winner.data.id} is still in flight until deadline ${winner.data.deadlineMs}; this command wrote nothing`,
+    },
+    dead,
+  };
+}
+
 async function claimInFlight(paths, id, deadlineMs) {
-  const inFlightFile = join(paths.root, "in-flight.json");
   const claimId = hex(8);
+  const ownName = `${CLAIM_PREFIX}${claimId}.json`;
+  const claimPath = join(paths.root, ownName);
   const payload = JSON.stringify({
     id, claimId, state: "SENT_NOT_ACKNOWLEDGED",
     startedAt: nowIso(), deadlineMs,
   }) + "\n";
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const tmpPath = `${inFlightFile}.tmp-${id}`;
-    await writeFile(tmpPath, payload, { mode: 0o600 });
-    let linked = false;
-    try {
-      await link(tmpPath, inFlightFile);
-      linked = true;
-    } catch (error) {
-      if (error?.code !== "EEXIST") throw error;
-    }
-    await rm(tmpPath, { force: true });
-    if (linked) {
-      // Every in-flight.release-* file present now is an orphan: release
-      // files are only written for claims that already terminated, and the
-      // only live claim is the one we just created.
-      try {
-        for (const name of await readdir(paths.root)) {
-          if (name.startsWith("in-flight.release-")) {
-            await rm(join(paths.root, name), { force: true });
-          }
-        }
-      } catch {
-        // cleanup is best-effort; orphans are harmless
-      }
-      return { ok: true, inFlightFile, claimId };
-    }
+  const tmpPath = `${claimPath}.tmp-${id}`;
+  await writeFile(tmpPath, payload, { mode: 0o600 });
+  await rename(tmpPath, claimPath);
 
-    let existing = null;
+  const decision = await evaluateClaims(paths, claimId);
+  if (decision.winnerIsOwn) {
+    // Hygiene only: dead claims can never block, so sweeping them changes
+    // no outcome. Best-effort — failures are ignored.
+    for (const name of decision.dead) {
+      await rm(join(paths.root, name), { force: true }).catch(() => {});
+    }
+    // Orphan release files whose claim file is gone.
     try {
-      existing = await readJson(inFlightFile);
-    } catch {
-      // Unreadable marker: our own publishes are atomic, so this means
-      // external tampering. It cannot prove a live flight; steal it.
-    }
-    let released = false;
-    if (typeof existing?.claimId === "string") {
-      try {
-        await lstat(join(paths.root, `in-flight.release-${existing.claimId}`));
-        released = true;
-      } catch {
-        // no release file for this claim → not released
-      }
-    }
-    const blocking = existing !== null && !released &&
-      typeof existing.deadlineMs === "number" &&
-      Date.now() < existing.deadlineMs;
-    if (blocking) {
-      return {
-        ok: false,
-        blocker: {
-          code: "ONE_IN_FLIGHT",
-          message: `request ${existing.id} is still in flight until deadline ${existing.deadlineMs}; this command wrote nothing`,
-        },
-      };
-    }
-    const stalePath = `${inFlightFile}.stale-${hex(4)}`;
-    try {
-      await rename(inFlightFile, stalePath);
-      await rm(stalePath, { force: true });
-      if (typeof existing?.claimId === "string") {
-        await rm(join(paths.root, `in-flight.release-${existing.claimId}`), { force: true });
+      for (const name of await readdir(paths.root)) {
+        if (!name.startsWith(RELEASE_PREFIX)) continue;
+        const claimFile = `${CLAIM_PREFIX}${name.slice(RELEASE_PREFIX.length)}.json`;
+        try {
+          await lstat(join(paths.root, claimFile));
+        } catch {
+          await rm(join(paths.root, name), { force: true }).catch(() => {});
+        }
       }
     } catch {
-      // another contender stole the slot first; loop and re-claim
+      // best-effort
     }
+    return { ok: true, claimId };
   }
-  return {
-    ok: false,
-    blocker: {
-      code: "ONE_IN_FLIGHT",
-      message: "could not claim the in-flight slot under contention; this command wrote nothing",
-    },
-  };
+  await rm(claimPath, { force: true });
+  return { ok: false, blocker: decision.blocker };
 }
 
 /**

@@ -10,7 +10,7 @@
 | --- | --- | --- | --- | --- |
 | CAP021 ping/version + target identity | **verified on real host (macOS)** | runs `run-20261113-2`, `run-20261113-3` | AE 2026 `26.5.3x9` answered `identify`/`ping`/`snapshot`/`sysinfo` with session identity (`sess-disp-1ccc5fa1-6af71e9e` in run-3), user, locale; wrong-target/mismatched-pin requests were REFUSED (`WRONG_TARGET`, `EXPIRED`) and a pre-activation timeout stayed `UNKNOWN` with no resend. Run-3 additionally proves: `ping` carries session identity, a same-session re-`identify` does **not** rewrite the pin, and `hostClock` is true UTC | AE 2027 real-host run; Windows; client-side wrong-target refusal against a real *second* session (fake-tested only) |
 | CAP022 snapshot schema + invalidation | documented | source-reviewed + automated-test + real-host shape check | Schema, invalidation rules and invariants are written, fake-tested, and a live `probe.snapshot` reply matched the documented shape | Reference-invalidation behavior across project mutations (out of read-only scope) |
-| CAP023 UNKNOWN/REFUSED/BLOCKED model | documented | automated-test + **real-host confirmations** | Outcome table, wrong-target refusal, no-retry regressions — `node tests/run.mjs` → 6/6 test files green (31 tests); on the real host an absent dispatcher produced `UNKNOWN NO_REPLY_BEFORE_DEADLINE`, a stale request was `REFUSED EXPIRED`, a version-pin mismatch was `REFUSED WRONG_TARGET`, and a REFUSED reply releases the in-flight guard immediately (post-fix) | Real busy/modal timeout under load (ADR-0005 V3/V4) |
+| CAP023 UNKNOWN/REFUSED/BLOCKED model | documented | automated-test + **real-host confirmations** | Outcome table, wrong-target refusal, no-retry regressions — `node tests/run.mjs` → 7/7 test files green (33 tests); on the real host an absent dispatcher produced `UNKNOWN NO_REPLY_BEFORE_DEADLINE`, a stale request was `REFUSED EXPIRED`, a version-pin mismatch was `REFUSED WRONG_TARGET`, and a REFUSED reply releases the in-flight guard immediately (post-fix) | Real busy/modal timeout under load (ADR-0005 V3/V4) |
 | CAP024 macOS version/CPU/latency/trace | **verified on real host (macOS)** | runs `run-20261113-2`, `run-20261113-3` | Round trips 157–315 ms (50 ms poll granularity), true-UTC host clock (run-3), Apple M5 / 10 cores, macOS 27.2.1 (26B131), per-request JSONL trace persisted | Windows; CPU-under-load deltas; AE 2027 |
 
 **Windows stays `UNVERIFIED`** — no Windows host is used (owner decision; see
@@ -19,7 +19,8 @@
 ## What is actually green
 
 - `node tests/run.mjs` → **6/6 test files green, 31 tests** (2026-11-13,
-  macOS, head `c11b1ad`). Tests use a **fake responder**; they do
+  macOS, head `c11b1ad`; suite has since grown — current head runs
+  7/7 files, 33 tests). Tests use a **fake responder**; they do
   not start After Effects.
 - Real-host run `run-20261113-2` against **owned AE 2026 (26.5.3x9,
   pid 1054)**, activated via `osascript DoScriptFile` on the owned
