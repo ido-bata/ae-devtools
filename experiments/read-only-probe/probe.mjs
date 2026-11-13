@@ -315,6 +315,13 @@ async function claimInFlight(paths, id, deadlineMs) {
       }
       continue;
     }
+    // The deadline may have passed DURING the round-2 scan (the scan's own
+    // `now` is stale by then). Re-check before declaring victory — a
+    // post-deadline request write would violate the write-nothing contract.
+    if (Date.now() >= deadlineMs) {
+      await rm(claimPath, { force: true });
+      return { ok: false, blocker: deadlineBlocker() };
+    }
     // Won both scans. Hygiene only: provably dead claims can never block,
     // so sweeping them changes no outcome. Best-effort — failures ignored.
     for (const name of decision.dead) {
@@ -538,6 +545,17 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
     return {
       outcome: "BLOCKED",
       blocker: { code: "DUPLICATE_ID", message: "id collision; rerun the command" },
+      requestState: "NOT_SENT",
+      command: name,
+      ts: nowIso(),
+    };
+  }
+  if (Date.now() >= end) {
+    // Election consumed the whole deadline; never write an expired request.
+    await releaseFlight(paths, claimed.claimId, "RELEASED");
+    return {
+      outcome: "BLOCKED",
+      blocker: { code: "DEADLINE_EXPIRED", message: "deadline expired before the request could be sent; this command wrote nothing" },
       requestState: "NOT_SENT",
       command: name,
       ts: nowIso(),
