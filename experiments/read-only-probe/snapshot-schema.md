@@ -112,14 +112,14 @@ must adopt:
 4. **R4 — Identity fields are the only stable references in the schema**,
    and they are references to *the process and channel*, not to project
    objects. Even `sessionId` is invalidated by **AE restart** and by
-   **dispatcher re-activation** (both proven events, both replacing
-   `dispatchId`; restart additionally replaces `sessionId`). The invalidation
-   table:
+   **dispatcher re-activation** — in this harness `sessionId` is derived
+   from `dispatchId` (`sess-` + dispatchId), so both events replace both
+   fields. The invalidation table:
 
 | Event | `sessionId` | `dispatchId` | counts | `aeVersion` |
 | --- | --- | --- | --- | --- |
 | (no event) | valid | valid | valid until any AE-side mutation; consumer cannot detect → treat as volatile | valid |
-| dispatcher re-activated | valid | **invalid** | volatile | valid |
+| dispatcher re-activated | **invalid** | **invalid** | volatile | valid |
 | AE quit → relaunch (new activation) | **invalid** | **invalid** | volatile | may change |
 | AE version change / upgrade | **invalid** | **invalid** | volatile | **invalid** |
 
@@ -142,10 +142,10 @@ must adopt:
 5. Timestamps parse as RFC3339.
 6. Round-trip: JSON.parse(JSON.stringify(snapshot)) deep-equals the source
    (no `undefined` leaves, no functions, no NaN).
-7. **Reference-invalidation conformance:** the schema's TS/JSON shape file
-   (`schema/snapshot-v1.json` in tests) must not contain any key matching
-   `/handle|ref|id$/i` other than the identity fields listed in §2 — this is
-   a static guard against someone smuggling a project-handle field in.
+7. **Reference-invalidation conformance:** no leaf key named `handle` or
+   `ref` may appear outside the §2 identity allowlist (`aeVersion`,
+   `sessionId`, `channelId`, `dispatchId`, `requestId`) — a static guard
+   against smuggling a project-handle field into the blob.
 8. Two snapshots from **different** `sessionId` must never compare equal in
    `identity`; two snapshots from the same activation **must** be equal in
    `identity` (this is the evidence rule used by the wrong-target test).

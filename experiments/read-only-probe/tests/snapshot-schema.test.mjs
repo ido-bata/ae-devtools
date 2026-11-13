@@ -3,9 +3,8 @@
  *
  * Validates a captured snapshot blob against the rules in
  * snapshot-schema.md §6. Evidence level: automated-test (fake blobs).
- * The REAL snapshot captured on the real host is validated by the same
- * function in evidence tests (see validateSnapshot usage in
- * evidence/2026-11-12-macos/).
+ * Real-host snapshot blobs are validated by the same rules against the
+ * committed evidence run directories.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";

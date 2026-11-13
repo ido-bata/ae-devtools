@@ -82,14 +82,14 @@ experiments/read-only-probe/
 ├── README.md                  # this file
 ├── outcome-model.md           # CAP023: UNKNOWN/REFUSED/BLOCKED + wrong-target + no-resend
 ├── snapshot-schema.md         # CAP022: runtime snapshot schema, invalidation, invariants
-├── probe.mjs                  # Node client: prepare/identify/ping/snapshot/diagnose
+├── probe.mjs                  # Node client: prepare/identify/ping/snapshot/sysinfo/diagnose
 ├── host/
 │   └── probe-dispatcher.jsx   # ES3 dispatcher template (read-only, activated by a human)
 ├── tests/
 │   ├── run.mjs                # test runner (node:test, zero deps)
 │   └── *.test.mjs             # fake-responder tests incl. no-resend regression
 ├── EVIDENCE.md                # evidence ledger: what was measured, what is UNVERIFIED
-└── evidence/run-20261113-2/     # real-host run artifacts (owned AE 2026, macOS)
+└── evidence/run-20261113-{2,3}/  # real-host run artifacts (owned AE 2026, macOS)
 ```
 
 ## Quick start (macOS, owned session only)

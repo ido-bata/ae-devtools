@@ -90,12 +90,12 @@ never with the same id (§4).
 | **Timeout after possible dispatch** | `UNKNOWN`. **No automatic retry.** | The rule is absolute: the client never re-sends, never removes/recreates the request, and must leave any request file in place so the host's own late refusal (`EXPIRED`) is observable. The next manual ping uses a *new* id. Regression: `tests/no-resend.test.mjs`. |
 | **Reconnect** (AE quit + relaunched, dispatcher reactivated on the same channel) | new `COMPLETED` on a **new** request id, with re-derived `sessionId` | Reconnect is *not* recovery of the old in-flight request — that one stays `UNKNOWN` forever. What reconnect proves is that the *channel + activation model* survives a host restart: measured in `evidence/` as a separate row. Old session's ids are never reused (id-registry test). |
 | **Stale / expired request** (`deadlineMs` past) | `REFUSED` with `refusal.code = "EXPIRED"` — issued by the host | Host-side claim-before-run means an expired request is refused atomically by the host, not guessed by the client. |
-| **Duplicate request id** | cannot occur by construction; host renames to `.claimed` before evaluating | Client refuses to build two requests with the same id (`tests/duplicate-id.test.mjs`); host-side rename prevents replay after a host restart. |
+| **Duplicate request id** | cannot occur by construction; host renames to `.claimed` before evaluating | Client refuses to build two requests with the same id and burns every issued id permanently (`tests/no-resend.test.mjs` id-registry assertions); host-side rename prevents replay after a host restart. |
 | **Corrupt / unparseable reply** | `UNKNOWN` (`UNREADABLE_REPLY`) + quarantine note | A half-written or alien file must not be treated as "no result yet"; publish-by-rename makes this rare, but if seen: never retry, quarantine. |
-| **Channel not private** (POSIX group/other bits set; note: POSIX modes are insufficient on Windows — see `evidence/windows-UNVERIFIED.md`) | `BLOCKED` (`CHANNEL_NOT_PRIVATE`) before anything is written | Environment-proven, pre-dispatch. `requestState = NOT_SENT`. |
+| **Channel not private** (POSIX group/other bits set; note: POSIX modes are insufficient on Windows — see the Windows row in `EVIDENCE.md`) | `BLOCKED` (`CHANNEL_NOT_PRIVATE`) before anything is written | Environment-proven, pre-dispatch. `requestState = NOT_SENT`. |
 | **AE not running at all** (probe pre-check, owned-session gate) | `BLOCKED` (`TARGET_NOT_RUNNING`) | Pre-dispatch environment fact. This pre-check is **only** about *process existence of the intended owned target*; it never inspects or touches the user's AE instance. |
 
-Client-side classification happens in `probe.mjs` `classify()`;
+Client-side classification happens in `probe.mjs` `classifyReply`;
 `tests/outcome-classification.test.mjs` pins the mapping table.
 
 ## 4. Anti-double-send (no-resend) invariants

@@ -246,16 +246,18 @@ function classifyReply(reply, { pinnedTarget, channelId, requestId, probe }) {
       };
     }
     // dispatchId distinguishes dispatcher re-activation inside one AE
-    // session; checked only when both sides recorded it (old pins lack it).
-    if (pinnedTarget.dispatchId && identity.dispatchId &&
-        identity.dispatchId !== pinnedTarget.dispatchId) {
-      return {
-        outcome: "REFUSED",
-        refusal: {
-          code: "WRONG_TARGET",
-          message: `reply dispatchId ${identity.dispatchId} does not match pinned target ${pinnedTarget.dispatchId} (dispatcher re-activated?)`,
-        },
-      };
+    // session; fail closed when the pin recorded one — a reply that omits
+    // it cannot prove it is the pinned dispatcher.
+    if (pinnedTarget.dispatchId) {
+      if (!identity.dispatchId || identity.dispatchId !== pinnedTarget.dispatchId) {
+        return {
+          outcome: "REFUSED",
+          refusal: {
+            code: "WRONG_TARGET",
+            message: `reply dispatchId ${identity.dispatchId ?? "<absent>"} does not match pinned target ${pinnedTarget.dispatchId} (dispatcher re-activated?)`,
+          },
+        };
+      }
     }
   }
   return { outcome: "COMPLETED", identity };
@@ -392,10 +394,28 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
     const durationMs = Date.now() - startedAt;
     if (verdict.outcome === "COMPLETED") {
       const identity = verdict.identity;
-      // Write the pin only when none exists or the operator explicitly
-      // re-pins; an existing matching pin is left untouched.
+      // identify exists to prove identity: a success reply without it is
+      // not a usable target identification.
+      if (name === "identify" && (!identity.sessionId || !identity.aeVersion)) {
+        const event = {
+          outcome: "REFUSED", command: name, method,
+          requestId: id, requestState: "ACKED",
+          refusal: {
+            code: "WRONG_TARGET",
+            message: "identify reply carries no session identity; cannot pin a target",
+          },
+          startedAt: startedIso, endedAt: nowIso(), durationMs,
+          ts: nowIso(),
+        };
+        await markInFlight(paths, claimed.inFlightFile, "ACKED");
+        await appendTrace(paths, event);
+        return event;
+      }
+      // Write the pin only when none exists, the operator explicitly
+      // re-pins, and the reply actually carries identity — never pin a
+      // hollow target. An existing matching pin is left untouched.
       let pinnedNow = pinnedTarget;
-      if (allowRepin || !pinnedTarget) {
+      if ((allowRepin || !pinnedTarget) && identity.sessionId && identity.aeVersion) {
         pinnedNow = await pinTarget(paths, identity);
       }
       const event = {
