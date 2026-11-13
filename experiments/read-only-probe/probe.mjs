@@ -34,7 +34,7 @@
  */
 import { randomBytes } from "node:crypto";
 import {
-  lstat, link, mkdir, open, readFile, rename, rm, writeFile,
+  lstat, link, mkdir, open, readdir, readFile, rename, rm, writeFile,
 } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -160,21 +160,26 @@ async function checkAndBurnId(paths, id) {
  *   claim, and exactly one contender can win the link (EEXIST). The file is
  *   never mutated afterwards, so no process can ever clobber another
  *   flight's claim.
- * - `in-flight.release` records terminal release ({claimId, state}) via
- *   temp+rename. It is keyed by the claim's unique `claimId`, so a stale
- *   release can never match a newer claim. A claim is active while
- *   `deadlineMs` is in the future AND no release names its claimId.
+ * - `in-flight.release-<claimId>` records terminal release, one file per
+ *   claim, created atomically. Releases can never overwrite or mask each
+ *   other, and a stale release can never match a newer claim (claimIds are
+ *   unique). A claim is active while `deadlineMs` is in the future AND no
+ *   release file names its claimId.
+ *
+ * `deadlineMs` is the caller's single deadline for claim + send + poll, so
+ * the slot cannot expire while this process still legitimately holds it.
  *
  * A released or deadline-expired claim is stale: the slot is stolen by
  * rename(2), which is atomic and single-winner — losers get ENOENT and loop
  * to re-claim. A still-active claim inside its deadline returns
  * ONE_IN_FLIGHT and this command writes nothing.
+ *
+ * Requires hard-link support on the channel filesystem (local POSIX dirs;
+ * Windows is UNVERIFIED for this experiment).
  */
-async function claimInFlight(paths, id, timeout) {
+async function claimInFlight(paths, id, deadlineMs) {
   const inFlightFile = join(paths.root, "in-flight.json");
-  const releaseFile = join(paths.root, "in-flight.release");
   const claimId = hex(8);
-  const deadlineMs = Date.now() + timeout;
   const payload = JSON.stringify({
     id, claimId, state: "SENT_NOT_ACKNOWLEDGED",
     startedAt: nowIso(), deadlineMs,
@@ -190,7 +195,21 @@ async function claimInFlight(paths, id, timeout) {
       if (error?.code !== "EEXIST") throw error;
     }
     await rm(tmpPath, { force: true });
-    if (linked) return { ok: true, inFlightFile, releaseFile, claimId };
+    if (linked) {
+      // Every in-flight.release-* file present now is an orphan: release
+      // files are only written for claims that already terminated, and the
+      // only live claim is the one we just created.
+      try {
+        for (const name of await readdir(paths.root)) {
+          if (name.startsWith("in-flight.release-")) {
+            await rm(join(paths.root, name), { force: true });
+          }
+        }
+      } catch {
+        // cleanup is best-effort; orphans are harmless
+      }
+      return { ok: true, inFlightFile, claimId };
+    }
 
     let existing = null;
     try {
@@ -202,10 +221,10 @@ async function claimInFlight(paths, id, timeout) {
     let released = false;
     if (typeof existing?.claimId === "string") {
       try {
-        const release = await readJson(releaseFile);
-        released = release?.claimId === existing.claimId;
+        await lstat(join(paths.root, `in-flight.release-${existing.claimId}`));
+        released = true;
       } catch {
-        // no release file → not released
+        // no release file for this claim → not released
       }
     }
     const blocking = existing !== null && !released &&
@@ -224,6 +243,9 @@ async function claimInFlight(paths, id, timeout) {
     try {
       await rename(inFlightFile, stalePath);
       await rm(stalePath, { force: true });
+      if (typeof existing?.claimId === "string") {
+        await rm(join(paths.root, `in-flight.release-${existing.claimId}`), { force: true });
+      }
     } catch {
       // another contender stole the slot first; loop and re-claim
     }
@@ -238,21 +260,25 @@ async function claimInFlight(paths, id, timeout) {
 }
 
 /**
- * Terminal release for the flight this process owns. Writes the release
- * record keyed by claimId via temp+rename — atomic and idempotent, and a
- * late write can only ever name THIS claim, never a newer one.
+ * Terminal release for the flight this process owns: one atomic file per
+ * claimId (`in-flight.release-<claimId>`), created with O_EXCL. Releases
+ * can never overwrite each other, and a late write can only ever name THIS
+ * claim — never a newer one.
  */
 async function releaseFlight(paths, claimId, finalState) {
   try {
-    const releaseFile = join(paths.root, "in-flight.release");
-    const tmpPath = `${releaseFile}.tmp-${claimId}`;
-    await writeFile(tmpPath, JSON.stringify({
-      claimId, state: finalState, releasedAt: nowIso(),
-    }) + "\n", { mode: 0o600 });
-    await rename(tmpPath, releaseFile);
+    const releasePath = join(paths.root, `in-flight.release-${claimId}`);
+    const handle = await open(releasePath, "wx", 0o600);
+    try {
+      await handle.writeFile(JSON.stringify({
+        claimId, state: finalState, releasedAt: nowIso(),
+      }) + "\n");
+    } finally {
+      await handle.close();
+    }
   } catch {
-    // bookkeeping failure must not change the outcome; the claim's own
-    // deadline still bounds the guard
+    // EEXIST means already released; any other failure leaves the claim's
+    // own deadline to bound the guard — bookkeeping never changes outcomes
   }
 }
 
@@ -396,10 +422,12 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
   const startedAt = Date.now();
   const startedIso = nowIso();
   const id = hex(16);
-  // Claim the in-flight slot FIRST: the claim is the serialization point,
-  // so the id registry's read-modify-write below can never race across
-  // processes. A BLOCKED command burns nothing.
-  const claimed = await claimInFlight(paths, id, timeout);
+  // One deadline covers claim + send + poll: the claim cannot expire while
+  // this process still legitimately holds it. Claim FIRST — it is the
+  // serialization point, so the id registry's read-modify-write below can
+  // never race across processes. A BLOCKED command burns nothing.
+  const end = Date.now() + timeout;
+  const claimed = await claimInFlight(paths, id, end);
   if (!claimed.ok) {
     return {
       outcome: "BLOCKED",
@@ -421,7 +449,6 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
       ts: nowIso(),
     };
   }
-  const end = Date.now() + timeout;
   const request = {
     v: 1, id, token: probe.token, channelId,
     method, params: method === "probe.echo" ? { message: "ping-" + id.slice(0, 8) } : {},

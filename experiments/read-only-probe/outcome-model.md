@@ -110,9 +110,11 @@ must uphold, and the fake-responder tests enforce for this harness:
    `SENT`/`SENT_NOT_ACKNOWLEDGED` is refused client-side (`BLOCKED`,
    `code=ONE_IN_FLIGHT`) without writing anything. The guard must hold
    across **independent processes**, not just within one client: the
-   claim is an atomic create (`link(2)`), release is keyed by a unique
-   `claimId`, and stale/expired claims are stolen by atomic `rename(2)` —
-   enforced by `tests/one-in-flight-processes.test.mjs`.
+   claim is an atomic create (`link(2)`), release is one atomic file per
+   unique `claimId` (`in-flight.release-<claimId>`), stale/expired claims
+   are stolen by atomic `rename(2)`, and the claim deadline is the same
+   deadline as send+poll — enforced by
+   `tests/one-in-flight-processes.test.mjs`.
 3. **No automatic retry:** no timer, loop, or error path re-issues a
    request. Timeout yields `UNKNOWN` and returns. The only re-run is a
    human-issued, new-id command.
