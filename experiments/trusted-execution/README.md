@@ -17,10 +17,14 @@ experiments/trusted-execution/
 ├── codec/
 │   └── trusted-codec.js       # ES3 strict codec (TrustedJson + ae* wrappers)
 ├── permissions.mjs            # CAP025/027: execution classes + consent scope
+├── mutation-guard.mjs         # CAP027: aeRef resolution, project scope, retry policy
+├── outcomes.mjs               # CAP028: write-outcome taxonomy + contract mapping
 └── tests/
     ├── run.mjs                # node:test runner, zero deps
     ├── codec.test.mjs         # differential + refusal tests (node:vm, JSON removed)
-    └── permissions.test.mjs   # class resolution + consent-scope tests
+    ├── permissions.test.mjs   # class resolution + consent-scope tests
+    ├── mutation-guard.test.mjs# STALE_REFERENCE / project mismatch / retry policy
+    └── outcomes.test.mjs      # busy-vs-unknown, mayHaveMutated, undo separation
 ```
 
 ## Evidence level
@@ -75,6 +79,25 @@ catalog dispatch gate (`assertDispatchAllowed`):
   re-pin, project change, or argument drift; `trusted-dev-script`
   additionally requires an explicit opt-in flag and a provenance
   declaration.
+
+## Mutation guard and outcomes (CAP027/CAP028 groundwork)
+
+- `mutation-guard.mjs` — `resolveDescriptor` resolves an `aeRef` against a
+  plain project snapshot; any failure is `STALE_REFERENCE`, never a
+  best-effort re-resolution. `guardMutation` additionally binds the
+  dispatch's project identity to the snapshot's (`PROJECT_MISMATCH` /
+  `PROJECT_UNKNOWN`). `retryDecision` encodes the quarantine rule:
+  `UNKNOWN` is never resent for any operation.
+- `outcomes.mjs` — `classifyWriteResult` extends the probe outcome model
+  to write paths: `BLOCKED`/`not-sent` only when nothing was dispatched,
+  `REFUSED HOST_BUSY` only when the *host itself* reported busy (a
+  client-side "AE seems busy" guess stays `UNKNOWN`), `FAILED` carries
+  `mayHaveMutated` when the host cannot prove atomicity, and timeout
+  after possible dispatch is always `UNKNOWN` + `mayHaveMutated: true`.
+  `toContractOutcome` maps wire outcomes onto catalog contract §5
+  (`not-sent`/`refused`/`completed`/`failed`/`unknown`). Undo is a
+  separate operation whose failure is never folded into the original
+  operation's success.
 
 ## Running
 
