@@ -22,9 +22,14 @@ than a parallel permission system:
 
 Rules:
 
-- `assertDispatchAllowed`-equivalent gating applies **before** consent is
-  even evaluated; an unimplemented/unverified/no-execution-path row refuses
+- `assertDispatchAllowed` gating applies **before** consent is even
+  evaluated; an unimplemented/unverified/no-execution-path row refuses
   regardless of consent (fail-closed order preserved from the catalog).
+  As finalized on PR #29 head `45665bc`: the dispatch must declare its
+  permission class (required, closed enum), and ownership is proven only
+  by the handshake's attested `target.ownership` — caller claims corroborate
+  but never override. Write classes additionally require the consent scope
+  below; `negotiate` remains metadata preflight only.
 - Arbitrary runtime code evaluation is a separate privileged action. No
   request field may cause a string to be `eval`'d implicitly; the script
   body is always an explicit, separately-authorized payload.
