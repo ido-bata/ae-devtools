@@ -258,9 +258,10 @@ describe("executability gates fail closed (discovery is not permission)", () => 
     // Every row imported from the real inventories is source-reviewed only:
     // implementation is unknown/not-implemented, verification is not-run and
     // canRemoteInvoke is unproven. Advertisement must not imply dispatchability.
-    for (const capability of serverFixture().availableCapabilities.slice(0, 25)) {
+    const realServer = serverFixture();
+    for (const capability of realServer.availableCapabilities) {
       const result = assertDispatchAllowed({
-        response: serverFixture(),
+        response: realServer,
         capabilityId: capability.id,
         permission: capability.permissions[0],
         ownership: "owned",

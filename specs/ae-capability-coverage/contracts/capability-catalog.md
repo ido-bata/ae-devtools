@@ -112,7 +112,7 @@ Client behavior (enforced by `negotiate` / `assertDispatchAllowed`, with refusal
 
 1. Negotiate major contract version before any write; incompatible major refuses `incompatible-contract-version`, a client minor newer than the server refuses `unsupported-minor-version`, a foreign schema refuses `malformed-response`.
 2. Compare target identity, required permission, operation trust class and host version before dispatch; failures refuse `unknown-capability`, `capability-unassessed`, `missing-permission` or `ownership-unproven`.
-3. A capability advertisement is **not** authorization to run an operation. `assertDispatchAllowed` additionally fails closed on executability: `implementation !== "implemented"` refuses `not-implemented`, `verification === "not-run"` refuses `unverified`, and `execution.canRemoteInvoke !== true` refuses `no-execution-path`. ae-a8n's ownership, static extension and consent checks still apply per call.
+3. A capability advertisement is **not** authorization to run an operation. `negotiate` itself does not assess executability — a `compatible` result only means contract version, capability existence and declared permission line up. `assertDispatchAllowed` is the executability gate and fails closed on: `implementation !== "implemented"` refuses `not-implemented`, `verification === "not-run"` refuses `unverified`, and `execution.canRemoteInvoke !== true` refuses `no-execution-path`. ae-a8n's ownership, static extension and consent checks still apply per call.
 4. Cache is scoped to host/session/AE build/adapter/plugin hashes and invalidated on restart, project/session change or proof expiry.
 5. No implicit fallback from dedicated-host to console or from named operation to arbitrary script execution.
 
