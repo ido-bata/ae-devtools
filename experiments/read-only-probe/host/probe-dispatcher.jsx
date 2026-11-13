@@ -76,14 +76,17 @@
     }
   }
 
+  // True UTC instant: getUTC* only. Local-time getters with a "Z" suffix
+  // would mislabel the host clock (observed +9h drift on a JST host).
   function isoNow() {
     var d = new Date();
     function two(n) { return (n < 10 ? "0" : "") + n; }
-    return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) +
-      "T" + two(d.getHours()) + ":" + two(d.getMinutes()) + ":" +
-      two(d.getSeconds()) + "." + (d.getMilliseconds() < 10 ? "00" :
-        (d.getMilliseconds() < 100 ? "0" : "")) + d.getMilliseconds() +
-      "Z";
+    return d.getUTCFullYear() + "-" + two(d.getUTCMonth() + 1) + "-" +
+      two(d.getUTCDate()) + "T" + two(d.getUTCHours()) + ":" +
+      two(d.getUTCMinutes()) + ":" + two(d.getUTCSeconds()) + "." +
+      (d.getUTCMilliseconds() < 10 ? "00" :
+        (d.getUTCMilliseconds() < 100 ? "0" : "")) +
+      d.getUTCMilliseconds() + "Z";
   }
 
   function osUserName() {
@@ -110,9 +113,13 @@
     return p;
   }
 
+  // echo carries the same identity block as every other method: without it
+  // the client cannot apply the wrong-target check to a ping (fail-open).
   function echoPayload(params) {
-    return { echoed: (params && params.message !== undefined)
-      ? String(params.message) : "" };
+    var p = identityPayload();
+    p.echoed = (params && params.message !== undefined)
+      ? String(params.message) : "";
+    return p;
   }
 
   function snapshotPayload() {

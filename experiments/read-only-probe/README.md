@@ -55,9 +55,9 @@ The following rules were followed and must be followed by any re-run:
    open with the user's work; it must **not be touched in any way** — no
    script delivery, no Apple Events, no focus change, no attach. Any probe
    run uses only an AE **the probe's operator launched themselves** (owned
-   session, no project). Note: as of 2026-11-12 **no probe run has been
-   performed and recorded**; the evidence ledger is [`EVIDENCE.md`](EVIDENCE.md)
-   and it records this explicitly.
+   session, no project). Real-host runs so far are recorded in
+   [`EVIDENCE.md`](EVIDENCE.md) (owned sessions only; the user's working
+   AE was never touched).
 2. **Read-only.** The dispatcher answers exactly one method set
    (`probe.echo`, `probe.identify`, `probe.sysinfo`, `probe.snapshot`) — all
    pure `app`/`Folder`/`File` reads that mutate nothing, save nothing,
@@ -89,7 +89,7 @@ experiments/read-only-probe/
 │   ├── run.mjs                # test runner (node:test, zero deps)
 │   └── *.test.mjs             # fake-responder tests incl. no-resend regression
 ├── EVIDENCE.md                # evidence ledger: what was measured, what is UNVERIFIED
-└── (no capture artifacts yet: no real-host run has been performed or recorded)
+└── evidence/run-20261113-2/     # real-host run artifacts (owned AE 2026, macOS)
 ```
 
 ## Quick start (macOS, owned session only)

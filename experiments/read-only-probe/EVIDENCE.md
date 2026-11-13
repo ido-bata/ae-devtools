@@ -18,12 +18,18 @@
 
 ## What is actually green
 
-- `node tests/run.mjs` → **6/6 test files green** (2026-11-13, macOS).
-  Tests use a **fake responder**; they do not start After Effects.
-- Real-host run `run-20261113-2` against **owned AE 2026 (26.5.3x9, pid 1054)**,
-  activated via `osascript DoScriptFile` on the owned instance after owner
-  authorization of CLI/AppleScript activation (the earlier human-menu plan
-  was superseded). The user's interactive AE 2027 session was never touched.
+- `node tests/run.mjs` → **6/6 test files green, 30 tests** (2026-11-13,
+  macOS, post-review-fix head). Tests use a **fake responder**; they do
+  not start After Effects.
+- Real-host run `run-20261113-2` against **owned AE 2026 (26.5.3x9,
+  pid 1054)**, activated via `osascript DoScriptFile` on the owned
+  instance after owner authorization of CLI/AppleScript activation (the
+  earlier human-menu plan was superseded). The user's interactive AE
+  2027 session was never touched. **Caveat:** that run predates the
+  supervision-review fixes below; its `hostClock` values are local time
+  mislabeled as UTC and its `ping` reply carried no session identity, so
+  the wrong-target check was not exercised for `ping` in that run. A
+  post-fix re-run is recorded separately below.
 - Artifacts: `evidence/run-20261113-2/` (`manifest.json`, `trace.jsonl`,
   `target.json`, `results/*.result.json` — channel token redacted).
 
@@ -57,6 +63,24 @@ Additional completed calls in the same session: `identify` 208 ms,
   (`tests/prepare.test.mjs`). The AE `-r` launch flag did **not** activate
   the dispatcher on macOS; activation used `DoScriptFile` instead.
 
+### Defects found in supervision review of `d2348fd` (fixed post-run)
+
+Recorded verbatim; the artifacts above are pre-fix and are not rewritten:
+
+- `hostClock` in `run-20261113-2` artifacts is **local time mislabeled
+  as UTC** (`isoNow()` used local getters + `"Z"`; observed +9h on this
+  JST host). Not usable for clock-drift measurement. Fixed to `getUTC*`
+  in the post-review head.
+- `probe.echo` replies carried **no session identity**, so the
+  wrong-target check could not fire for `ping` (fail-open). The host now
+  returns the identity block on every method, and the client refuses a
+  pinned-channel reply that lacks `sessionId`/`aeVersion`.
+- `identify` **silently overwrote `target.json`** on every run, so a
+  second session answering the same channel would have re-pinned without
+  any `WRONG_TARGET`. Pins now survive refused re-identifies; overwriting
+  requires the explicit `identify --pin-session`. `dispatchId` is pinned
+  and checked to catch dispatcher re-activation inside one AE session.
+
 ## How a run is reproduced (macOS, owned session)
 
 1. Launch your *own* AE (26.5.3 or 27.0.0), no project, or with a disposable
@@ -67,11 +91,39 @@ Additional completed calls in the same session: `identify` 208 ms,
    Script File, or an owner-authorized `DoScriptFile`. Never install into a
    Startup folder by tooling.
 4. `node probe.mjs identify|ping|snapshot|sysinfo|diagnose <channel>`.
+   The first successful `identify` pins the session in `target.json`;
+   a later `identify` against a *different* session is REFUSED
+   WRONG_TARGET — re-pinning an owned channel on purpose requires the
+   explicit `identify --pin-session`.
 5. Record build / OS / CPU / latency / trace into this file and
    `evidence/<run>/`.
 
 Windows row stays UNVERIFIED until a dedicated Windows host is available
 (see #21).
+
+## How to evaluate a candidate transport
+
+Any candidate transport (CEP panel + `evalScript`, in-AE dispatcher,
+UXP, Apple Events, …) is scored against the **same transport-agnostic
+contract** this probe implements — it is not scored by reusing this
+file-envelope harness:
+
+1. Map the candidate onto the outcome model (`outcome-model.md`): can it
+   produce `not-sent / refused / completed / failed / unknown` with the
+   same meaning, claim-before-run, one-in-flight, no auto-retry?
+2. Map it onto the snapshot schema (`snapshot-schema.md`): does a reply
+   carry `identity` (sessionId/dispatchId/channelId/aeVersion) sufficient
+   for the wrong-target check on **every** method, including ping?
+3. Run the V2 minimal round trip (ADR-0005): one read-only operation,
+   request id + deadline + target identity, measure latency/CPU/trace on
+   an **owned** AE session per OS row (macOS here; Windows UNVERIFIED).
+4. Record build / OS / CPU / latency / trace in this file under a new
+   `run-<date>-<n>` with `transportId` naming the candidate — never
+   reuse this harness's numbers as another transport's evidence.
+
+This harness (`file-envelope-v1`) is itself only one instantiation; its
+numbers answer "what does the contract cost over files", not "which
+transport wins".
 
 ## Feeding ADR-0005 V tasks
 

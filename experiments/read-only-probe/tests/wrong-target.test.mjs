@@ -110,6 +110,117 @@ test("identify accepts the FIRST identity and pins it; a second identity change 
   }
 });
 
+test("pinned channel + success reply WITHOUT session identity → REFUSED WRONG_TARGET (fail closed)", async () => {
+  const root = mkdtempSync(join(tmpdir(), "probe-noident-"));
+  try {
+    const { channel } = makeChannel(root);
+    writeFileSync(join(channel, "target.json"), JSON.stringify({
+      sessionId: "sess-expected", aeVersion: "27.0.0",
+      pinnedAt: new Date().toISOString(),
+    }) + "\n", { mode: 0o600 });
+
+    // a reply that matches token/channelId/id but carries no identity at
+    // all (e.g. a host that answers echo without an identity block)
+    const stopResponder = fakeResponder(channel, (id) => ({
+      v: 1, id, token: TOKEN, channelId: "chan-cccccccc",
+      dispatchId: "disp-x", ok: true, hostEvalMs: 1,
+      result: { echoed: "ping" },
+    }));
+    try {
+      const r = await run(["ping", channel, "5000"]);
+      assert.equal(r.event.outcome, "REFUSED");
+      assert.equal(r.event.refusal.code, "WRONG_TARGET");
+    } finally {
+      stopResponder();
+    }
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("pinned channel + identify from a DIFFERENT session → REFUSED and pin is NOT overwritten", async () => {
+  const root = mkdtempSync(join(tmpdir(), "probe-repin-"));
+  try {
+    const { channel } = makeChannel(root);
+    writeFileSync(join(channel, "target.json"), JSON.stringify({
+      sessionId: "sess-A", aeVersion: "27.0.0", dispatchId: "disp-A",
+      pinnedAt: new Date().toISOString(),
+    }) + "\n", { mode: 0o600 });
+
+    const stopResponder = fakeResponder(channel, (id) => ({
+      v: 1, id, token: TOKEN, channelId: "chan-cccccccc",
+      dispatchId: "disp-B", ok: true, hostEvalMs: 1,
+      result: goodIdentity({ sessionId: "sess-B", dispatchId: "disp-B" }),
+    }));
+    try {
+      const r = await run(["identify", channel, "5000"]);
+      assert.equal(r.event.outcome, "REFUSED");
+      assert.equal(r.event.refusal.code, "WRONG_TARGET");
+      const pinned = readChannelJson(channel, "target.json");
+      assert.equal(pinned.sessionId, "sess-A", "pin must survive a refused re-identify");
+      assert.equal(pinned.dispatchId, "disp-A");
+    } finally {
+      stopResponder();
+    }
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("identify --pin-session is the explicit re-pin: overwrites a stale pin", async () => {
+  const root = mkdtempSync(join(tmpdir(), "probe-repin-ok-"));
+  try {
+    const { channel } = makeChannel(root);
+    writeFileSync(join(channel, "target.json"), JSON.stringify({
+      sessionId: "sess-OLD", aeVersion: "26.5.3x9",
+      pinnedAt: new Date().toISOString(),
+    }) + "\n", { mode: 0o600 });
+
+    const stopResponder = fakeResponder(channel, (id) => ({
+      v: 1, id, token: TOKEN, channelId: "chan-cccccccc",
+      dispatchId: "disp-new", ok: true, hostEvalMs: 1,
+      result: goodIdentity({ sessionId: "sess-new", dispatchId: "disp-new" }),
+    }));
+    try {
+      const r = await run(["identify", channel, "5000", "--pin-session"]);
+      assert.equal(r.event.outcome, "COMPLETED");
+      const pinned = readChannelJson(channel, "target.json");
+      assert.equal(pinned.sessionId, "sess-new");
+      assert.equal(pinned.dispatchId, "disp-new");
+    } finally {
+      stopResponder();
+    }
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("pinned dispatchId mismatch (dispatcher re-activated) → REFUSED WRONG_TARGET", async () => {
+  const root = mkdtempSync(join(tmpdir(), "probe-dispatchid-"));
+  try {
+    const { channel } = makeChannel(root);
+    writeFileSync(join(channel, "target.json"), JSON.stringify({
+      sessionId: "sess-1", aeVersion: "27.0.0", dispatchId: "disp-OLD",
+      pinnedAt: new Date().toISOString(),
+    }) + "\n", { mode: 0o600 });
+
+    const stopResponder = fakeResponder(channel, (id) => ({
+      v: 1, id, token: TOKEN, channelId: "chan-cccccccc",
+      dispatchId: "disp-NEW", ok: true, hostEvalMs: 1,
+      result: goodIdentity({ sessionId: "sess-1", dispatchId: "disp-NEW" }),
+    }));
+    try {
+      const r = await run(["ping", channel, "5000"]);
+      assert.equal(r.event.outcome, "REFUSED");
+      assert.equal(r.event.refusal.code, "WRONG_TARGET");
+    } finally {
+      stopResponder();
+    }
+  } finally {
+    cleanup(root);
+  }
+});
+
 test("unparseable reply → UNKNOWN UNREADABLE_REPLY (quarantine, do not retry)", async () => {
   const root = mkdtempSync(join(tmpdir(), "probe-unreadable-"));
   try {

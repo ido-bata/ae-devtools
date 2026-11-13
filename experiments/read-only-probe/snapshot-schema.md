@@ -17,7 +17,7 @@ restart/undo/reorder without proof").
   "kind": "probe.snapshot.v1",        // versioned schema discriminator, closed set
   "schemaVersion": 1,
   "takenAt": "2026-11-12T09:00:00.000Z",     // client-side RFC3339
-  "hostClock": "2026-11-12T09:00:00.000Z",   // AE-side Date at snapshot time (drift observable)
+  "hostClock": "2026-11-12T09:00:00.000Z",   // AE-side UTC instant at snapshot time (drift observable)
   "identity": { /* §2, mandatory */ },
   "runtime":  { /* §3, mandatory */ },
   "sessionContext": { /* §4 */ },
@@ -158,9 +158,9 @@ must adopt:
 - It does not define how `probe.snapshot` is transported, nor that the
   file-envelope harness is retained for production (ADR-0005 R1 Open).
 - It does not include Windows evidence: `userName` on Windows and the
-  privacy check are **UNVERIFIED** on this machine
-  (`evidence/windows-UNVERIFIED.md`).
-- It has not been exercised against a real AE yet beyond the 2026-11-12
-  owned macOS session recorded in `EVIDENCE.md`; fields marked
-  `verified on real host: yes` are exactly those observed there (§
-  EVIDENCE.md "Field-level evidence").
+  privacy check are **UNVERIFIED** on this machine (Windows row in
+  `EVIDENCE.md`).
+- It has been exercised against a real AE in the owned macOS sessions
+  recorded in `EVIDENCE.md` (`run-20261113-2`, and the post-fix re-run
+  recorded there); fields observed on a real host are listed per-run in
+  `EVIDENCE.md`.

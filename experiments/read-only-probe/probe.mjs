@@ -10,7 +10,7 @@
  *
  * Commands:
  *   prepare   <channel>                        create private channel + probe-start.jsx
- *   identify  <channel> [timeoutMs] [--expect-ae <ver>] [ --pin-session]
+ *   identify  <channel> [timeoutMs] [--expect-ae <ver>] [--pin-session]
  *   ping      <channel> [timeoutMs] [--expect-ae <ver>]
  *   snapshot  <channel> [timeoutMs]
  *   sysinfo   <channel> [timeoutMs]
@@ -22,8 +22,12 @@
  *   - NO automatic retry on timeout: deadline → UNKNOWN { outcome }, exit
  *   - request ids are never reused (burned in <channel>/ids.json)
  *   - targets are pinned in <channel>/target.json after the first
- *     successful identify; a reply from a different sessionId is REFUSED
- *     WRONG_TARGET, never silently accepted (mis-delivery guard)
+ *     successful identify; a reply from a different sessionId/aeVersion/
+ *     dispatchId is REFUSED WRONG_TARGET, never silently accepted
+ *     (mis-delivery guard). A pinned channel never re-pins silently:
+ *     overwriting an existing pin requires `identify --pin-session`
+ *   - a success reply that lacks session identity while a pin exists is
+ *     REFUSED WRONG_TARGET (fail closed: unproven target is not the target)
  *   - every command appends a JSONL trace line to <channel>/trace.jsonl
  *
  * Node >= 22, zero dependencies.
@@ -212,8 +216,18 @@ function classifyReply(reply, { pinnedTarget, channelId, requestId, probe }) {
   // success path — wrong-target check (CAP023 §5)
   const identity = reply.result ?? {};
   if (pinnedTarget) {
-    if (pinnedTarget.sessionId && identity.sessionId &&
-        identity.sessionId !== pinnedTarget.sessionId) {
+    // Fail closed: a reply that cannot prove which session answered is not
+    // the pinned target, even though token/channelId/id all matched.
+    if (!identity.sessionId || !identity.aeVersion) {
+      return {
+        outcome: "REFUSED",
+        refusal: {
+          code: "WRONG_TARGET",
+          message: "reply carries no session identity; cannot confirm the pinned target",
+        },
+      };
+    }
+    if (pinnedTarget.sessionId && identity.sessionId !== pinnedTarget.sessionId) {
       return {
         outcome: "REFUSED",
         refusal: {
@@ -222,13 +236,24 @@ function classifyReply(reply, { pinnedTarget, channelId, requestId, probe }) {
         },
       };
     }
-    if (pinnedTarget.aeVersion && identity.aeVersion &&
-        identity.aeVersion !== pinnedTarget.aeVersion) {
+    if (pinnedTarget.aeVersion && identity.aeVersion !== pinnedTarget.aeVersion) {
       return {
         outcome: "REFUSED",
         refusal: {
           code: "WRONG_TARGET",
           message: `reply aeVersion ${identity.aeVersion} does not match pinned target ${pinnedTarget.aeVersion}`,
+        },
+      };
+    }
+    // dispatchId distinguishes dispatcher re-activation inside one AE
+    // session; checked only when both sides recorded it (old pins lack it).
+    if (pinnedTarget.dispatchId && identity.dispatchId &&
+        identity.dispatchId !== pinnedTarget.dispatchId) {
+      return {
+        outcome: "REFUSED",
+        refusal: {
+          code: "WRONG_TARGET",
+          message: `reply dispatchId ${identity.dispatchId} does not match pinned target ${pinnedTarget.dispatchId} (dispatcher re-activated?)`,
         },
       };
     }
@@ -292,11 +317,12 @@ async function pinTarget(paths, identity) {
     aeVersion: identity.aeVersion,
     pinnedAt: nowIso(),
   };
+  if (identity.dispatchId) pinned.dispatchId = identity.dispatchId;
   await writeFile(paths.targetFile, JSON.stringify(pinned) + "\n", { mode: 0o600 });
   return pinned;
 }
 
-async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "", pinSession = false, name = method } = {}) {
+async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "", allowRepin = false, name = method } = {}) {
   const startedAt = Date.now();
   const startedIso = nowIso();
   const id = hex(16);
@@ -333,7 +359,10 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
   await rename(partPath, requestPath);
   await markInFlight(paths, claimed.inFlightFile, "SENT");
 
-  const pinnedTarget = pinSession ? null : await loadPinnedTarget(paths);
+  // A pin is never bypassed silently: only an explicit `identify
+  // --pin-session` (allowRepin) checks against nothing and re-pins.
+  const pinnedTarget = await loadPinnedTarget(paths);
+  const pinnedForCheck = allowRepin ? null : pinnedTarget;
   let lastError = null;
   while (Date.now() < end) {
     let text;
@@ -358,13 +387,15 @@ async function dispatch(paths, channelId, probe, method, timeout, { expectAe = "
       return event;
     }
     const verdict = classifyReply(reply, {
-      pinnedTarget, channelId, requestId: id, probe,
+      pinnedTarget: pinnedForCheck, channelId, requestId: id, probe,
     });
     const durationMs = Date.now() - startedAt;
     if (verdict.outcome === "COMPLETED") {
       const identity = verdict.identity;
+      // Write the pin only when none exists or the operator explicitly
+      // re-pins; an existing matching pin is left untouched.
       let pinnedNow = pinnedTarget;
-      if (pinSession || !pinnedTarget) {
+      if (allowRepin || !pinnedTarget) {
         pinnedNow = await pinTarget(paths, identity);
       }
       const event = {
@@ -480,7 +511,9 @@ async function runCommand(command, channel, args) {
 
   const event = await dispatch(paths, probe.channelId, probe, method, timeoutArg, {
     expectAe: args.expectAe ?? "",
-    pinSession: command === "identify",
+    // --pin-session is the explicit re-pin authorization: only meaningful
+    // for identify, which is the command that establishes/overwrites the pin.
+    allowRepin: command === "identify" && args.pinSession === true,
     name: command,
   });
   console.log(JSON.stringify(event, null, 2));
@@ -511,7 +544,7 @@ async function main(argv) {
   }
   const known = ["identify", "ping", "snapshot", "sysinfo", "diagnose"];
   if (!known.includes(command)) {
-    return fail(`usage: probe.mjs <prepare|identify|ping|snapshot|sysinfo|diagnose> <channel> [timeoutMs] [--expect-ae <ver>]`);
+    return fail(`usage: probe.mjs <prepare|identify|ping|snapshot|sysinfo|diagnose> <channel> [timeoutMs] [--expect-ae <ver>] [--pin-session]`);
   }
   const { out, positional } = parseArgs(argv.slice(3));
   const channel = positional[0];

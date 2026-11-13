@@ -144,4 +144,4 @@ proving a reply from the *wrong* target is rejected:
   observation record; until then "I think AE is busy" is `UNKNOWN`.
 - Windows ACL evidence: POSIX mode checks are insufficient on Windows; the
   channel-privacy rule cannot be evaluated there on this machine
-  (UNVERIFIED, see `evidence/windows-UNVERIFIED.md`).
+  (UNVERIFIED — see the Windows row in `EVIDENCE.md`).
