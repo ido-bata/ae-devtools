@@ -1,0 +1,25 @@
+{
+  "v": 1,
+  "id": "f4688485fbee39f45e9895d97d5771c2",
+  "token": "<redacted: per-run channel credential; channel is dead>",
+  "channelId": "chan-8afdca95d4c51869",
+  "dispatchId": "disp-1ccc5fa1-6af71e9e",
+  "ok": true,
+  "hostClock": "2026-11-13T14:28:56.374Z",
+  "hostEvalMs": 0,
+  "result": {
+    "aeVersion": "26.5.3x9",
+    "aeBuildName": "26.5.3x9",
+    "scriptingVersion": "undefined",
+    "isoLanguage": "ja_JP",
+    "locale": "ja_JP",
+    "userName": "rebui",
+    "sessionId": "sess-disp-1ccc5fa1-6af71e9e",
+    "channelId": "chan-8afdca95d4c51869",
+    "dispatchId": "disp-1ccc5fa1-6af71e9e",
+    "projectOpen": true,
+    "projectItemCount": 0,
+    "activeItemPresent": false,
+    "renderQueueItemCount": 0
+  }
+}

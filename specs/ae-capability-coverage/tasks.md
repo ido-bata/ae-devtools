@@ -57,10 +57,10 @@ Dependencies: #8–#10 initial; ae-a8n #97–#99. Status: **open / not verified*
 
 Dependencies: #12; ae-a8n #98. Status: **open / not verified**.
 
-- [ ] **CAP021** Prove AE host version/ping and target identity. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
-- [ ] **CAP022** Define runtime snapshot and handle invalidation rules. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
-- [ ] **CAP023** Test missing/wrong/busy/timeout/reconnect failure paths. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
-- [ ] **CAP024** Capture real-host OS/AE/CPU/latency/trace evidence. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP021** Prove AE host version/ping and target identity. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP022** Define runtime snapshot and handle invalidation rules. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP023** Test missing/wrong/busy/timeout/reconnect failure paths. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
+- [x] **CAP024** Capture real-host OS/AE/CPU/latency/trace evidence. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
 
 ### [#14](https://github.com/ido-bata/ae-devtools/issues/14) — Script runtime
 
