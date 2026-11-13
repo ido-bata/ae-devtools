@@ -43,6 +43,13 @@ Dispatcher activated via `osascript DoScriptFile` on the owned instance.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 26.5.3x9 (AE 2026, owned, pid 60663) | macOS 27.2.1 (26B131), Apple M5 10c | 261–315 ms | COMPLETED — projectOpen=true, 0 items, 0 RQ items | COMPLETED — session/dispatch/user/locale pinned; **re-identify did not rewrite the pin** | AE 19.7 % CPU, 585 MB RSS at capture | `evidence/run-20261113-3/` (`manifest.json`, `trace.jsonl`, `target.json`, `results/*.result.json`, token redacted) | **verified on real host (macOS)** |
 
+Post-run commits note: the host script `host/probe-dispatcher.jsx` is
+unchanged since `c11b1ad`. Later client-only hardening (`9b4843a`:
+dispatchId fail-closed, identify requires identity, no hollow pins) is
+covered by the fake-responder suite; it does not alter host-observed
+behavior, so the run-3 measurements remain bound to `c11b1ad` for the
+executed code and to `9b4843a` for the current client.
+
 Post-fix confirmations in this run:
 
 - `hostClock` is a **true UTC instant** (e.g. `14:30:32.307Z` vs client
