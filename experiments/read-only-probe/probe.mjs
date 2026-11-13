@@ -165,23 +165,35 @@ async function checkAndBurnId(paths, id) {
  *   with the smallest (ctimeMs, claimKey). ctimeMs is the publish time —
  *   rename(2) stamps it — so ordering is publish order, not creation
  *   order; a later publisher can never outrank an earlier visible claim.
- * - Exactly one winner exists per scan snapshot, and the globally earliest
- *   publisher always wins: every later publisher sees its file and loses.
- *   Losers delete only their OWN uniquely-named claim file and return
- *   BLOCKED ONE_IN_FLIGHT without writing anything.
+ * - A first-election winner then waits CLAIM_CONFIRM_MS and re-scans: a
+ *   claim published in the same ctime tick but after the first scan becomes
+ *   visible, and the deterministic (ctimeMs, claimKey) order then yields
+ *   exactly one survivor. This requires filesystem ctime granularity
+ *   finer than the confirm window; verified on APFS — FAT/exFAT and
+ *   network filesystems are UNVERIFIED for this experiment.
+ * - Unevaluable claim files (unreadable/corrupt) are treated as ACTIVE
+ *   with a bounded deadline of ctime + MAX_TIMEOUT + margin: they block
+ *   (fail-closed) but can never block forever, and they are never swept
+ *   while that bound is live.
  * - `in-flight.release-<claimId>` (O_EXCL create) marks terminal release;
  *   `in-flight.json` is still honoured as a legacy claim shape so fixtures
  *   and pre-change channels keep working.
- * - Dead claims (expired deadline, released, ACKed legacy, unreadable
- *   claim-* files) are swept best-effort by the winner — they can never
- *   block, so removal is hygiene only.
+ * - Provably dead claims (expired deadline, released, ACKed legacy,
+ *   unevaluable past the bound) are swept best-effort by the winner —
+ *   they can never block, so removal is hygiene only.
  *
  * `deadlineMs` is the caller's single deadline for claim + send + poll, so
  * the slot cannot expire while this process still legitimately holds it.
+ * If the election+confirm cannot complete before it, the command loses
+ * and writes nothing.
  */
 const CLAIM_PREFIX = "in-flight.claim-";
 const RELEASE_PREFIX = "in-flight.release-";
 const LEGACY_CLAIM_NAME = "in-flight.json";
+const CLAIM_CONFIRM_MS = 200;
+// An unevaluable claim can belong to a flight of at most MAX_TIMEOUT plus
+// scheduling slack; past ctime + this bound it is provably dead.
+const UNEVALUABLE_CLAIM_BOUND_MS = MAX_TIMEOUT + 5_000;
 
 async function releaseExists(paths, claimId) {
   try {
@@ -194,16 +206,13 @@ async function releaseExists(paths, claimId) {
 
 /**
  * Evaluate all claim files in the channel. Returns the winning claimKey,
- * whether it is ours, the blocker to report, and dead files to sweep.
+ * whether it is ours, the blocker to report, and provably dead files to
+ * sweep. Throws on channel-level I/O failure — an unevaluable directory
+ * must fail closed, not elect a winner by default.
  */
 async function evaluateClaims(paths, ownClaimId) {
   const ownName = `${CLAIM_PREFIX}${ownClaimId}.json`;
-  let names = [];
-  try {
-    names = await readdir(paths.root);
-  } catch {
-    return { winnerIsOwn: true, blocker: null, dead: [] };
-  }
+  const names = await readdir(paths.root);
   const now = Date.now();
   const active = [];
   const dead = [];
@@ -212,29 +221,40 @@ async function evaluateClaims(paths, ownClaimId) {
     const isLegacy = name === LEGACY_CLAIM_NAME;
     if (!isClaimFile && !isLegacy) continue;
     const file = join(paths.root, name);
+    let stat = null;
+    try {
+      stat = await lstat(file);
+    } catch {
+      continue;   // vanished mid-scan
+    }
     let data = null;
+    let unevaluable = false;
     try {
       data = await readJson(file);
     } catch {
-      data = null;   // atomic publish means unreadable = tampered/dead
-    }
-    let ctimeMs = 0;
-    try {
-      ctimeMs = (await lstat(file)).ctimeMs;
-    } catch {
-      // vanished mid-scan; treat as dead
+      unevaluable = true;   // corrupt or transient I/O: cannot prove dead OR live
     }
     const claimKey = typeof data?.claimId === "string" ? data.claimId
       : typeof data?.id === "string" ? data.id : name;
+    if (unevaluable) {
+      // Bounded fail-closed: blocks until ctime + bound, then provably dead.
+      const boundDeadline = stat.ctimeMs + UNEVALUABLE_CLAIM_BOUND_MS;
+      if (now < boundDeadline) {
+        active.push({ name, claimKey, isOwn: name === ownName, data: null, unevaluable: true, ctimeMs: stat.ctimeMs, deadlineMs: boundDeadline });
+      } else {
+        dead.push(name);
+      }
+      continue;
+    }
     const released = typeof data?.claimId === "string" && await releaseExists(paths, data.claimId);
     const legacyAcked = isLegacy && data?.state === "ACKED";
-    const isActive = data !== null && !released && !legacyAcked &&
+    const isActive = !released && !legacyAcked &&
       typeof data.deadlineMs === "number" && now < data.deadlineMs;
     if (!isActive) {
       dead.push(name);
       continue;
     }
-    active.push({ name, claimKey, isOwn: name === ownName, data, ctimeMs });
+    active.push({ name, claimKey, isOwn: name === ownName, data, ctimeMs: stat.ctimeMs, deadlineMs: data.deadlineMs });
   }
   active.sort((a, b) =>
     a.ctimeMs - b.ctimeMs || (a.claimKey < b.claimKey ? -1 : a.claimKey > b.claimKey ? 1 : 0));
@@ -246,9 +266,18 @@ async function evaluateClaims(paths, ownClaimId) {
     winnerIsOwn: false,
     blocker: {
       code: "ONE_IN_FLIGHT",
-      message: `request ${winner.data.id} is still in flight until deadline ${winner.data.deadlineMs}; this command wrote nothing`,
+      message: winner.unevaluable
+        ? `unevaluable claim file ${winner.name} may hide an in-flight request (bounded until ${new Date(winner.deadlineMs).toISOString()}); this command wrote nothing`
+        : `request ${winner.data.id} is still in flight until deadline ${winner.data.deadlineMs}; this command wrote nothing`,
     },
     dead,
+  };
+}
+
+function deadlineBlocker() {
+  return {
+    code: "DEADLINE_EXPIRED",
+    message: "the claim deadline expired during election; this command wrote nothing",
   };
 }
 
@@ -264,12 +293,45 @@ async function claimInFlight(paths, id, deadlineMs) {
   await writeFile(tmpPath, payload, { mode: 0o600 });
   await rename(tmpPath, claimPath);
 
-  const decision = await evaluateClaims(paths, claimId);
-  if (decision.winnerIsOwn) {
-    // Hygiene only: dead claims can never block, so sweeping them changes
-    // no outcome. Best-effort — failures are ignored.
+  for (let round = 0; round < 2; round++) {
+    if (Date.now() >= deadlineMs) {
+      await rm(claimPath, { force: true });
+      return { ok: false, blocker: deadlineBlocker() };
+    }
+    const decision = await evaluateClaims(paths, claimId);
+    if (!decision.winnerIsOwn) {
+      await rm(claimPath, { force: true });
+      return { ok: false, blocker: decision.blocker };
+    }
+    if (round === 0) {
+      // Confirm scan: a claim published in the same ctime tick after our
+      // first scan only becomes visible now; the deterministic order then
+      // yields exactly one survivor. The wait is bounded by the remaining
+      // deadline so short timeouts still work (with a weaker confirm).
+      const remaining = deadlineMs - Date.now();
+      const waitMs = Math.min(CLAIM_CONFIRM_MS, Math.max(0, remaining - POLL_INTERVAL_MS));
+      if (waitMs > 0) {
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+      continue;
+    }
+    // Won both scans. Hygiene only: provably dead claims can never block,
+    // so sweeping them changes no outcome. Best-effort — failures ignored.
     for (const name of decision.dead) {
       await rm(join(paths.root, name), { force: true }).catch(() => {});
+    }
+    // Abandoned temp files from crashed publishers (older than 60s only,
+    // so a concurrent publish-in-flight is never swept).
+    try {
+      for (const name of await readdir(paths.root)) {
+        if (!name.startsWith(CLAIM_PREFIX) || !name.includes(".tmp-")) continue;
+        const st = await lstat(join(paths.root, name)).catch(() => null);
+        if (st && Date.now() - st.mtimeMs > 60_000) {
+          await rm(join(paths.root, name), { force: true }).catch(() => {});
+        }
+      }
+    } catch {
+      // best-effort
     }
     // Orphan release files whose claim file is gone.
     try {
@@ -288,7 +350,7 @@ async function claimInFlight(paths, id, deadlineMs) {
     return { ok: true, claimId };
   }
   await rm(claimPath, { force: true });
-  return { ok: false, blocker: decision.blocker };
+  return { ok: false, blocker: deadlineBlocker() };
 }
 
 /**

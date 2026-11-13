@@ -122,11 +122,14 @@ test("concurrent reclaim of an expired claim: exactly one winner, fresh claims n
       const winner = results.find((r) => r.event.requestId === requests[0]);
       assert.ok(winner);
       assert.equal(winner.event.outcome, "UNKNOWN");
-      // No probe/stale/temp litter may remain.
+      // Exactly the winner's claim may remain (it stays until its deadline
+      // or a release sweep); no probe/stale/temp/loser-claim litter.
       const leftovers = readdirSync(channel).filter(
         (f) => f.includes(".probe-") || f.includes(".stale-") || f.includes(".tmp-"),
       );
       assert.deepEqual(leftovers, [], `round ${round}: claim litter left behind`);
+      const claimFiles = readdirSync(channel).filter((f) => f.startsWith("in-flight.claim-"));
+      assert.equal(claimFiles.length, 1, `round ${round}: expected only the winner's claim file`);
     } finally {
       cleanup(root);
     }

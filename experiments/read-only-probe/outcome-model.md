@@ -114,10 +114,15 @@ must uphold, and the fake-responder tests enforce for this harness:
    (`in-flight.claim-<claimId>.json`, atomic temp+rename) and then elects a
    winner by scanning the channel — the active claim (deadline in the
    future, no `in-flight.release-<claimId>`) with the smallest publish
-   time wins, losers delete only their own claim and write nothing.
-   There is deliberately no steal-by-rename: removing or replacing a
-   shared claim path always leaves an absent-window in which a fresh
-   claim could be displaced. Expired/released claims are dead weight swept
+   time wins. A first-election winner re-scans after a confirm delay so a
+   same-timestamp-tick latecomer cannot produce two winners; this assumes
+   filesystem ctime granularity finer than the confirm window (verified on
+   APFS; FAT/exFAT and network filesystems are UNVERIFIED). Unevaluable
+   claim files block fail-closed up to a bounded deadline
+   (`ctime + MAX_TIMEOUT + margin`). Losers delete only their own claim
+   and write nothing. There is deliberately no steal-by-rename: removing
+   or replacing a shared claim path always leaves an absent-window in
+   which a fresh claim could be displaced. Provably dead claims are swept
    by the next winner; they can never block. The claim deadline is the
    same deadline as send+poll — enforced by
    `tests/one-in-flight-processes.test.mjs`, including a concurrent
