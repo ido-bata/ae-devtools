@@ -314,6 +314,46 @@ describe("handshake pass is not authorization", () => {
     expect(result.status === "refused" && result.reason).toBe("malformed-response");
   });
 
+  test("structurally broken advertisements refuse, never throw or pass", () => {
+    const brokenAds = [
+      { ...server.availableCapabilities[0], verification: undefined },
+      { ...server.availableCapabilities[0], execution: undefined },
+      { ...server.availableCapabilities[0], permissions: "read" },
+      { ...server.availableCapabilities[0], permissions: ["bogus"] },
+    ];
+    for (const ad of brokenAds) {
+      const forged = {
+        ...server,
+        availableCapabilities: [ad],
+      } as unknown as typeof server;
+      const result = assertDispatchAllowed({
+        response: forged,
+        capabilityId: EXECUTABLE_ID,
+        permission: "read",
+        ownership: "owned",
+      });
+      expect(result.status).toBe("refused");
+      if (result.status !== "refused") throw new Error("unreachable");
+      expect([
+        "not-implemented", "unverified", "no-execution-path", "missing-permission",
+      ]).toContain(result.reason);
+    }
+    // A permission outside the closed enum refuses even if advertised.
+    const bogusPerm = {
+      ...server,
+      availableCapabilities: [{
+        ...server.availableCapabilities[0], permissions: ["bogus"],
+      }],
+    } as unknown as typeof server;
+    const result = assertDispatchAllowed({
+      response: bogusPerm,
+      capabilityId: EXECUTABLE_ID,
+      permission: "bogus" as never,
+      ownership: "owned",
+    });
+    expect(result.status === "refused" && result.reason).toBe("missing-permission");
+  });
+
   test("dispatch against an unassessed capability refuses, never silently passes", () => {
     const result = assertDispatchAllowed({
       response: server,

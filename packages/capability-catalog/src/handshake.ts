@@ -14,6 +14,7 @@
 
 import {
   CONTRACT_VERSION,
+  VERIFICATION_AXES,
   type AccessClass,
   type CapabilityRecord,
   type ContractVersion,
@@ -316,7 +317,8 @@ function lookupCapability(
   const parsed = parseCapabilityId(id);
   if (parsed === null) return { kind: "unknown" };
   const supplyKey = NAMESPACE_SUPPLY[parsed.namespace];
-  return response.inventorySupply[supplyKey] === "supplied" ? { kind: "unknown" } : { kind: "unassessed" };
+  // Missing inventorySupply fails closed as unassessed, never as absent.
+  return response.inventorySupply?.[supplyKey] === "supplied" ? { kind: "unknown" } : { kind: "unassessed" };
 }
 
 export function negotiate(
@@ -399,10 +401,18 @@ export type DispatchResult =
  * the dispatch must declare a permission the capability advertises, and
  * ownership must be proven by the handshake's own `target` evidence —
  * caller-supplied claims can corroborate but never override it.
+ *
+ * Trust boundary: this gate authorizes against an *authentic*
+ * `HandshakeResponse` produced by `buildHandshake`/the host handshake and
+ * carried over a transport whose integrity the caller already trusts
+ * (ADR-0005). A caller-assembled lookalike object is not distinguishable
+ * here — transport authenticity and ae-a8n's consent checks are the
+ * layers above this gate, not this function. `negotiate` (version
+ * preflight) is likewise the caller's responsibility to run first.
  */
 export function assertDispatchAllowed(check: DispatchCheck): DispatchResult {
   if (
-    check.response?.schema !== CONTRACT_SCHEMA ||
+    check?.response?.schema !== CONTRACT_SCHEMA ||
     !Array.isArray(check.response?.availableCapabilities)
   ) {
     return {
@@ -437,21 +447,28 @@ export function assertDispatchAllowed(check: DispatchCheck): DispatchResult {
       detail: `capability ${capability.id} has implementation=${capability.implementation}; only "implemented" rows may dispatch`,
     };
   }
-  if (capability.verification === "not-run") {
+  // Whitelist, not blacklist: anything that is not a recorded proof level
+  // (including a missing/forged field) refuses as unverified.
+  if (!VERIFICATION_AXES.includes(capability.verification) || capability.verification === "not-run") {
     return {
       status: "refused",
       reason: "unverified",
-      detail: `capability ${capability.id} has verification=not-run; no behavioral proof exists for this host`,
+      detail: `capability ${capability.id} has verification=${JSON.stringify(capability.verification)}; no behavioral proof exists for this host`,
     };
   }
-  if (capability.execution.canRemoteInvoke !== true) {
+  if (capability.execution?.canRemoteInvoke !== true) {
     return {
       status: "refused",
       reason: "no-execution-path",
-      detail: `capability ${capability.id} has canRemoteInvoke=${JSON.stringify(capability.execution.canRemoteInvoke)}; no proven remote execution path`,
+      detail: `capability ${capability.id} has canRemoteInvoke=${JSON.stringify(capability.execution?.canRemoteInvoke)}; no proven remote execution path`,
     };
   }
-  if (check.permission === undefined || !capability.permissions.includes(check.permission)) {
+  if (
+    check.permission === undefined ||
+    !PERMISSION_VALUES.includes(check.permission) ||
+    !Array.isArray(capability.permissions) ||
+    !capability.permissions.includes(check.permission)
+  ) {
     return {
       status: "refused",
       reason: "missing-permission",
