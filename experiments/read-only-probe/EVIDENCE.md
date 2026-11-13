@@ -8,18 +8,18 @@
 
 | CAP | Requirement | Evidence level | What is proven | What is NOT proven |
 | --- | --- | --- | --- | --- |
-| CAP021 ping/version + target identity | **verified on real host (macOS)** | run `run-20261113-2` | AE 2026 `26.5.3x9` answered `identify`/`ping`/`snapshot`/`sysinfo` with session identity (`sess-disp-cc004b7d-6af716bd`), user, locale; wrong-target/mismatched-pin requests were REFUSED (`WRONG_TARGET`, `EXPIRED`) and a pre-activation timeout stayed `UNKNOWN` with no resend | AE 2027 real-host run; Windows |
+| CAP021 ping/version + target identity | **verified on real host (macOS)** | runs `run-20261113-2`, `run-20261113-3` | AE 2026 `26.5.3x9` answered `identify`/`ping`/`snapshot`/`sysinfo` with session identity (`sess-disp-1ccc5fa1-6af71e9e` in run-3), user, locale; wrong-target/mismatched-pin requests were REFUSED (`WRONG_TARGET`, `EXPIRED`) and a pre-activation timeout stayed `UNKNOWN` with no resend. Run-3 additionally proves: `ping` carries session identity, a same-session re-`identify` does **not** rewrite the pin, and `hostClock` is true UTC | AE 2027 real-host run; Windows; client-side wrong-target refusal against a real *second* session (fake-tested only) |
 | CAP022 snapshot schema + invalidation | documented | source-reviewed + automated-test + real-host shape check | Schema, invalidation rules and invariants are written, fake-tested, and a live `probe.snapshot` reply matched the documented shape | Reference-invalidation behavior across project mutations (out of read-only scope) |
-| CAP023 UNKNOWN/REFUSED/BLOCKED model | documented | automated-test + **real-host confirmations** | Outcome table, wrong-target refusal, no-retry regressions — `node tests/run.mjs` → 6/6 test files green; on the real host an absent dispatcher produced `UNKNOWN NO_REPLY_BEFORE_DEADLINE`, a stale request was `REFUSED EXPIRED`, and a version-pin mismatch was `REFUSED WRONG_TARGET` | Real busy/modal timeout under load (ADR-0005 V3/V4) |
-| CAP024 macOS version/CPU/latency/trace | **verified on real host (macOS)** | run `run-20261113-2` | Round trips 157–260 ms (50 ms poll granularity), host clock, Apple M5 / 10 cores, macOS 27.2.1 (26B131), per-request JSONL trace persisted | Windows; CPU-under-load deltas; AE 2027 |
+| CAP023 UNKNOWN/REFUSED/BLOCKED model | documented | automated-test + **real-host confirmations** | Outcome table, wrong-target refusal, no-retry regressions — `node tests/run.mjs` → 6/6 test files green (31 tests); on the real host an absent dispatcher produced `UNKNOWN NO_REPLY_BEFORE_DEADLINE`, a stale request was `REFUSED EXPIRED`, a version-pin mismatch was `REFUSED WRONG_TARGET`, and a REFUSED reply releases the in-flight guard immediately (post-fix) | Real busy/modal timeout under load (ADR-0005 V3/V4) |
+| CAP024 macOS version/CPU/latency/trace | **verified on real host (macOS)** | runs `run-20261113-2`, `run-20261113-3` | Round trips 157–315 ms (50 ms poll granularity), true-UTC host clock (run-3), Apple M5 / 10 cores, macOS 27.2.1 (26B131), per-request JSONL trace persisted | Windows; CPU-under-load deltas; AE 2027 |
 
 **Windows stays `UNVERIFIED`** — no Windows host is used (owner decision; see
 #21 and #6 comment 6822775849). Nothing below claims Windows evidence.
 
 ## What is actually green
 
-- `node tests/run.mjs` → **6/6 test files green, 30 tests** (2026-11-13,
-  macOS, post-review-fix head). Tests use a **fake responder**; they do
+- `node tests/run.mjs` → **6/6 test files green, 31 tests** (2026-11-13,
+  macOS, head `c11b1ad`). Tests use a **fake responder**; they do
   not start After Effects.
 - Real-host run `run-20261113-2` against **owned AE 2026 (26.5.3x9,
   pid 1054)**, activated via `osascript DoScriptFile` on the owned
@@ -32,6 +32,35 @@
   post-fix re-run is recorded separately below.
 - Artifacts: `evidence/run-20261113-2/` (`manifest.json`, `trace.jsonl`,
   `target.json`, `results/*.result.json` — channel token redacted).
+
+## Real-run record (run-20261113-3, 2026-11-13, post-review head `c11b1ad`)
+
+Owned AE 2026 **26.5.3x9** (pid 60663, launched via `open -na` for this
+run; the user's interactive AE 2027 session was never touched).
+Dispatcher activated via `osascript DoScriptFile` on the owned instance.
+
+| AE build | OS | ping round trip | snapshot result | identify | CPU | trace | level |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 26.5.3x9 (AE 2026, owned, pid 60663) | macOS 27.2.1 (26B131), Apple M5 10c | 261–315 ms | COMPLETED — projectOpen=true, 0 items, 0 RQ items | COMPLETED — session/dispatch/user/locale pinned; **re-identify did not rewrite the pin** | AE 19.7 % CPU, 585 MB RSS at capture | `evidence/run-20261113-3/` (`manifest.json`, `trace.jsonl`, `target.json`, `results/*.result.json`, token redacted) | **verified on real host (macOS)** |
+
+Post-fix confirmations in this run:
+
+- `hostClock` is a **true UTC instant** (e.g. `14:30:32.307Z` vs client
+  `startedAt` in the same second — previously +9h mislabeled).
+- `probe.echo` result carries the **full identity block**
+  (`sessionId`/`aeVersion`/`dispatchId`), so the wrong-target check now
+  applies to `ping`.
+- `--expect-ae 27.0.0` against AE 26.5.3x9 → host `REFUSED WRONG_TARGET`
+  before execution.
+- Same-session re-`identify` → COMPLETED with `pinnedAt` **unchanged**
+  (no silent re-pin).
+- A REFUSED reply releases the in-flight guard immediately (verified on
+  the real channel: the command after the WRONG_TARGET ping was not
+  BLOCKED; regression covered by `tests/outcome-classification.test.mjs`).
+
+Still not covered: a real *second* session attempting the same channel
+(client-side `WRONG_TARGET` on live mis-delivery is fake-tested only —
+only one owned AE was launched), AE 2027, Windows, busy/modal behavior.
 
 ## Real-run record (run-20261113-2, 2026-11-13)
 
@@ -127,9 +156,10 @@ transport wins".
 
 ## Feeding ADR-0005 V tasks
 
-The `run-20261113-2` measurements map to ADR-0005's V2 (minimal round trip:
-~150–260 ms end-to-end through a 250 ms scheduled-task poll on an owned
-local session) and the observable parts of V6/V7. They do **not** close
+The `run-20261113-2`/`run-20261113-3` measurements map to ADR-0005's V2
+(minimal round trip: ~150–315 ms end-to-end through a 250 ms
+scheduled-task poll on an owned local session) and the observable parts
+of V6/V7. They do **not** close
 V1 (bootstrap UX), V3 (contention under render), V4 (unknown-outcome field
 behavior under real busy/modal), or V5 (restart tolerance) — those runs were
 not performed.
