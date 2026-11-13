@@ -4,21 +4,28 @@
   choices remain gated by ADR-0005 and ae-a8n #97–#99.
 - Parent spec: [spec.md](../spec.md); plan: [plan.md](../plan.md);
   catalog contract: [contracts/capability-catalog.md](../contracts/capability-catalog.md).
-- Prerequisite outputs (not yet integrated at time of writing): PR #29
-  (capability catalog fail-closed gates) and PR #28 (read-only probe
-  session pinning / outcome model). This note consumes their *decided
-  semantics*; it does not re-open them.
+- Prerequisite outputs: PR #28 (read-only probe session pinning / outcome
+  model, merged as `61174e3`) and PR #29 (capability catalog fail-closed
+  gates, merged as `9e99e1e`) are integrated on `release-0-1-0`; this note
+  consumes their *decided semantics* and does not re-open them.
 
 ## 1. Permission classes (CAP025)
 
 Three execution classes, mapped onto the catalog's existing axes rather
 than a parallel permission system:
 
-| Class | Catalog precondition | Consent | Examples |
-| --- | --- | --- | --- |
-| `read-only` | `implementation=implemented`, `verification!=not-run`, `execution.canRemoteInvoke===true` | target pin only (session identity) | `identify`, `ping`, `snapshot`, `sysinfo` |
-| `intentional-write` | same + per-operation `write` trust class in manifest | explicit per-dispatch consent token + disposable-project scope | named comp/layer/property operations |
-| `trusted-dev-script` | same + script-provenance declaration | explicit opt-in flag; never reachable via generic untrusted RPC | operator-supplied ExtendScript |
+| Class | Catalog precondition | Declared `Permission` | Consent | Examples |
+| --- | --- | --- | --- | --- |
+| `read-only` | `implementation=implemented`, `verification!=not-run`, `execution.canRemoteInvoke===true` | `read` | target pin only (session identity) | `identify`, `ping`, `snapshot`, `sysinfo` |
+| `intentional-write` | same + `access` ∈ {`write`, `read-write`} and per-operation manifest entry | `write` | explicit per-dispatch consent token + disposable-project scope | named comp/layer/property operations |
+| `trusted-dev-script` | same + `risk.trust="privileged-dev-code"` | `execute` | explicit opt-in flag; never reachable via generic untrusted RPC | operator-supplied ExtendScript |
+
+Known contract gap (recorded, not silently patched): `risk.trust` admits
+`"privileged-dev-code"` (`schema.ts`), but `riskForAccess` never produces
+it — no `AccessClass` maps to it today. Until the catalog gains an access
+class or an explicit override path, a `trusted-dev-script` row cannot be
+expressed without hand-editing `risk`. This is a §7-compatible schema
+question for a follow-up, not something this note resolves.
 
 Rules:
 
@@ -90,6 +97,15 @@ one vocabulary:
 - `BLOCKED` — client-side guard (one-in-flight, expired marker); nothing
   was sent.
 
+Vocabulary bridge to the catalog contract (§5): the probe's wire
+outcomes are the same five states under different spelling —
+`COMPLETED`↔`completed`, `REFUSED <code>`↔`refused`, `FAILED`↔`failed`,
+`UNKNOWN`↔`unknown`, and `BLOCKED`↔`not-sent` (environment-proven
+non-dispatch). Write paths reuse this mapping verbatim; `BLOCKED`/
+`not-sent` remains the only outcome that may be re-issued, and only as a
+new request after re-authorization (§4 invariants of the probe outcome
+model apply unchanged).
+
 Additional write-specific rules:
 
 - AE UI busy / modal state → `REFUSED HOST_BUSY` (pre-execution) rather
@@ -99,7 +115,25 @@ Additional write-specific rules:
 - Timeout-after-possible-dispatch is always `UNKNOWN`; the client records
   `mayHaveMutated: true` in trace.
 
-## 5. Open decisions (explicitly not fixed here)
+## 5. Transport-independent implementation units
+
+Decomposition of CAP025–028 into units that need no transport decision
+(ADR-0005 Open Q1) and no real AE. Each lands as its own reviewable
+commit/PR on this Issue's branch; fake-level evidence is labelled
+`fake/mock only`, never promoted.
+
+| Unit | CAP | Content | Depends on |
+| --- | --- | --- | --- |
+| U1 codec | CAP026 | ES3 strict codec: serializable-set enforcement, `aeRef`/`aeEnum`/`aePath`/`aeError` wrappers, error source-map fields; differential `node:vm` tests (JSON removed) | none — reference implementation pending runtime placement |
+| U2 permission classes | CAP025 | permission-class → catalog axis mapping as data + pure check functions mirroring `assertDispatchAllowed` order; consent-scope shape (session pin + operation id + argument hash) | catalog contract (merged) |
+| U3 mutation guard | CAP027 | snapshot identity descriptor resolve/refuse (`STALE_REFERENCE`), project-identity scoping, `idempotent` flag handling, `mayHaveMutated` trace field | U1 (descriptor codec), U2 |
+| U4 outcome extension | CAP028 | write-outcome taxonomy (`HOST_BUSY` typed refusal, undo `FAILED`, timeout→`UNKNOWN`+`mayHaveMutated`), fake-responder tests reusing the probe harness pattern | U1–U3 |
+
+Explicitly **not** in these units: transport selection, consent token
+issuance/storage, dispatcher activation, any real-AE run. Those stay
+behind ADR-0005 and ae-a8n #97–#99.
+
+## 6. Open decisions (explicitly not fixed here)
 
 - Transport selection remains ADR-0005's; this note assumes only a
   request/reply channel with the probe's pinning semantics.
@@ -110,7 +144,7 @@ Additional write-specific rules:
 - ES3 codec canonical schema versioning — to be fixed when the first
   write operation is implemented, versioned alongside the catalog contract.
 
-## 6. What this note does not claim
+## 7. What this note does not claim
 
 - No transport, no consent UX, and no write operation is implemented by
   this document.

@@ -63,3 +63,24 @@ jobs:
           node-version: "22"
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/read-only-probe/tests/run.mjs
+
+  trusted-execution:
+    name: trusted-execution (node:test, codec fake-level)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect suite
+        id: detect
+        run: |
+          if [ -f experiments/trusted-execution/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "experiments/trusted-execution not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/trusted-execution/tests/run.mjs
