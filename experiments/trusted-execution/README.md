@@ -16,9 +16,11 @@ experiments/trusted-execution/
 ├── README.md                  # this file
 ├── codec/
 │   └── trusted-codec.js       # ES3 strict codec (TrustedJson + ae* wrappers)
+├── permissions.mjs            # CAP025/027: execution classes + consent scope
 └── tests/
     ├── run.mjs                # node:test runner, zero deps
-    └── codec.test.mjs         # differential + refusal tests (node:vm, JSON removed)
+    ├── codec.test.mjs         # differential + refusal tests (node:vm, JSON removed)
+    └── permissions.test.mjs   # class resolution + consent-scope tests
 ```
 
 ## Evidence level
@@ -54,6 +56,25 @@ Known boundary: a host object whose `Object.prototype.toString` tag is
 alone. Keeping host objects off the wire is the **dispatcher's** wrapping
 discipline (always `aeRef`); the codec enforces everything type tags can
 express. This limitation is recorded, not hidden.
+
+## Permission classes and consent (CAP025/CAP027 groundwork)
+
+`permissions.mjs` implements the class layer that sits **after** the
+catalog dispatch gate (`assertDispatchAllowed`):
+
+- `executionClassFor(advertisement, permission)` resolves
+  `read-only` / `intentional-write` / `trusted-dev-script` from the
+  declared permission plus catalog axes; unmapped combinations return
+  `null` and fail closed.
+- `consentScopeFor(...)` builds the consent scope — session pin
+  (`sessionId`/`aeVersion`/`dispatchId`), operation id, canonical
+  argument hash (sha256), project identity.
+- `authorizeExecution(input)` enforces, in order: class resolution →
+  per-class consent requirement (`session-pin` / `per-dispatch` /
+  `explicit-opt-in`) → exact scope match. Consent never survives session
+  re-pin, project change, or argument drift; `trusted-dev-script`
+  additionally requires an explicit opt-in flag and a provenance
+  declaration.
 
 ## Running
 
