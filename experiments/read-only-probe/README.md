@@ -62,10 +62,13 @@ The following rules were followed and must be followed by any re-run:
    (`probe.echo`, `probe.identify`, `probe.sysinfo`, `probe.snapshot`) — all
    pure `app`/`Folder`/`File` reads that mutate nothing, save nothing,
    quit nothing. See `host/probe-dispatcher.jsx` §Verify-before-use.
-3. **Human-consented activation only.** The host script is started by a human
-   via File → Scripts → Run Script File inside the *owned* AE, not by
-   Startup-folder install. No AE preference, no scripting-permission
-   database, no TCC/consent dialog is ever auto-approved or modified.
+3. **Consented activation only.** The host script is started inside the
+   *owned* AE only with explicit owner consent — File → Scripts → Run
+   Script File by a human, or an owner-authorized `DoScriptFile`/CLI
+   equivalent on that owned instance. Never via Startup-folder install,
+   never silently, never in a user's working AE. No AE preference, no
+   scripting-permission database, no TCC/consent dialog is ever
+   auto-approved or modified.
 4. **No automatic retry after timeout.** A timeout after possible dispatch
    is `UNKNOWN` (see `outcome-model.md`), the request file is never removed
    or re-created, and no second request with the same id can be issued.
@@ -95,8 +98,13 @@ experiments/read-only-probe/
 # 0. AE must NOT be the user's running instance. Launch your own AE, or skip.
 # 1. Prepare a private channel (inbox/outbox/probe.json, 0700/0600)
 node probe.mjs prepare /absolute/path/to/channel
-# 2. In the OWNED AE: File → Scripts → Run Script File → <channel>/probe-start.jsx
-#    (if AE shows its scripting-permission prompt, the human decides; never automate)
+# 2. In the OWNED AE, with explicit owner consent: File → Scripts → Run
+#    Script File → <channel>/probe-start.jsx, or an owner-authorized
+#    `osascript -e 'tell application "Adobe After Effects <ver>" to
+#    DoScriptFile "<channel>/probe-start.jsx"'` on that owned instance.
+#    (AE's `-r` launch flag did not activate the dispatcher on macOS;
+#    if AE shows its scripting-permission prompt, the owner decides;
+#    never automate consent.)
 # 3. From the same OS user:
 node probe.mjs identify /absolute/path/to/channel 10000
 node probe.mjs ping       /absolute/path/to/channel 10000

@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "id": "193e7ce27534de81832895c16395d11f",
+  "token": "<redacted: per-run channel credential; channel is dead>",
+  "channelId": "chan-f01f13fe42f33344",
+  "dispatchId": "disp-cc004b7d-6af716bd",
+  "ok": false,
+  "refusal": {
+    "code": "WRONG_TARGET",
+    "message": "request refused before execution"
+  }
+}

@@ -273,7 +273,7 @@ async function prepare(channel, { expectAe = "" } = {}) {
   console.log(JSON.stringify({
     outcome: "COMPLETED", command: "prepare",
     startScript: paths.startScript, channelId,
-    note: "activate inside an OWNED AE via File > Scripts > Run Script File; never install silently",
+    note: "activate inside an OWNED AE with explicit owner consent (File > Scripts > Run Script File or owner-authorized DoScriptFile); never install silently",
   }, null, 2));
   return 0;
 }

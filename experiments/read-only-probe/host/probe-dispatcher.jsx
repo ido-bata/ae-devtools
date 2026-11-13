@@ -13,8 +13,9 @@
  *   - The only files it writes are <channel>/outbox/<id>.result.json
  *     (publish-by-rename, atomic) and nothing else.
  *   - There is no "run this string" method: the dispatch table is fixed.
- *   - A human activates it inside an AE that this experiment owns
- *     (File > Scripts > Run Script File). It must never be installed into
+ *   - Activation inside an AE that this experiment owns requires explicit
+ *     owner consent (File > Scripts > Run Script File, or an
+ *     owner-authorized DoScriptFile). It must never be installed into
  *     a Startup folder by tooling, and it must not be activated in an AE
  *     that belongs to someone's interactive work.
  *   - Requests are claimed (renamed to .claimed) BEFORE evaluation, so a
