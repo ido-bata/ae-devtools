@@ -199,7 +199,7 @@ function executableSource(): ImportedSource {
   };
 }
 
-function executableServer() {
+function executableServer(attestedOwnership: "owned" | "unknown" = "owned") {
   return buildHandshake({
     scripting: executableSource(),
     tools: { ...inputs.tools, records: [] },
@@ -213,33 +213,105 @@ function executableServer() {
     transport: "file-envelope",
     generatedAt: AT,
     supportedRelease: { state: "not-recorded" },
+    target: {
+      identity: "fixture-host",
+      ownership: attestedOwnership,
+      nonInterference: "proven",
+    },
   });
 }
 
 describe("handshake pass is not authorization", () => {
   const server = executableServer();
 
-  test("unproven ownership fails closed even for an executable capability", () => {
+  test("attested ownership gates dispatch; caller claims cannot override it", () => {
+    // Caller claim agreeing with attested evidence passes.
     expect(
       assertDispatchAllowed({
         response: server,
         capabilityId: EXECUTABLE_ID,
         permission: "read",
-        ownership: "unknown",
-      }),
-    ).toEqual({
-      status: "refused",
-      reason: "ownership-unproven",
-      detail: expect.stringContaining("ownership") as unknown as string,
-    });
+        ownership: "owned",
+      }).status,
+    ).toBe("pass");
+    // Omitting the caller claim still passes on attested evidence alone.
+    expect(
+      assertDispatchAllowed({
+        response: server,
+        capabilityId: EXECUTABLE_ID,
+        permission: "read",
+      }).status,
+    ).toBe("pass");
+    // A caller claim that contradicts the attested evidence refuses.
     expect(
       assertDispatchAllowed({
         response: server,
         capabilityId: EXECUTABLE_ID,
         permission: "read",
         ownership: "explicitly-attached",
-      }).status,
-    ).toBe("pass");
+      }),
+    ).toEqual({
+      status: "refused",
+      reason: "ownership-unproven",
+      detail: expect.stringContaining("contradict") as unknown as string,
+    });
+  });
+
+  test("a caller claim of owned cannot upgrade attested unknown", () => {
+    const unattested = executableServer("unknown");
+    const result = assertDispatchAllowed({
+      response: unattested,
+      capabilityId: EXECUTABLE_ID,
+      permission: "read",
+      ownership: "owned",
+    });
+    expect(result.status).toBe("refused");
+    if (result.status !== "refused") throw new Error("unreachable");
+    expect(result.reason).toBe("ownership-unproven");
+  });
+
+  test("a missing target block fails closed as ownership-unproven", () => {
+    const noTarget = executableServer();
+    const stripped = { ...noTarget, target: undefined } as unknown as typeof noTarget;
+    const result = assertDispatchAllowed({
+      response: stripped,
+      capabilityId: EXECUTABLE_ID,
+      permission: "read",
+      ownership: "owned",
+    });
+    expect(result.status === "refused" && result.reason).toBe("ownership-unproven");
+  });
+
+  test("omitting the permission class refuses as missing-permission", () => {
+    const result = assertDispatchAllowed({
+      response: server,
+      capabilityId: EXECUTABLE_ID,
+      // @ts-expect-error — deliberately omitting the now-required field
+      permission: undefined,
+      ownership: "owned",
+    });
+    expect(result.status === "refused" && result.reason).toBe("missing-permission");
+  });
+
+  test("an undeclared permission refuses as missing-permission", () => {
+    const result = assertDispatchAllowed({
+      response: server,
+      capabilityId: EXECUTABLE_ID,
+      permission: "write",
+      ownership: "owned",
+    });
+    expect(result.status === "refused" && result.reason).toBe("missing-permission");
+  });
+
+  test("a malformed response refuses before any other check", () => {
+    const malformed = { ...server, schema: "bogus" } as unknown as typeof server;
+    const result = assertDispatchAllowed({
+      response: malformed,
+      capabilityId: EXECUTABLE_ID,
+      permission: "read",
+      ownership: "owned",
+    });
+    expect(result.status === "refused" && result.reason).toBe("malformed-response");
   });
 
   test("dispatch against an unassessed capability refuses, never silently passes", () => {
@@ -263,7 +335,7 @@ describe("executability gates fail closed (discovery is not permission)", () => 
       const result = assertDispatchAllowed({
         response: realServer,
         capabilityId: capability.id,
-        permission: capability.permissions[0],
+        permission: capability.permissions[0] ?? "read",
         ownership: "owned",
       });
       expect(result.status).toBe("refused");

@@ -370,8 +370,20 @@ export function negotiate(
 export type DispatchCheck = {
   response: HandshakeResponse;
   capabilityId: string;
-  permission?: Permission;
-  ownership: OwnershipEvidence;
+  /**
+   * The permission class this dispatch exercises. Required: a dispatch that
+   * does not declare its permission class cannot be authorized — omitting it
+   * refuses `missing-permission` (fail closed, never skipped).
+   */
+  permission: Permission;
+  /**
+   * Optional caller-side ownership observation (e.g. from a session probe).
+   * It is a *claim*, never the authority: authorization uses the ownership
+   * attested in `response.target`. A claim that contradicts the attested
+   * evidence refuses `ownership-unproven`; a claim of `owned` cannot upgrade
+   * an attested `unknown`.
+   */
+  ownership?: OwnershipEvidence;
 };
 
 export type DispatchResult =
@@ -380,10 +392,25 @@ export type DispatchResult =
 
 /**
  * Per-dispatch gate (contract §4 rule 3): a compatible handshake is not
- * authorization. Ownership must be proven for this host/session and the
- * capability must be assessed and permission-declared before any call.
+ * authorization. This is the *authorization* half of the boundary —
+ * `negotiate` is only metadata preflight (schema/version/capability
+ * existence/declared permission). Here, in order: the response must be a
+ * well-formed handshake, the capability must pass the executability gates,
+ * the dispatch must declare a permission the capability advertises, and
+ * ownership must be proven by the handshake's own `target` evidence —
+ * caller-supplied claims can corroborate but never override it.
  */
 export function assertDispatchAllowed(check: DispatchCheck): DispatchResult {
+  if (
+    check.response?.schema !== CONTRACT_SCHEMA ||
+    !Array.isArray(check.response?.availableCapabilities)
+  ) {
+    return {
+      status: "refused",
+      reason: "malformed-response",
+      detail: "dispatch authorization requires a well-formed handshake response",
+    };
+  }
   const lookup = lookupCapability(check.response, check.capabilityId);
   if (lookup.kind === "unassessed") {
     return {
@@ -424,18 +451,32 @@ export function assertDispatchAllowed(check: DispatchCheck): DispatchResult {
       detail: `capability ${capability.id} has canRemoteInvoke=${JSON.stringify(capability.execution.canRemoteInvoke)}; no proven remote execution path`,
     };
   }
-  if (check.permission !== undefined && !capability.permissions.includes(check.permission)) {
+  if (check.permission === undefined || !capability.permissions.includes(check.permission)) {
     return {
       status: "refused",
       reason: "missing-permission",
-      detail: `capability ${capability.id} does not declare permission ${check.permission}`,
+      detail:
+        check.permission === undefined
+          ? `dispatch for ${capability.id} declared no permission class; every dispatch must name the permission it exercises`
+          : `capability ${capability.id} does not declare permission ${check.permission}`,
     };
   }
-  if (check.ownership !== "owned" && check.ownership !== "explicitly-attached") {
+  // Ownership authority is the handshake's attested target evidence, not
+  // the caller's say-so. A caller claim that contradicts it is refused;
+  // absent server evidence stays `unknown` and fails closed.
+  const attested = check.response.target?.ownership ?? "unknown";
+  if (check.ownership !== undefined && check.ownership !== attested) {
     return {
       status: "refused",
       reason: "ownership-unproven",
-      detail: `target ownership is ${check.ownership}; dispatch requires proven ownership of this host/session`,
+      detail: `caller claims ownership=${check.ownership} but the handshake attests ${attested}; contradictory evidence is not proof`,
+    };
+  }
+  if (attested !== "owned" && attested !== "explicitly-attached") {
+    return {
+      status: "refused",
+      reason: "ownership-unproven",
+      detail: `target ownership is ${attested}; dispatch requires ownership proven by the handshake target evidence for this host/session`,
     };
   }
   return { status: "pass" };
