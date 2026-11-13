@@ -10,7 +10,8 @@
     "report": "bun run scripts/report.ts",
     "verify": "bun run scripts/verify.ts",
     "test": "bun test",
-    "typecheck": "bunx tsc --noEmit"
+    "typecheck": "bunx tsc --noEmit",
+    "discover": "bun run scripts/discover.ts"
   },
   "devDependencies": {
     "bun-types": "^1.4.4",
