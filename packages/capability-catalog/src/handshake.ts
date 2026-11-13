@@ -17,6 +17,7 @@ import {
   type AccessClass,
   type CapabilityRecord,
   type ContractVersion,
+  type ImplementationAxis,
   type ImportedSource,
   type VerificationAxis,
 } from "./schema.ts";
@@ -63,6 +64,14 @@ export type CapabilityAdvertisement = {
   proofLevel: ProofLevel;
   compatibility: CapabilityRecord["compatibility"];
   execution: CapabilityRecord["execution"];
+  /**
+   * Executability axes, exposed so a client can distinguish discovery from
+   * dispatchability (contract §4 rule 3). `assertDispatchAllowed` refuses
+   * anything that is not `implemented` + verified beyond `not-run` +
+   * `canRemoteInvoke === true`; advertisement alone never authorizes.
+   */
+  implementation: ImplementationAxis;
+  verification: VerificationAxis;
 };
 
 export type HandshakeDiagnostic = {
@@ -133,6 +142,8 @@ function advertise(record: CapabilityRecord): CapabilityAdvertisement {
     proofLevel: proofLevelFor(record),
     compatibility: record.compatibility,
     execution: record.execution,
+    implementation: record.coverage.implementation,
+    verification: record.coverage.verification,
   };
 }
 
@@ -277,7 +288,10 @@ export type RefusalReason =
   | "unknown-capability"
   | "capability-unassessed"
   | "missing-permission"
-  | "ownership-unproven";
+  | "ownership-unproven"
+  | "not-implemented"
+  | "unverified"
+  | "no-execution-path";
 
 export type NegotiationRequest = {
   contractVersion: ContractVersion;
@@ -385,11 +399,36 @@ export function assertDispatchAllowed(check: DispatchCheck): DispatchResult {
       detail: `capability ${check.capabilityId} is not advertised by this host`,
     };
   }
-  if (check.permission !== undefined && !lookup.capability.permissions.includes(check.permission)) {
+  const capability = lookup.capability;
+  // Fail-closed executability gates: discovery is not permission. A row that
+  // exists in a supplied inventory but is unimplemented, unverified or has
+  // no proven remote execution path must never reach dispatch.
+  if (capability.implementation !== "implemented") {
+    return {
+      status: "refused",
+      reason: "not-implemented",
+      detail: `capability ${capability.id} has implementation=${capability.implementation}; only "implemented" rows may dispatch`,
+    };
+  }
+  if (capability.verification === "not-run") {
+    return {
+      status: "refused",
+      reason: "unverified",
+      detail: `capability ${capability.id} has verification=not-run; no behavioral proof exists for this host`,
+    };
+  }
+  if (capability.execution.canRemoteInvoke !== true) {
+    return {
+      status: "refused",
+      reason: "no-execution-path",
+      detail: `capability ${capability.id} has canRemoteInvoke=${JSON.stringify(capability.execution.canRemoteInvoke)}; no proven remote execution path`,
+    };
+  }
+  if (check.permission !== undefined && !capability.permissions.includes(check.permission)) {
     return {
       status: "refused",
       reason: "missing-permission",
-      detail: `capability ${lookup.capability.id} does not declare permission ${check.permission}`,
+      detail: `capability ${capability.id} does not declare permission ${check.permission}`,
     };
   }
   if (check.ownership !== "owned" && check.ownership !== "explicitly-attached") {

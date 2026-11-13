@@ -18,6 +18,8 @@ import {
   CONTRACT_VERSION,
   negotiate,
 } from "../src/handshake.ts";
+import type { CoverageAxes, ExecutionDescriptor, ImportedSource } from "../src/schema.ts";
+import { makeRecord } from "./fixture.ts";
 
 const inputs = loadRepoInputs();
 const AT = "2026-11-13T00:00:00.000Z";
@@ -162,14 +164,66 @@ describe("capability request refusals", () => {
   });
 });
 
-describe("handshake pass is not authorization", () => {
-  const server = serverFixture();
+const EXECUTABLE_ID = "ae.scripting.app.fixtureExec";
 
-  test("unproven ownership fails closed even for an available capability", () => {
+function executableSource(): ImportedSource {
+  return {
+    source: "scripting",
+    records: [
+      makeRecord({
+        id: EXECUTABLE_ID,
+        kind: "scripting-symbol",
+        access: "read",
+        execution: {
+          class: "extendscript",
+          lifecycle: "AE scripting host",
+          canRemoteInvoke: true,
+        },
+        coverage: {
+          inventory: "source-reviewed",
+          reachability: "reachable",
+          implementation: "implemented",
+          verification: "automated-fake",
+          evidenceRefs: [{ kind: "automated-test", ref: "test://fixture" }],
+        },
+      }),
+    ],
+    denominator: { state: "supplied", count: 1 },
+    evidenceLevel: {
+      inventory: "source-reviewed",
+      verification: "automated-fake",
+      realHost: "not-run",
+      statement: "fixture",
+    },
+    provenance: {},
+  };
+}
+
+function executableServer() {
+  return buildHandshake({
+    scripting: executableSource(),
+    tools: { ...inputs.tools, records: [] },
+    semantics: { ...inputs.semantics, records: [] },
+    sdkAggregate: inputs.sdk,
+    catalogRevision: "sha-fixture",
+    hostId: "host-fixture",
+    os: "darwin",
+    arch: "arm64",
+    executionMode: "local",
+    transport: "file-envelope",
+    generatedAt: AT,
+    supportedRelease: { state: "not-recorded" },
+  });
+}
+
+describe("handshake pass is not authorization", () => {
+  const server = executableServer();
+
+  test("unproven ownership fails closed even for an executable capability", () => {
     expect(
       assertDispatchAllowed({
         response: server,
-        capabilityId: "ae.scripting.app.version",
+        capabilityId: EXECUTABLE_ID,
         permission: "read",
         ownership: "unknown",
       }),
@@ -181,9 +235,9 @@ describe("handshake pass is not authorization", () => {
     expect(
       assertDispatchAllowed({
         response: server,
-        capabilityId: "ae.scripting.app.version",
+        capabilityId: EXECUTABLE_ID,
         permission: "read",
-        ownership: "owned",
+        ownership: "explicitly-attached",
       }).status,
     ).toBe("pass");
   });
@@ -196,6 +250,117 @@ describe("handshake pass is not authorization", () => {
       ownership: "owned",
     });
     expect(result.status === "refused" && result.reason).toBe("capability-unassessed");
+  });
+});
+
+describe("executability gates fail closed (discovery is not permission)", () => {
+  test("real inventory rows are advertised but refuse dispatch on every executability axis", () => {
+    // Every row imported from the real inventories is source-reviewed only:
+    // implementation is unknown/not-implemented, verification is not-run and
+    // canRemoteInvoke is unproven. Advertisement must not imply dispatchability.
+    for (const capability of serverFixture().availableCapabilities.slice(0, 25)) {
+      const result = assertDispatchAllowed({
+        response: serverFixture(),
+        capabilityId: capability.id,
+        permission: capability.permissions[0],
+        ownership: "owned",
+      });
+      expect(result.status).toBe("refused");
+      if (result.status !== "refused") throw new Error("unreachable");
+      expect(["not-implemented", "unverified", "no-execution-path"]).toContain(result.reason);
+    }
+  });
+
+  function serverWithRecord(coverage: Partial<CoverageAxes>, execution?: ExecutionDescriptor) {
+    const rec = makeRecord({
+      id: "ae.scripting.app.gateProbe",
+      kind: "scripting-symbol",
+      access: "read",
+      ...(execution ? { execution } : {}),
+      coverage,
+    });
+    return buildHandshake({
+      scripting: {
+        source: "scripting",
+        records: [rec],
+        denominator: { state: "supplied", count: 1 },
+        evidenceLevel: {
+          inventory: "source-reviewed",
+          verification: "not-run",
+          realHost: "not-run",
+          statement: "fixture",
+        },
+        provenance: {},
+      },
+      tools: { ...inputs.tools, records: [] },
+      semantics: { ...inputs.semantics, records: [] },
+      sdkAggregate: inputs.sdk,
+      catalogRevision: "sha-fixture",
+      hostId: "host-fixture",
+      os: "darwin",
+      arch: "arm64",
+      executionMode: "local",
+      transport: "file-envelope",
+      generatedAt: AT,
+      supportedRelease: { state: "not-recorded" },
+    });
+  }
+
+  const implemented = {
+    inventory: "source-reviewed" as const,
+    reachability: "reachable" as const,
+    implementation: "implemented" as const,
+    verification: "automated-fake" as const,
+    evidenceRefs: [{ kind: "automated-test" as const, ref: "test://x" }],
+  };
+  const invocable = {
+    class: "extendscript" as const,
+    lifecycle: "AE scripting host",
+    canRemoteInvoke: true,
+  };
+
+  test("unimplemented rows refuse as not-implemented", () => {
+    for (const implementation of ["none", "adapter-present", "unsupported", "unknown"] as const) {
+      const server = serverWithRecord({ ...implemented, implementation }, invocable);
+      const result = assertDispatchAllowed({
+        response: server,
+        capabilityId: "ae.scripting.app.gateProbe",
+        permission: "read",
+        ownership: "owned",
+      });
+      expect(result.status === "refused" && result.reason).toBe("not-implemented");
+    }
+  });
+
+  test("verification=not-run refuses as unverified even when implemented", () => {
+    const server = serverWithRecord({ ...implemented, verification: "not-run" }, invocable);
+    const result = assertDispatchAllowed({
+      response: server,
+      capabilityId: "ae.scripting.app.gateProbe",
+      permission: "read",
+      ownership: "owned",
+    });
+    expect(result.status === "refused" && result.reason).toBe("unverified");
+  });
+
+  test("canRemoteInvoke null or false refuses as no-execution-path", () => {
+    for (const canRemoteInvoke of [null, false] as const) {
+      const server = serverWithRecord(implemented, { ...invocable, canRemoteInvoke });
+      const result = assertDispatchAllowed({
+        response: server,
+        capabilityId: "ae.scripting.app.gateProbe",
+        permission: "read",
+        ownership: "owned",
+      });
+      expect(result.status === "refused" && result.reason).toBe("no-execution-path");
+    }
+  });
+
+  test("advertisement exposes implementation and verification axes", () => {
+    const server = serverWithRecord(implemented, invocable);
+    const ad = server.availableCapabilities.find((c) => c.id === "ae.scripting.app.gateProbe");
+    expect(ad?.implementation).toBe("implemented");
+    expect(ad?.verification).toBe("automated-fake");
   });
 });
 

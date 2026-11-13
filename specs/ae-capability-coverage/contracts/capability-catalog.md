@@ -104,7 +104,7 @@ Implemented in `packages/capability-catalog/src/handshake.ts` (`CONTRACT_SCHEMA 
 
 - `contractVersion`, `catalogRevision`, `hostId`, `host` (`ae` version/build/scriptingVersion when known, `os`, `arch`, `executionMode` (`local`, `remote`, `isolated-user` experimental), `transport`).
 - `target` (`identity`, `ownership` ∈ `owned | explicitly-attached | unknown`, `nonInterference` ∈ `proven | by-construction | unproven`).
-- `inventorySupply` per source (`supplied | not-supplied`) and `availableCapabilities[]` with IDs, declared permissions, adapter/execution class and actual proof level (`verified-real-host | automated-test | source-reviewed | unverified`). Capabilities whose inventory was not supplied are omitted from `available` and represented in `diagnostics` (`inventory-not-supplied`, `capability-unassessed`) — never reported as absent.
+- `inventorySupply` per source (`supplied | not-supplied`) and `availableCapabilities[]` with IDs, declared permissions, adapter/execution class, actual proof level (`verified-real-host | automated-test | source-reviewed | unverified`), and the executability axes `implementation` / `verification` so a client can distinguish discovery from dispatchability. Capabilities whose inventory was not supplied are omitted from `available` and represented in `diagnostics` (`inventory-not-supplied`, `capability-unassessed`) — never reported as absent.
 - `diagnostics[]` (`code`, optional `source`, `effect`), including `no-real-host-evidence` and `supported-release-set-not-recorded`.
 - `provenance`: catalog revision, host id, generation timestamp, per-source evidence levels (the §1.1 `inventory`/`verification`/`realHost` axes preserved), SDK aggregate totals with `denominatorCaveats`, and session/evidence references as they become available.
 
@@ -112,7 +112,7 @@ Client behavior (enforced by `negotiate` / `assertDispatchAllowed`, with refusal
 
 1. Negotiate major contract version before any write; incompatible major refuses `incompatible-contract-version`, a client minor newer than the server refuses `unsupported-minor-version`, a foreign schema refuses `malformed-response`.
 2. Compare target identity, required permission, operation trust class and host version before dispatch; failures refuse `unknown-capability`, `capability-unassessed`, `missing-permission` or `ownership-unproven`.
-3. A capability advertisement is **not** authorization to run an operation. ae-a8n's ownership, static extension and consent checks still apply per call.
+3. A capability advertisement is **not** authorization to run an operation. `assertDispatchAllowed` additionally fails closed on executability: `implementation !== "implemented"` refuses `not-implemented`, `verification === "not-run"` refuses `unverified`, and `execution.canRemoteInvoke !== true` refuses `no-execution-path`. ae-a8n's ownership, static extension and consent checks still apply per call.
 4. Cache is scoped to host/session/AE build/adapter/plugin hashes and invalidated on restart, project/session change or proof expiry.
 5. No implicit fallback from dedicated-host to console or from named operation to arbitrary script execution.
 
