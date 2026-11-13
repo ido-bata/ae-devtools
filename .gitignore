@@ -1,2 +1,5 @@
 # temporary probe channels created during local runs
 experiments/read-only-probe/.tmp-test-chan/
+
+# package manager dependencies
+node_modules/
