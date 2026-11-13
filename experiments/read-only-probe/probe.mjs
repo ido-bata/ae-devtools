@@ -258,10 +258,10 @@ async function prepare(channel, { expectAe = "" } = {}) {
   const channelId = "chan-" + hex(8);
   const template = await readFile(join(here, "host", "probe-dispatcher.jsx"), "utf8");
   const source = template
-    .replace("__PROBE_ROOT__", stringLiteral(root.replace(/\\/g, "/")))
-    .replace("__PROBE_TOKEN__", stringLiteral(token))
-    .replace("__PROBE_CHANNEL_ID__", stringLiteral(channelId))
-    .replace("__PROBE_EXPECTED_AE_VERSION__", stringLiteral(expectAe));
+    .replace(/"__PROBE_ROOT__"/, stringLiteral(root.replace(/\\/g, "/")))
+    .replace(/"__PROBE_TOKEN__"/, stringLiteral(token))
+    .replace(/"__PROBE_CHANNEL_ID__"/, stringLiteral(channelId))
+    .replace(/"__PROBE_EXPECTED_AE_VERSION__"/, stringLiteral(expectAe));
   const { copyFile } = await import("node:fs/promises");
   await copyFile(join(here, "host", "probe-json.js"), join(root, "probe-json.js"));
   await writeFile(paths.startScript, source, { mode: 0o600, flag: "wx" });
