@@ -28,6 +28,13 @@
  *   - host aeError fields (name/message/line/file) pass through verbatim —
  *     source positions are host-reported, never inferred client-side
  *
+ * Guarantee scope (explicit): requestId single-use and UNKNOWN
+ * quarantine are enforced ONLY within one createJsxRunner() instance.
+ * A second runner instance, another process, or a restart does not
+ * share sentIds/quarantinedIds — cross-instance dedup requires a
+ * shared store owned by the deployment layer (not implemented here).
+ * Tests cover the single-instance contract only.
+ *
  * NOT proven here (explicit non-claims): consent-token authenticity
  * (issuance/verification is ae-a8n #97–#99 territory), host-side
  * re-validation of the envelope, and catalog-gate integration. This

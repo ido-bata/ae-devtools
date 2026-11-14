@@ -313,3 +313,20 @@ test("caller-chosen requestId is preserved on the envelope and result", async ()
   assert.equal(r.requestId, "req-fixed-1");
   assert.equal(codec.parse(transport.calls[0]).requestId, "req-fixed-1");
 });
+
+test("guarantee scope: a SECOND runner instance does not share sentIds (documented boundary)", async () => {
+  // Single-use requestIds and UNKNOWN quarantine are per-instance only.
+  // This test pins the boundary so nobody mistakes it for a
+  // cross-instance/operational guarantee — a deployment needing
+  // dedup across runners must supply a shared store (not implemented).
+  const transport = makeTransport({ ok: true, result: 1 });
+  const runnerA = createJsxRunner({ transport, codec });
+  const runnerB = createJsxRunner({ transport, codec });
+  const shared = "req-cross-instance";
+  const a = await runnerA.runScript(validInput(SOURCE, { requestId: shared }));
+  assert.equal(a.outcome, "COMPLETED");
+  const b = await runnerB.runScript(validInput(SOURCE, { requestId: shared }));
+  // B has its own sentIds: the same id dispatches again. Documented
+  // limitation, asserted so the boundary stays visible.
+  assert.equal(b.outcome, "COMPLETED");
+});
