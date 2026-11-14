@@ -1,0 +1,189 @@
+{
+  "schema": "ae-devtools.adapter-coverage-claims/v1",
+  "generatedFrom": "experiments/scripting-adapters/registry.mjs",
+  "evidenceLevel": "fake/mock only",
+  "realHostVerified": 0,
+  "claims": {
+    "ae.scripting.app.newProject": {
+      "ops": [
+        "project.new"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.open": {
+      "ops": [
+        "project.open"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.save": {
+      "ops": [
+        "project.save"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.close": {
+      "ops": [
+        "project.close"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.ItemCollection.addComp": {
+      "ops": [
+        "item.addComp"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.ItemCollection.addFolder": {
+      "ops": [
+        "item.addFolder"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.remove": {
+      "ops": [
+        "item.remove"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addNull": {
+      "ops": [
+        "comp.addNullLayer"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setValue": {
+      "ops": [
+        "layer.setTransformPosition",
+        "anim.setValue"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyBase.name": {
+      "ops": [
+        "layer.setTransformPosition"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.moveToEnd": {
+      "ops": [
+        "layer.reorder"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.moveToBeginning": {
+      "ops": [
+        "layer.reorder"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.parent": {
+      "ops": [
+        "layer.setParent"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.duplicate": {
+      "ops": [
+        "layer.duplicate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.activeItem": {
+      "ops": [
+        "read.projectSummary"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.name": {
+      "ops": [
+        "read.projectSummary"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.id": {
+      "ops": [
+        "read.projectSummary"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setValueAtKey": {
+      "ops": [
+        "anim.setKeyframe"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setValueAtTime": {
+      "ops": [
+        "anim.setValueAtTime"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.expression": {
+      "ops": [
+        "anim.setExpression"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.expressionEnabled": {
+      "ops": [
+        "anim.setExpression"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.canSetExpression": {
+      "ops": [
+        "anim.setExpression"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.expressionError": {
+      "ops": [
+        "anim.setExpression"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyGroup.addProperty": {
+      "ops": [
+        "effect.add"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyGroup.canAddProperty": {
+      "ops": [
+        "effect.add"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.renderQueue": {
+      "ops": [
+        "render.queueComp"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueue.items": {
+      "ops": [
+        "render.queueComp"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.comp": {
+      "ops": [
+        "render.queueComp"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueue.render": {
+      "ops": [
+        "render.renderQueued"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueue.rendering": {
+      "ops": [
+        "render.renderQueued"
+      ],
+      "evidence": "fake/mock only"
+    }
+  }
+}
