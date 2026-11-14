@@ -69,11 +69,26 @@ caller's responsibility.
 
 ## UXP status (CAP060)
 
-UXP plugin development lifecycle is tracked per-row as **BLOCKED /
-UNVERIFIED**: Adobe's UXP-for-AE availability is beta/provisional
-(research.md §2, ADR-0005 D5). No UXP scaffold is generated, no UXP
-load is claimed, and beta adoption is not assumed. Re-evaluation trigger:
-Adobe released build with documented plugin loading + remote IPC for AE.
+Re-investigated 2026-11-14 against current Adobe public sources:
+
+- **Public beta is live.** Adobe opened AE UXP private beta 2026-10-05
+  (AE beta 27.0.0.63) and announced public beta "by mid-November 2026";
+  `developer.adobe.com/after-effects/uxp/` now serves public docs
+  (quickstart, After Effects API reference, UXP API reference) "throughout
+  the beta".
+- **Still beta.** Per our acceptance rule (released build with documented
+  plugin loading + remote IPC), every UXP lifecycle row stays
+  **BLOCKED/UNVERIFIED**: beta DOM stability, packaging/signing path, and
+  remote-IPC surface are not GA-contract. Hybrid (Node-capable) plugins
+  are "on the roadmap for GA" per Adobe staff — not available in beta.
+- **CEP transition context (Adobe blog, 2026-09):** AE public beta UXP
+  Nov 2026; new CEP submissions stop ~2027; CEP removed from new AE
+  versions Dec 2029; **ExtendScript is explicitly not affected**. This
+  raises the long-term value of the CEP dev-loop work here but does not
+  change today's evidence level.
+
+Re-evaluation trigger: AE UXP GA (or a documented stable beta contract)
+with plugin load + IPC evidence on an owned host.
 
 ## Layout
 
