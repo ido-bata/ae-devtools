@@ -74,7 +74,7 @@ function makeLayer(name, comp) {
 function makeComp(name, w, h, par, dur, owner) {
   const comp = {
     name,
-    type: "CompItem",
+    typeName: "Composition",
     id: Math.floor(Math.random() * 1e9),
     width: w,
     height: h,
@@ -120,15 +120,16 @@ export function createAdapterFakeApp() {
     file: { fsName: "/tmp/fake.aep" },
   };
   project.items = collection(items, {
-    addComp(name, w, h, par, dur) {
+    addComp(name, w, h, par, dur, frameRate) {
       const c = makeComp(name, w, h, par, dur, items);
+      c.frameRate = frameRate;
       items.push(c);
       return c;
     },
     addFolder(name) {
       const f = {
         name,
-        type: "FolderItem",
+        typeName: "Folder",
         id: items.length + 1,
         remove() {
           const i = items.indexOf(f);
@@ -147,7 +148,7 @@ export function createAdapterFakeApp() {
   };
   app.__state = {
     items,
-    fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.type }))),
+    fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.typeName }))),
     reset: () => { items.length = 0; project.activeItem = null; },
   };
   return app;

@@ -40,13 +40,22 @@ function __adp_fail(msg) { throw new Error("adapter: " + msg); }
 function __adp_items() { return app.project.items; }
 function __adp_findItem(name, typeName) {
   var items = __adp_items();
+  var found = null;
+  var sawName = false;
   for (var i = 1; i <= items.length; i++) {
     var it = items[i];
     if (it.name === name) {
-      if (typeName === null || it.type === typeName) return it;
-      __adp_fail("name '" + name + "' exists but is not a " + typeName);
+      sawName = true;
+      if (typeName === null || it.typeName === typeName) {
+        if (found !== null) {
+          __adp_fail("ambiguous item name '" + name + "' (" + typeName + "): multiple matches — rename or qualify");
+        }
+        found = it;
+      }
     }
   }
+  if (found !== null) return found;
+  if (sawName) __adp_fail("name '" + name + "' exists but is not a " + typeName);
   __adp_fail("item not found: " + name);
   return null;
 }
@@ -85,6 +94,7 @@ export const OPERATIONS = [
     issue: "15",
     permission: "execute",
     mutating: true,
+    destructive: true,
     members: [S("app", "newProject")],
     args: [],
     source: () => `${PRELUDE}
@@ -99,6 +109,7 @@ return __adp_json({ ok: true });
     issue: "15",
     permission: "execute",
     mutating: true,
+    destructive: true,
     members: [S("app", "open")],
     args: ["path"],
     validate: (a) => requireArgs(a, ["path"]),
@@ -131,6 +142,7 @@ return __adp_json({ ok: true });
     issue: "15",
     permission: "execute",
     mutating: true,
+    destructive: true,
     members: [S("Project", "close")],
     args: [],
     source: () => `${PRELUDE}
@@ -146,10 +158,15 @@ return __adp_json({ ok: true });
     permission: "execute",
     mutating: true,
     members: [S("ItemCollection", "addComp")],
-    args: ["name", "width", "height", "pixelAspect", "duration"],
-    validate: (a) => requireArgs(a, ["name", "width", "height", "pixelAspect", "duration"]),
+    args: ["name", "width", "height", "pixelAspect", "duration", "frameRate"],
+    validate: (a) => {
+      requireArgs(a, ["name", "width", "height", "pixelAspect", "duration", "frameRate"]);
+      for (const n of ["width", "height", "pixelAspect", "duration", "frameRate"]) {
+        if (!Number.isFinite(Number(a[n]))) throw new Error(`item.addComp: ${n} must be a finite number`);
+      }
+    },
     source: (a) => `${PRELUDE}
-var comp = app.project.items.addComp(${js(a.name)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.pixelAspect)}, ${Number(a.duration)});
+var comp = app.project.items.addComp(${js(a.name)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.pixelAspect)}, ${Number(a.duration)}, ${Number(a.frameRate)});
 return __adp_json({ ok: true, id: comp.id, name: comp.name });
 `,
   },
@@ -175,11 +192,12 @@ return __adp_json({ ok: true, id: f.id, name: f.name });
     issue: "15",
     permission: "execute",
     mutating: true,
-    members: [S("Item", "remove")],
-    args: ["name", "type"],
-    validate: (a) => requireArgs(a, ["name", "type"]),
+    destructive: true,
+    members: [S("Item", "remove"), S("Item", "typeName")],
+    args: ["name", "typeName"],
+    validate: (a) => requireArgs(a, ["name", "typeName"]),
     source: (a) => `${PRELUDE}
-var it = __adp_findItem(${js(a.name)}, ${js(a.type)});
+var it = __adp_findItem(${js(a.name)}, ${js(a.typeName)});
 it.remove();
 return __adp_json({ ok: true, removed: ${js(a.name)} });
 `,
@@ -195,7 +213,7 @@ return __adp_json({ ok: true, removed: ${js(a.name)} });
     args: ["compName", "layerName"],
     validate: (a) => requireArgs(a, ["compName", "layerName"]),
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "CompItem");
+var comp = __adp_findItem(${js(a.compName)}, "Composition");
 var layer = comp.layers.addNull(comp.duration);
 layer.name = ${js(a.layerName)};
 return __adp_json({ ok: true, layer: layer.name, index: layer.index });
@@ -210,9 +228,14 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index });
     mutating: true,
     members: [S("Property", "setValue"), S("PropertyBase", "name")],
     args: ["compName", "layerName", "x", "y"],
-    validate: (a) => requireArgs(a, ["compName", "layerName", "x", "y"]),
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "x", "y"]);
+      for (const n of ["x", "y"]) {
+        if (!Number.isFinite(Number(a[n]))) throw new Error(`layer.setTransformPosition: ${n} must be a finite number`);
+      }
+    },
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "CompItem");
+var comp = __adp_findItem(${js(a.compName)}, "Composition");
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 var pos = layer.property("Transform").property("Position");
 pos.setValue([${Number(a.x)}, ${Number(a.y)}]);
@@ -235,7 +258,7 @@ return __adp_json({ ok: true, layer: layer.name, value: pos.value });
       }
     },
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "CompItem");
+var comp = __adp_findItem(${js(a.compName)}, "Composition");
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 ${a.to === "top" ? "layer.moveToBeginning();" : "layer.moveToEnd();"}
 return __adp_json({ ok: true, layer: layer.name, index: layer.index });
@@ -257,7 +280,7 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index });
           ? "null"
           : `__adp_findLayer(comp, ${js(a.parentName)})`;
       return `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "CompItem");
+var comp = __adp_findItem(${js(a.compName)}, "Composition");
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 layer.parent = ${parentExpr};
 return __adp_json({ ok: true, layer: layer.name, parent: layer.parent === null ? null : layer.parent.name });
@@ -275,7 +298,7 @@ return __adp_json({ ok: true, layer: layer.name, parent: layer.parent === null ?
     args: ["compName", "layerName"],
     validate: (a) => requireArgs(a, ["compName", "layerName"]),
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "CompItem");
+var comp = __adp_findItem(${js(a.compName)}, "Composition");
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 var dup = layer.duplicate();
 return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: dup.index });
@@ -288,20 +311,20 @@ return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: du
     issue: "15",
     permission: "execute",
     mutating: false,
-    members: [S("Project", "activeItem"), S("AVItem", "name")],
+    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "typeName")],
     args: [],
     source: () => `${PRELUDE}
 var items = __adp_items();
 var list = [];
 for (var i = 1; i <= items.length; i++) {
-  list.push({ name: items[i].name, type: String(items[i].type), id: items[i].id });
+  list.push({ name: items[i].name, typeName: String(items[i].typeName), id: items[i].id });
 }
 var ai = app.project.activeItem;
 return __adp_json({
   ok: true,
   count: items.length,
   items: list,
-  activeItem: ai === null ? null : { name: ai.name, type: String(ai.type) }
+  activeItem: ai === null ? null : { name: ai.name, typeName: String(ai.typeName) }
 });
 `,
   },
@@ -334,6 +357,7 @@ export function registryReport() {
     schema: ADAPTER_SCHEMA,
     operationCount: OPERATIONS.length,
     mutating: OPERATIONS.filter((o) => o.mutating).length,
+    destructive: OPERATIONS.filter((o) => o.destructive === true).length,
     readOnly: OPERATIONS.filter((o) => !o.mutating).length,
     domains: [...new Set(OPERATIONS.map((o) => o.domain))],
     operations: OPERATIONS.map((o) => ({

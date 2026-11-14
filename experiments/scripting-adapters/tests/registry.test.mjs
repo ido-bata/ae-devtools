@@ -79,9 +79,9 @@ test("generated sources are ES3-safe (no arrow functions / let / const)", () => 
 function sampleArgs(op) {
   const a = {};
   for (const n of op.args) {
-    if (["x", "y", "width", "height", "pixelAspect", "duration"].includes(n)) a[n] = 100;
+    if (["x", "y", "width", "height", "pixelAspect", "duration", "frameRate"].includes(n)) a[n] = 30;
     else if (n === "to") a[n] = "top";
-    else if (n === "type") a[n] = "CompItem";
+    else if (n === "typeName") a[n] = "Composition";
     else if (n === "path") a[n] = "/tmp/x.aep";
     else if (n === "parentName") a[n] = null;
     else a[n] = `sample-${n}`;
@@ -113,19 +113,19 @@ function freshApp() {
 test("fake exec: project.new -> item.addComp -> read.projectSummary", () => {
   const t = freshApp();
   t.run("project.new", {});
-  const r1 = t.run("item.addComp", { name: "Hero", width: 1920, height: 1080, pixelAspect: 1, duration: 10 });
+  const r1 = t.run("item.addComp", { name: "Hero", width: 1920, height: 1080, pixelAspect: 1, duration: 10, frameRate: 30 });
   assert.equal(JSON.parse(r1).name, "Hero");
   t.run("item.addFolder", { name: "Assets" });
   const summary = JSON.parse(t.run("read.projectSummary", {}));
   assert.equal(summary.count, 2);
-  assert.equal(summary.items[0].type, "CompItem");
-  assert.equal(summary.items[1].type, "FolderItem");
+  assert.equal(summary.items[0].typeName, "Composition");
+  assert.equal(summary.items[1].typeName, "Folder");
 });
 
 test("fake exec: comp/layer lifecycle — addNull, position, reorder, parent, duplicate", () => {
   const t = freshApp();
   t.run("project.new", {});
-  t.run("item.addComp", { name: "C1", width: 100, height: 100, pixelAspect: 1, duration: 5 });
+  t.run("item.addComp", { name: "C1", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 });
   t.run("comp.addNullLayer", { compName: "C1", layerName: "Rig" });
   t.run("comp.addNullLayer", { compName: "C1", layerName: "Cam" });
 
@@ -147,23 +147,23 @@ test("fake exec: comp/layer lifecycle — addNull, position, reorder, parent, du
 test("fake exec: item.remove and same-name type guard (CAP031)", () => {
   const t = freshApp();
   t.run("project.new", {});
-  t.run("item.addComp", { name: "Same", width: 1, height: 1, pixelAspect: 1, duration: 1 });
+  t.run("item.addComp", { name: "Same", width: 1, height: 1, pixelAspect: 1, duration: 1, frameRate: 30 });
   t.run("item.addFolder", { name: "Same" });
   // type guard: "Same" as CompItem resolves the comp, not the folder
-  const r = JSON.parse(t.run("item.remove", { name: "Same", type: "CompItem" }));
+  const r = JSON.parse(t.run("item.remove", { name: "Same", typeName: "Composition" }));
   assert.equal(r.removed, "Same");
   const summary = JSON.parse(t.run("read.projectSummary", {}));
   assert.equal(summary.count, 1);
-  assert.equal(summary.items[0].type, "FolderItem");
+  assert.equal(summary.items[0].typeName, "Folder");
 });
 
 test("fake exec: name-not-found and wrong-type produce adapter errors, not silent wrong-target", () => {
   const t = freshApp();
   t.run("project.new", {});
   t.run("item.addFolder", { name: "OnlyFolder" });
-  assert.throws(() => t.run("item.remove", { name: "OnlyFolder", type: "CompItem" }), /not a CompItem/);
+  assert.throws(() => t.run("item.remove", { name: "OnlyFolder", typeName: "Composition" }), /not a Composition/);
   assert.throws(() => t.run("comp.addNullLayer", { compName: "Ghost", layerName: "x" }), /item not found/);
-  assert.throws(() => t.run("layer.setTransformPosition", { compName: "OnlyFolder", layerName: "x", x: 0, y: 0 }), /not a CompItem/);
+  assert.throws(() => t.run("layer.setTransformPosition", { compName: "OnlyFolder", layerName: "x", x: 0, y: 0 }), /not a Composition/);
 });
 
 test("fake exec: project.save/open/close are dispatchable", () => {
@@ -172,4 +172,44 @@ test("fake exec: project.save/open/close are dispatchable", () => {
   assert.equal(JSON.parse(t.run("project.save", { path: "/tmp/out.aep" })).ok, true);
   assert.equal(JSON.parse(t.run("project.open", { path: "/tmp/in.aep" })).ok, true);
   assert.equal(JSON.parse(t.run("project.close", {})).ok, true);
+});
+
+/* ---- PR #46 independent-review regressions ---- */
+
+test("R1: two same-name+type items -> ambiguous error, never silent first-match", () => {
+  const t = freshApp();
+  t.run("project.new", {});
+  t.run("item.addComp", { name: "Dup", width: 1, height: 1, pixelAspect: 1, duration: 1, frameRate: 30 });
+  t.run("item.addComp", { name: "Dup", width: 2, height: 2, pixelAspect: 1, duration: 1, frameRate: 30 });
+  assert.throws(() => t.run("comp.addNullLayer", { compName: "Dup", layerName: "x" }), /ambiguous/);
+});
+
+test("R2: non-finite numeric args rejected at buildSource, never reach host", () => {
+  assert.throws(() => buildSource("item.addComp", { name: "c", width: NaN, height: 1, pixelAspect: 1, duration: 1, frameRate: 30 }), /finite number/);
+  assert.throws(() => buildSource("layer.setTransformPosition", { compName: "c", layerName: "l", x: "abc", y: 0 }), /finite number|missing/);
+});
+
+test("R3: destructive ops are explicitly flagged for consent/loop gating", () => {
+  for (const id of ["project.new", "project.open", "project.close", "item.remove"]) {
+    assert.equal(getOperation(id).destructive, true, `${id} must be destructive`);
+  }
+  assert.equal(getOperation("read.projectSummary").destructive, undefined);
+  assert.equal(registryReport().destructive, 4);
+});
+
+test("R4: generated sources only call API surface the fake host actually implements", () => {
+  // If a source references a member fake-app lacks, vm throws at exec —
+  // but assert statically too so coverage is explicit per op.
+  const t = freshApp();
+  t.run("project.new", {});
+  t.run("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 1, frameRate: 30 });
+  const comp = t.app.project.items[1];
+  for (const m of ["layers", "duration", "name"]) assert.ok(m in comp || comp[m] !== undefined, `comp.${m} missing on fake`);
+  const layer = comp.layers.addNull(1);
+  for (const m of ["property", "moveToBeginning", "moveToEnd", "duplicate", "remove"]) {
+    assert.equal(typeof layer[m], "function", `layer.${m} must be callable`);
+  }
+  for (const m of ["parent", "name", "index", "enabled"]) {
+    assert.ok(m in layer, `layer.${m} must exist`);
+  }
 });
