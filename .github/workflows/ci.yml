@@ -102,5 +102,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # xmllint is required for the XSD contract test — without it the
+      # test would silently skip and the contract would be unverified.
+      - if: steps.detect.outputs.present == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/runtime-bridge/cep-panel/tests/run.mjs
