@@ -90,6 +90,54 @@ test("domain views never promote coverage axes", () => {
   }
 });
 
+test("unassigned scripting symbols stay visible — nothing falls outside every domain", () => {
+  const report = buildDomainCoverageReport({
+    records: manifest.records,
+    domains,
+    generatedFrom: [],
+  });
+  const scripting = manifest.records.filter((r) => r.kind === "scripting-symbol");
+  const memberIds = new Set(report.domains.flatMap((d) => d.members.map((m) => m.id)));
+  const unassignedIds = new Set(report.unassigned.map((u) => u.id));
+
+  // Partition: every scripting symbol is a domain member XOR unassigned.
+  for (const r of scripting) {
+    const inDomain = memberIds.has(r.id);
+    const unassigned = unassignedIds.has(r.id);
+    assert.ok(inDomain !== unassigned, `${r.id} must be exactly one of member/unassigned`);
+  }
+  assert.equal(memberIds.size + unassignedIds.size, scripting.length);
+
+  // Unassigned entries are sorted and carry only real scripting symbols.
+  const sorted = [...report.unassigned].sort((a, b) => (a.id < b.id ? -1 : 1));
+  assert.deepEqual(report.unassigned, sorted);
+  for (const u of report.unassigned) {
+    assert.ok(u.id.startsWith("ae.scripting."), `${u.id} is not a scripting symbol`);
+  }
+
+  // The 'application' (app.*) category is deliberately claimed by no
+  // domain today — it must show up here, not vanish.
+  const appMembers = scripting.filter((r) => r.category === "application");
+  assert.ok(appMembers.length > 0, "expected application-category symbols in inventory");
+  for (const m of appMembers) {
+    assert.ok(unassignedIds.has(m.id), `${m.id} (application) should be unassigned`);
+  }
+});
+
+test("a category claimed by two domains fails closed", () => {
+  const base = domains[0];
+  assert.ok(base !== undefined);
+  const overlapping: DomainDefinition = {
+    ...base,
+    domain: "overlap",
+    categories: [base.categories[0] as string],
+  };
+  assert.throws(
+    () => buildDomainCoverageReport({ records: manifest.records, domains: [base, overlapping], generatedFrom: [] }),
+    /claimed by both/,
+  );
+});
+
 test("serialization is deterministic", () => {
   const report = buildDomainCoverageReport({
     records: manifest.records,
