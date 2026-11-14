@@ -43,7 +43,8 @@ If any box is unchecked, the proof does not run.
 - **F-C1 load fixture:** the scaffolded panel as-is. Success signal: the
   panel appears under Window > Extensions (or the host's extension list),
   `getCurrentApiVersion()` returns a `{major,minor,micro}` object, and
-  `app.version()` returns the AE version string via `evalScript`.
+  `app.version` (attribute read, not a call) returns the AE version
+  string via `evalScript`.
 - **F-C2 error fixture:** the panel's "intentional error probe" button
   runs ExtendScript that throws; success signal is an `EvalScript_ErrMessage`
   (or equivalent typed error) surfaced to the panel, not a silent failure.
@@ -61,10 +62,13 @@ console/log captures where obtainable. Evidence lands in
 
 Explicit checks:
 
-1. **CSInterface provisioning** — does `<script src="CSInterface.js">`
-   resolve (host-provided) or 404 (must bundle)? Recorded either way.
-2. **evalScript round trip** — `app.version()` result equals the AE build
-   string; the error probe produces a typed error, not a hang.
+1. **CSInterface provisioning** — resolved at scaffold level:
+   `CSInterface.js` is bundled (official CEP_12.x file). The load proof
+   still records whether the bundled copy loads and `new CSInterface()`
+   succeeds; a host-provided resolution is not assumed or required.
+2. **evalScript round trip** — `app.version` result equals the AE build
+   string; the error probe produces the `EvalScript error.` sentinel
+   surfaced as a typed error, not a hang.
 3. **Reload semantics** — does closing/reopening the panel re-run
    `main.js`? Does AE cache the manifest (stale manifest after edit)?
 4. **Unload/cleanup** — removing the extension folder + `PlayerDebugMode`

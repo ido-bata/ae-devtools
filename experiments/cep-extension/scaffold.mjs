@@ -6,6 +6,8 @@
  *
  *   <out>/CSXS/manifest.xml
  *   <out>/index.html
+ *   <out>/CSInterface.js               (official Adobe-CEP CEP_12.x file,
+ *                                        bundled — the host does NOT provide it)
  *   <out>/js/main.js
  *   <out>/js/csinterface-wrapper.js   (copied verbatim from templates/)
  *
@@ -22,9 +24,12 @@
  * Options:
  *   --id <reverse-dns.id>   required; must contain at least one dot
  *   --title <text>          panel <title>/heading; default: derived from id
- *   --version <semver>      extension version; default 0.1.0
- *   --host <range>          AE Host Version range, e.g. "[25.0,99.0]" or
- *                           "[25.0,)"; default "[25.0,99.0]"
+ *   --version <ver>        extension/bundle version (XSD Version type:
+ *                           major[.minor[.micro[.special]]]); default 0.1.0
+ *   --host <range>          AE Host Version range — XSD RangedVersion:
+ *                           plain "25.0" or "[25.0,99.0]" / "(25.0,99.0)".
+ *                           A bracketed range MUST have both bounds
+ *                           ("[24.0,]" is schema-invalid); default "[25.0,99.0]"
  *   --csxs <version>        RequiredRuntime CSXS version; default 12.0
  *   --out <dir>             output directory (required)
  *   --force                 overwrite a non-empty output directory
@@ -39,9 +44,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES = join(HERE, "templates");
 
 const ID_RE = /^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)+$/;
-const VERSION_RE = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
+// XSD simpleType "Version" (ExtensionManifest_v_7_0.xsd):
+//   major[.minor[.micro[.special]]] — special is a dot-suffixed token.
+const VERSION_RE = /^\d{1,9}(\.\d{1,9}(\.\d{1,9}(\.[\w-]+)?)?)?$/;
 const CSXS_RE = /^\d+\.\d+(\.\d+)?$/;
-const HOST_RE = /^\[[0-9]+(\.[0-9]+)?(,[0-9]*(\.[0-9]+)?)?\]$/;
+// XSD simpleType "RangedVersion": a plain version (minimum, no max) or a
+// bracketed range that MUST carry both bounds, e.g. "[25.0,99.0]" or
+// "(25.0,99.0)". Open-ended "[24.0,]" is NOT schema-valid.
+const HOST_RE = new RegExp(
+  "^(" +
+    VERSION_RE.source.slice(1, -1) + "|" +
+    "[\\[(]" + VERSION_RE.source.slice(1, -1) + "," + VERSION_RE.source.slice(1, -1) + "[\\])]" +
+  ")$"
+);
 
 function usage(msg) {
   if (msg) console.error(`error: ${msg}`);
@@ -76,10 +91,13 @@ function validate(args) {
   }
   if (!args.out) usage("--out is required");
   args.version = args.version ?? "0.1.0";
-  if (!VERSION_RE.test(args.version)) usage(`--version must be semver-ish, got: ${args.version}`);
+  if (!VERSION_RE.test(args.version)) {
+    usage(`--version must be an XSD Version (major[.minor[.micro[.special]]]), got: ${args.version}`);
+  }
   args.host = args.host ?? "[25.0,99.0]";
   if (!HOST_RE.test(args.host)) {
-    usage(`--host must look like "[25.0,99.0]" or "[25.0,]", got: ${args.host}`);
+    usage(`--host must be an XSD RangedVersion: "25.0" or "[25.0,99.0]" ` +
+      `(bracketed ranges need both bounds), got: ${args.host}`);
   }
   args.csxs = args.csxs ?? "12.0";
   if (!CSXS_RE.test(args.csxs)) usage(`--csxs must be a dotted version, got: ${args.csxs}`);
@@ -162,6 +180,9 @@ export async function scaffold(args) {
   const files = [
     ["CSXS/manifest.xml", await renderTemplate("manifest.xml.tmpl", vars)],
     ["index.html", await renderTemplate("index.html.tmpl", vars)],
+    // Official CEP_12.x CSInterface.js, bundled per the CEP cookbook
+    // ("include these JavaScript files in your HTML extension").
+    ["CSInterface.js", await readFile(join(TEMPLATES, "CSInterface.js"), "utf8")],
     ["js/main.js", await renderTemplate("js/main.js.tmpl", vars)],
     ["js/csinterface-wrapper.js", await readFile(join(TEMPLATES, "js/csinterface-wrapper.js"), "utf8")],
   ];

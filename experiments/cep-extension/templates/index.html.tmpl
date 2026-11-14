@@ -31,7 +31,7 @@
   </div>
 
   <div class="row">
-    <button id="btn-ae-version">Run app.version()</button>
+    <button id="btn-ae-version">Read app.version</button>
     <button id="btn-ae-error">Run intentional error probe</button>
     <button id="btn-clear">Clear</button>
   </div>
@@ -40,9 +40,10 @@
   <pre id="result">(none)</pre>
 
   <!--
-    CSInterface.js is referenced as host-provided; whether the host
-    actually supplies it at runtime is a LOAD-PROOF verification item.
-    Order matters: wrapper before main.js.
+    CSInterface.js is BUNDLED with the extension (copied verbatim from
+    Adobe-CEP/CEP-Resources CEP_12.x by scaffold.mjs) — the official
+    cookbook requires including it in the extension; the host does not
+    provide it. Order matters: CSInterface -> wrapper -> main.js.
   -->
   <script src="CSInterface.js"></script>
   <script src="js/csinterface-wrapper.js"></script>

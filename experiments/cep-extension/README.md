@@ -27,9 +27,14 @@ node scaffold.mjs --id com.example.my-panel --title "My Panel" \
 Output tree:
 
 ```
-<out>/CSXS/manifest.xml          # ExtensionManifest, AEFT host range, CSXS runtime
+<out>/CSXS/manifest.xml          # official CEP 5.0+/12 shape: ExtensionList +
+                                #   ExecutionEnvironment(HostList/LocaleList/
+                                #   RequiredRuntimeList) + DispatchInfoList
 <out>/index.html                 # panel shell, CSP, wires js/main.js
-<out>/js/main.js                 # ES5 panel logic: api version, app.version(), error probe
+<out>/CSInterface.js             # official Adobe-CEP CEP_12.x file, bundled
+                                #   (the host does NOT provide it)
+<out>/js/main.js                 # ES5 panel logic: api version, app.version
+                                #   (attribute, not a call), error probe
 <out>/js/csinterface-wrapper.js  # copied verbatim from templates/
 ```
 
@@ -43,7 +48,8 @@ caller's responsibility.
 ## Evidence level
 
 - Scaffold generation and validation: **automated test** (`node tests/run.mjs`, zero deps).
-- Manifest correctness against the real CEP schema: **source-reviewed** against `docs/architecture/research/02-cep-deep-dive.md` and the runtime-bridge manifest; the XSD itself is not vendored.
+- Manifest correctness: **XSD-validated** — `tests/scaffold.test.mjs` validates generated output against the vendored official `schema/ExtensionManifest_v_7_0.xsd` (Adobe states the schema is unchanged CEP 7→12) via `xmllint`. Note: the published XSD enumerates manifest `Version` as `7.0` only while the official CEP 12 sample ships `Version="12.0"`; the test pins the emitted copy to `7.0` for schema validation and asserts `12.0` separately — the schema is stale relative to Adobe's own sample.
+- `CSInterface.js`: **bundled** — the official CEP 12 cookbook requires including it in the extension ("include these JavaScript files in your HTML extension"); the earlier host-provided assumption was wrong and is corrected.
 - Panel load in AE: **UNVERIFIED** — see `LOAD-PROOF.md`.
 - Windows: **UNVERIFIED** — no Windows host; agents never touch Windows (Issue #21).
 
@@ -57,9 +63,9 @@ caller's responsibility.
   `~/Library/Application Support/Adobe/CEP/extensions/` (macOS)
   (`docs/troubleshooting.md`). Whether AE 2026/2027 honors this path
   unchanged is unverified.
-- `CSInterface.js` is referenced as host-provided in `index.html`; whether
-  the host actually supplies it (vs requiring it bundled) is a load-proof
-  verification item.
+- `CSInterface.js` is **bundled** at the extension root (official CEP_12.x
+  file). Whether a given AE/CEP runtime additionally resolves a host copy
+  is irrelevant to correctness — bundling is the documented requirement.
 
 ## UXP status (CAP060)
 
@@ -77,6 +83,7 @@ cep-extension/
 ├── EVIDENCE.md                # evidence ledger
 ├── LOAD-PROOF.md              # gated real-AE load procedure + fixtures
 ├── scaffold.mjs               # generator CLI (Node >= 22, zero deps)
-├── templates/                 # manifest/html/js templates + wrapper asset
+├── schema/                    # vendored official ExtensionManifest_v_7_0.xsd
+├── templates/                 # manifest/html/js templates + CSInterface.js + wrapper
 └── tests/                     # node:test suite (fake-level only)
 ```

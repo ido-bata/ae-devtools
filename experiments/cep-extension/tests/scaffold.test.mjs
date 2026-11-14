@@ -1,6 +1,19 @@
 /**
  * Tests for scaffold.mjs — automated-test / fake-level evidence only.
  * No After Effects is involved; generated trees are never loaded here.
+ *
+ * Manifest regression coverage targets the defects found in PR #40
+ * review against the official Adobe CEP 12 material:
+ *   - manifest must use the CEP 5.0+/12 shape (ExtensionList +
+ *     ExecutionEnvironment + DispatchInfoList), not the pre-CEP5
+ *     attribute form;
+ *   - generated manifest is validated against the vendored official
+ *     XSD (schema/ExtensionManifest_v_7_0.xsd) via xmllint when
+ *     available;
+ *   - main.js must not call app.version() (it is an attribute);
+ *   - evalScript callback contract is a single result string with the
+ *     "EvalScript error." sentinel, not an (err, value) pair;
+ *   - CSInterface.js is bundled, not host-provided.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -13,6 +26,7 @@ import { scaffold, ScaffoldError } from "../scaffold.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));
 const SCAFFOLD = join(HERE, "scaffold.mjs");
+const XSD = join(HERE, "schema", "ExtensionManifest_v_7_0.xsd");
 
 async function tmp() {
   return mkdtemp(join(tmpdir(), "cep-scaffold-"));
@@ -26,6 +40,10 @@ const BASE = {
   csxs: "12.0",
 };
 
+function xmllintAvailable() {
+  return spawnSync("xmllint", ["--version"], { encoding: "utf8" }).status === 0;
+}
+
 test("generates the expected tree with substituted values", async () => {
   const dir = await tmp();
   try {
@@ -33,6 +51,7 @@ test("generates the expected tree with substituted values", async () => {
     for (const rel of [
       "CSXS/manifest.xml",
       "index.html",
+      "CSInterface.js",
       "js/main.js",
       "js/csinterface-wrapper.js",
     ]) {
@@ -41,11 +60,23 @@ test("generates the expected tree with substituted values", async () => {
 
     const manifest = await readFile(join(out, "CSXS/manifest.xml"), "utf8");
     assert.match(manifest, /<ExtensionManifest/);
-    assert.match(manifest, /Extension Id="com\.example\.probe-panel"/);
-    assert.match(manifest, /Version="0\.1\.0"/);
-    assert.match(manifest, /RequiredRuntimeList="CSXS-12\.0"/);
-    assert.match(manifest, /<Host Name="AEFT" Version="\[25\.0,99\.0\]"/);
+    assert.match(manifest, /ExtensionBundleId="com\.example\.probe-panel"/);
+    assert.match(manifest, /ExtensionBundleVersion="0\.1\.0"/);
+    assert.match(manifest, /Version="12\.0"/);
+    // Official CEP 5.0+/12 structure.
+    assert.match(manifest, /<ExtensionList>[\s\S]*<Extension Id="com\.example\.probe-panel" Version="0\.1\.0"\/>/);
+    assert.match(manifest, /<ExecutionEnvironment>/);
+    assert.match(manifest, /<HostList>[\s\S]*<Host Name="AEFT" Version="\[25\.0,99\.0\]"\/>/);
+    assert.match(manifest, /<Locale Code="All"\/>/);
+    assert.match(manifest, /<RequiredRuntimeList>[\s\S]*<RequiredRuntime Name="CSXS" Version="12\.0"\/>/);
+    assert.match(manifest, /<DispatchInfoList>[\s\S]*<Extension Id="com\.example\.probe-panel">[\s\S]*<DispatchInfo>/);
     assert.match(manifest, /<MainPath>\.\/index\.html<\/MainPath>/);
+    assert.match(manifest, /<AutoVisible>true<\/AutoVisible>/);
+    assert.match(manifest, /<Type>Panel<\/Type>/);
+    assert.match(manifest, /<Menu>Probe Panel<\/Menu>/);
+    // Pre-CEP5 attribute form must NOT appear.
+    assert.ok(!/RequiredRuntimeList="CSXS/.test(manifest), "no RequiredRuntimeList attribute form");
+    assert.ok(!/DispatchInfoList"[^>]*Host=/.test(manifest), "no Host attribute on DispatchInfo");
     assert.ok(!manifest.includes("{{"), "no unexpanded placeholders in manifest");
 
     const html = await readFile(join(out, "index.html"), "utf8");
@@ -56,25 +87,108 @@ test("generates the expected tree with substituted values", async () => {
     assert.match(html, /js\/main\.js/);
     assert.ok(!html.includes("{{"), "no unexpanded placeholders in html");
 
+    // CSInterface.js is the official bundled file, not a stub.
+    const csInterface = await readFile(join(out, "CSInterface.js"), "utf8");
+    assert.match(csInterface, /CSInterface - v12\.0\.0/);
+    assert.match(csInterface, /CSInterface\.prototype\.evalScript = function\(script, callback\)/);
+
     const main = await readFile(join(out, "js/main.js"), "utf8");
     assert.match(main, /com\.example\.probe-panel/);
-    assert.match(main, /app\.version\(\)/);
-    assert.match(main, /intentional error probe/);
+    assert.match(main, /intentional error probe|intentional-error/);
     assert.ok(!main.includes("{{"), "no unexpanded placeholders in main.js");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });
 
-test("csinterface-wrapper.js is copied byte-identical", async () => {
+test("manifest validates against the vendored official XSD", async (t) => {
+  if (!xmllintAvailable()) {
+    t.skip("xmllint not available; XSD validation skipped (structure assertions still apply)");
+    return;
+  }
   const dir = await tmp();
   try {
     const out = await scaffold({ ...BASE, out: join(dir, "panel") });
-    const generated = await readFile(join(out, "js/csinterface-wrapper.js"), "utf8");
-    const template = await readFile(
-      new URL("../templates/js/csinterface-wrapper.js", import.meta.url), "utf8"
+    const manifestPath = join(out, "CSXS/manifest.xml");
+    const manifest = await readFile(manifestPath, "utf8");
+
+    // Adobe's published XSD (ExtensionManifest_v_7_0.xsd) enumerates the
+    // manifest Version attribute as "7.0" only, while the official CEP 12
+    // sample ships Version="12.0". The published schema is stale relative
+    // to the sample; validate structure on a copy pinned to the schema's
+    // enumerated value, and assert the emitted value separately.
+    assert.match(manifest, /Version="12\.0"/);
+    const pinned = manifest.replace(
+      /<ExtensionManifest([^>]*?) Version="12\.0"/,
+      '<ExtensionManifest$1 Version="7.0"'
     );
-    assert.equal(generated, template);
+    assert.notEqual(pinned, manifest, "Version pin substitution applied");
+    const pinnedPath = join(dir, "manifest-pinned.xml");
+    await writeFile(pinnedPath, pinned);
+
+    const r = spawnSync(
+      "xmllint", ["--noout", "--schema", XSD, pinnedPath],
+      { encoding: "utf8" }
+    );
+    assert.equal(r.status, 0, `XSD validation failed:\n${r.stderr}${r.stdout}`);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("regression: app.version is read as an attribute, never called", async () => {
+  const dir = await tmp();
+  try {
+    const out = await scaffold({ ...BASE, out: join(dir, "panel") });
+    const main = await readFile(join(out, "js/main.js"), "utf8");
+    const html = await readFile(join(out, "index.html"), "utf8");
+    // Strip comments before scanning — the header documents the bug.
+    const stripComments = (s) => s
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+    const mainCode = stripComments(main);
+    const htmlCode = stripComments(html);
+    // app.version is an ExtendScript attribute (provisional.ae.scripting
+    // .app.version, kind=attribute). Calling it throws on a real host.
+    assert.ok(!/app\.version\s*\(/.test(mainCode), "main.js must not call app.version()");
+    assert.ok(!/app\.version\s*\(/.test(htmlCode), "index.html must not advertise app.version()");
+    assert.match(main, /runScript\("app\.version", "app\.version"\)/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("regression: evalScript callback uses the single-result contract", async () => {
+  const dir = await tmp();
+  try {
+    const out = await scaffold({ ...BASE, out: join(dir, "panel") });
+    const main = await readFile(join(out, "js/main.js"), "utf8");
+    const wrapper = await readFile(join(out, "js/csinterface-wrapper.js"), "utf8");
+    // Official contract: callback(result) — one string arg; failure is the
+    // "EvalScript error." sentinel, NOT an (err, value) Node-style pair.
+    assert.match(main, /csWrap\.evalScript\(source, function \(result\)/);
+    assert.match(main, /EvalScript error\./);
+    assert.ok(!/evalScript\(source, function \(err,/.test(main),
+      "main.js must not treat the first callback arg as an error object");
+    assert.match(wrapper, /indexOf\("EvalScript error\."\)/);
+    // The wrapper must pass the callback through unmodified — CSInterface
+    // invokes it with exactly one argument.
+    assert.match(wrapper, /return this\.cs\.evalScript\(source, callback\)/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("csinterface-wrapper.js and CSInterface.js are copied byte-identical", async () => {
+  const dir = await tmp();
+  try {
+    const out = await scaffold({ ...BASE, out: join(dir, "panel") });
+    for (const rel of ["js/csinterface-wrapper.js", "CSInterface.js"]) {
+      const generated = await readFile(join(out, rel), "utf8");
+      const template = await readFile(join(HERE, "templates", rel), "utf8");
+      assert.equal(generated, template, rel);
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -142,9 +256,12 @@ test("CLI rejects invalid ids, versions, host ranges and paths", async () => {
     const cases = [
       ["--id", "nodots", "--out", out],
       ["--id", "com.example.a/b", "--out", out],
-      ["--id", "com.example.panel", "--version", "1.0", "--out", out],
+      ["--id", "com.example.panel", "--version", "1.0.x", "--out", out],
+      ["--id", "com.example.panel", "--version", "abc", "--out", out],
       ["--id", "com.example.panel", "--host", "25.0-99.0", "--out", out],
       ["--id", "com.example.panel", "--host", "[abc,def]", "--out", out],
+      // Open-ended bracketed range is not a valid XSD RangedVersion.
+      ["--id", "com.example.panel", "--host", "[24.0,]", "--out", out],
       ["--id", "com.example.panel", "--csxs", "twelve", "--out", out],
       ["--id", "com.example.panel"], // missing --out
     ];
@@ -186,15 +303,15 @@ test("CLI happy path prints the output path", async () => {
       "--id", "com.example.cli-panel",
       "--title", "CLI Panel",
       "--version", "1.2.3",
-      "--host", "[24.0,]",
+      "--host", "[24.0,99.0)",
       "--csxs", "11.1",
       "--out", out,
     ]);
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /scaffolded CEP extension "com\.example\.cli-panel" v1\.2\.3/);
     const manifest = await readFile(join(out, "CSXS/manifest.xml"), "utf8");
-    assert.match(manifest, /Version="\[24\.0,\]"/);
-    assert.match(manifest, /RequiredRuntimeList="CSXS-11\.1"/);
+    assert.match(manifest, /<Host Name="AEFT" Version="\[24\.0,99\.0\)"\/>/);
+    assert.match(manifest, /<RequiredRuntime Name="CSXS" Version="11\.1"\/>/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

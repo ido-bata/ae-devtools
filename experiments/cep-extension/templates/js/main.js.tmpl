@@ -7,12 +7,23 @@
  *
  * The "intentional error probe" runs ExtendScript that throws, so the
  * evalScript error path can be observed end-to-end during load proof.
+ *
+ * Contract notes (verified against Adobe CEP 12 CSInterface.js /
+ * CEP 12 HTML Extension Cookbook):
+ *   - CSInterface.evalScript(script, callback): the callback receives
+ *     ONE argument — the result string. There is no (err, value) pair.
+ *   - On ExtendScript failure the callback receives the string
+ *     "EvalScript error." (EvalScript_ErrMessage), not a thrown error.
+ *   - app.version is an ExtendScript *attribute* (property), not a
+ *     function — the probe must evaluate `app.version`, never
+ *     `app.version()`.
  */
 (function () {
   "use strict";
 
   var EXT_ID = "{{EXT_ID:js}}";
   var EXT_VERSION = "{{EXT_VERSION:js}}";
+  var EVALSCRIPT_ERR = "EvalScript error.";
 
   function log(level, obj) {
     var line = "[" + EXT_ID + "@" + EXT_VERSION + "] " + level + " " +
@@ -27,18 +38,28 @@
     log(err ? "error" : "info", { probe: label, err: err, value: value });
   }
 
+  /*
+   * evalScript callback contract: single `result` string argument.
+   * Failure is signalled by the EvalScript_ErrMessage prefix, not by a
+   * separate error argument. Anything else is the script's return value
+   * serialised as a string; JSON.parse it when it looks structured.
+   */
   function runScript(label, source) {
     if (!window.csWrap) {
       setResult(label, { kind: "no_csinterface", detail: "CSInterface.js not loaded" }, null);
       return;
     }
-    csWrap.evalScript(source, function (err, raw) {
-      // evalScript callbacks receive a string; try JSON for structure.
+    csWrap.evalScript(source, function (result) {
+      var raw = (typeof result === "string") ? result : String(result);
+      if (raw.indexOf(EVALSCRIPT_ERR) === 0) {
+        setResult(label, { kind: "evalscript_error", raw: raw }, null);
+        return;
+      }
       var value = raw;
-      if (typeof raw === "string" && raw.length > 0) {
+      if (raw.length > 0) {
         try { value = JSON.parse(raw); } catch (e) { /* keep raw string */ }
       }
-      setResult(label, err, value);
+      setResult(label, null, value);
     });
   }
 
@@ -56,7 +77,8 @@
     var vBtn = document.getElementById("btn-ae-version");
     if (vBtn) {
       vBtn.addEventListener("click", function () {
-        runScript("app.version", "app.version()");
+        // app.version is an attribute (property), not a method.
+        runScript("app.version", "app.version");
       });
     }
     var eBtn = document.getElementById("btn-ae-error");
