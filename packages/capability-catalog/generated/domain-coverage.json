@@ -34,11 +34,3256 @@
       "sha256": "68a34ea225f5b3c9ad80e2eb2346bf562af49e93c5042ecbf650e97bac0dc45e"
     },
     {
+      "path": "specs/ae-capability-coverage/domains/animation-effects-render.json",
+      "sha256": "c2a8b18a26a085ce55a5bff523bf14eb86545459d464deaa84ce00a8b2edf1a9"
+    },
+    {
       "path": "specs/ae-capability-coverage/domains/project-items-comps-layers.json",
       "sha256": "a72263605f98d360f11dd0cc231a60811c67e0cb1dd020547d05091ab347c1c6"
     }
   ],
   "domains": [
+    {
+      "schema": "ae-devtools.domain-coverage/v1",
+      "domain": "animation-effects-render",
+      "issue": "https://github.com/ido-bata/ae-devtools/issues/16",
+      "title": "Properties / keyframes / expressions / text / shape / mask / effects / render queue / output / IO / menu / preferences",
+      "categories": [
+        "keyframe",
+        "mask",
+        "output",
+        "preferences",
+        "property",
+        "render-queue",
+        "shape",
+        "system",
+        "text",
+        "ui"
+      ],
+      "memberCount": 355,
+      "counts": {
+        "fr05": {
+          "documented": 355,
+          "reachable": 0,
+          "implemented": 0,
+          "automated-fake-tested": 0,
+          "verified-on-real-host": 0,
+          "unsupported-with-reason": 0,
+          "unknown": 0
+        },
+        "implementation": {
+          "none": 0,
+          "adapter-present": 0,
+          "implemented": 0,
+          "unsupported": 0,
+          "unknown": 355
+        },
+        "verification": {
+          "not-run": 355,
+          "automated-fake": 0,
+          "verified-real-host": 0
+        }
+      },
+      "members": [
+        {
+          "id": "ae.scripting.CharacterRange.characterEnd",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.characterStart",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.fillColor",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.isRangeValid",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.kerning",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.pasteFrom",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.strokeColor",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.strokeOverFill",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.text",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.CharacterRange.toString",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ComposedLineRange.characterEnd",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ComposedLineRange.characterRange",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ComposedLineRange.characterStart",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ComposedLineRange.isRangeValid",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ComposedLineRange.toString",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.designAxesData",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.designVector",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.familyName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.familyPrefix",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.fontID",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.fullName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.hasDesignAxes",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.hasGlyphsFor",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.hasSameDict",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.isFromAdobeFonts",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.isSubstitute",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.location",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.nativeFamilyName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.nativeFullName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.nativeStyleName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.otherFontsWithSameDict",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.postScriptName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.postScriptNameForDesignVector",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.styleName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.technology",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.type",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.version",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontObject.writingScripts",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.allFonts",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.favoriteFontFamilyList",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.fontServerRevision",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.fontsDuplicateByPostScriptName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.fontsWithDefaultDesignAxes",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.freezeSyncSubstitutedFonts",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.getCTScriptForString",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.getDefaultFontForCTScript",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.getFontByID",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.getFontsByFamilyNameAndStyleName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.getFontsByPostScriptName",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.missingOrSubstitutedFonts",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.mruFontFamilyList",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.pollForAndPushNonSystemFontFoldersChanges",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.setDefaultFontForCTScript",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.FontsObject.substitutedFontReplacementMatchPolicy",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.GuideOptions.color",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.GuideOptions.orientation",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.GuideOptions.pinned",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.GuideOptions.position",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.GuideOptions.positionType",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.KeyframeEase.influence",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.KeyframeEase.speed",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.chapter",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.comment",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.cuePointName",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.duration",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.eventCuePoint",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.frameTarget",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.getParameters",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.label",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.protectedRegion",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.setParameters",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MarkerValue.url",
+          "category": "keyframe",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.color",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.inverted",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.locked",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.maskFeatherFalloff",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.maskMode",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.maskMotionBlur",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.MaskPropertyGroup.rotoBezier",
+          "category": "mask",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.applyTemplate",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.file",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.getSetting",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.getSettings",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.includeSourceXMP",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.name",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.postRenderAction",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.remove",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.saveAsTemplate",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.setSetting",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.setSettings",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.OutputModule.templates",
+          "category": "output",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParagraphRange.characterEnd",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParagraphRange.characterRange",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParagraphRange.characterStart",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParagraphRange.isRangeValid",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParagraphRange.toString",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParametricMeshLayer.parametricBevelOptions",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParametricMeshLayer.parametricMeshOptions",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ParametricMeshLayer.parametricMeshType",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.deletePref",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.getPrefAsBool",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.getPrefAsFloat",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.getPrefAsLong",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.getPrefAsString",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.havePref",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.reload",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.savePrefAsBool",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.savePrefAsFloat",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.savePrefAsLong",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.savePrefAsString",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Preferences.saveToDisk",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.LayerInputStageType",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.addKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.addToMotionGraphicsTemplate",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.addToMotionGraphicsTemplateAs",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.alternateSource",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.canAddToMotionGraphicsTemplate",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.canSetAlternateSource",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.canSetExpression",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.canVaryOverTime",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.dimensionsSeparated",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.essentialPropertySource",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.expression",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.expressionEnabled",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.expressionError",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.getInputStageCycleSafeLimit",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.getSeparationFollower",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.hasMax",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.hasMin",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.inputLayerAndStage",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.isDropdownEffect",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.isInterpolationTypeValid",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.isSeparationFollower",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.isSeparationLeader",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.isSpatial",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.isTimeVarying",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyInInterpolationType",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyInSpatialTangent",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyInTemporalEase",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyLabel",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyOutInterpolationType",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyOutSpatialTangent",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyOutTemporalEase",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyRoving",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keySelected",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keySpatialAutoBezier",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keySpatialContinuous",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyTemporalAutoBezier",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyTemporalContinuous",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyTime",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.keyValue",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.layerInputStage",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.maxValue",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.minValue",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.nearestKeyIndex",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.numKeys",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.propertyIndex",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.propertyParameters",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.propertyValueType",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.removeKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.selectedKeys",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.separationDimension",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.separationLeader",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setAlternateSource",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setInputLayerAndStage",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setInterpolationTypeAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setLabelAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setLayerInputStage",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setPropertyParameters",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setRovingAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setSelectedAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setSpatialAutoBezierAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setSpatialContinuousAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setSpatialTangentsAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setTemporalAutoBezierAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setTemporalContinuousAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setTemporalEaseAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setValue",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setValueAtKey",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setValueAtTime",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.setValuesAtTimes",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.unitsText",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.value",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.valueAtTime",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Property.valueText",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.active",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.canSetEnabled",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.duplicate",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.elided",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.enabled",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.isEffect",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.isMask",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.isModified",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.matchName",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.moveTo",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.name",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.parentProperty",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.propertyDepth",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.propertyGroup",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.propertyIndex",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.propertyType",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.remove",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyBase.selected",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyGroup.addProperty",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyGroup.addVariableFontAxis",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyGroup.canAddProperty",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyGroup.numProperties",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.PropertyGroup.property",
+          "category": "property",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.canQueueInAME",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.item",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.items",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.numItems",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.pauseRendering",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.queueInAME",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.queueNotify",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.render",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.rendering",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.showWindow",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueue.stopRendering",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.applyTemplate",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.comp",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.duplicate",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.elapsedSeconds",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.getSetting",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.getSettings",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.logType",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.numOutputModules",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.onStatusChanged",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.outputModule",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.outputModules",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.queueItemNotify",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.remove",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.render",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.saveAsTemplate",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.setSetting",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.setSettings",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.skipFrames",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.startTime",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.status",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.templates",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.timeSpanDuration",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.RenderQueueItem.timeSpanStart",
+          "category": "render-queue",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Settings.getSetting",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Settings.haveSetting",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Settings.saveSetting",
+          "category": "preferences",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.closed",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherInterps",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherRadii",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherRelCornerAngles",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherRelSegLocs",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherSegLocs",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherTensions",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.featherTypes",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.inTangents",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.outTangents",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Shape.vertices",
+          "category": "shape",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.System.callSystem",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.System.machineName",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.System.osName",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.System.osVersion",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.System.userName",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.allCaps",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.applyFill",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.applyStroke",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.autoHyphenate",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.autoKernType",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.autoLeading",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.baselineDirection",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.baselineLocs",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.baselineShift",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxAutoFitPolicy",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxFirstBaselineAlignment",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxFirstBaselineAlignmentMinimum",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxInsetSpacing",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxOverflow",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxText",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxTextPos",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxTextSize",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.boxVerticalAlignment",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.characterRange",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.composedLineCharacterIndexesAt",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.composedLineCount",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.composedLineRange",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.composerEngine",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.digitSet",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.direction",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.endIndent",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.everyLineComposer",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fauxBold",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fauxItalic",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fillColor",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.firstLineIndent",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.font",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontBaselineOption",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontCapsOption",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontFamily",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontLocation",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontObject",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontSize",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.fontStyle",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.hangingRoman",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.horizontalScale",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.justification",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.kerning",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.leading",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.leadingType",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.ligature",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.lineJoinType",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.lineOrientation",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.noBreak",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.paragraphCharacterIndexesAt",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.paragraphCount",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.paragraphRange",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.pointText",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.resetCharStyle",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.resetParagraphStyle",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.smallCaps",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.spaceAfter",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.spaceBefore",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.startIndent",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.strokeColor",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.strokeOverFill",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.strokeWidth",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.subscript",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.superscript",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.text",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.tracking",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.tsume",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.TextDocument.verticalScale",
+          "category": "text",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.View.active",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.View.options",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.View.setActive",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.channels",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.checkerboards",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.exposure",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.fastPreview",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.guidesLocked",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.guidesSnap",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.guidesVisibility",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.rulers",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.ViewOptions.zoom",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Viewer.active",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Viewer.activeViewIndex",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Viewer.maximized",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Viewer.setActive",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Viewer.type",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.Viewer.views",
+          "category": "ui",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.clearOutput",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.currentFormatToTime",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.generateRandomNumber",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.getEnumAsString",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.isValid",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.timeToCurrentFormat",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.write",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        },
+        {
+          "id": "ae.scripting.global.writeLn",
+          "category": "system",
+          "implementation": "unknown",
+          "verification": "not-run",
+          "reachability": "unknown",
+          "fr05": "documented"
+        }
+      ],
+      "uncovered": [
+        "ae.scripting.CharacterRange.characterEnd",
+        "ae.scripting.CharacterRange.characterStart",
+        "ae.scripting.CharacterRange.fillColor",
+        "ae.scripting.CharacterRange.isRangeValid",
+        "ae.scripting.CharacterRange.kerning",
+        "ae.scripting.CharacterRange.pasteFrom",
+        "ae.scripting.CharacterRange.strokeColor",
+        "ae.scripting.CharacterRange.strokeOverFill",
+        "ae.scripting.CharacterRange.text",
+        "ae.scripting.CharacterRange.toString",
+        "ae.scripting.ComposedLineRange.characterEnd",
+        "ae.scripting.ComposedLineRange.characterRange",
+        "ae.scripting.ComposedLineRange.characterStart",
+        "ae.scripting.ComposedLineRange.isRangeValid",
+        "ae.scripting.ComposedLineRange.toString",
+        "ae.scripting.FontObject.designAxesData",
+        "ae.scripting.FontObject.designVector",
+        "ae.scripting.FontObject.familyName",
+        "ae.scripting.FontObject.familyPrefix",
+        "ae.scripting.FontObject.fontID",
+        "ae.scripting.FontObject.fullName",
+        "ae.scripting.FontObject.hasDesignAxes",
+        "ae.scripting.FontObject.hasGlyphsFor",
+        "ae.scripting.FontObject.hasSameDict",
+        "ae.scripting.FontObject.isFromAdobeFonts",
+        "ae.scripting.FontObject.isSubstitute",
+        "ae.scripting.FontObject.location",
+        "ae.scripting.FontObject.nativeFamilyName",
+        "ae.scripting.FontObject.nativeFullName",
+        "ae.scripting.FontObject.nativeStyleName",
+        "ae.scripting.FontObject.otherFontsWithSameDict",
+        "ae.scripting.FontObject.postScriptName",
+        "ae.scripting.FontObject.postScriptNameForDesignVector",
+        "ae.scripting.FontObject.styleName",
+        "ae.scripting.FontObject.technology",
+        "ae.scripting.FontObject.type",
+        "ae.scripting.FontObject.version",
+        "ae.scripting.FontObject.writingScripts",
+        "ae.scripting.FontsObject.allFonts",
+        "ae.scripting.FontsObject.favoriteFontFamilyList",
+        "ae.scripting.FontsObject.fontServerRevision",
+        "ae.scripting.FontsObject.fontsDuplicateByPostScriptName",
+        "ae.scripting.FontsObject.fontsWithDefaultDesignAxes",
+        "ae.scripting.FontsObject.freezeSyncSubstitutedFonts",
+        "ae.scripting.FontsObject.getCTScriptForString",
+        "ae.scripting.FontsObject.getDefaultFontForCTScript",
+        "ae.scripting.FontsObject.getFontByID",
+        "ae.scripting.FontsObject.getFontsByFamilyNameAndStyleName",
+        "ae.scripting.FontsObject.getFontsByPostScriptName",
+        "ae.scripting.FontsObject.missingOrSubstitutedFonts",
+        "ae.scripting.FontsObject.mruFontFamilyList",
+        "ae.scripting.FontsObject.pollForAndPushNonSystemFontFoldersChanges",
+        "ae.scripting.FontsObject.setDefaultFontForCTScript",
+        "ae.scripting.FontsObject.substitutedFontReplacementMatchPolicy",
+        "ae.scripting.GuideOptions.color",
+        "ae.scripting.GuideOptions.orientation",
+        "ae.scripting.GuideOptions.pinned",
+        "ae.scripting.GuideOptions.position",
+        "ae.scripting.GuideOptions.positionType",
+        "ae.scripting.KeyframeEase.influence",
+        "ae.scripting.KeyframeEase.speed",
+        "ae.scripting.MarkerValue.chapter",
+        "ae.scripting.MarkerValue.comment",
+        "ae.scripting.MarkerValue.cuePointName",
+        "ae.scripting.MarkerValue.duration",
+        "ae.scripting.MarkerValue.eventCuePoint",
+        "ae.scripting.MarkerValue.frameTarget",
+        "ae.scripting.MarkerValue.getParameters",
+        "ae.scripting.MarkerValue.label",
+        "ae.scripting.MarkerValue.protectedRegion",
+        "ae.scripting.MarkerValue.setParameters",
+        "ae.scripting.MarkerValue.url",
+        "ae.scripting.MaskPropertyGroup.color",
+        "ae.scripting.MaskPropertyGroup.inverted",
+        "ae.scripting.MaskPropertyGroup.locked",
+        "ae.scripting.MaskPropertyGroup.maskFeatherFalloff",
+        "ae.scripting.MaskPropertyGroup.maskMode",
+        "ae.scripting.MaskPropertyGroup.maskMotionBlur",
+        "ae.scripting.MaskPropertyGroup.rotoBezier",
+        "ae.scripting.OutputModule.applyTemplate",
+        "ae.scripting.OutputModule.file",
+        "ae.scripting.OutputModule.getSetting",
+        "ae.scripting.OutputModule.getSettings",
+        "ae.scripting.OutputModule.includeSourceXMP",
+        "ae.scripting.OutputModule.name",
+        "ae.scripting.OutputModule.postRenderAction",
+        "ae.scripting.OutputModule.remove",
+        "ae.scripting.OutputModule.saveAsTemplate",
+        "ae.scripting.OutputModule.setSetting",
+        "ae.scripting.OutputModule.setSettings",
+        "ae.scripting.OutputModule.templates",
+        "ae.scripting.ParagraphRange.characterEnd",
+        "ae.scripting.ParagraphRange.characterRange",
+        "ae.scripting.ParagraphRange.characterStart",
+        "ae.scripting.ParagraphRange.isRangeValid",
+        "ae.scripting.ParagraphRange.toString",
+        "ae.scripting.ParametricMeshLayer.parametricBevelOptions",
+        "ae.scripting.ParametricMeshLayer.parametricMeshOptions",
+        "ae.scripting.ParametricMeshLayer.parametricMeshType",
+        "ae.scripting.Preferences.deletePref",
+        "ae.scripting.Preferences.getPrefAsBool",
+        "ae.scripting.Preferences.getPrefAsFloat",
+        "ae.scripting.Preferences.getPrefAsLong",
+        "ae.scripting.Preferences.getPrefAsString",
+        "ae.scripting.Preferences.havePref",
+        "ae.scripting.Preferences.reload",
+        "ae.scripting.Preferences.savePrefAsBool",
+        "ae.scripting.Preferences.savePrefAsFloat",
+        "ae.scripting.Preferences.savePrefAsLong",
+        "ae.scripting.Preferences.savePrefAsString",
+        "ae.scripting.Preferences.saveToDisk",
+        "ae.scripting.Property.LayerInputStageType",
+        "ae.scripting.Property.addKey",
+        "ae.scripting.Property.addToMotionGraphicsTemplate",
+        "ae.scripting.Property.addToMotionGraphicsTemplateAs",
+        "ae.scripting.Property.alternateSource",
+        "ae.scripting.Property.canAddToMotionGraphicsTemplate",
+        "ae.scripting.Property.canSetAlternateSource",
+        "ae.scripting.Property.canSetExpression",
+        "ae.scripting.Property.canVaryOverTime",
+        "ae.scripting.Property.dimensionsSeparated",
+        "ae.scripting.Property.essentialPropertySource",
+        "ae.scripting.Property.expression",
+        "ae.scripting.Property.expressionEnabled",
+        "ae.scripting.Property.expressionError",
+        "ae.scripting.Property.getInputStageCycleSafeLimit",
+        "ae.scripting.Property.getSeparationFollower",
+        "ae.scripting.Property.hasMax",
+        "ae.scripting.Property.hasMin",
+        "ae.scripting.Property.inputLayerAndStage",
+        "ae.scripting.Property.isDropdownEffect",
+        "ae.scripting.Property.isInterpolationTypeValid",
+        "ae.scripting.Property.isSeparationFollower",
+        "ae.scripting.Property.isSeparationLeader",
+        "ae.scripting.Property.isSpatial",
+        "ae.scripting.Property.isTimeVarying",
+        "ae.scripting.Property.keyInInterpolationType",
+        "ae.scripting.Property.keyInSpatialTangent",
+        "ae.scripting.Property.keyInTemporalEase",
+        "ae.scripting.Property.keyLabel",
+        "ae.scripting.Property.keyOutInterpolationType",
+        "ae.scripting.Property.keyOutSpatialTangent",
+        "ae.scripting.Property.keyOutTemporalEase",
+        "ae.scripting.Property.keyRoving",
+        "ae.scripting.Property.keySelected",
+        "ae.scripting.Property.keySpatialAutoBezier",
+        "ae.scripting.Property.keySpatialContinuous",
+        "ae.scripting.Property.keyTemporalAutoBezier",
+        "ae.scripting.Property.keyTemporalContinuous",
+        "ae.scripting.Property.keyTime",
+        "ae.scripting.Property.keyValue",
+        "ae.scripting.Property.layerInputStage",
+        "ae.scripting.Property.maxValue",
+        "ae.scripting.Property.minValue",
+        "ae.scripting.Property.nearestKeyIndex",
+        "ae.scripting.Property.numKeys",
+        "ae.scripting.Property.propertyIndex",
+        "ae.scripting.Property.propertyParameters",
+        "ae.scripting.Property.propertyValueType",
+        "ae.scripting.Property.removeKey",
+        "ae.scripting.Property.selectedKeys",
+        "ae.scripting.Property.separationDimension",
+        "ae.scripting.Property.separationLeader",
+        "ae.scripting.Property.setAlternateSource",
+        "ae.scripting.Property.setInputLayerAndStage",
+        "ae.scripting.Property.setInterpolationTypeAtKey",
+        "ae.scripting.Property.setLabelAtKey",
+        "ae.scripting.Property.setLayerInputStage",
+        "ae.scripting.Property.setPropertyParameters",
+        "ae.scripting.Property.setRovingAtKey",
+        "ae.scripting.Property.setSelectedAtKey",
+        "ae.scripting.Property.setSpatialAutoBezierAtKey",
+        "ae.scripting.Property.setSpatialContinuousAtKey",
+        "ae.scripting.Property.setSpatialTangentsAtKey",
+        "ae.scripting.Property.setTemporalAutoBezierAtKey",
+        "ae.scripting.Property.setTemporalContinuousAtKey",
+        "ae.scripting.Property.setTemporalEaseAtKey",
+        "ae.scripting.Property.setValue",
+        "ae.scripting.Property.setValueAtKey",
+        "ae.scripting.Property.setValueAtTime",
+        "ae.scripting.Property.setValuesAtTimes",
+        "ae.scripting.Property.unitsText",
+        "ae.scripting.Property.value",
+        "ae.scripting.Property.valueAtTime",
+        "ae.scripting.Property.valueText",
+        "ae.scripting.PropertyBase.active",
+        "ae.scripting.PropertyBase.canSetEnabled",
+        "ae.scripting.PropertyBase.duplicate",
+        "ae.scripting.PropertyBase.elided",
+        "ae.scripting.PropertyBase.enabled",
+        "ae.scripting.PropertyBase.isEffect",
+        "ae.scripting.PropertyBase.isMask",
+        "ae.scripting.PropertyBase.isModified",
+        "ae.scripting.PropertyBase.matchName",
+        "ae.scripting.PropertyBase.moveTo",
+        "ae.scripting.PropertyBase.name",
+        "ae.scripting.PropertyBase.parentProperty",
+        "ae.scripting.PropertyBase.propertyDepth",
+        "ae.scripting.PropertyBase.propertyGroup",
+        "ae.scripting.PropertyBase.propertyIndex",
+        "ae.scripting.PropertyBase.propertyType",
+        "ae.scripting.PropertyBase.remove",
+        "ae.scripting.PropertyBase.selected",
+        "ae.scripting.PropertyGroup.addProperty",
+        "ae.scripting.PropertyGroup.addVariableFontAxis",
+        "ae.scripting.PropertyGroup.canAddProperty",
+        "ae.scripting.PropertyGroup.numProperties",
+        "ae.scripting.PropertyGroup.property",
+        "ae.scripting.RenderQueue.canQueueInAME",
+        "ae.scripting.RenderQueue.item",
+        "ae.scripting.RenderQueue.items",
+        "ae.scripting.RenderQueue.numItems",
+        "ae.scripting.RenderQueue.pauseRendering",
+        "ae.scripting.RenderQueue.queueInAME",
+        "ae.scripting.RenderQueue.queueNotify",
+        "ae.scripting.RenderQueue.render",
+        "ae.scripting.RenderQueue.rendering",
+        "ae.scripting.RenderQueue.showWindow",
+        "ae.scripting.RenderQueue.stopRendering",
+        "ae.scripting.RenderQueueItem.applyTemplate",
+        "ae.scripting.RenderQueueItem.comp",
+        "ae.scripting.RenderQueueItem.duplicate",
+        "ae.scripting.RenderQueueItem.elapsedSeconds",
+        "ae.scripting.RenderQueueItem.getSetting",
+        "ae.scripting.RenderQueueItem.getSettings",
+        "ae.scripting.RenderQueueItem.logType",
+        "ae.scripting.RenderQueueItem.numOutputModules",
+        "ae.scripting.RenderQueueItem.onStatusChanged",
+        "ae.scripting.RenderQueueItem.outputModule",
+        "ae.scripting.RenderQueueItem.outputModules",
+        "ae.scripting.RenderQueueItem.queueItemNotify",
+        "ae.scripting.RenderQueueItem.remove",
+        "ae.scripting.RenderQueueItem.render",
+        "ae.scripting.RenderQueueItem.saveAsTemplate",
+        "ae.scripting.RenderQueueItem.setSetting",
+        "ae.scripting.RenderQueueItem.setSettings",
+        "ae.scripting.RenderQueueItem.skipFrames",
+        "ae.scripting.RenderQueueItem.startTime",
+        "ae.scripting.RenderQueueItem.status",
+        "ae.scripting.RenderQueueItem.templates",
+        "ae.scripting.RenderQueueItem.timeSpanDuration",
+        "ae.scripting.RenderQueueItem.timeSpanStart",
+        "ae.scripting.Settings.getSetting",
+        "ae.scripting.Settings.haveSetting",
+        "ae.scripting.Settings.saveSetting",
+        "ae.scripting.Shape.closed",
+        "ae.scripting.Shape.featherInterps",
+        "ae.scripting.Shape.featherRadii",
+        "ae.scripting.Shape.featherRelCornerAngles",
+        "ae.scripting.Shape.featherRelSegLocs",
+        "ae.scripting.Shape.featherSegLocs",
+        "ae.scripting.Shape.featherTensions",
+        "ae.scripting.Shape.featherTypes",
+        "ae.scripting.Shape.inTangents",
+        "ae.scripting.Shape.outTangents",
+        "ae.scripting.Shape.vertices",
+        "ae.scripting.System.callSystem",
+        "ae.scripting.System.machineName",
+        "ae.scripting.System.osName",
+        "ae.scripting.System.osVersion",
+        "ae.scripting.System.userName",
+        "ae.scripting.TextDocument.allCaps",
+        "ae.scripting.TextDocument.applyFill",
+        "ae.scripting.TextDocument.applyStroke",
+        "ae.scripting.TextDocument.autoHyphenate",
+        "ae.scripting.TextDocument.autoKernType",
+        "ae.scripting.TextDocument.autoLeading",
+        "ae.scripting.TextDocument.baselineDirection",
+        "ae.scripting.TextDocument.baselineLocs",
+        "ae.scripting.TextDocument.baselineShift",
+        "ae.scripting.TextDocument.boxAutoFitPolicy",
+        "ae.scripting.TextDocument.boxFirstBaselineAlignment",
+        "ae.scripting.TextDocument.boxFirstBaselineAlignmentMinimum",
+        "ae.scripting.TextDocument.boxInsetSpacing",
+        "ae.scripting.TextDocument.boxOverflow",
+        "ae.scripting.TextDocument.boxText",
+        "ae.scripting.TextDocument.boxTextPos",
+        "ae.scripting.TextDocument.boxTextSize",
+        "ae.scripting.TextDocument.boxVerticalAlignment",
+        "ae.scripting.TextDocument.characterRange",
+        "ae.scripting.TextDocument.composedLineCharacterIndexesAt",
+        "ae.scripting.TextDocument.composedLineCount",
+        "ae.scripting.TextDocument.composedLineRange",
+        "ae.scripting.TextDocument.composerEngine",
+        "ae.scripting.TextDocument.digitSet",
+        "ae.scripting.TextDocument.direction",
+        "ae.scripting.TextDocument.endIndent",
+        "ae.scripting.TextDocument.everyLineComposer",
+        "ae.scripting.TextDocument.fauxBold",
+        "ae.scripting.TextDocument.fauxItalic",
+        "ae.scripting.TextDocument.fillColor",
+        "ae.scripting.TextDocument.firstLineIndent",
+        "ae.scripting.TextDocument.font",
+        "ae.scripting.TextDocument.fontBaselineOption",
+        "ae.scripting.TextDocument.fontCapsOption",
+        "ae.scripting.TextDocument.fontFamily",
+        "ae.scripting.TextDocument.fontLocation",
+        "ae.scripting.TextDocument.fontObject",
+        "ae.scripting.TextDocument.fontSize",
+        "ae.scripting.TextDocument.fontStyle",
+        "ae.scripting.TextDocument.hangingRoman",
+        "ae.scripting.TextDocument.horizontalScale",
+        "ae.scripting.TextDocument.justification",
+        "ae.scripting.TextDocument.kerning",
+        "ae.scripting.TextDocument.leading",
+        "ae.scripting.TextDocument.leadingType",
+        "ae.scripting.TextDocument.ligature",
+        "ae.scripting.TextDocument.lineJoinType",
+        "ae.scripting.TextDocument.lineOrientation",
+        "ae.scripting.TextDocument.noBreak",
+        "ae.scripting.TextDocument.paragraphCharacterIndexesAt",
+        "ae.scripting.TextDocument.paragraphCount",
+        "ae.scripting.TextDocument.paragraphRange",
+        "ae.scripting.TextDocument.pointText",
+        "ae.scripting.TextDocument.resetCharStyle",
+        "ae.scripting.TextDocument.resetParagraphStyle",
+        "ae.scripting.TextDocument.smallCaps",
+        "ae.scripting.TextDocument.spaceAfter",
+        "ae.scripting.TextDocument.spaceBefore",
+        "ae.scripting.TextDocument.startIndent",
+        "ae.scripting.TextDocument.strokeColor",
+        "ae.scripting.TextDocument.strokeOverFill",
+        "ae.scripting.TextDocument.strokeWidth",
+        "ae.scripting.TextDocument.subscript",
+        "ae.scripting.TextDocument.superscript",
+        "ae.scripting.TextDocument.text",
+        "ae.scripting.TextDocument.tracking",
+        "ae.scripting.TextDocument.tsume",
+        "ae.scripting.TextDocument.verticalScale",
+        "ae.scripting.View.active",
+        "ae.scripting.View.options",
+        "ae.scripting.View.setActive",
+        "ae.scripting.ViewOptions.channels",
+        "ae.scripting.ViewOptions.checkerboards",
+        "ae.scripting.ViewOptions.exposure",
+        "ae.scripting.ViewOptions.fastPreview",
+        "ae.scripting.ViewOptions.guidesLocked",
+        "ae.scripting.ViewOptions.guidesSnap",
+        "ae.scripting.ViewOptions.guidesVisibility",
+        "ae.scripting.ViewOptions.rulers",
+        "ae.scripting.ViewOptions.zoom",
+        "ae.scripting.Viewer.active",
+        "ae.scripting.Viewer.activeViewIndex",
+        "ae.scripting.Viewer.maximized",
+        "ae.scripting.Viewer.setActive",
+        "ae.scripting.Viewer.type",
+        "ae.scripting.Viewer.views",
+        "ae.scripting.global.clearOutput",
+        "ae.scripting.global.currentFormatToTime",
+        "ae.scripting.global.generateRandomNumber",
+        "ae.scripting.global.getEnumAsString",
+        "ae.scripting.global.isValid",
+        "ae.scripting.global.timeToCurrentFormat",
+        "ae.scripting.global.write",
+        "ae.scripting.global.writeLn"
+      ]
+    },
     {
       "schema": "ae-devtools.domain-coverage/v1",
       "domain": "project-items-comps-layers",
@@ -2424,1394 +5669,6 @@
   ],
   "unassigned": [
     {
-      "id": "ae.scripting.CharacterRange.characterEnd",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.characterStart",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.fillColor",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.isRangeValid",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.kerning",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.pasteFrom",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.strokeColor",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.strokeOverFill",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.text",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.CharacterRange.toString",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ComposedLineRange.characterEnd",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ComposedLineRange.characterRange",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ComposedLineRange.characterStart",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ComposedLineRange.isRangeValid",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ComposedLineRange.toString",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.designAxesData",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.designVector",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.familyName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.familyPrefix",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.fontID",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.fullName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.hasDesignAxes",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.hasGlyphsFor",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.hasSameDict",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.isFromAdobeFonts",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.isSubstitute",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.location",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.nativeFamilyName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.nativeFullName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.nativeStyleName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.otherFontsWithSameDict",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.postScriptName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.postScriptNameForDesignVector",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.styleName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.technology",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.type",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.version",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontObject.writingScripts",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.allFonts",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.favoriteFontFamilyList",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.fontServerRevision",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.fontsDuplicateByPostScriptName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.fontsWithDefaultDesignAxes",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.freezeSyncSubstitutedFonts",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.getCTScriptForString",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.getDefaultFontForCTScript",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.getFontByID",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.getFontsByFamilyNameAndStyleName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.getFontsByPostScriptName",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.missingOrSubstitutedFonts",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.mruFontFamilyList",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.pollForAndPushNonSystemFontFoldersChanges",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.setDefaultFontForCTScript",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.FontsObject.substitutedFontReplacementMatchPolicy",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.GuideOptions.color",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.GuideOptions.orientation",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.GuideOptions.pinned",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.GuideOptions.position",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.GuideOptions.positionType",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.KeyframeEase.influence",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.KeyframeEase.speed",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.chapter",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.comment",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.cuePointName",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.duration",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.eventCuePoint",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.frameTarget",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.getParameters",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.label",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.protectedRegion",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.setParameters",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MarkerValue.url",
-      "category": "keyframe"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.color",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.inverted",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.locked",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.maskFeatherFalloff",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.maskMode",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.maskMotionBlur",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.MaskPropertyGroup.rotoBezier",
-      "category": "mask"
-    },
-    {
-      "id": "ae.scripting.OutputModule.applyTemplate",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.file",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.getSetting",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.getSettings",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.includeSourceXMP",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.name",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.postRenderAction",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.remove",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.saveAsTemplate",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.setSetting",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.setSettings",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.OutputModule.templates",
-      "category": "output"
-    },
-    {
-      "id": "ae.scripting.ParagraphRange.characterEnd",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ParagraphRange.characterRange",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ParagraphRange.characterStart",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ParagraphRange.isRangeValid",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ParagraphRange.toString",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.ParametricMeshLayer.parametricBevelOptions",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.ParametricMeshLayer.parametricMeshOptions",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.ParametricMeshLayer.parametricMeshType",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Preferences.deletePref",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.getPrefAsBool",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.getPrefAsFloat",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.getPrefAsLong",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.getPrefAsString",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.havePref",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.reload",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.savePrefAsBool",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.savePrefAsFloat",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.savePrefAsLong",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.savePrefAsString",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Preferences.saveToDisk",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Property.LayerInputStageType",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.addKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.addToMotionGraphicsTemplate",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.addToMotionGraphicsTemplateAs",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.alternateSource",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.canAddToMotionGraphicsTemplate",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.canSetAlternateSource",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.canSetExpression",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.canVaryOverTime",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.dimensionsSeparated",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.essentialPropertySource",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.expression",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.expressionEnabled",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.expressionError",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.getInputStageCycleSafeLimit",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.getSeparationFollower",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.hasMax",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.hasMin",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.inputLayerAndStage",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.isDropdownEffect",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.isInterpolationTypeValid",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.isSeparationFollower",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.isSeparationLeader",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.isSpatial",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.isTimeVarying",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyInInterpolationType",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyInSpatialTangent",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyInTemporalEase",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyLabel",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyOutInterpolationType",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyOutSpatialTangent",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyOutTemporalEase",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyRoving",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keySelected",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keySpatialAutoBezier",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keySpatialContinuous",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyTemporalAutoBezier",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyTemporalContinuous",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyTime",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.keyValue",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.layerInputStage",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.maxValue",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.minValue",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.nearestKeyIndex",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.numKeys",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.propertyIndex",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.propertyParameters",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.propertyValueType",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.removeKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.selectedKeys",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.separationDimension",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.separationLeader",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setAlternateSource",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setInputLayerAndStage",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setInterpolationTypeAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setLabelAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setLayerInputStage",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setPropertyParameters",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setRovingAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setSelectedAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setSpatialAutoBezierAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setSpatialContinuousAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setSpatialTangentsAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setTemporalAutoBezierAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setTemporalContinuousAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setTemporalEaseAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setValue",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setValueAtKey",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setValueAtTime",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.setValuesAtTimes",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.unitsText",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.value",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.valueAtTime",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.Property.valueText",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.active",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.canSetEnabled",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.duplicate",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.elided",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.enabled",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.isEffect",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.isMask",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.isModified",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.matchName",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.moveTo",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.name",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.parentProperty",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.propertyDepth",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.propertyGroup",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.propertyIndex",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.propertyType",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.remove",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyBase.selected",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyGroup.addProperty",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyGroup.addVariableFontAxis",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyGroup.canAddProperty",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyGroup.numProperties",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.PropertyGroup.property",
-      "category": "property"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.canQueueInAME",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.item",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.items",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.numItems",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.pauseRendering",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.queueInAME",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.queueNotify",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.render",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.rendering",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.showWindow",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueue.stopRendering",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.applyTemplate",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.comp",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.duplicate",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.elapsedSeconds",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.getSetting",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.getSettings",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.logType",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.numOutputModules",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.onStatusChanged",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.outputModule",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.outputModules",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.queueItemNotify",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.remove",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.render",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.saveAsTemplate",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.setSetting",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.setSettings",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.skipFrames",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.startTime",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.status",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.templates",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.timeSpanDuration",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.RenderQueueItem.timeSpanStart",
-      "category": "render-queue"
-    },
-    {
-      "id": "ae.scripting.Settings.getSetting",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Settings.haveSetting",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Settings.saveSetting",
-      "category": "preferences"
-    },
-    {
-      "id": "ae.scripting.Shape.closed",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherInterps",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherRadii",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherRelCornerAngles",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherRelSegLocs",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherSegLocs",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherTensions",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.featherTypes",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.inTangents",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.outTangents",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.Shape.vertices",
-      "category": "shape"
-    },
-    {
-      "id": "ae.scripting.System.callSystem",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.System.machineName",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.System.osName",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.System.osVersion",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.System.userName",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.TextDocument.allCaps",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.applyFill",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.applyStroke",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.autoHyphenate",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.autoKernType",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.autoLeading",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.baselineDirection",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.baselineLocs",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.baselineShift",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxAutoFitPolicy",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxFirstBaselineAlignment",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxFirstBaselineAlignmentMinimum",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxInsetSpacing",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxOverflow",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxText",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxTextPos",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxTextSize",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.boxVerticalAlignment",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.characterRange",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.composedLineCharacterIndexesAt",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.composedLineCount",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.composedLineRange",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.composerEngine",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.digitSet",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.direction",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.endIndent",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.everyLineComposer",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fauxBold",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fauxItalic",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fillColor",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.firstLineIndent",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.font",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontBaselineOption",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontCapsOption",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontFamily",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontLocation",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontObject",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontSize",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.fontStyle",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.hangingRoman",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.horizontalScale",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.justification",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.kerning",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.leading",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.leadingType",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.ligature",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.lineJoinType",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.lineOrientation",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.noBreak",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.paragraphCharacterIndexesAt",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.paragraphCount",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.paragraphRange",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.pointText",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.resetCharStyle",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.resetParagraphStyle",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.smallCaps",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.spaceAfter",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.spaceBefore",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.startIndent",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.strokeColor",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.strokeOverFill",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.strokeWidth",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.subscript",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.superscript",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.text",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.tracking",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.tsume",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.TextDocument.verticalScale",
-      "category": "text"
-    },
-    {
-      "id": "ae.scripting.View.active",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.View.options",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.View.setActive",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.channels",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.checkerboards",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.exposure",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.fastPreview",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.guidesLocked",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.guidesSnap",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.guidesVisibility",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.rulers",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.ViewOptions.zoom",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.Viewer.active",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.Viewer.activeViewIndex",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.Viewer.maximized",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.Viewer.setActive",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.Viewer.type",
-      "category": "ui"
-    },
-    {
-      "id": "ae.scripting.Viewer.views",
-      "category": "ui"
-    },
-    {
       "id": "ae.scripting.app.activate",
       "category": "application"
     },
@@ -3974,38 +5831,6 @@
     {
       "id": "ae.scripting.app.watchFolder",
       "category": "application"
-    },
-    {
-      "id": "ae.scripting.global.clearOutput",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.currentFormatToTime",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.generateRandomNumber",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.getEnumAsString",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.isValid",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.timeToCurrentFormat",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.write",
-      "category": "system"
-    },
-    {
-      "id": "ae.scripting.global.writeLn",
-      "category": "system"
     }
   ]
 }
