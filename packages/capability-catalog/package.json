@@ -11,7 +11,8 @@
     "verify": "bun run scripts/verify.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
-    "discover": "bun run scripts/discover.ts"
+    "discover": "bun run scripts/discover.ts",
+    "domain-coverage": "bun run scripts/domain-coverage.ts"
   },
   "devDependencies": {
     "bun-types": "^1.4.4",
