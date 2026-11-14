@@ -84,3 +84,24 @@ jobs:
           node-version: "22"
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/trusted-execution/tests/run.mjs
+
+  diagnostics:
+    name: diagnostics (node:test, record schema fake-level)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect suite
+        id: detect
+        run: |
+          if [ -f experiments/diagnostics/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "experiments/diagnostics not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/diagnostics/tests/run.mjs
