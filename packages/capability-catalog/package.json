@@ -1,0 +1,21 @@
+{
+  "name": "@ae-devtools/capability-catalog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Capability ID grammar, manifest generation, coverage/drift gates and versioned handshake for ae-devtools (Issue #11, CAP013-016).",
+  "scripts": {
+    "generate": "bun run scripts/generate.ts",
+    "gate": "bun run scripts/gate.ts",
+    "report": "bun run scripts/report.ts",
+    "verify": "bun run scripts/verify.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "discover": "bun run scripts/discover.ts",
+    "domain-coverage": "bun run scripts/domain-coverage.ts"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.4",
+    "typescript": "^5.9.3"
+  }
+}

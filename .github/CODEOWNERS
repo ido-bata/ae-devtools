@@ -1,0 +1,38 @@
+# CODEOWNERS
+# ガバナンス経路の所有者。Ruleset / branch protection と組合せ、
+# ADR-0012 / ADR-0003 で要求される review / approval の anchor を構成する。
+#
+# 編集の前に:
+# 1. AGENTS.md §10–§17 を読み直す（governance skeleton）
+# 2. docs/architecture/decisions/ で当該領域 ADR を確認する
+# 3. 変更が対応する Issue に紐付いているかを Draft PR 作成前に確認する
+
+# Default owners (project-wide) — Repository owner / initial gate.
+# Change this when the repository adopts a second owner.
+*                     @rebuildup
+
+# Governance documents require a tracker + ADR cross-reference
+/AGENTS.md            @rebuildup
+/docs/                @rebuildup
+/adr/                 @rebuildup
+
+# Architecture / ADR / research
+/docs/architecture/   @rebuildup
+/docs/architecture/decisions/ @rebuildup
+/docs/architecture/research/  @rebuildup
+
+# Skill specs (canonical skill input)
+/skills/              @rebuildup
+
+# CI / GitHub configuration
+/.github/workflows/   @rebuildup
+/.github/CODEOWNERS   @rebuildup
+
+# Experiments — runtime bridge probes are security-sensitive (loopback only
+# token), so they belong with the repository owner.
+/experiments/         @rebuildup
+
+# Notes for future expansion:
+# - When the project adopts a second human owner, add a second column.
+# - When CODEOWNERS is used by branch protection (require review from Code Owners),
+#   ADR-0012 continues to require explicit human authorization for release PR merge.

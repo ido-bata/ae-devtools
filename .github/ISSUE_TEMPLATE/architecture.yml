@@ -1,0 +1,84 @@
+name: Architecture
+description: ガバナンス骨格（release / recovery / quality / branch / SoT 等）への変更提案
+title: "[Architecture]: "
+labels: ["architecture"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Architecture change proposal
+        release sprint cadence / branch naming / Draft PR lifecycle / recovery model /
+        quality profile / external side effect 境界 / SoT 分離など **ガバナンス骨格** に
+        関わる変更提案はここで受け付け、 関連 ADR amendment を伴って扱います。
+
+        **affecting 領域** を Issue body で明示し、 ADR / doc の pointer と整合させてください。
+
+  - type: dropdown
+    id: governance-area
+    attributes:
+      label: "Governance area"
+      description: "変更が主に関わる領域"
+      options:
+        - "release / sprint / branch model (ADR-0003)"
+        - "durable checkpoint / recovery model (ADR-0004)"
+        - "release merge authorization (ADR-0012)"
+        - "Linear release control plane (ADR-0014)"
+        - "Agent Skill taxonomy / dispatch"
+        - "SoT separation (Issues / Projects / Linear / Git / ADR)"
+        - "Quality profile / verification taxonomy"
+        - "Security profile / advisory intake"
+        - "Other architecture decision"
+    validations:
+      required: true
+
+  - type: input
+    id: related-adrs
+    attributes:
+      label: "Related ADRs"
+      description: "ADR-NNNN をスペース区切りで列挙してください（例: `ADR-0003 ADR-0012`）"
+      placeholder: "ADR-NNNN"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Context"
+      description: "現状のガバナンス制約と、なぜ変更が必要か"
+    validations:
+      required: true
+
+  - type: textarea
+    id: decision
+    attributes:
+      label: "Proposed decision"
+      description: "提案する決定 / 採用案"
+    validations:
+      required: true
+
+  - type: textarea
+    id: consequences
+    attributes:
+      label: "Consequences"
+      description: "Positive / Negative / Neutral へのインパクト"
+    validations:
+      required: true
+
+  - type: textarea
+    id: migration
+    attributes:
+      label: "Migration / staged rollout"
+      description: "段階的導入計画 / 互換性 / 撤回条件"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: governance-checks
+    attributes:
+      label: "Governance checks"
+      options:
+        - label: "AGENTS.md §11 (decision precedence) の sequence を意識している
+        - label: "本 Issue と対応する ADR amendment branch を前以て切らない（Issue 経由で切ります）
+        - label: "ADR-0012 の merge 境界を守る：release PR merge は explicit user authorization を要求する

@@ -1,0 +1,70 @@
+name: Bug
+description: 既存実装 / 仕様 / probe / docs における障害報告
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug report
+        このテンプレートは既存実装 / 仕様 / probe / docs の **障害** 報告用です。
+        仕様変更の議論は `feature.yml`、アーキテクチャ変更は `architecture.yml` を使用してください。
+
+  - type: input
+    id: target-version
+    attributes:
+      label: "Target release (when known)"
+      description: "修正を取り込みたい sprint / release branch 例: `release-0-1-0`. 未定なら空のまま提出してください。"
+      placeholder: "release-x-y-z"
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "AE バージョン / CEP / UXP / ExtendScript / OS / runtime の組合せ"
+      placeholder: "AE 26.x, CEP 12, macOS 14"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: "Repro steps"
+      description: "再現手順。ExtendScript / panel / MCP / サーバ経路を区別して書いてください。"
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected / Actual"
+      description: "期待する挙動と実際の挙動"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope-impact
+    attributes:
+      label: "Scope / Impact"
+      description: "影響範囲 / 緊急度 / workaround"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: governance-checks
+    attributes:
+      label: "Governance checks"
+      description: "提出前に確認する項目"
+      options:
+        - label: "本 Issue は AGENTS.md §1「ビジョン未確定を勝手に固定しない」を尊重している
+        - label: "AGENTS.md §10 の branch naming 規約（`<issue-number>` のみ）に沿う branch 名を後続 PR で使う予定
+        - label: "Draft PR を first meaningful commit 直後に作成する運用に従う予定
+        - label: "本 Issue を完了条件 clear まで進める前に、 review conversation / Draft PR / remote head を必ず保持する

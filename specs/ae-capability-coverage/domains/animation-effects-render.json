@@ -1,0 +1,8 @@
+{
+  "schema": "ae-devtools.domain-coverage/v1",
+  "domain": "animation-effects-render",
+  "issue": "https://github.com/ido-bata/ae-devtools/issues/16",
+  "title": "Properties / keyframes / expressions / text / shape / mask / effects / render queue / output / IO / menu / preferences",
+  "categories": ["property", "keyframe", "text", "shape", "mask", "render-queue", "output", "preferences", "ui", "system"],
+  "notes": "CAP033-CAP036 scope. Effect/plugin parameter coverage rides on the 'property' category plus the native side tracked by #17/#18 — there is no separate 'effect' category in the current inventory. 'application' (app.*), 'project'/'item'/'comp'/'layer'/'collection'/'source' belong to the #15 domain. 'system' is included for CAP035 file/IO surface; System.callSystem-class entries keep their own risk.trust and are never auto-executable."
+}

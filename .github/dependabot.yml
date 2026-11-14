@@ -1,0 +1,41 @@
+# dependabot.yml
+# AGENTS.md §16 に従い、 package manager は Bun を standard とする一方、
+# Node.js / npm 環境では npm / npx を許容する。本ファイルは public repository
+# における dependency advisory intake の自動経路として設定する。
+
+version: 2
+
+updates:
+  # JavaScript / TypeScript (Bun + npm 互換 manifest) ── apps / packages /
+  # 将来追加される workspace。 package.json を含むすべての path を対象とする。
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps(dev)"
+      include: "scope"
+
+  # GitHub Actions（CI / scheduled job / release source check 等） dependency
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+
+# 重要: AGENTS.md §12 の security advisory intake 経路と整合させる。
+# dependabot alert 情報は docs/security.md §security-advisory-intake の
+# priority model を経由して GitHub Issue に変換し、target release を割り当てる。

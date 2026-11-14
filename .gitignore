@@ -1,12 +1,5 @@
-# OS
-.DS_Store
-Thumbs.db
+# temporary probe channels created during local runs
+experiments/read-only-probe/.tmp-test-chan/
 
-# Editors / IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Logs
-*.log
+# package manager dependencies
+node_modules/

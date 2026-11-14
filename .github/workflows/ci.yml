@@ -1,0 +1,86 @@
+name: ci
+
+# Automated verification for ticket PRs. The only other workflow
+# (release-source-check.yml) fires on PRs into `main`; ticket PRs target
+# release-x-y-z branches and previously ran no checks at all.
+#
+# Each job detects whether its surface exists on the head tree and skips
+# cleanly when it does not, so the same file serves every ticket branch.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  capability-catalog:
+    name: capability-catalog (bun test / typecheck / verify)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect package
+        id: detect
+        run: |
+          if [ -f packages/capability-catalog/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "packages/capability-catalog not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: oven-sh/setup-bun@v2
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bun install --frozen-lockfile
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bun test
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bunx tsc --noEmit
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bun run verify
+
+  read-only-probe:
+    name: read-only-probe (node:test, fake responder)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect probe
+        id: detect
+        run: |
+          if [ -f experiments/read-only-probe/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "experiments/read-only-probe not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/read-only-probe/tests/run.mjs
+
+  trusted-execution:
+    name: trusted-execution (node:test, codec fake-level)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect suite
+        id: detect
+        run: |
+          if [ -f experiments/trusted-execution/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "experiments/trusted-execution not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/trusted-execution/tests/run.mjs
