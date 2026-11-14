@@ -33,6 +33,7 @@ unaffected.
 ```
 experiments/native-sdk/
 ├── README.md            # this file
+├── LOAD-PROOF.md        # gated procedure + fixtures + verification conditions for real-AE load proof
 ├── build-macos.sh       # xcodebuild probe: Sweetie (AEGP) + Checkout (Effect)
 ├── EVIDENCE.md          # build log summary + blocker list
 └── build/               # gitignored output (logs + derived data)
