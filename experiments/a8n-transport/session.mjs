@@ -29,10 +29,8 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-
-import { AfterEffects } from "@ido-bata/ae-a8n";
 
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
 import { createA8nTransport } from "./transport.mjs";
@@ -41,27 +39,48 @@ const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXTENSION_MODULE = join(HERE, "extension.mjs");
 
-async function aeA8nBin() {
-  // Resolve the CLI shipped by the pinned dependency rather than relying on
-  // PATH: `npm exec`/`npx` resolution differs across environments.
+/**
+ * Resolve the ae-a8n API + CLI. Default: the pinned npm dependency.
+ * `aeA8nRoot` points at a local checkout's `dist/` build instead — used to
+ * exercise unreleased fixes (e.g. ae-a8n#103) before they are published;
+ * the evidence record carries the root so the run is never mistaken for a
+ * released-package verification.
+ */
+async function loadAeA8n(aeA8nRoot) {
+  if (typeof aeA8nRoot === "string" && aeA8nRoot.length > 0) {
+    const indexUrl = pathToFileURL(join(aeA8nRoot, "dist", "index.js")).href;
+    const mod = await import(indexUrl);
+    return {
+      AfterEffects: mod.AfterEffects,
+      cliPath: join(aeA8nRoot, "dist", "cli.js"),
+      source: `local:${aeA8nRoot}`,
+    };
+  }
   const { createRequire } = await import("node:module");
   const require = createRequire(import.meta.url);
-  const pkgPath = require.resolve("@ido-bata/ae-a8n/package.json");
-  const { join: j } = await import("node:path");
-  return j(dirname(pkgPath), "dist", "cli.js");
+  const { AfterEffects } = await import("@ido-bata/ae-a8n");
+  const entry = require.resolve("@ido-bata/ae-a8n");
+  return {
+    AfterEffects,
+    // dist/index.js and dist/cli.js are siblings.
+    cliPath: join(dirname(entry), "cli.js"),
+    source: "npm:@ido-bata/ae-a8n",
+  };
 }
 
 /**
  * @param {object} options
  *   installDir     — forwarded to AfterEffects.launch (pin an AE install)
+ *   aeA8nRoot      — local ae-a8n checkout root with a built dist/; overrides
+ *                    the pinned npm dependency (recorded in evidence)
  *   callTimeoutMs  — per-dispatch ae.call budget (default 9500)
  *   deadlineMs     — runner deadline (default 10000; keep > callTimeoutMs)
  *   workdir        — scratch dir for the generated host script (default: tmp)
  */
 export async function openSliceSession(options = {}) {
+  const { AfterEffects, cliPath, source: aeA8nSource } = await loadAeA8n(options.aeA8nRoot);
   const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-transport-"));
   const hostScriptPath = join(workdir, "a8n-host-ext.js");
-  const cliPath = await aeA8nBin();
   await execFileAsync(process.execPath, [
     cliPath, "extension", "build",
     "--extension", EXTENSION_MODULE,
@@ -104,5 +123,5 @@ export async function openSliceSession(options = {}) {
     }
   }
 
-  return { ae, transport, runner, pin, info, ownership, close, workdir };
+  return { ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource };
 }

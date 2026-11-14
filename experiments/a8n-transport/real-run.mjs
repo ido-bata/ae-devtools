@@ -30,11 +30,13 @@ function arg(flag) {
 
 async function main() {
   const installDir = arg("--install-dir");
+  const aeA8nRoot = arg("--ae-a8n-root");
   const out = arg("--out") ?? join(HERE, "evidence", `run-${Date.now()}.json`);
   const startedAt = new Date().toISOString();
 
   const session = await openSliceSession({
     ...(installDir !== undefined ? { installDir } : {}),
+    ...(aeA8nRoot !== undefined ? { aeA8nRoot } : {}),
   });
   const evidence = {
     issue: 49,
@@ -42,6 +44,7 @@ async function main() {
     platform: `${process.platform}/${process.arch}`,
     node: process.version,
     pin: session.pin,
+    aeA8nSource: session.aeA8nSource,
     hostInfo: session.info,
     ownership: session.ownership,
     hostScript: join(session.workdir, "a8n-host-ext.js"),
