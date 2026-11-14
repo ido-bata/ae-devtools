@@ -61,6 +61,10 @@ Capability handshake must include protocol version, AE build, OS/architecture, t
         └──► #12 boundary ADR ◄─ ae-a8n #97–99  ├──► #20 VSCode/MCP     │
                          │                       └──► #21 conformance ◄─┘
                          └──► #13 read-only AE probe ─► #14
+        #11/#13 ─► #36 CEP/UXP extension lifecycle (development-target axis, not transport)
+
+#14 + #15/#16 + #17/#18 + #36 ─► #37 unified diagnostics ─► consumed by #20
+#14 + #20 + #21 + #37 ─► #38 agent development-loop E2E
 
 ae-a8n #97/#98/#99 + ae-devtools #11/#12 ─► ae-a8n #102 capability negotiation
 ae-a8n #102 + ae-devtools #11/#17/#18/#21 + ae-test #19 ─► ae-test #21 conformance
@@ -77,8 +81,8 @@ Edges mean prerequisites for *closing* the dependent slice; research/contract dr
 | **P1: safe host access** | [#13](https://github.com/ido-bata/ae-devtools/issues/13), [#14](https://github.com/ido-bata/ae-devtools/issues/14), [ae-a8n #102](https://github.com/ido-bata/ae-a8n/issues/102) | Read-only real AE proof first; then bounded script writes; G0/G1/G2 from ae-a8n #99 remain hard gates. |
 | **P2: scripting coverage** | [#15](https://github.com/ido-bata/ae-devtools/issues/15), [#16](https://github.com/ido-bata/ae-devtools/issues/16) | Inventory-driven domain adapters and conformance. Each newly discovered symbol remains visible as missing until addressed. |
 | **P3: native SDK proof** | [#17](https://github.com/ido-bata/ae-devtools/issues/17), [#18](https://github.com/ido-bata/ae-devtools/issues/18) | Native AEGP and effect plugin build/load/use/test in AE; Windows/macOS verified separately. |
-| **P4: SDK breadth and developer clients** | [#19](https://github.com/ido-bata/ae-devtools/issues/19), [#20](https://github.com/ido-bata/ae-devtools/issues/20) | Suite-family child issues from SDK inventory; VSCode/MCP small developer-loop surface; never declare complete from one plugin. |
-| **P5: ecosystem conformance** | [#21](https://github.com/ido-bata/ae-devtools/issues/21), [ae-test #21](https://github.com/ido-bata/ae-test/issues/21), [ae-farm #4](https://github.com/ido-bata/ae-farm/issues/4) | Exact AE/OS/SDK/build evidence, packaged consumers, release gating; farm remains future until ae-test real-host runner proven. |
+| **P4: SDK breadth and developer clients** | [#19](https://github.com/ido-bata/ae-devtools/issues/19), [#20](https://github.com/ido-bata/ae-devtools/issues/20), [#36](https://github.com/ido-bata/ae-devtools/issues/36), [#37](https://github.com/ido-bata/ae-devtools/issues/37) | Suite-family child issues from SDK inventory; VSCode/MCP small developer-loop surface; CEP/UXP extension development lifecycle (CEP now, UXP gated on Adobe release); unified diagnostics model. Never declare complete from one plugin or one panel. |
+| **P5: ecosystem conformance** | [#21](https://github.com/ido-bata/ae-devtools/issues/21), [#38](https://github.com/ido-bata/ae-devtools/issues/38), [ae-test #21](https://github.com/ido-bata/ae-test/issues/21), [ae-farm #4](https://github.com/ido-bata/ae-farm/issues/4) | Exact AE/OS/SDK/build evidence, packaged consumers, agent dev-loop E2E on disposable projects, release gating; farm remains future until ae-test real-host runner proven. |
 
 No release dates are committed by this plan. P2 and P3 can proceed in parallel **after** the relevant contracts; one real AE host cannot be used concurrently by uncoordinated workers.
 

@@ -22,6 +22,8 @@ Enable developer-facing access to the complete **documented and practically reac
 - **US5 (P1) — Shared consumer contract.** ae-a8n exposes capabilities through its existing public API and static named extension model; ae-test and future ae-farm can consume the same contract without copying host logic or weakening session/ownership rules.
 - **US6 (P1) — Conformance and refusal.** A capability is reported available only on a proven host/AE build/plug-in set; unknown outcome, unsupported version, missing permission, wrong AE target and plugin absence produce distinct, testable outcomes.
 - **US7 (P2) — Competitive parity.** When an existing AE-control tool implements a reachable operation not covered by the catalog, the gap is recorded and either mapped to an existing operation or given a concrete implementation/refusal ticket.
+- **US8 (P2) — Extension development lifecycle.** A developer can scaffold, build, install, run, reload, observe and clean up CEP extensions (and UXP plugins once Adobe released builds provide the required surface) as *development targets*, with per-OS evidence separated from transport-selection concerns ([#36](https://github.com/ido-bata/ae-devtools/issues/36)).
+- **US9 (P1) — Unified diagnostics and agent loop.** Script exceptions, expression errors, panel logs, native crashes, plugin load failures and render failures are collected into one diagnostics model with source-position mapping where available, so an agent can recognize an error, fix it, re-run and regression-verify on a disposable project ([#37](https://github.com/ido-bata/ae-devtools/issues/37), [#38](https://github.com/ido-bata/ae-devtools/issues/38)).
 
 ## Functional requirements
 
@@ -39,6 +41,8 @@ Enable developer-facing access to the complete **documented and practically reac
 - **FR-12:** Run version/OS-specific real AE conformance tests on disposable projects and packaged consumers, recording exact source SHA, AE/SDK version, OS, plugin build, session identity, traces and artifacts.
 - **FR-13:** For unsupported, inaccessible or undocumented APIs, retain the inventory row, evidence and alternative/limitation; an explicit waiver or follow-up issue is required before excluding it from supported coverage.
 - **FR-14:** Existing tool parity and API coverage are re-evaluated on a documented cadence or version update; a newly discovered API/tool creates a tracked delta rather than silently redefining 100%.
+- **FR-15:** CEP/UXP extensions are treated as development targets with an explicit lifecycle (scaffold → build → install → run → reload → verify → cleanup). UXP rows stay `BLOCKED`/`UNVERIFIED` until Adobe released builds provide plugin loading and remote IPC; beta adoption is not assumed (ADR-0005 D5).
+- **FR-16:** Diagnostics from every reachable failure source (script exception, expression error, panel log, native crash, plugin load failure, render failure, transport outcome) are collected into a single record model with source-position mapping where available; sources that cannot be collected are `unsupported-with-reason`, never silently dropped or fabricated.
 
 ## Safety and nonfunctional requirements
 
