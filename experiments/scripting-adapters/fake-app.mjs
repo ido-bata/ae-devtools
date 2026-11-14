@@ -37,7 +37,8 @@ function makeProperty(value, opts = {}) {
     __keys: [],
     expressionEnabled: false,
     numKeys: 0,
-    canSetExpression() { return expressionAllowed; },
+    canSetExpression: expressionAllowed,
+    expressionError: "",
     setValue(v) { this.value = Array.isArray(v) ? v.slice() : v; },
     // Real API: keyIndex is the 1-based keyframe INDEX, not a time.
     // Out-of-range indexes throw; they do not append.
@@ -83,6 +84,7 @@ function makeFxGroup(layer) {
   return {
     __list: fx,
     numProperties: 0,
+    canAddProperty(matchName) { return KNOWN_EFFECTS.indexOf(matchName) !== -1; },
     addProperty(matchName) {
       // Real AE rejects matchNames that are not installed effects.
       if (KNOWN_EFFECTS.indexOf(matchName) === -1) {

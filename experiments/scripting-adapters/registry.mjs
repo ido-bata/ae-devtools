@@ -465,7 +465,7 @@ return __adp_json({ ok: true, property: "keyframed-at-time", time: ${a.time} });
     domain: "animation-effects-render",
     permission: "execute",
     mutating: true,
-    members: [S("Property", "expression"), S("Property", "expressionEnabled")],
+    members: [S("Property", "expression"), S("Property", "expressionEnabled"), S("Property", "canSetExpression"), S("Property", "expressionError")],
     args: ["compName", "layerName", "propertyPath", "expression"],
     validate: (a) => {
       requireArgs(a, ["compName", "layerName", "propertyPath", "expression"]);
@@ -473,12 +473,14 @@ return __adp_json({ ok: true, property: "keyframed-at-time", time: ${a.time} });
       jsPath(a.propertyPath);
     },
     source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
-if (typeof prop.canSetExpression === "function" && !prop.canSetExpression()) {
+// canSetExpression is a Boolean attribute (inventory kind=attribute).
+if (prop.canSetExpression === false) {
   __adp_fail("expression not allowed on this property");
 }
 prop.expression = ${js(a.expression)};
 prop.expressionEnabled = true;
-return __adp_json({ ok: true, property: "expression-set" });
+// Surface host-reported expressionError verbatim — never infer it.
+return __adp_json({ ok: true, property: "expression-set", expressionError: String(prop.expressionError || "") });
 `,
   },
   {
@@ -486,13 +488,17 @@ return __adp_json({ ok: true, property: "expression-set" });
     domain: "animation-effects-render",
     permission: "execute",
     mutating: true,
-    members: [S("PropertyGroup", "addProperty")],
+    members: [S("PropertyGroup", "addProperty"), S("PropertyGroup", "canAddProperty")],
     args: ["compName", "layerName", "effectMatchName"],
     validate: (a) => requireArgs(a, ["compName", "layerName", "effectMatchName"]),
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
-var fx = layer.property("ADBE Effect Parade").addProperty(${js(a.effectMatchName)});
+var parade = layer.property("ADBE Effect Parade");
+if (typeof parade.canAddProperty === "function" && !parade.canAddProperty(${js(a.effectMatchName)})) {
+  __adp_fail("effect cannot be added: " + ${js(a.effectMatchName)});
+}
+var fx = parade.addProperty(${js(a.effectMatchName)});
 return __adp_json({ ok: true, effect: String(fx.name), matchName: ${js(a.effectMatchName)} });
 `,
   },

@@ -300,5 +300,5 @@ test("fixture: expression on non-expressionable property and addProperty misuse 
   // unknown effect matchName is rejected like real AE
   assert.throws(
     () => run("effect.add", { compName: "C", layerName: "N", effectMatchName: "ADBE NotARealEffect" }),
-    /unknown effect matchName/);
+    /cannot be added|unknown effect matchName/);
 });
