@@ -19,13 +19,37 @@ experiments/trusted-execution/
 ├── permissions.mjs            # CAP025/027: execution classes + consent scope
 ├── mutation-guard.mjs         # CAP027: aeRef resolution, project scope, retry policy
 ├── outcomes.mjs               # CAP028: write-outcome taxonomy + contract mapping
+├── runner.mjs                 # CAP028: safe eval pipeline — consent gate → codec
+│                              #   envelope → injected transport → outcome + retry
 └── tests/
     ├── run.mjs                # node:test runner, zero deps
     ├── codec.test.mjs         # differential + refusal tests (node:vm, JSON removed)
     ├── permissions.test.mjs   # class resolution + consent-scope tests
     ├── mutation-guard.test.mjs# STALE_REFERENCE / project mismatch / retry policy
-    └── outcomes.test.mjs      # busy-vs-unknown, mayHaveMutated, undo separation
+    ├── outcomes.test.mjs      # busy-vs-unknown, mayHaveMutated, undo separation
+    └── runner.test.mjs        # consent-before-send, UNKNOWN no-resend, aeError pass-through
 ```
+
+## Runner pipeline (CAP028)
+
+`runner.mjs` is the client-side composition of the units above into one
+safe eval path: `runScript({source, pin, operationId, consent, ...})`:
+
+1. **validate** — non-empty source, ≤ `MAX_SOURCE_BYTES` (256 KiB);
+   violations are `BLOCKED`/`not-sent` before anything else.
+2. **consent** — `authorizeExecution` with `EVAL_ADVERTISEMENT`
+   (`execute` permission → `trusted-dev-script`): requires explicit
+   `trustedScriptOptIn`, `scriptProvenance`, and a consent token whose
+   scope matches {session pin, operationId, argument hash, project}.
+   Refusal ⇒ `BLOCKED`, transport is never called.
+3. **send** — codec-serialized `{v:1, kind:"extendscript.eval", ...}`
+   envelope through the **injected** `transport.send` (no channel is
+   chosen here — ADR-0005 Open Q1). One deadline; no retry.
+4. **classify** — `classifyWriteResult` + `toContractOutcome` +
+   `retryDecision`: `UNKNOWN` quarantines and is never resent; host
+   `aeError` fields (name/message/line/file) pass through verbatim for
+   the diagnostics surface (Issue #37) — positions are host-reported,
+   never inferred.
 
 ## Evidence level
 
