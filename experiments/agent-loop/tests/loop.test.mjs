@@ -11,7 +11,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFakeHost, createFakeApp } from "../fake-host.mjs";
 import { loadTrustedCodec } from "../../trusted-execution/runner.mjs";
-import { runDevLoop, regressionCheck, toDiagnostic } from "../loop.mjs";
+import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION } from "../loop.mjs";
+import { consentScopeFor } from "../../trusted-execution/permissions.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => readFileSync(join(here, "..", "fixtures", name), "utf8");
@@ -30,6 +31,29 @@ function makeTransport() {
   };
 }
 
+// Stand-in for an EXTERNAL consent authority. The loop must never mint
+// consent itself; this provider plays the role of the deployment's
+// consent service in tests. It binds each attempt's exact source.
+function makeConsentProvider(spy) {
+  return async (source, attempt) => {
+    if (spy) spy.push({ source, attempt });
+    return {
+      consent: {
+        scope: consentScopeFor({
+          pin: FAKE_SESSION.pin,
+          operationId: FAKE_SESSION.operationId,
+          args: { source, dispatchArgs: null },
+          projectIdentity: FAKE_SESSION.projectIdentity,
+        }),
+      },
+      trustedScriptOptIn: true,
+      scriptProvenance: "test-consent-provider",
+    };
+  };
+}
+const PROVIDER = makeConsentProvider();
+const RESET = async () => {}; // fake project-state reset
+
 // Deterministic stand-in for the "agent": fixes the two seeded bugs.
 function fixtureFixer(diag, source, attempt) {
   if (attempt === 0) return source.replace("items.addd(", "items.add(");
@@ -39,7 +63,7 @@ function fixtureFixer(diag, source, attempt) {
 
 test("clean fixture completes on first dispatch", async () => {
   const t = makeTransport();
-  const report = await runDevLoop({ source: fixture("clean.jsx"), transport: t });
+  const report = await runDevLoop({ source: fixture("clean.jsx"), transport: t, consentProvider: PROVIDER });
   assert.equal(report.outcome, "COMPLETED");
   assert.equal(report.iterations.length, 1);
   assert.equal(report.iterations[0].result, "final");
@@ -52,6 +76,8 @@ test("E2E: broken fixture -> diagnostic -> fix -> rerun -> COMPLETED", async () 
     source: fixture("broken.jsx"),
     transport: t,
     fixer: fixtureFixer,
+    consentProvider: PROVIDER,
+    stateReset: RESET,
   });
   assert.equal(report.outcome, "COMPLETED");
   assert.equal(report.iterations.length, 3); // fail, fail, pass
@@ -82,8 +108,15 @@ test("regression check reruns final source and requires COMPLETED", async () => 
     source: fixture("broken.jsx"),
     transport: t,
     fixer: fixtureFixer,
+    consentProvider: PROVIDER,
+    stateReset: RESET,
   });
-  const reg = await regressionCheck({ source: report.finalSource, transport: t });
+  const reg = await regressionCheck({
+    source: report.finalSource,
+    transport: t,
+    consentProvider: PROVIDER,
+    assumeIdempotent: true,
+  });
   assert.equal(reg.ok, true);
   assert.equal(reg.outcome, "COMPLETED");
 });
@@ -94,6 +127,8 @@ test("fixer returning null stops the loop as FAILED (no infinite retry)", async 
     source: fixture("broken.jsx"),
     transport: t,
     fixer: () => null,
+    consentProvider: PROVIDER,
+    stateReset: RESET,
   });
   assert.equal(report.outcome, "FAILED");
   assert.equal(report.iterations.length, 1);
@@ -102,7 +137,7 @@ test("fixer returning null stops the loop as FAILED (no infinite retry)", async 
 
 test("no fixer configured: first FAILED ends the loop", async () => {
   const t = makeTransport();
-  const report = await runDevLoop({ source: fixture("broken.jsx"), transport: t });
+  const report = await runDevLoop({ source: fixture("broken.jsx"), transport: t, consentProvider: PROVIDER });
   assert.equal(report.outcome, "FAILED");
   assert.equal(report.diagnostics.length, 1);
 });
@@ -113,6 +148,8 @@ test("fix budget exhausted -> FAILED, bounded sends", async () => {
     source: fixture("broken.jsx"),
     transport: t,
     fixer: (d, s, a) => s + `\n// attempt ${a}`,
+    consentProvider: PROVIDER,
+    stateReset: RESET,
     maxFixes: 2,
   });
   assert.equal(report.outcome, "FAILED");
@@ -150,9 +187,96 @@ test("reply with wrong requestId -> UNKNOWN via runner, loop stops, id quarantin
       return codec.stringify(parsed);
     },
   };
-  const report = await runDevLoop({ source: fixture("clean.jsx"), transport: t });
+  const report = await runDevLoop({ source: fixture("clean.jsx"), transport: t, consentProvider: PROVIDER });
   assert.equal(report.outcome, "UNKNOWN");
   assert.equal(report.iterations.length, 1);
   assert.equal(report.iterations[0].outcome, "UNKNOWN");
   assert.equal(report.quarantined.length, 1);
+});
+
+/* ---- PR #45 re-review: loop safety contract ---- */
+
+test("S1: no consentProvider -> BLOCKED before any send (loop must not self-issue consent)", async () => {
+  const t = makeTransport();
+  const report = await runDevLoop({ source: fixture("clean.jsx"), transport: t, fixer: fixtureFixer });
+  assert.equal(report.outcome, "BLOCKED");
+  assert.equal(t.calls.length, 0);
+});
+
+test("S2: consentProvider is invoked per attempt with the EXACT source being dispatched", async () => {
+  const t = makeTransport();
+  const seen = [];
+  const report = await runDevLoop({
+    source: fixture("broken.jsx"),
+    transport: t,
+    fixer: fixtureFixer,
+    consentProvider: makeConsentProvider(seen),
+    stateReset: RESET,
+  });
+  assert.equal(report.outcome, "COMPLETED");
+  assert.equal(seen.length, 3);
+  // Each consent request binds the precise source of that attempt —
+  // the provider saw broken, then fix1, then fix2 (never a stale source).
+  assert.ok(seen[0].source.includes("items.addd("));
+  assert.ok(!seen[1].source.includes("items.addd("));
+  assert.ok(seen[1].source.includes("setName("));
+  assert.ok(!seen[2].source.includes("setName("));
+});
+
+test("S3: FAILED mayHaveMutated -> rerun refused unless stateReset or explicit allowDirtyRerun", async () => {
+  const t = makeTransport();
+  const report = await runDevLoop({
+    source: fixture("broken.jsx"),
+    transport: t,
+    fixer: fixtureFixer,
+    consentProvider: PROVIDER,
+    // NO stateReset, NO allowDirtyRerun: partial mutation may persist.
+  });
+  assert.equal(report.outcome, "FAILED");
+  assert.equal(report.iterations.length, 1);
+  assert.equal(t.calls.length, 1);
+  assert.equal(report.stateDirty, true);
+});
+
+test("S4: stateReset is awaited before rerun after a dirty FAILED", async () => {
+  const t = makeTransport();
+  const resets = [];
+  const report = await runDevLoop({
+    source: fixture("broken.jsx"),
+    transport: t,
+    fixer: fixtureFixer,
+    consentProvider: PROVIDER,
+    stateReset: async (src, attempt) => { resets.push(attempt); },
+  });
+  assert.equal(report.outcome, "COMPLETED");
+  assert.equal(resets.length, 2); // once before each rerun
+});
+
+test("S5: allowDirtyRerun:true permits rerun without stateReset (explicit operator acceptance)", async () => {
+  const t = makeTransport();
+  const report = await runDevLoop({
+    source: fixture("broken.jsx"),
+    transport: t,
+    fixer: fixtureFixer,
+    consentProvider: PROVIDER,
+    allowDirtyRerun: true,
+  });
+  assert.equal(report.outcome, "COMPLETED");
+  assert.equal(report.iterations.length, 3);
+});
+
+test("S6: regressionCheck refuses a possibly-mutating source unless assumeIdempotent", async () => {
+  const t = makeTransport();
+  const skipped = await regressionCheck({ source: fixture("clean.jsx"), transport: t });
+  assert.equal(skipped.ok, false);
+  assert.equal(skipped.skipped, "mutating-unverified");
+  assert.equal(t.calls.length, 0);
+  const ran = await regressionCheck({
+    source: fixture("clean.jsx"),
+    transport: t,
+    consentProvider: PROVIDER,
+    assumeIdempotent: true,
+  });
+  assert.equal(ran.ok, true);
+  assert.equal(t.calls.length, 1);
 });
