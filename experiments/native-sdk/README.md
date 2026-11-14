@@ -1,19 +1,32 @@
 # native-sdk build probe — CAP037/CAP042 groundwork (Issues #17/#18)
 
-> Status: **build-path evidence only.** This directory records that the
-> locally supplied AE SDK builds on this machine. It is **not** plugin
-> load evidence, not a transport, and not a shipped adapter. Plugin
-> load/registration inside After Effects (CAP040/CAP042) requires a real
-> AE session and remains gated; Windows is entirely UNVERIFIED.
+> Status: **SDK build-path evidence only.** This directory records that the
+> locally supplied AE SDK *compiles* on this machine. It is **not** plugin
+> load evidence, not execution evidence, not a transport, and not a shipped
+> adapter. Plugin load/registration/execution inside After Effects
+> (CAP040/CAP042) requires a real AE session and remains gated; Windows is
+> entirely UNVERIFIED. Nothing here is `verified-real-host` catalog
+> evidence — see the state table below.
 
-## What is proven here
+## Independent verification states
 
-| Claim | Evidence level | Basis |
-| --- | --- | --- |
-| AE SDK 26.5 macOS distribution is obtainable and usable locally | `verified on real host` (build machine, not AE) | operator-supplied archive; sha256 in `inventories/sdk/generated/provenance.json`; never vendored |
-| SDK sample plugins compile on macOS arm64 with Xcode 27.2 | `automated`-adjacent local build log | `build-macos.sh` + `EVIDENCE.md` |
-| Plugin .load inside AE, command registration, crash/unload behaviour | **UNVERIFIED** | needs owned/dedicated AE session — not run |
-| Windows SDK build | **UNVERIFIED** | no Windows host |
+Build success, plugin load, plugin execution and Windows support are
+**separate states** — progress on one never implies another, and none is
+AE-host evidence:
+
+| State | Scope | Status | Basis |
+| --- | --- | --- | --- |
+| SDK acquisition & integrity | AE SDK 26.5 macOS archive, operator-supplied | verified on **build host** (not AE) | sha256 in `inventories/sdk/generated/provenance.json`; never vendored |
+| SDK sample **build** | `Sweetie` (AEGP), `Checkout` (Effect/CPU) compile via xcodebuild on macOS arm64 / Xcode 27.2 | **BUILD SUCCEEDED** (local build log) | `build-macos.sh` + `EVIDENCE.md` |
+| Plugin **load** into AE | `.plugin` recognized/registered by After Effects | **UNVERIFIED** | needs owned/dedicated AE session — not run; ad-hoc signing acceptance unknown |
+| Plugin **execution** | AEGP commands / effect render path actually run in AE | **UNVERIFIED** | same gate; GPU path additionally blocked (below) |
+| **Windows** SDK build | Win64 toolchain + samples | **UNVERIFIED** | no Windows host; agents never touch Windows (Issue #21) |
+
+`Effect/SDK_Invert_ProcAmp` (GPU kernels) is **BUILD FAILED** on this
+machine — `metal_common` (AE GPU SDK component, absent from the base 26.5
+distribution) and Boost headers (`BOOST_BASE_PATH` unset). This blocks
+only the SmartFX/MFR/GPU slice (CAP043/#18); the CPU `Checkout` build is
+unaffected.
 
 ## Layout
 

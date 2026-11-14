@@ -1,7 +1,11 @@
 # EVIDENCE — native-sdk build probe
 
-Measured 2026-11-14 on the macOS development host. Build-machine evidence
-only; **no After Effects process was launched** and no plugin was loaded.
+Measured 2026-11-14 on the macOS development host. **SDK build-machine
+evidence only** — `BUILD SUCCEEDED` means the sample compiles; it is not
+plugin-load evidence, not execution evidence, and not `verified-real-host`
+catalog evidence. **No After Effects process was launched** and no plugin
+was loaded. The independent states (SDK build / AE load / execution /
+Windows) are tracked separately in `README.md` and must not be collapsed.
 
 ## Environment
 
@@ -34,11 +38,14 @@ Full logs: `build/<name>.build.log` (gitignored; regenerate with
    CPU-only effect samples are unaffected. Obtaining the GPU SDK addendum
    and/or Boost is a **real blocker** for SmartFX/MFR/GPU fixtures; it does
    not block the CPU effect vertical slice.
-2. **Plugin load/registration:** unverified. Loading a `.plugin` requires
-   launching After Effects; the operator's interactive AE session is
-   off-limits for this work and no dedicated host exists yet. Ad-hoc
-   signing acceptance by AE on this macOS version is unknown until then.
-3. **Windows:** entirely UNVERIFIED — no Windows host, per Issue #21.
+2. **Plugin load/registration:** unverified — a distinct state from the
+   build results above. Loading a `.plugin` requires launching After
+   Effects; the operator's interactive AE session is off-limits for this
+   work and no dedicated host exists yet. Ad-hoc signing acceptance by AE
+   on this macOS version is unknown until then.
+3. **Plugin execution:** unverified — even a successful load would not
+   prove command registration, effect render, or crash/unload behaviour.
+4. **Windows:** entirely UNVERIFIED — no Windows host, per Issue #21.
 
 ## Reproduce
 
