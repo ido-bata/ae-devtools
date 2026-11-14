@@ -192,8 +192,7 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
     let deadlineExceeded = false;
     try {
       const timeout = new Promise((resolve) => {
-        const t = setTimeout(() => resolve("__deadline__"), deadline);
-        if (typeof t.unref === "function") t.unref();
+        setTimeout(() => resolve("__deadline__"), deadline);
       });
       const sent = transport.send(requestText);
       const raced = await Promise.race([sent, timeout]);
