@@ -11,6 +11,12 @@
  * element (implemented via Proxy over a 0-based JS array).
  */
 
+// Host-object classes so generated `instanceof` checks work exactly
+// like ExtendScript. Display names (typeName) stay for reporting only.
+class CompItem {}
+class FolderItem {}
+class FootageItem {}
+
 function collection(list, extra = {}) {
   return new Proxy(extra, {
     get(target, prop) {
@@ -44,10 +50,12 @@ function makeLayer(name, comp) {
     enabled: true,
     __pos: makeProperty([0, 0]),
     property(group) {
-      if (group === "Transform") {
+      // Real AE resolves both display name and matchName; we only
+      // implement the stable matchName path adapters must use.
+      if (group === "ADBE Transform Group" || group === "Transform") {
         return {
           property(sub) {
-            if (sub === "Position") return layer.__pos;
+            if (sub === "ADBE Position" || sub === "Position") return layer.__pos;
             throw new Error("fake-app: no such transform property " + sub);
           },
         };
@@ -72,7 +80,8 @@ function makeLayer(name, comp) {
 }
 
 function makeComp(name, w, h, par, dur, owner) {
-  const comp = {
+  const comp = new CompItem();
+  Object.assign(comp, {
     name,
     typeName: "Composition",
     id: Math.floor(Math.random() * 1e9),
@@ -93,7 +102,7 @@ function makeComp(name, w, h, par, dur, owner) {
       if (to === "top") comp.__layers.unshift(layer); else comp.__layers.push(layer);
       comp.__reindex();
     },
-  };
+  });
   comp.layers = collection(comp.__layers, {
     addNull(d) {
       const l = makeLayer("Null " + (comp.__layers.length + 1), comp);
@@ -127,7 +136,8 @@ export function createAdapterFakeApp() {
       return c;
     },
     addFolder(name) {
-      const f = {
+      const f = new FolderItem();
+      Object.assign(f, {
         name,
         typeName: "Folder",
         id: items.length + 1,
@@ -135,7 +145,7 @@ export function createAdapterFakeApp() {
           const i = items.indexOf(f);
           if (i >= 0) items.splice(i, 1);
         },
-      };
+      });
       items.push(f);
       return f;
     },
@@ -146,6 +156,9 @@ export function createAdapterFakeApp() {
     newProject() { items.length = 0; project.activeItem = null; },
     open(f) { project.file = f; },
   };
+  app.CompItem = CompItem;
+  app.FolderItem = FolderItem;
+  app.FootageItem = FootageItem;
   app.__state = {
     items,
     fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.typeName }))),

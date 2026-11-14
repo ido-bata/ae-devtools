@@ -38,7 +38,9 @@ const S = (owner, member) => `provisional.ae.scripting.${owner}.${member}`;
 const PRELUDE = `
 function __adp_fail(msg) { throw new Error("adapter: " + msg); }
 function __adp_items() { return app.project.items; }
-function __adp_findItem(name, typeName) {
+// Type discrimination uses instanceof (locale-independent). typeName
+// is localized and must NOT be used for branching (PR #46 review).
+function __adp_findItem(name, ctor) {
   var items = __adp_items();
   var found = null;
   var sawName = false;
@@ -46,31 +48,71 @@ function __adp_findItem(name, typeName) {
     var it = items[i];
     if (it.name === name) {
       sawName = true;
-      if (typeName === null || it.typeName === typeName) {
+      var match = false;
+      try { match = (ctor === null) || (it instanceof ctor); } catch (e) { match = false; }
+      if (match) {
         if (found !== null) {
-          __adp_fail("ambiguous item name '" + name + "' (" + typeName + "): multiple matches — rename or qualify");
+          __adp_fail("ambiguous item name '" + name + "': multiple matches — rename or qualify");
         }
         found = it;
       }
     }
   }
   if (found !== null) return found;
-  if (sawName) __adp_fail("name '" + name + "' exists but is not a " + typeName);
+  if (sawName) __adp_fail("name '" + name + "' exists but is not the requested type");
   __adp_fail("item not found: " + name);
   return null;
 }
 function __adp_findLayer(comp, name) {
   var layers = comp.layers;
+  var found = null;
   for (var i = 1; i <= layers.length; i++) {
-    if (layers[i].name === name) return layers[i];
+    if (layers[i].name === name) {
+      if (found !== null) {
+        __adp_fail("ambiguous layer name '" + name + "' in comp '" + comp.name + "': multiple matches");
+      }
+      found = layers[i];
+    }
   }
+  if (found !== null) return found;
   __adp_fail("layer not found in comp '" + comp.name + "': " + name);
   return null;
 }
+// Hand-rolled JSON serializer: ExtendScript's JSON support is NOT
+// guaranteed across AE versions, and host objects crash native
+// JSON.stringify on circular refs. Adapter results are plain
+// objects/arrays/strings/numbers/booleans/null only.
 function __adp_json(v) {
-  try { return JSON.stringify(v); } catch (e) { return String(v); }
+  if (v === null || v === undefined) return "null";
+  var t = typeof v;
+  if (t === "number") return isFinite(v) ? String(v) : "null";
+  if (t === "boolean") return v ? "true" : "false";
+  if (t === "string") {
+    var out = '"';
+    for (var i = 0; i < v.length; i++) {
+      var c = v.charAt(i);
+      var code = v.charCodeAt(i);
+      if (c === '"' || c === "\\\\") out += "\\\\" + c;
+      else if (code < 32) out += "\\\\u" + ("000" + code.toString(16)).slice(-4);
+      else out += c;
+    }
+    return out + '"';
+  }
+  if (t === "object") {
+    var isArr = Object.prototype.toString.call(v) === "[object Array]";
+    var parts = [];
+    var key;
+    for (key in v) {
+      if (!v.hasOwnProperty(key)) continue;
+      if (isArr && (key === "length" || isNaN(key))) continue;
+      parts.push(isArr ? __adp_json(v[key]) : __adp_json(key) + ":" + __adp_json(v[key]));
+    }
+    return (isArr ? "[" : "{") + parts.join(",") + (isArr ? "]" : "}");
+  }
+  return "null";
 }
 `;
+
 
 function js(v) {
   // JSON-encode a JS literal into the ExtendScript source (strings only
@@ -193,11 +235,16 @@ return __adp_json({ ok: true, id: f.id, name: f.name });
     permission: "execute",
     mutating: true,
     destructive: true,
-    members: [S("Item", "remove"), S("Item", "typeName")],
-    args: ["name", "typeName"],
-    validate: (a) => requireArgs(a, ["name", "typeName"]),
+    members: [S("Item", "remove")],
+    args: ["name", "type"],
+    validate: (a) => {
+      requireArgs(a, ["name", "type"]);
+      if (["CompItem", "FolderItem", "FootageItem"].indexOf(a.type) === -1) {
+        throw new Error("item.remove: type must be one of CompItem|FolderItem|FootageItem");
+      }
+    },
     source: (a) => `${PRELUDE}
-var it = __adp_findItem(${js(a.name)}, ${js(a.typeName)});
+var it = __adp_findItem(${js(a.name)}, ${a.type});
 it.remove();
 return __adp_json({ ok: true, removed: ${js(a.name)} });
 `,
@@ -213,7 +260,7 @@ return __adp_json({ ok: true, removed: ${js(a.name)} });
     args: ["compName", "layerName"],
     validate: (a) => requireArgs(a, ["compName", "layerName"]),
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "Composition");
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = comp.layers.addNull(comp.duration);
 layer.name = ${js(a.layerName)};
 return __adp_json({ ok: true, layer: layer.name, index: layer.index });
@@ -235,9 +282,9 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index });
       }
     },
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "Composition");
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
-var pos = layer.property("Transform").property("Position");
+var pos = layer.property("ADBE Transform Group").property("ADBE Position");
 pos.setValue([${Number(a.x)}, ${Number(a.y)}]);
 return __adp_json({ ok: true, layer: layer.name, value: pos.value });
 `,
@@ -258,7 +305,7 @@ return __adp_json({ ok: true, layer: layer.name, value: pos.value });
       }
     },
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "Composition");
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 ${a.to === "top" ? "layer.moveToBeginning();" : "layer.moveToEnd();"}
 return __adp_json({ ok: true, layer: layer.name, index: layer.index });
@@ -280,7 +327,7 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index });
           ? "null"
           : `__adp_findLayer(comp, ${js(a.parentName)})`;
       return `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "Composition");
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 layer.parent = ${parentExpr};
 return __adp_json({ ok: true, layer: layer.name, parent: layer.parent === null ? null : layer.parent.name });
@@ -298,7 +345,7 @@ return __adp_json({ ok: true, layer: layer.name, parent: layer.parent === null ?
     args: ["compName", "layerName"],
     validate: (a) => requireArgs(a, ["compName", "layerName"]),
     source: (a) => `${PRELUDE}
-var comp = __adp_findItem(${js(a.compName)}, "Composition");
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 var dup = layer.duplicate();
 return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: dup.index });
@@ -311,13 +358,13 @@ return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: du
     issue: "15",
     permission: "execute",
     mutating: false,
-    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "typeName")],
+    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "id")],
     args: [],
     source: () => `${PRELUDE}
 var items = __adp_items();
 var list = [];
 for (var i = 1; i <= items.length; i++) {
-  list.push({ name: items[i].name, typeName: String(items[i].typeName), id: items[i].id });
+  list.push({ name: items[i].name, typeName: String(items[i].typeName), id: items[i].id }); // typeName is display-only (localized); never branch on it
 }
 var ai = app.project.activeItem;
 return __adp_json({

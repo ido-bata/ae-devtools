@@ -46,6 +46,7 @@ function evalSource(source, app) {
     Error, TypeError, ReferenceError, parseInt, parseFloat, isNaN, isFinite, undefined,
     File: class File { constructor(p) { this.fsName = p; this.exists = true; } },
     CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
+    CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
   });
   return vm.runInContext(`(function(){\n${source}\n})()`, ctx, { filename: "adapter.jsx" });
 }
@@ -81,7 +82,7 @@ function sampleArgs(op) {
   for (const n of op.args) {
     if (["x", "y", "width", "height", "pixelAspect", "duration", "frameRate"].includes(n)) a[n] = 30;
     else if (n === "to") a[n] = "top";
-    else if (n === "typeName") a[n] = "Composition";
+    else if (n === "type") a[n] = "CompItem";
     else if (n === "path") a[n] = "/tmp/x.aep";
     else if (n === "parentName") a[n] = null;
     else a[n] = `sample-${n}`;
@@ -150,7 +151,7 @@ test("fake exec: item.remove and same-name type guard (CAP031)", () => {
   t.run("item.addComp", { name: "Same", width: 1, height: 1, pixelAspect: 1, duration: 1, frameRate: 30 });
   t.run("item.addFolder", { name: "Same" });
   // type guard: "Same" as CompItem resolves the comp, not the folder
-  const r = JSON.parse(t.run("item.remove", { name: "Same", typeName: "Composition" }));
+  const r = JSON.parse(t.run("item.remove", { name: "Same", type: "CompItem" }));
   assert.equal(r.removed, "Same");
   const summary = JSON.parse(t.run("read.projectSummary", {}));
   assert.equal(summary.count, 1);
@@ -161,9 +162,9 @@ test("fake exec: name-not-found and wrong-type produce adapter errors, not silen
   const t = freshApp();
   t.run("project.new", {});
   t.run("item.addFolder", { name: "OnlyFolder" });
-  assert.throws(() => t.run("item.remove", { name: "OnlyFolder", typeName: "Composition" }), /not a Composition/);
+  assert.throws(() => t.run("item.remove", { name: "OnlyFolder", type: "CompItem" }), /not the requested type/);
   assert.throws(() => t.run("comp.addNullLayer", { compName: "Ghost", layerName: "x" }), /item not found/);
-  assert.throws(() => t.run("layer.setTransformPosition", { compName: "OnlyFolder", layerName: "x", x: 0, y: 0 }), /not a Composition/);
+  assert.throws(() => t.run("layer.setTransformPosition", { compName: "OnlyFolder", layerName: "x", x: 0, y: 0 }), /not the requested type/);
 });
 
 test("fake exec: project.save/open/close are dispatchable", () => {
@@ -212,4 +213,25 @@ test("R4: generated sources only call API surface the fake host actually impleme
   for (const m of ["parent", "name", "index", "enabled"]) {
     assert.ok(m in layer, `layer.${m} must exist`);
   }
+});
+
+test("contract: generated sources use locale-independent matchName + instanceof, no typeName branching, no JSON global", () => {
+  for (const op of OPERATIONS) {
+    const args = {};
+    for (const a of op.args) {
+      if (a === "name" || a === "compName" || a === "layerName") args[a] = "x";
+      else if (a === "type") args[a] = "CompItem";
+      else if (a === "to") args[a] = "top";
+      else if (["width","height","pixelAspect","duration","frameRate","x","y","durationSeconds"].includes(a)) args[a] = 1;
+    }
+    let src;
+    try { src = op.source(args); } catch { continue; }
+    assert.ok(!/typeName\s*[=!]==?/.test(src), `${op.id} must not branch on typeName (localized)`);
+    assert.ok(!/property\("(Transform|Position|Opacity|Scale)"\)/.test(src), `${op.id} must use matchName, not display name`);
+    assert.ok(!/\bJSON\.(stringify|parse)\s*\(/.test(src), `${op.id} must not rely on host JSON (not guaranteed in ExtendScript)`);
+  }
+  const pos = getOperation("layer.setTransformPosition").source({ compName:"c", layerName:"l", x:1, y:2 });
+  assert.ok(pos.includes('"ADBE Position"'), "position access must use ADBE matchName");
+  const rem = getOperation("item.remove").source({ name:"x", type:"CompItem" });
+  assert.ok(rem.includes("instanceof"), "type discrimination must use instanceof");
 });
