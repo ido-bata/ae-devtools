@@ -33,10 +33,11 @@ If any box is unchecked, the proof does not run.
 | Item | Requirement |
 | --- | --- |
 | Scaffold output | Tree produced by `scaffold.mjs` for a probe extension id (e.g. `com.ae-devtools.cep-probe`) |
-| AE version | Recorded exactly (26.5.3 / 27.0.0 observed installed); load behaviour may differ per version — evidence binds to one |
-| CEP runtime | The CSXS version the installed AE actually ships; confirm `RequiredRuntimeList` compatibility (research 02: AE 25.x → CEP 12 is Cookbook-confirmed; AE 26.x mapping must be verified, not assumed) |
-| Install location | macOS: `~/Library/Application Support/Adobe/CEP/extensions/<id>/`; Windows: `%APPDATA%\Adobe\CEP\extensions\<id>\` — exact honoured path is itself a verification item |
-| Debug mode | `PlayerDebugMode=1` for the correct `com.adobe.CSXS.<ver>` domain (macOS plist) — key name/version confirmed against the installed host, per research 02/05 |
+| AE version | Recorded exactly. Observed on this host (2026-11-14): AE 2026 = 26.5.3 running CEPHtmlEngine `AdobeCEP/12.0.1`; AE 2027 (27.0.0) installed but not inspected — evidence binds to one version |
+| CEP runtime | **Verified on this host:** CEP 12.0.1 → `--csxs 12.0` scaffold default is correct for AE 2026. Re-confirm if targeting AE 2027 |
+| Install location | **Verified on this host:** `~/Library/Application Support/Adobe/CEP/extensions/<id>/` is the honoured path (operator's `app.ty-plus*` panels load from it). Windows path remains UNVERIFIED |
+| Debug mode | **Verified on this host:** `PlayerDebugMode=1` already set for `com.adobe.CSXS.11` and `com.adobe.CSXS.12`. Still record before/after per §1; do not change without need |
+| Panel log | **Verified on this host:** `~/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-<extensionId>.log` receives renderer `--log-file` output — the panel-log diagnostics source (Issue #37) |
 
 ## 3. Fixtures
 

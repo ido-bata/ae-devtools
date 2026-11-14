@@ -28,6 +28,33 @@ only** — nothing here has been loaded into After Effects.
 | UXP plugin lifecycle | — | not run; Adobe released-build surface absent | **BLOCKED/UNVERIFIED** |
 | Windows anything | — | no Windows host | **UNVERIFIED** |
 
+## Real-host environment observations (non-invasive, 2026-11-14)
+
+Read-only inspection of the running dev Mac (`pgrep`, `defaults read`,
+`ls`) — the operator's interactive AE 2026 session was **not touched**.
+These facts describe the environment our scaffold will run in; they are
+NOT evidence that our extension loads.
+
+| Fact | Observed value | Level |
+| --- | --- | --- |
+| AE running | After Effects 2026, build 26.5.3, operator's session with `app.ty-plus` / `app.ty-plus.dev` CEP panels active | **verified on real host** (environment only) |
+| CEP runtime | `AdobeCEP/12.0.1` (CEPHtmlEngine UA string in renderer processes) | **verified on real host** |
+| Host code | `AEFT`, app version `26.5.3` | **verified on real host** |
+| Extension dir | `~/Library/Application Support/Adobe/CEP/extensions/<id>/` — the operator's panels load from exactly this path | **verified on real host** |
+| `PlayerDebugMode` | `com.adobe.CSXS.11` = 1 and `com.adobe.CSXS.12` = 1 already set on this host | **verified on real host** |
+| Panel log path | `~/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-<extensionId>.log` (per-panel `--log-file` arg in renderer cmdline) | **verified on real host** |
+| Panel nodejs | renderer args include `--enable-nodejs --mixed-context` for the operator's panels — nodejs in panel JS is real on this host | **verified on real host** (capability exists; our scaffold does not use it yet) |
+| Remote debugging | operator's panels use `--remote-debugging-port` via `.debug` files (ports 8970/9170 observed) | **verified on real host** |
+
+## Real-load blocker (recorded, not worked around)
+
+A real load proof requires installing the scaffold into the CEP
+extensions dir **and** an AE restart (CEP scans the dir at startup; the
+operator's AE 2026 is currently running interactively). Per LOAD-PROOF.md
+§1 this needs an explicitly owned/authorized session — **BLOCKED pending
+owner authorization**. No files were added to the live extensions dir
+and no AE process was signaled.
+
 ## Blockers recorded
 
 1. **Real-AE load proof** requires an explicitly owned, authorized AE
