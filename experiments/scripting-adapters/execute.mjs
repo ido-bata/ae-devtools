@@ -93,6 +93,15 @@ export async function runOperation(input = {}) {
     return refused("CONSENT_PROVIDER_REQUIRED",
       "every registry dispatch requires an injected consentProvider; absence is a refusal, not an approval", { opId });
   }
+  // Destructive ops need an explicit per-call confirmation IN ADDITION
+  // to consent — consent approves the scope, this flag acknowledges the
+  // operation class. It is a UX/safety gate, not an approval authenticity
+  // mechanism (that remains a #14 non-claim).
+  if (op.destructive === true && input.confirmDestructive !== true) {
+    return refused("DESTRUCTIVE_CONFIRMATION_REQUIRED",
+      `'${opId}' is destructive; pass confirmDestructive:true after operator confirmation`, { opId });
+  }
+
   const decision = await input.consentProvider({ opId, args, source, scope });
   if (!decision || decision.approved !== true) {
     return {
@@ -122,6 +131,21 @@ export async function runOperation(input = {}) {
   let result = outcome.result;
   if (typeof result === "string") {
     try { result = JSON.parse(result); } catch { /* keep raw string */ }
+  }
+  // Adapter payload contract: __adp_json emits {ok:true,...} on success.
+  // An explicit ok:false is a host-level logical failure even though the
+  // dispatch itself completed — surface it, never report bare COMPLETED.
+  const adapterFailed = result !== null && typeof result === "object" && result.ok === false;
+  if (adapterFailed) {
+    return {
+      ...outcome,
+      opId,
+      mutating: op.mutating === true,
+      destructive: op.destructive === true,
+      status: "failed",
+      adapterError: result.error ?? result,
+      result,
+    };
   }
 
   return {

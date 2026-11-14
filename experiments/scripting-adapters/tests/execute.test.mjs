@@ -74,7 +74,7 @@ test("vertical slice: project.new → item.addComp → read.projectSummary all v
     ["item.addComp", { name: "Hero", width: 1920, height: 1080, pixelAspect: 1, duration: 10, frameRate: 30 }],
     ["read.projectSummary", {}],
   ]) {
-    const r = await runOperation({ opId, args, consentProvider: provider, ...t });
+    const r = await runOperation({ opId, args, consentProvider: provider, confirmDestructive: true, ...t });
     assert.equal(r.outcome, "COMPLETED", `${opId}: ${JSON.stringify(r)}`);
     assert.equal(r.contractOutcome, "completed");
   }
@@ -86,7 +86,7 @@ test("consent denial refuses BEFORE transport — nothing is sent", async () => 
   const app = createAdapterFakeApp();
   const t = baseInput(app);
   const r = await runOperation({
-    opId: "project.new", args: {}, consentProvider: async () => ({ approved: false, reason: "operator said no" }), ...t,
+    opId: "item.addFolder", args: { name: "X" }, consentProvider: async () => ({ approved: false, reason: "operator said no" }), ...t,
   });
   assert.equal(r.status, "refused");
   assert.equal(r.stage, "consent");
@@ -125,11 +125,11 @@ test("destructive op metadata surfaces on the outcome; duplicate requestId is re
   const t = baseInput(app);
   const provider = approvingProvider();
 
-  const r1 = await runOperation({ opId: "project.close", args: {}, consentProvider: provider, requestId: "dup-1", ...t });
+  const r1 = await runOperation({ opId: "project.close", args: {}, consentProvider: provider, confirmDestructive: true, requestId: "dup-1", ...t });
   assert.equal(r1.outcome, "COMPLETED");
   assert.equal(r1.destructive, true);
 
-  const r2 = await runOperation({ opId: "project.new", args: {}, consentProvider: provider, requestId: "dup-1", ...t });
+  const r2 = await runOperation({ opId: "project.new", args: {}, consentProvider: provider, confirmDestructive: true, requestId: "dup-1", ...t });
   assert.equal(r2.outcome, "BLOCKED");
   assert.equal(r2.refusal?.code, "DUPLICATE_REQUEST");
   assert.equal(t.transport.calls.length, 1);
@@ -142,8 +142,45 @@ test("host-side failure surfaces hostReported diagnostics through the runner", a
   // fake still has items collection; instead remove a nonexistent item.
   const r = await runOperation({
     opId: "item.remove", args: { name: "Ghost", type: "CompItem" },
-    consentProvider: approvingProvider(), ...t,
+    consentProvider: approvingProvider(), confirmDestructive: true, ...t,
   });
   assert.notEqual(r.outcome, "COMPLETED");
   assert.equal(t.transport.calls.length, 1);
+});
+
+test("destructive ops require confirmDestructive in addition to consent", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const r = await runOperation({ opId: "project.close", args: {}, consentProvider: provider, ...t });
+  assert.equal(r.reason, "DESTRUCTIVE_CONFIRMATION_REQUIRED");
+  assert.equal(t.transport.calls.length, 0);
+  const ok = await runOperation({ opId: "project.close", args: {}, consentProvider: provider, confirmDestructive: true, ...t });
+  assert.equal(ok.outcome, "COMPLETED");
+});
+
+test("every registered op dispatches through the runner end-to-end", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const VALUE = {
+    name: "N", compName: "C", layerName: "Null 1", parentName: "Null 1",
+    type: "CompItem", to: "top", path: "/tmp/x.aep",
+    width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30, x: 0, y: 0,
+  };
+  const { OPERATIONS } = await import("../registry.mjs");
+  // project.new resets state — run it first, then the rest in order.
+  const ordered = [...OPERATIONS].sort((a, b) => (a.id === "project.new" ? -1 : b.id === "project.new" ? 1 : 0));
+  for (const op of ordered) {
+    if (op.id === "project.open" || op.id === "project.close") continue; // lifecycle resets; covered elsewhere
+    const args = {};
+    for (const a of op.args) args[a] = VALUE[a];
+    if (op.id === "item.addComp") args.name = "C";
+    if (op.id === "item.addFolder") args.name = "F";
+    if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate"].includes(op.id)) args.compName = "C";
+    const r = await runOperation({ opId: op.id, args, consentProvider: provider,
+      confirmDestructive: true, ...t });
+    assert.equal(r.outcome, "COMPLETED", `${op.id}: ${JSON.stringify(r).slice(0, 200)}`);
+  }
 });
