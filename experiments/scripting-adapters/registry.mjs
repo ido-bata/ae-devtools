@@ -424,11 +424,31 @@ return __adp_json({ ok: true, property: "set" });
 `,
   },
   {
+    // setValueAtKey takes a 1-based KEY INDEX, not a time — confusing the
+    // two silently writes the wrong keyframe (PR #47 review).
     id: "anim.setKeyframe",
     domain: "animation-effects-render",
     permission: "execute",
     mutating: true,
     members: [S("Property", "setValueAtKey")],
+    args: ["compName", "layerName", "propertyPath", "keyIndex", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "keyIndex", "value"]);
+      if (!Number.isInteger(a.keyIndex) || a.keyIndex < 1) throw new Error("keyIndex must be an integer >= 1");
+      jsLit(a.value); jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.setValueAtKey(${a.keyIndex}, ${jsLit(a.value)});
+return __adp_json({ ok: true, property: "keyframed", keyIndex: ${a.keyIndex} });
+`,
+  },
+  {
+    // Time-based keyframing is a different API: setValueAtTime.
+    id: "anim.setValueAtTime",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "setValueAtTime")],
     args: ["compName", "layerName", "propertyPath", "time", "value"],
     validate: (a) => {
       requireArgs(a, ["compName", "layerName", "propertyPath", "time", "value"]);
@@ -436,8 +456,8 @@ return __adp_json({ ok: true, property: "set" });
       jsLit(a.value); jsPath(a.propertyPath);
     },
     source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
-prop.setValueAtKey(${a.time}, ${jsLit(a.value)});
-return __adp_json({ ok: true, property: "keyframed", time: ${a.time} });
+prop.setValueAtTime(${a.time}, ${jsLit(a.value)});
+return __adp_json({ ok: true, property: "keyframed-at-time", time: ${a.time} });
 `,
   },
   {
@@ -453,6 +473,9 @@ return __adp_json({ ok: true, property: "keyframed", time: ${a.time} });
       jsPath(a.propertyPath);
     },
     source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+if (typeof prop.canSetExpression === "function" && !prop.canSetExpression()) {
+  __adp_fail("expression not allowed on this property");
+}
 prop.expression = ${js(a.expression)};
 prop.expressionEnabled = true;
 return __adp_json({ ok: true, property: "expression-set" });
@@ -492,6 +515,18 @@ return __adp_json({ ok: true, queued: comp.name, index: item.index });
     domain: "animation-effects-render",
     permission: "execute",
     mutating: true,
+    // Render contract (Issue #16 / #21): this op starts a REAL render in
+    // AE — it writes output files per each queued item's Output Module
+    // settings, can run far beyond the runner deadline, and a transport
+    // UNKNOWN means render state is unknowable (AE may still be
+    // rendering). execute.mjs therefore requires confirmRender:true in
+    // addition to consent + consentProvider. Stop conditions: deadline
+    // expiry or reply loss → UNKNOWN → quarantined, never retried;
+    // callers must treat UNKNOWN as "render may be in progress" and
+    // observe app.project.renderQueue.rendering before any re-dispatch.
+    // Output destination/ownership verification is host-side and remains
+    // UNVERIFIED until a real render runs on an owned session.
+    requiresConfirm: "render",
     members: [S("RenderQueue", "render"), S("RenderQueue", "rendering")],
     args: [],
     validate: () => {},
@@ -532,6 +567,17 @@ export function registryReport() {
     destructive: OPERATIONS.filter((o) => o.destructive === true).length,
     readOnly: OPERATIONS.filter((o) => !o.mutating).length,
     domains: [...new Set(OPERATIONS.map((o) => o.domain))],
+    // Evidence accounting is deliberately separated: implemented ops,
+    // automated tests, and fake-host verification are NOT real-host
+    // verification. realHostVerified stays 0 until an owned AE session
+    // runs the disposable-project conformance suite (Issue #15/#16).
+    evidence: {
+      implemented: OPERATIONS.length,
+      automatedTest: OPERATIONS.length,
+      fakeMockVerified: OPERATIONS.length,
+      realHostVerified: 0,
+      level: "fake/mock only",
+    },
     operations: OPERATIONS.map((o) => ({
       id: o.id,
       domain: o.domain,

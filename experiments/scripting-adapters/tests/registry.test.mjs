@@ -87,6 +87,7 @@ function sampleArgs(op) {
     else if (n === "parentName") a[n] = null;
     else if (n === "propertyPath") a[n] = ["ADBE Transform Group", "ADBE Position"];
     else if (n === "time") a[n] = 0;
+    else if (n === "keyIndex") a[n] = 1;
     else if (n === "value") a[n] = 1;
     else if (n === "effectMatchName") a[n] = "ADBE Gaussian Blur 2";
     else a[n] = `sample-${n}`;
@@ -248,7 +249,8 @@ test("fake exec: #16 ops mutate real fake state — keyframes, expression, effec
   run("comp.addNullLayer", { compName: "C", layerName: "N1" });
   const path = ["ADBE Transform Group", "ADBE Position"];
   run("anim.setValue", { compName: "C", layerName: "N1", propertyPath: path, value: [1, 2] });
-  run("anim.setKeyframe", { compName: "C", layerName: "N1", propertyPath: path, time: 1.5, value: [3, 4] });
+  run("anim.setValueAtTime", { compName: "C", layerName: "N1", propertyPath: path, time: 1.5, value: [3, 4] });
+  run("anim.setKeyframe", { compName: "C", layerName: "N1", propertyPath: path, keyIndex: 1, value: [5, 6] });
   run("anim.setExpression", { compName: "C", layerName: "N1", propertyPath: path, expression: "transform.position" });
   run("effect.add", { compName: "C", layerName: "N1", effectMatchName: "ADBE Gaussian Blur 2" });
   run("render.queueComp", { compName: "C" });
@@ -257,10 +259,46 @@ test("fake exec: #16 ops mutate real fake state — keyframes, expression, effec
   const layer = app.project.items[0].layers[0];
   const pos = layer.property("ADBE Transform Group").property("ADBE Position");
   assert.equal(pos.numKeys, 1);
-  assert.equal(pos.__keys[0].time, 1.5); assert.deepEqual(Array.from(pos.__keys[0].value), [3, 4]);
+  // setValueAtTime created the key, setKeyframe(keyIndex:1) overwrote it
+  assert.equal(pos.__keys[0].time, 1.5); assert.deepEqual(Array.from(pos.__keys[0].value), [5, 6]);
   assert.equal(pos.expression, "transform.position");
   assert.equal(pos.expressionEnabled, true);
   assert.equal(layer.property("ADBE Effect Parade").numProperties, 1);
   assert.equal(app.project.renderQueue.items.length, 1);
   assert.equal(app.project.renderQueue.__rendered, 1);
+});
+
+test("fixture: invalid parenting — self, cycle, and stale layer are refused", () => {
+  const app = createAdapterFakeApp();
+  const run = (opId, args) => evalSource(buildSource(opId, args), app);
+  run("project.new", {});
+  run("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 });
+  run("comp.addNullLayer", { compName: "C", layerName: "A" });
+  run("comp.addNullLayer", { compName: "C", layerName: "B" });
+  run("layer.setParent", { compName: "C", layerName: "A", parentName: "B" });
+  assert.throws(() => run("layer.setParent", { compName: "C", layerName: "B", parentName: "A" }), /cycle/);
+  assert.throws(() => run("layer.setParent", { compName: "C", layerName: "A", parentName: "A" }), /itself/);
+  // stale reference: remove B, then any op resolving it must fail
+  const comp = app.project.items[0];
+  const b = comp.layers[2]; // 1-based collection: index 2 = layer "B"
+  b.remove();
+  assert.throws(() => run("layer.setTransformPosition", { compName: "C", layerName: "B", x: 0, y: 0 }), /not found/);
+});
+
+test("fixture: expression on non-expressionable property and addProperty misuse fail", () => {
+  const app = createAdapterFakeApp();
+  const run = (opId, args) => evalSource(buildSource(opId, args), app);
+  run("project.new", {});
+  run("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 });
+  run("comp.addNullLayer", { compName: "C", layerName: "N" });
+  run("effect.add", { compName: "C", layerName: "N", effectMatchName: "ADBE Gaussian Blur 2" });
+  // effect param path: Parade -> effect -> param (fake: params not expressionable)
+  const fxPath = ["ADBE Effect Parade", "ADBE Gaussian Blur 2", "ADBE Blurriness"];
+  assert.throws(
+    () => run("anim.setExpression", { compName: "C", layerName: "N", propertyPath: fxPath, expression: "x" }),
+    /expression not allowed/);
+  // unknown effect matchName is rejected like real AE
+  assert.throws(
+    () => run("effect.add", { compName: "C", layerName: "N", effectMatchName: "ADBE NotARealEffect" }),
+    /unknown effect matchName/);
 });
