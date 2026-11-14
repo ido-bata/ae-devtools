@@ -234,18 +234,29 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
     // 4. Send with a single deadline. No retry, ever, inside this call.
     let replyText = null;
     let deadlineExceeded = false;
+    // The deadline timer stays ref'd while pending (a hung transport must
+    // not let the event loop drain), but is cleared as soon as the send
+    // settles so fast replies do not pin the process for `deadline` ms.
+    let timer = null;
     try {
       const timeout = new Promise((resolve) => {
-        setTimeout(() => resolve("__deadline__"), deadline);
+        timer = setTimeout(() => resolve("__deadline__"), deadline);
       });
-      const sent = transport.send(requestText);
-      const raced = await Promise.race([sent, timeout]);
+      const raced = await Promise.race([transport.send(requestText), timeout]);
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
       if (raced === "__deadline__") {
         deadlineExceeded = true;
       } else {
         replyText = raced;
       }
     } catch {
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
       replyText = null; // transport threw: indistinguishable from no reply
     }
 
