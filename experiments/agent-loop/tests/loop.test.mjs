@@ -280,3 +280,95 @@ test("S6: regressionCheck refuses a possibly-mutating source unless assumeIdempo
   assert.equal(ran.ok, true);
   assert.equal(t.calls.length, 1);
 });
+
+/* ---- PR #45 re-review round 2: REAL state verification, not self-declared flags ---- */
+
+function makeStatefulTransport() {
+  const codec = loadTrustedCodec();
+  const app = createFakeApp();
+  const host = createFakeHost({ app });
+  const calls = [];
+  return {
+    app,
+    calls,
+    fp: () => app.__state.fingerprint(),
+    send: async (text) => { calls.push(text); return host.send(text, codec); },
+  };
+}
+
+test("V1: dirty FAILED leaves REAL mutation in fake state; rerun refused without reset", async () => {
+  const t = makeStatefulTransport();
+  const report = await runDevLoop({
+    source: fixture("mutate-then-fail.jsx"),
+    transport: t,
+    fixer: () => fixture("clean.jsx"),
+    consentProvider: PROVIDER,
+    stateFingerprint: t.fp,
+  });
+  assert.equal(report.outcome, "FAILED");
+  assert.equal(report.iterations.length, 1);
+  // The mutation is REAL: the fake project still holds the partial item.
+  assert.equal(t.app.__state.items.length, 1);
+  assert.equal(report.stateDirty, true);
+  assert.equal(report.iterations[0].stateChanged, true);
+});
+
+test("V2: stateReset actually restores state — verified by fingerprint, not trusted", async () => {
+  const t = makeStatefulTransport();
+  const resets = [];
+  const report = await runDevLoop({
+    source: fixture("mutate-then-fail.jsx"),
+    transport: t,
+    fixer: () => fixture("clean.jsx"),
+    consentProvider: PROVIDER,
+    stateFingerprint: t.fp,
+    stateReset: async () => { t.app.__state.reset(); resets.push(1); },
+  });
+  assert.equal(report.outcome, "COMPLETED");
+  assert.equal(resets.length, 1);
+  // Post-reset fingerprint matched baseline -> rerun proceeded on
+  // verified-clean state; the final clean.jsx run added its one item.
+  assert.equal(t.app.__state.items.length, 1);
+  assert.equal(report.stateResetVerified, true);
+});
+
+test("V3: a no-op stateReset is caught by fingerprint verification -> RESET_INCOMPLETE stop", async () => {
+  const t = makeStatefulTransport();
+  const report = await runDevLoop({
+    source: fixture("mutate-then-fail.jsx"),
+    transport: t,
+    fixer: () => fixture("clean.jsx"),
+    consentProvider: PROVIDER,
+    stateFingerprint: t.fp,
+    stateReset: async () => {}, // does NOT restore — must be detected
+  });
+  assert.equal(report.outcome, "FAILED");
+  assert.equal(report.iterations.length, 1); // rerun never dispatched
+  assert.equal(t.calls.length, 1);
+  assert.equal(report.resetIncomplete, true);
+});
+
+test("V4: regressionCheck with stateFingerprint detects real mutation vs clean rerun", async () => {
+  const t = makeStatefulTransport();
+  const dirty = await regressionCheck({
+    source: fixture("mutating-clean.jsx"),
+    transport: t,
+    consentProvider: PROVIDER,
+    assumeIdempotent: true, // operator asserts idempotent — fingerprint proves otherwise
+    stateFingerprint: t.fp,
+  });
+  assert.equal(dirty.ok, true);
+  assert.equal(dirty.mutationDetected, true);
+  assert.equal(t.app.__state.items.length, 1);
+
+  const t2 = makeStatefulTransport();
+  const clean = await regressionCheck({
+    source: fixture("readonly.jsx"),
+    transport: t2,
+    consentProvider: PROVIDER,
+    assumeIdempotent: true,
+    stateFingerprint: t2.fp,
+  });
+  assert.equal(clean.ok, true);
+  assert.equal(clean.mutationDetected, false);
+});

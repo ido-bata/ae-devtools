@@ -127,6 +127,7 @@ export async function runDevLoop({
   consentProvider,
   session,
   stateReset,
+  stateFingerprint,
   allowDirtyRerun = false,
   maxFixes = 3,
 }) {
@@ -135,23 +136,37 @@ export async function runDevLoop({
   }
 
   const runner = createJsxRunner({ transport });
+  const fp = typeof stateFingerprint === "function" ? stateFingerprint : null;
+  const baselineFp = fp ? fp() : null;
   const report = {
     iterations: [],
     diagnostics: [],
     finalSource: source,
     outcome: null,
     stateDirty: false,
+    stateResetVerified: false,
+    resetIncomplete: false,
     quarantined: [],
   };
   let current = source;
   let pendingReset = false; // a dirty FAILED awaits state reconciliation
 
   for (let attempt = 0; attempt <= maxFixes; attempt += 1) {
-    // Dirty-state gate: a previous FAILED may have partially mutated.
-    // Rerun only after an explicit reset or an explicit dirty-accept.
+    // Dirty-state gate: a previous FAILED may have partially mutated —
+    // by host flag OR by observed fingerprint change. Rerun only after
+    // an explicit reset VERIFIED against the baseline fingerprint, or
+    // an explicit dirty-accept. A reset that does not restore the
+    // baseline stops the loop before any further dispatch.
     if (pendingReset) {
       if (typeof stateReset === "function") {
         await stateReset(current, attempt);
+        if (fp && fp() !== baselineFp) {
+          report.outcome = "FAILED";
+          report.stateDirty = true;
+          report.resetIncomplete = true;
+          return report;
+        }
+        report.stateResetVerified = true;
       } else if (!allowDirtyRerun) {
         report.outcome = "FAILED";
         report.stateDirty = true;
@@ -160,14 +175,18 @@ export async function runDevLoop({
       pendingReset = false;
     }
 
+    const preFp = fp ? fp() : null;
     const auth = await consentProvider(current, attempt);
     const out = await runner.runScript(runInput(current, session, auth ?? {}));
+    const postFp = fp ? fp() : null;
+    const stateChanged = preFp !== null && postFp !== preFp;
     report.iterations.push({
       attempt,
       requestId: out.requestId,
       outcome: out.outcome,
       contractOutcome: out.contractOutcome ?? null,
       mayHaveMutated: out.mayHaveMutated ?? null,
+      stateChanged,
       result: out.result ?? null,
       error: out.error ?? null,
       retry: out.retry ?? null,
@@ -185,8 +204,9 @@ export async function runDevLoop({
       return report;
     }
 
-    report.stateDirty = out.mayHaveMutated === true ? true : report.stateDirty;
-    pendingReset = out.mayHaveMutated === true;
+    const dirty = out.mayHaveMutated === true || stateChanged === true;
+    report.stateDirty = dirty ? true : report.stateDirty;
+    pendingReset = dirty;
 
     const diag = toDiagnostic(out);
     if (diag) report.diagnostics.push(diag);
@@ -215,7 +235,7 @@ export async function runDevLoop({
  * eval is treated as possibly-mutating; re-dispatching it "to check"
  * could duplicate side effects, so the default is an explicit skip.
  */
-export async function regressionCheck({ source, transport, session, consentProvider, assumeIdempotent }) {
+export async function regressionCheck({ source, transport, session, consentProvider, assumeIdempotent, stateFingerprint }) {
   if (assumeIdempotent !== true) {
     return {
       ok: false,
@@ -228,11 +248,17 @@ export async function regressionCheck({ source, transport, session, consentProvi
     return { ok: false, skipped: "consent-provider-required", outcome: "BLOCKED" };
   }
   const runner = createJsxRunner({ transport });
+  const fp = typeof stateFingerprint === "function" ? stateFingerprint : null;
+  const beforeFp = fp ? fp() : null;
   const auth = await consentProvider(source, -1);
   const out = await runner.runScript(runInput(source, session, auth ?? {}));
+  const afterFp = fp ? fp() : null;
   return {
     ok: out.outcome === "COMPLETED",
     outcome: out.outcome,
     result: out.result ?? null,
+    // When a fingerprint is supplied, mutation is MEASURED, not assumed:
+    // assumeIdempotent is the operator's claim; this is the evidence.
+    mutationDetected: beforeFp !== null ? afterFp !== beforeFp : null,
   };
 }

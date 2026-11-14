@@ -111,7 +111,7 @@ export function createFakeHost({ app, globals = {} } = {}) {
  */
 export function createFakeApp() {
   const items = [];
-  return {
+  const app = {
     version: "99.0-fake",
     project: {
       items: {
@@ -125,4 +125,12 @@ export function createFakeApp() {
       activeItem: null,
     },
   };
+  // Fake-only state inspection for the loop's dirty-state verification.
+  // NOT part of any AE contract — ExtendScript has no such API.
+  app.__state = {
+    items,
+    fingerprint: () => JSON.stringify(items),
+    reset: () => { items.length = 0; },
+  };
+  return app;
 }
