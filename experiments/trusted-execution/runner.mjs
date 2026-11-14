@@ -15,10 +15,24 @@
  * Hard rules (same discipline as the probe outcome model):
  *   - consent refusal happens BEFORE anything is sent; a refused dispatch
  *     never reaches the transport (send count stays 0)
- *   - deadline → UNKNOWN, never retried here; retryDecision returns
- *     "quarantine" for UNKNOWN and the runner never resends
+ *   - the consent scope ALWAYS binds the executed source: args hashed
+ *     into the scope are {source, dispatchArgs} — caller-supplied args
+ *     can never decouple approval from the code that runs
+ *   - permission is fixed to "execute": this endpoint runs arbitrary
+ *     ExtendScript, which is never a read or a write-class dispatch
+ *   - a dispatched requestId is single-use; reusing it is BLOCKED
+ *   - replies MUST echo requestId; a missing or mismatched id is
+ *     unattributable → UNKNOWN, never COMPLETED
+ *   - deadline/mismatch → UNKNOWN, never retried here; retryDecision
+ *     returns "quarantine" and isQuarantined() exposes the set
  *   - host aeError fields (name/message/line/file) pass through verbatim —
  *     source positions are host-reported, never inferred client-side
+ *
+ * NOT proven here (explicit non-claims): consent-token authenticity
+ * (issuance/verification is ae-a8n #97–#99 territory), host-side
+ * re-validation of the envelope, and catalog-gate integration. This
+ * module is the fake-level reference for the rule, not production
+ * authorization.
  *
  * Evidence level: automated-test / fake only. No AE involved.
  * Node >= 22, zero dependencies (node:vm + node:crypto only).
@@ -113,6 +127,15 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
   const c = codec ?? loadTrustedCodec();
   const deadline = deadlineMs ?? DEFAULT_DEADLINE_MS;
 
+  // Request ids that were actually dispatched (single-use) and ids whose
+  // outcome was UNKNOWN (quarantined — never silently re-issued).
+  const sentIds = new Set();
+  const quarantinedIds = new Set();
+
+  function isQuarantined(requestId) {
+    return quarantinedIds.has(requestId);
+  }
+
   /**
    * Run one ExtendScript source against the pinned session.
    *
@@ -138,6 +161,12 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
       : newRequestId();
     const base = { requestId, operationId: input.operationId ?? null };
 
+    // 0. Single-use request ids: anything already dispatched is burned.
+    if (sentIds.has(requestId)) {
+      return blocked("validate", "DUPLICATE_REQUEST",
+        `requestId ${requestId} was already dispatched; issue a new request`, base);
+    }
+
     // 1. Source validation — before consent, before send.
     const source = input.source;
     if (typeof source !== "string" || source.trim().length === 0) {
@@ -148,13 +177,24 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
         `script source exceeds ${MAX_SOURCE_BYTES} bytes`, base);
     }
 
+    // 1b. Permission is fixed: this endpoint executes arbitrary
+    // ExtendScript — it is never a read and never a write-class dispatch.
+    // A caller asking for anything else is refused before consent eval.
+    if (input.permission !== undefined && input.permission !== "execute") {
+      return blocked("validate", "PERMISSION_NOT_ALLOWED",
+        `extendscript.eval only supports permission "execute", got ${JSON.stringify(input.permission)}`, base);
+    }
+
     // 2. Consent/permission gate — refusal means NOTHING is sent.
+    // The consent scope ALWAYS binds the executed source: args hashed are
+    // {source, dispatchArgs}; caller args ride inside dispatchArgs and can
+    // never substitute for the source itself.
     const auth = authorizeExecution({
       advertisement: input.advertisement ?? EVAL_ADVERTISEMENT,
-      permission: input.permission ?? "execute",
+      permission: "execute",
       pin: input.pin,
       operationId: input.operationId,
-      args: input.args ?? { source },
+      args: { source, dispatchArgs: input.args ?? null },
       projectIdentity: input.projectIdentity,
       consent: input.consent,
       trustedScriptOptIn: input.trustedScriptOptIn,
@@ -187,6 +227,10 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
         err instanceof Error ? err.message : String(err), base);
     }
 
+    // The id is burned at dispatch time — even an UNKNOWN outcome must not
+    // be silently re-issued under the same id.
+    sentIds.add(requestId);
+
     // 4. Send with a single deadline. No retry, ever, inside this call.
     let replyText = null;
     let deadlineExceeded = false;
@@ -214,12 +258,51 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
         reply = { __unparseable: true };
       }
     }
-    const classified = classifyWriteResult({
-      dispatched: true,
-      reply: normalizeReply(reply),
-      deadlineExceeded,
-      partialMutation: input.mayMutatePartial === true,
-    });
+
+    // 5a. Reply identity: the host contract requires replies to echo the
+    // requestId they answer. Missing or mismatched ids are unattributable
+    // — UNKNOWN, never COMPLETED (mis-delivery guard, same discipline as
+    // the probe's WRONG_TARGET refusal).
+    let classified;
+    const replyId =
+      reply !== null && typeof reply === "object" && !reply.__unparseable &&
+      typeof reply.requestId === "string" && reply.requestId.length > 0
+        ? reply.requestId
+        : null;
+    if (replyId !== null && replyId !== requestId) {
+      classified = {
+        outcome: "UNKNOWN",
+        unknownCategory: "REQUEST_ID_MISMATCH",
+        requestState: "SENT_NOT_ACKNOWLEDGED",
+        mayHaveMutated: true,
+        result: null,
+      };
+    } else if (reply !== null && typeof reply === "object" && !reply.__unparseable && replyId === null) {
+      classified = {
+        outcome: "UNKNOWN",
+        unknownCategory: "UNATTRIBUTABLE_REPLY",
+        requestState: "SENT_NOT_ACKNOWLEDGED",
+        mayHaveMutated: true,
+        result: null,
+      };
+    } else if (reply !== null && typeof reply === "object" && replyId === requestId) {
+      classified = classifyWriteResult({
+        dispatched: true,
+        reply: normalizeReply(reply),
+        deadlineExceeded: false,
+        partialMutation: input.mayMutatePartial === true,
+      });
+    } else {
+      // reply is null (no reply / deadline) or an unparseable/primitive
+      // payload — classifyWriteResult maps both to UNKNOWN.
+      classified = classifyWriteResult({
+        dispatched: true,
+        reply,
+        deadlineExceeded,
+        partialMutation: input.mayMutatePartial === true,
+      });
+    }
+    if (classified.outcome === "UNKNOWN") quarantinedIds.add(requestId);
 
     const out = {
       ...base,
@@ -241,5 +324,5 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
     return out;
   }
 
-  return { runScript, codec: c };
+  return { runScript, isQuarantined, codec: c };
 }
