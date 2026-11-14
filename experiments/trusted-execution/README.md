@@ -35,21 +35,34 @@ experiments/trusted-execution/
 `runner.mjs` is the client-side composition of the units above into one
 safe eval path: `runScript({source, pin, operationId, consent, ...})`:
 
-1. **validate** — non-empty source, ≤ `MAX_SOURCE_BYTES` (256 KiB);
-   violations are `BLOCKED`/`not-sent` before anything else.
+1. **validate** — non-empty source, ≤ `MAX_SOURCE_BYTES` (256 KiB),
+   `permission` fixed to `"execute"` (eval is never a read/write-class
+   dispatch), single-use `requestId`; violations are `BLOCKED`/`not-sent`.
 2. **consent** — `authorizeExecution` with `EVAL_ADVERTISEMENT`
-   (`execute` permission → `trusted-dev-script`): requires explicit
+   (`execute` → `trusted-dev-script`): requires explicit
    `trustedScriptOptIn`, `scriptProvenance`, and a consent token whose
-   scope matches {session pin, operationId, argument hash, project}.
-   Refusal ⇒ `BLOCKED`, transport is never called.
+   scope matches {session pin, operationId, **{source, dispatchArgs}
+   argument hash**, project}. The executed source is ALWAYS inside the
+   hashed args — caller-supplied args ride in `dispatchArgs` and cannot
+   decouple approval from the code that runs. Refusal ⇒ `BLOCKED`,
+   transport is never called.
 3. **send** — codec-serialized `{v:1, kind:"extendscript.eval", ...}`
    envelope through the **injected** `transport.send` (no channel is
-   chosen here — ADR-0005 Open Q1). One deadline; no retry.
-4. **classify** — `classifyWriteResult` + `toContractOutcome` +
-   `retryDecision`: `UNKNOWN` quarantines and is never resent; host
-   `aeError` fields (name/message/line/file) pass through verbatim for
-   the diagnostics surface (Issue #37) — positions are host-reported,
-   never inferred.
+   chosen here — ADR-0005 Open Q1). One deadline; no retry; the id is
+   burned at dispatch.
+4. **reply identity** — replies MUST echo `requestId`; missing or
+   mismatched ids are unattributable → `UNKNOWN` (`UNATTRIBUTABLE_REPLY`
+   / `REQUEST_ID_MISMATCH`), never `COMPLETED`.
+5. **classify** — `classifyWriteResult` + `toContractOutcome` +
+   `retryDecision`: `UNKNOWN` quarantines (`runner.isQuarantined(id)`)
+   and is never resent; host `aeError` fields (name/message/line/file)
+   pass through verbatim for the diagnostics surface (Issue #37) —
+   positions are host-reported, never inferred.
+
+Explicit non-claims: consent-token authenticity, host-side envelope
+re-validation, and catalog-gate integration are NOT established by this
+module — it is the fake-level reference for the dispatch rules, not
+production authorization.
 
 ## Evidence level
 
