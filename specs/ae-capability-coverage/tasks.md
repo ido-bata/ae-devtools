@@ -134,6 +134,31 @@ Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open / not veri
 - [ ] **CAP055** Bind ae-a8n/ae-test/farm evidence to exact SHA. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 - [ ] **CAP056** Reject stale/fake-only/unknown coverage release claims. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 
+### [#36](https://github.com/ido-bata/ae-devtools/issues/36) — CEP/UXP extension lifecycle
+
+Dependencies: #11, #13. Status: **open / not verified**. Registered 2026-11-14; extension *development* lifecycle is a distinct axis from transport selection (ADR-0005 D5).
+
+- [ ] **CAP057** Generate CEP extension scaffolds (manifest.xml, CSXS version, host version range, debug-load configuration) from inventory and Adobe-official specs. ([Issue #36](https://github.com/ido-bata/ae-devtools/issues/36))
+- [ ] **CAP058** Mechanize CEP panel build/install/reload/unload/cleanup per OS; record `.zxp` signing, `PlayerDebugMode` and registry/plist handling. ([Issue #36](https://github.com/ido-bata/ae-devtools/issues/36))
+- [ ] **CAP059** Prove panel load → `CSInterface.evalScript` round trip → reload → unload on an owned AE session only. ([Issue #36](https://github.com/ido-bata/ae-devtools/issues/36))
+- [ ] **CAP060** Track UXP plugin development lifecycle as BLOCKED/UNVERIFIED per row until Adobe released builds provide plugin loading and remote IPC; beta adoption stays forbidden (ADR-0005 D5). ([Issue #36](https://github.com/ido-bata/ae-devtools/issues/36))
+
+### [#37](https://github.com/ido-bata/ae-devtools/issues/37) — Unified AE diagnostics
+
+Dependencies: #14, #15, #16, #17, #18, #36. Status: **open / not verified**. Registered 2026-11-14.
+
+- [ ] **CAP061** Define the diagnostics record schema (source kind, severity, source position, session/target pin, artifact hash). ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+- [ ] **CAP062** Connect ExtendScript exceptions, expression errors and render-queue failures to the host-side collection path via the trusted-execution codec. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+- [ ] **CAP063** Investigate and adapt collection of CEP/UXP panel logs, AE plug-in load failures and OS crash reports; unreachable sources are `unsupported-with-reason`. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+- [ ] **CAP064** Implement diagnostics→source-position mapping (generated JSX / panel asset / plugin binary) with fake-responder tests. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+
+### [#38](https://github.com/ido-bata/ae-devtools/issues/38) — Agent development-loop E2E
+
+Dependencies: #14, #20, #21, #37. Status: **open / not verified**. Registered 2026-11-14.
+
+- [ ] **CAP065** Prove the minimal loop on an owned AE session: intentionally broken JSX fixture → execute → diagnostics with source position → fix → re-run → PASS, scripting only first. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
+- [ ] **CAP066** Bind loop evidence (per-iteration request/result/diagnostics/regression artifacts) to the #21 conformance evidence schema; fake-only success never promotes to real-host verified. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
+
 ## Cross-repository integration tasks (not duplicated in ae-devtools)
 
 ### [ae-a8n #102](https://github.com/ido-bata/ae-a8n/issues/102) — execution and capability negotiation
@@ -157,6 +182,9 @@ Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open / not veri
 | Native SDK reachable | #17–#19, ABI/plugin lifecycle and real AE evidence | One AEGP plugin or arbitrary JSON RPC wrapper |
 | Local/remote transport ready | ae-a8n #97–#99/#102 | #98 fake dispatcher or console-local ping |
 | Cross-repo verified | #21, ae-test #21, exact artifacts and host matrix | Unmatched npm/source SHA, missing AE/SDK build |
+| Extension lifecycle verified | #36, owned AE session, per-OS evidence | Scaffold-only output or UXP beta assumption |
+| Diagnostics collected | #37, source-position mapping where available | Unsourced error strings or fabricated positions |
+| Agent loop proven | #38 on real host, #21 evidence schema | Fake-responder loop reported as real-host |
 | Stable release | existing ae-a8n #63/#75, human authorization | This planning epic or a draft PR |
 
 ## Reconciliation checklist

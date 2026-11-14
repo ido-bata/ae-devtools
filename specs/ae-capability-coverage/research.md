@@ -51,7 +51,7 @@
 | AEGP suites and host-managed handles | Compiled AE native AEGP plug-in | Suites/handles valid only in host and SDK lifetime; ABI and thread rules | [#10](https://github.com/ido-bata/ae-devtools/issues/10), [#17](https://github.com/ido-bata/ae-devtools/issues/17) |
 | PF/Effect/SmartFX/MFR/GPU callbacks | Compiled Effect plug-in executing inside AE render lifecycle | Host callbacks/selectors cannot generally be arbitrary external RPC; thread safety, GPU device and host scheduling | [#10](https://github.com/ido-bata/ae-devtools/issues/10), [#18](https://github.com/ido-bata/ae-devtools/issues/18) |
 | SDK IO, custom UI, arbitrary data, other public extension points | Native plug-in/harness in specific lifecycle | Registration, UI thread, buffer ownership, plug-in build/load/signing | [#19](https://github.com/ido-bata/ae-devtools/issues/19) |
-| CEP/UXP/OS automation/aerender | Transport, panel or CLI layer | Transport is not an automatic expansion of underlying scripting/SDK API; host/version/consent differences | [#12](https://github.com/ido-bata/ae-devtools/issues/12), [#13](https://github.com/ido-bata/ae-devtools/issues/13) |
+| CEP/UXP/OS automation/aerender | Transport, panel or CLI layer | Transport is not an automatic expansion of underlying scripting/SDK API; host/version/consent differences | [#12](https://github.com/ido-bata/ae-devtools/issues/12), [#13](https://github.com/ido-bata/ae-devtools/issues/13), [#36](https://github.com/ido-bata/ae-devtools/issues/36) (extension *development* lifecycle) |
 
 ## 4. Competitor parity discovery protocol (CAP001–004)
 
@@ -66,6 +66,16 @@ Sources to examine first: [existing ae-devtools research 04](../../docs/architec
 - **R3:** SDK native AEGP/effect build/load/test and thread/lifecycle evidence; one successful plug-in does not verify all suites.
 - **R4:** Runtime/transport security and startup G0–G4 from ae-a8n #99; no cross-user/console fallback, unsafe quit or consent automation.
 - **R5:** Cross-repo consumer evidence from ae-test and (when ready) ae-farm, tied to exact packaged artifacts.
+
+## 5b. Addendum — 2026-11-14 scope registration
+
+Gap review against the stated end goal (script/SDK-plugin/CEP-UXP development lifecycle, unified diagnostics, agent fix-rerun-regression loop, conformance gate) found three uncovered requirements; they are registered as new Issues rather than silently absorbed:
+
+- [#36](https://github.com/ido-bata/ae-devtools/issues/36) — CEP/UXP extensions as **development targets** (scaffold/build/install/run/reload/verify/cleanup). This is deliberately separate from ADR-0005 D5 transport selection: a CEP panel may be the *thing being developed* while another transport executes AE operations. UXP stays `BLOCKED`/`UNVERIFIED` until Adobe released builds ship plugin loading and remote IPC.
+- [#37](https://github.com/ido-bata/ae-devtools/issues/37) — unified diagnostics (script exception, expression error, panel log, native crash, plugin load failure, render failure) with source-position mapping. Previously scattered across CAP026/CAP036/CAP040 without a single record model or consumer contract.
+- [#38](https://github.com/ido-bata/ae-devtools/issues/38) — agent development-loop E2E on a disposable project, bound to the #21 evidence schema.
+
+"Screen"/UI observation is intentionally **not** claimed: AE scripting exposes no screenshot primitive; visual verification proceeds via render-queue output and snapshots, and true screen capture remains an open research item (recorded, not promised). Native SDK host-callback limitations are unchanged (plan §3 class 4).
 
 ## 6. Follow-up questions that must remain open
 
