@@ -167,6 +167,8 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     name: "N", compName: "C", layerName: "Null 1", parentName: "Null 1",
     type: "CompItem", to: "top", path: "/tmp/x.aep",
     width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30, x: 0, y: 0,
+    propertyPath: ["ADBE Transform Group", "ADBE Position"], time: 0, value: [0, 0],
+    expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.

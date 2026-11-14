@@ -63,7 +63,7 @@ test("every claimed member id exists in the scripting inventory", () => {
 
 test("all ops belong to the #15 domain and declare execute permission", () => {
   for (const op of OPERATIONS) {
-    assert.equal(op.domain, "project-items-comps-layers");
+    assert.ok(["project-items-comps-layers", "animation-effects-render"].includes(op.domain), op.id);
     assert.equal(op.permission, "execute");
     assert.ok(op.members.length > 0, `${op.id} claims no symbols`);
   }
@@ -85,6 +85,10 @@ function sampleArgs(op) {
     else if (n === "type") a[n] = "CompItem";
     else if (n === "path") a[n] = "/tmp/x.aep";
     else if (n === "parentName") a[n] = null;
+    else if (n === "propertyPath") a[n] = ["ADBE Transform Group", "ADBE Position"];
+    else if (n === "time") a[n] = 0;
+    else if (n === "value") a[n] = 1;
+    else if (n === "effectMatchName") a[n] = "ADBE Gaussian Blur 2";
     else a[n] = `sample-${n}`;
   }
   return a;
@@ -100,7 +104,7 @@ test("registryReport counts match the operation table", () => {
   const r = registryReport();
   assert.equal(r.operationCount, OPERATIONS.length);
   assert.equal(r.mutating + r.readOnly, OPERATIONS.length);
-  assert.deepEqual(opsForDomain("project-items-comps-layers").length, OPERATIONS.length);
+  assert.equal(opsForDomain("project-items-comps-layers").length + opsForDomain("animation-effects-render").length, OPERATIONS.length);
 });
 
 /* ---------- fake execution ---------- */
@@ -234,4 +238,29 @@ test("contract: generated sources use locale-independent matchName + instanceof,
   assert.ok(pos.includes('"ADBE Position"'), "position access must use ADBE matchName");
   const rem = getOperation("item.remove").source({ name:"x", type:"CompItem" });
   assert.ok(rem.includes("instanceof"), "type discrimination must use instanceof");
+});
+
+test("fake exec: #16 ops mutate real fake state — keyframes, expression, effect, render queue", () => {
+  const app = createAdapterFakeApp();
+  const run = (opId, args) => evalSource(buildSource(opId, args), app);
+  run("project.new", {});
+  run("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 });
+  run("comp.addNullLayer", { compName: "C", layerName: "N1" });
+  const path = ["ADBE Transform Group", "ADBE Position"];
+  run("anim.setValue", { compName: "C", layerName: "N1", propertyPath: path, value: [1, 2] });
+  run("anim.setKeyframe", { compName: "C", layerName: "N1", propertyPath: path, time: 1.5, value: [3, 4] });
+  run("anim.setExpression", { compName: "C", layerName: "N1", propertyPath: path, expression: "transform.position" });
+  run("effect.add", { compName: "C", layerName: "N1", effectMatchName: "ADBE Gaussian Blur 2" });
+  run("render.queueComp", { compName: "C" });
+  run("render.renderQueued", {});
+
+  const layer = app.project.items[0].layers[0];
+  const pos = layer.property("ADBE Transform Group").property("ADBE Position");
+  assert.equal(pos.numKeys, 1);
+  assert.equal(pos.__keys[0].time, 1.5); assert.deepEqual(Array.from(pos.__keys[0].value), [3, 4]);
+  assert.equal(pos.expression, "transform.position");
+  assert.equal(pos.expressionEnabled, true);
+  assert.equal(layer.property("ADBE Effect Parade").numProperties, 1);
+  assert.equal(app.project.renderQueue.items.length, 1);
+  assert.equal(app.project.renderQueue.__rendered, 1);
 });

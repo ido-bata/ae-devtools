@@ -114,6 +114,37 @@ function __adp_json(v) {
 `;
 
 
+// Literal for number | finite-number[] args (keyframe values, positions).
+function jsLit(v) {
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) throw new Error("adapter arg must be a finite number");
+    return String(v);
+  }
+  if (Array.isArray(v)) {
+    return "[" + v.map((n) => {
+      if (typeof n !== "number" || !Number.isFinite(n)) throw new Error("adapter arg array must contain finite numbers");
+      return String(n);
+    }).join(",") + "]";
+  }
+  throw new Error("adapter arg must be a number or number array");
+}
+
+function jsPath(path) {
+  if (!Array.isArray(path) || path.length === 0 || path.some((p) => typeof p !== "string" || p.length === 0)) {
+    throw new Error("propertyPath must be a non-empty array of matchName strings");
+  }
+  return "[" + path.map(js).join(",") + "]";
+}
+
+// Shared source tail: resolve comp -> layer -> property by matchName path.
+const PROP_WALK = `
+var comp = __adp_findItem(@COMP@, CompItem);
+var layer = __adp_findLayer(comp, @LAYER@);
+var prop = layer;
+var __path = @PATH@;
+for (var __i = 0; __i < __path.length; __i++) { prop = prop.property(__path[__i]); }
+`;
+
 function js(v) {
   // JSON-encode a JS literal into the ExtendScript source (strings only
   // reach here after arg validation).
@@ -373,6 +404,100 @@ return __adp_json({
   items: list,
   activeItem: ai === null ? null : { name: ai.name, typeName: String(ai.typeName) }
 });
+`,
+  },
+  // ---- Issue #16: animation / effects / render domains ----
+  {
+    id: "anim.setValue",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "setValue")],
+    args: ["compName", "layerName", "propertyPath", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "value"]);
+      jsLit(a.value); jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.setValue(${jsLit(a.value)});
+return __adp_json({ ok: true, property: "set" });
+`,
+  },
+  {
+    id: "anim.setKeyframe",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "setValueAtKey")],
+    args: ["compName", "layerName", "propertyPath", "time", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "time", "value"]);
+      if (typeof a.time !== "number" || !Number.isFinite(a.time)) throw new Error("time must be a finite number");
+      jsLit(a.value); jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.setValueAtKey(${a.time}, ${jsLit(a.value)});
+return __adp_json({ ok: true, property: "keyframed", time: ${a.time} });
+`,
+  },
+  {
+    id: "anim.setExpression",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "expression"), S("Property", "expressionEnabled")],
+    args: ["compName", "layerName", "propertyPath", "expression"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "expression"]);
+      if (typeof a.expression !== "string" || a.expression.length === 0) throw new Error("expression must be a non-empty string");
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.expression = ${js(a.expression)};
+prop.expressionEnabled = true;
+return __adp_json({ ok: true, property: "expression-set" });
+`,
+  },
+  {
+    id: "effect.add",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("PropertyGroup", "addProperty")],
+    args: ["compName", "layerName", "effectMatchName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName", "effectMatchName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var fx = layer.property("ADBE Effect Parade").addProperty(${js(a.effectMatchName)});
+return __adp_json({ ok: true, effect: String(fx.name), matchName: ${js(a.effectMatchName)} });
+`,
+  },
+  {
+    id: "render.queueComp",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Project", "renderQueue"), S("RenderQueue", "items"), S("RenderQueueItem", "comp")],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var item = app.project.renderQueue.items.add(comp);
+return __adp_json({ ok: true, queued: comp.name, index: item.index });
+`,
+  },
+  {
+    id: "render.renderQueued",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("RenderQueue", "render"), S("RenderQueue", "rendering")],
+    args: [],
+    validate: () => {},
+    source: () => `${PRELUDE}
+app.project.renderQueue.render();
+return __adp_json({ ok: true, rendered: true });
 `,
   },
 ];

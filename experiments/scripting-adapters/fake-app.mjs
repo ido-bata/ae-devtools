@@ -33,10 +33,43 @@ function collection(list, extra = {}) {
 function makeProperty(value) {
   return {
     value,
+    __keys: [],
+    expression: "",
+    expressionEnabled: false,
+    numKeys: 0,
+    canSetExpression() { return true; },
     setValue(v) { this.value = Array.isArray(v) ? v.slice() : v; },
+    setValueAtKey(t, v) {
+      this.__keys.push({ time: t, value: Array.isArray(v) ? v.slice() : v });
+      this.numKeys = this.__keys.length;
+      this.value = Array.isArray(v) ? v.slice() : v;
+    },
     property(name) {
-      if (name === "Position") return makeProperty([0, 0]);
+      if (name === "Position" || name === "ADBE Position") return makeProperty([0, 0]);
       throw new Error("fake-app: no such property " + name);
+    },
+  };
+}
+
+// Minimal Effect Parade group: addProperty(matchName) like real AE.
+function makeFxGroup(layer) {
+  const fx = [];
+  return {
+    __list: fx,
+    numProperties: 0,
+    addProperty(matchName) {
+      const e = {
+        name: matchName, matchName, enabled: true,
+        property(n) { throw new Error("fake-app: effect param " + n + " not implemented"); },
+      };
+      fx.push(e);
+      this.numProperties = fx.length;
+      return e;
+    },
+    property(n) {
+      const hit = fx.filter((e) => e.matchName === n || e.name === n);
+      if (hit.length === 1) return hit[0];
+      throw new Error("fake-app: effect not found: " + n);
     },
   };
 }
@@ -49,6 +82,7 @@ function makeLayer(name, comp) {
     parent: null,
     enabled: true,
     __pos: makeProperty([0, 0]),
+    __fx: null,
     property(group) {
       // Real AE resolves both display name and matchName; we only
       // implement the stable matchName path adapters must use.
@@ -56,9 +90,14 @@ function makeLayer(name, comp) {
         return {
           property(sub) {
             if (sub === "ADBE Position" || sub === "Position") return layer.__pos;
+            if (sub === "ADBE Anchor Point" || sub === "Anchor Point") return makeProperty([0, 0]);
             throw new Error("fake-app: no such transform property " + sub);
           },
         };
+      }
+      if (group === "ADBE Effect Parade" || group === "Effects") {
+        if (layer.__fx === null) layer.__fx = makeFxGroup(layer);
+        return layer.__fx;
       }
       throw new Error("fake-app: no such property group " + group);
     },
@@ -122,11 +161,29 @@ function makeComp(name, w, h, par, dur, owner) {
 
 export function createAdapterFakeApp() {
   const items = [];
+  const renderItems = [];
   const project = {
     activeItem: null,
     save() {},
     close() {},
     file: { fsName: "/tmp/fake.aep" },
+    renderQueue: {
+      rendering: false,
+      __rendered: 0,
+      items: collection(renderItems, {
+        add(comp) {
+          const it = { comp, index: renderItems.length + 1 };
+          renderItems.push(it);
+          return it;
+        },
+      }),
+      render() {
+        this.rendering = true;
+        this.__rendered += 1;
+        this.rendering = false;
+        return true;
+      },
+    },
   };
   project.items = collection(items, {
     addComp(name, w, h, par, dur, frameRate) {
