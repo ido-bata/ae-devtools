@@ -2,7 +2,7 @@
 
 - Status: **Proposed**, architecture alternatives gated by evidence.
 - Epic: [#6](https://github.com/ido-bata/ae-devtools/issues/6)
-- Spec: [spec.md](spec.md); [research.md](research.md); [tasks.md](tasks.md); [catalog contract](contracts/capability-catalog.md).
+- Spec: [spec.md](spec.md); [research.md](research.md); [tasks.md](tasks.md); [catalog contract](contracts/capability-catalog.md); [trusted-execution design note](design/trusted-execution.md) (Issue #14, proposed).
 - This plan creates work units and acceptance obligations, **not a commitment that every SDK function can be remotely invoked**.
 
 ## 1. Canonical responsibilities
