@@ -104,3 +104,22 @@ jobs:
           node-version: "22"
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/scripting-adapters/tests/run.mjs
+
+  dev-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect suite
+        id: detect
+        run: |
+          if [ -f experiments/dev-loop/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/dev-loop/tests/run.mjs
