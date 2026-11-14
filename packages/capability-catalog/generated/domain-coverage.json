@@ -5666,5 +5666,1591 @@
         "ae.scripting.SolidSource.color"
       ]
     }
+  ],
+  "unassigned": [
+    {
+      "id": "ae.scripting.CharacterRange.characterEnd",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.characterStart",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.fillColor",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.isRangeValid",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.kerning",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.pasteFrom",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.strokeColor",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.strokeOverFill",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.text",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.CharacterRange.toString",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ComposedLineRange.characterEnd",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ComposedLineRange.characterRange",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ComposedLineRange.characterStart",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ComposedLineRange.isRangeValid",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ComposedLineRange.toString",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.designAxesData",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.designVector",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.familyName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.familyPrefix",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.fontID",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.fullName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.hasDesignAxes",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.hasGlyphsFor",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.hasSameDict",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.isFromAdobeFonts",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.isSubstitute",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.location",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.nativeFamilyName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.nativeFullName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.nativeStyleName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.otherFontsWithSameDict",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.postScriptName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.postScriptNameForDesignVector",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.styleName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.technology",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.type",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.version",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontObject.writingScripts",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.allFonts",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.favoriteFontFamilyList",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.fontServerRevision",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.fontsDuplicateByPostScriptName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.fontsWithDefaultDesignAxes",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.freezeSyncSubstitutedFonts",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.getCTScriptForString",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.getDefaultFontForCTScript",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.getFontByID",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.getFontsByFamilyNameAndStyleName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.getFontsByPostScriptName",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.missingOrSubstitutedFonts",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.mruFontFamilyList",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.pollForAndPushNonSystemFontFoldersChanges",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.setDefaultFontForCTScript",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.FontsObject.substitutedFontReplacementMatchPolicy",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.GuideOptions.color",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.GuideOptions.orientation",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.GuideOptions.pinned",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.GuideOptions.position",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.GuideOptions.positionType",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.KeyframeEase.influence",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.KeyframeEase.speed",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.chapter",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.comment",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.cuePointName",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.duration",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.eventCuePoint",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.frameTarget",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.getParameters",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.label",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.protectedRegion",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.setParameters",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MarkerValue.url",
+      "category": "keyframe"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.color",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.inverted",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.locked",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.maskFeatherFalloff",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.maskMode",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.maskMotionBlur",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.MaskPropertyGroup.rotoBezier",
+      "category": "mask"
+    },
+    {
+      "id": "ae.scripting.OutputModule.applyTemplate",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.file",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.getSetting",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.getSettings",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.includeSourceXMP",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.name",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.postRenderAction",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.remove",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.saveAsTemplate",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.setSetting",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.setSettings",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.OutputModule.templates",
+      "category": "output"
+    },
+    {
+      "id": "ae.scripting.ParagraphRange.characterEnd",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ParagraphRange.characterRange",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ParagraphRange.characterStart",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ParagraphRange.isRangeValid",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ParagraphRange.toString",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.ParametricMeshLayer.parametricBevelOptions",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.ParametricMeshLayer.parametricMeshOptions",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.ParametricMeshLayer.parametricMeshType",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Preferences.deletePref",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.getPrefAsBool",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.getPrefAsFloat",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.getPrefAsLong",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.getPrefAsString",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.havePref",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.reload",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.savePrefAsBool",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.savePrefAsFloat",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.savePrefAsLong",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.savePrefAsString",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Preferences.saveToDisk",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Property.LayerInputStageType",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.addKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.addToMotionGraphicsTemplate",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.addToMotionGraphicsTemplateAs",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.alternateSource",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.canAddToMotionGraphicsTemplate",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.canSetAlternateSource",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.canSetExpression",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.canVaryOverTime",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.dimensionsSeparated",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.essentialPropertySource",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.expression",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.expressionEnabled",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.expressionError",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.getInputStageCycleSafeLimit",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.getSeparationFollower",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.hasMax",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.hasMin",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.inputLayerAndStage",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.isDropdownEffect",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.isInterpolationTypeValid",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.isSeparationFollower",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.isSeparationLeader",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.isSpatial",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.isTimeVarying",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyInInterpolationType",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyInSpatialTangent",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyInTemporalEase",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyLabel",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyOutInterpolationType",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyOutSpatialTangent",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyOutTemporalEase",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyRoving",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keySelected",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keySpatialAutoBezier",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keySpatialContinuous",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyTemporalAutoBezier",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyTemporalContinuous",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyTime",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.keyValue",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.layerInputStage",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.maxValue",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.minValue",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.nearestKeyIndex",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.numKeys",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.propertyIndex",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.propertyParameters",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.propertyValueType",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.removeKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.selectedKeys",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.separationDimension",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.separationLeader",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setAlternateSource",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setInputLayerAndStage",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setInterpolationTypeAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setLabelAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setLayerInputStage",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setPropertyParameters",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setRovingAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setSelectedAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setSpatialAutoBezierAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setSpatialContinuousAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setSpatialTangentsAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setTemporalAutoBezierAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setTemporalContinuousAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setTemporalEaseAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setValue",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setValueAtKey",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setValueAtTime",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.setValuesAtTimes",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.unitsText",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.value",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.valueAtTime",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.Property.valueText",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.active",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.canSetEnabled",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.duplicate",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.elided",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.enabled",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.isEffect",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.isMask",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.isModified",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.matchName",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.moveTo",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.name",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.parentProperty",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.propertyDepth",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.propertyGroup",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.propertyIndex",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.propertyType",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.remove",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyBase.selected",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyGroup.addProperty",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyGroup.addVariableFontAxis",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyGroup.canAddProperty",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyGroup.numProperties",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.PropertyGroup.property",
+      "category": "property"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.canQueueInAME",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.item",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.items",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.numItems",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.pauseRendering",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.queueInAME",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.queueNotify",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.render",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.rendering",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.showWindow",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueue.stopRendering",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.applyTemplate",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.comp",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.duplicate",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.elapsedSeconds",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.getSetting",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.getSettings",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.logType",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.numOutputModules",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.onStatusChanged",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.outputModule",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.outputModules",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.queueItemNotify",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.remove",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.render",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.saveAsTemplate",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.setSetting",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.setSettings",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.skipFrames",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.startTime",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.status",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.templates",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.timeSpanDuration",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.RenderQueueItem.timeSpanStart",
+      "category": "render-queue"
+    },
+    {
+      "id": "ae.scripting.Settings.getSetting",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Settings.haveSetting",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Settings.saveSetting",
+      "category": "preferences"
+    },
+    {
+      "id": "ae.scripting.Shape.closed",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherInterps",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherRadii",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherRelCornerAngles",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherRelSegLocs",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherSegLocs",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherTensions",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.featherTypes",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.inTangents",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.outTangents",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.Shape.vertices",
+      "category": "shape"
+    },
+    {
+      "id": "ae.scripting.System.callSystem",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.System.machineName",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.System.osName",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.System.osVersion",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.System.userName",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.TextDocument.allCaps",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.applyFill",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.applyStroke",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.autoHyphenate",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.autoKernType",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.autoLeading",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.baselineDirection",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.baselineLocs",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.baselineShift",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxAutoFitPolicy",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxFirstBaselineAlignment",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxFirstBaselineAlignmentMinimum",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxInsetSpacing",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxOverflow",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxText",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxTextPos",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxTextSize",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.boxVerticalAlignment",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.characterRange",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.composedLineCharacterIndexesAt",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.composedLineCount",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.composedLineRange",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.composerEngine",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.digitSet",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.direction",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.endIndent",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.everyLineComposer",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fauxBold",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fauxItalic",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fillColor",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.firstLineIndent",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.font",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontBaselineOption",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontCapsOption",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontFamily",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontLocation",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontObject",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontSize",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.fontStyle",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.hangingRoman",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.horizontalScale",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.justification",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.kerning",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.leading",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.leadingType",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.ligature",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.lineJoinType",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.lineOrientation",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.noBreak",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.paragraphCharacterIndexesAt",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.paragraphCount",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.paragraphRange",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.pointText",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.resetCharStyle",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.resetParagraphStyle",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.smallCaps",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.spaceAfter",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.spaceBefore",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.startIndent",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.strokeColor",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.strokeOverFill",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.strokeWidth",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.subscript",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.superscript",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.text",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.tracking",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.tsume",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.TextDocument.verticalScale",
+      "category": "text"
+    },
+    {
+      "id": "ae.scripting.View.active",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.View.options",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.View.setActive",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.channels",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.checkerboards",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.exposure",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.fastPreview",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.guidesLocked",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.guidesSnap",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.guidesVisibility",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.rulers",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.ViewOptions.zoom",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.Viewer.active",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.Viewer.activeViewIndex",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.Viewer.maximized",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.Viewer.setActive",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.Viewer.type",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.Viewer.views",
+      "category": "ui"
+    },
+    {
+      "id": "ae.scripting.app.activate",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.activeViewer",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.availableGPUAccelTypes",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.beginSuppressDialogs",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.beginUndoGroup",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.buildName",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.buildNumber",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.cancelTask",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.disableRendering",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.effects",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.endSuppressDialogs",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.endUndoGroup",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.endWatchFolder",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.executeCommand",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.exitAfterLaunchAndEval",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.exitCode",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.findMenuCommandId",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.fonts",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.isRenderEngine",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.isWatchFolder",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.isoLanguage",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.memoryInUse",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.newProject",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.onError",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.open",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.openFast",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.parseSwatchFile",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.pauseWatchFolder",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.preferences",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.project",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.purge",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.quit",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.restart",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.saveProjectOnCrash",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.scheduleTask",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.setMemoryUsageLimits",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.setMultiFrameRenderingConfig",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.setSavePreferencesOnQuit",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.settings",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.version",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.app.watchFolder",
+      "category": "application"
+    },
+    {
+      "id": "ae.scripting.global.clearOutput",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.currentFormatToTime",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.generateRandomNumber",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.getEnumAsString",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.isValid",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.timeToCurrentFormat",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.write",
+      "category": "system"
+    },
+    {
+      "id": "ae.scripting.global.writeLn",
+      "category": "system"
+    }
   ]
 }

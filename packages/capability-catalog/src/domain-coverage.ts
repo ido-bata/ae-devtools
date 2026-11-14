@@ -64,6 +64,13 @@ export type DomainCoverageReport = {
   schema: "ae-devtools.domain-coverage-report/v1";
   generatedFrom: { path: string; sha256: string }[];
   domains: DomainCoverage[];
+  /**
+   * Scripting symbols whose `category` no domain definition claims.
+   * Domain coverage must never silently drop symbols: every scripting
+   * symbol is either a member of exactly one domain or listed here
+   * (CAP032 / FR-13 — the uncovered list is the honest denominator).
+   */
+  unassigned: { id: string; category: string }[];
 };
 
 function zeroAxis<T extends string>(axis: readonly T[]): Record<T, number> {
@@ -119,12 +126,22 @@ export function buildDomainCoverageReport(input: {
   generatedFrom: { path: string; sha256: string }[];
 }): DomainCoverageReport {
   const seen = new Set<string>();
+  const claimedBy = new Map<string, string>();
   const domains = input.domains.map((d) => {
     if (d.schema !== DOMAIN_SCHEMA) {
       throw new Error(`domain ${JSON.stringify(d.domain)} has schema ${JSON.stringify(d.schema)}`);
     }
     if (seen.has(d.domain)) throw new Error(`duplicate domain slug: ${d.domain}`);
     seen.add(d.domain);
+    // A category claimed by two domains would double-count its symbols in
+    // the coverage denominator — fail closed instead of picking a winner.
+    for (const category of d.categories) {
+      const owner = claimedBy.get(category);
+      if (owner !== undefined) {
+        throw new Error(`category ${JSON.stringify(category)} claimed by both ${owner} and ${d.domain}`);
+      }
+      claimedBy.set(category, d.domain);
+    }
     const coverage = summarizeDomain(d, input.records);
     if (coverage.memberCount === 0) {
       throw new Error(`domain ${d.domain} matched no scripting symbols — check its categories`);
@@ -132,12 +149,19 @@ export function buildDomainCoverageReport(input: {
     return coverage;
   });
   domains.sort((a, b) => (a.domain < b.domain ? -1 : a.domain > b.domain ? 1 : 0));
+
+  const unassigned = input.records
+    .filter((r) => r.kind === "scripting-symbol" && !claimedBy.has(r.category))
+    .map((r) => ({ id: r.id, category: r.category }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
   return {
     schema: "ae-devtools.domain-coverage-report/v1",
     generatedFrom: [...input.generatedFrom].sort((a, b) =>
       a.path < b.path ? -1 : a.path > b.path ? 1 : 0,
     ),
     domains,
+    unassigned,
   };
 }
 
