@@ -34,13 +34,47 @@ test("stale references refuse — never re-resolve by name", () => {
     ["name mismatch (same path, renamed)", { aeRef: { type: "layer", name: "Renamed", path: [0, 0] } }],
     ["content hash drift", { aeRef: { type: "layer", name: "Shape 1", path: [0, 0], contentHash: "old" } }],
     ["hash on un-hashed node", { aeRef: { type: "comp", name: "Alt", path: [1], contentHash: "h" } }],
-    ["not a descriptor", { foo: 1 }],
   ];
   for (const [label, descriptor] of cases) {
     const result = resolveDescriptor(descriptor, SNAPSHOT);
     assert.equal(result.status, "refused", label);
     assert.equal(result.reason, "STALE_REFERENCE", label);
   }
+});
+
+test("malformed aeRef descriptors are INVALID_REFERENCE — typed refusal, never a throw", () => {
+  const cases = [
+    ["no descriptor", null],
+    ["descriptor without aeRef", { foo: 1 }],
+    ["aeRef null", { aeRef: null }],
+    ["aeRef array", { aeRef: ["layer"] }],
+    ["aeRef missing type", { aeRef: { name: "x", path: [0] } }],
+    ["aeRef empty type", { aeRef: { type: "", name: "x", path: [0] } }],
+    ["aeRef non-string type", { aeRef: { type: 7, name: "x", path: [0] } }],
+    ["aeRef missing name", { aeRef: { type: "layer", path: [0] } }],
+    ["aeRef non-string name", { aeRef: { type: "layer", name: 7, path: [0] } }],
+    ["aeRef path not an array", { aeRef: { type: "layer", name: "x", path: "0" } }],
+    ["aeRef path null", { aeRef: { type: "layer", name: "x", path: null } }],
+    ["aeRef path object", { aeRef: { type: "layer", name: "x", path: { 0: 0 } } }],
+    ["aeRef path fractional index", { aeRef: { type: "layer", name: "x", path: [0.5] } }],
+    ["aeRef path NaN index", { aeRef: { type: "layer", name: "x", path: [NaN] } }],
+    ["aeRef path negative index", { aeRef: { type: "layer", name: "x", path: [-1] } }],
+    ["aeRef path string index", { aeRef: { type: "layer", name: "x", path: ["0"] } }],
+    ["aeRef path Infinity index", { aeRef: { type: "layer", name: "x", path: [Infinity] } }],
+    ["aeRef non-string contentHash", { aeRef: { type: "layer", name: "x", path: [0], contentHash: 42 } }],
+  ];
+  for (const [label, descriptor] of cases) {
+    const result = resolveDescriptor(descriptor, SNAPSHOT);
+    assert.equal(result.status, "refused", label);
+    assert.equal(result.reason, "INVALID_REFERENCE", label);
+  }
+  // guardMutation surfaces the same typed refusal (project checks still win).
+  const viaGuard = guardMutation({
+    descriptor: { aeRef: { type: "layer", name: "x", path: null } },
+    snapshot: SNAPSHOT,
+    projectIdentity: "proj-A",
+  });
+  assert.equal(viaGuard.reason, "INVALID_REFERENCE");
 });
 
 test("duplicate names do not confuse resolution — path wins, then exact match", () => {

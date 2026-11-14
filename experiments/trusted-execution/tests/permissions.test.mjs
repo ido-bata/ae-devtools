@@ -183,6 +183,136 @@ test("argumentHash is canonical: key order does not matter", () => {
 
 test("consentScopeFor refuses a pin without sessionId", () => {
   assert.throws(() => consentScopeFor({ pin: {}, operationId: "op", args: {} }), /session pin/);
+  assert.throws(() => consentScopeFor({ pin: null, operationId: "op", args: {} }), /session pin/);
+  assert.throws(
+    () => consentScopeFor({ pin: PIN, operationId: "", args: {} }),
+    /operation id/,
+  );
+  assert.throws(
+    () => consentScopeFor({ pin: PIN, operationId: undefined, args: {} }),
+    /operation id/,
+  );
+});
+
+test("malformed consent, pin and dispatch input are typed refusals — never throws", () => {
+  const base = {
+    advertisement: ROWS.writeRow,
+    permission: "write",
+    pin: PIN,
+    operationId: "ae.operation.comp.create",
+    args: {},
+    projectIdentity: "proj-A",
+  };
+
+  // Dispatch input itself malformed.
+  for (const input of [null, undefined, "x", 42]) {
+    const r = authorizeExecution(input);
+    assert.equal(r.status, "refused");
+    assert.equal(r.reason, "MALFORMED_REQUEST");
+  }
+
+  // Session pin malformed → CONSENT_REQUIRED, not an exception.
+  for (const pin of [null, {}, { sessionId: 7 }, { sessionId: "" }, "sess-1"]) {
+    const r = authorizeExecution({ ...base, pin });
+    assert.equal(r.status, "refused", JSON.stringify(pin));
+    assert.equal(r.reason, "CONSENT_REQUIRED", JSON.stringify(pin));
+  }
+
+  // Operation id missing → CONSENT_REQUIRED, not an exception.
+  for (const operationId of [undefined, null, "", 42]) {
+    const r = authorizeExecution({ ...base, operationId });
+    assert.equal(r.status, "refused", JSON.stringify(operationId));
+    assert.equal(r.reason, "CONSENT_REQUIRED", JSON.stringify(operationId));
+  }
+
+  // Consent tokens with malformed scope shapes → CONSENT_REQUIRED.
+  // sameScope must never see these (it would throw on missing sessionPin).
+  const badScopes = [
+    ["consent null", null],
+    ["consent scalar", "yes"],
+    ["scope missing", {}],
+    ["scope scalar", { scope: "proj-A" }],
+    ["scope array", { scope: [] }],
+    ["sessionPin missing", { scope: { operationId: "op", argumentHash: "h", projectIdentity: "p" } }],
+    ["sessionPin null", { scope: { sessionPin: null, operationId: "op", argumentHash: "h", projectIdentity: "p" } }],
+    ["sessionPin no sessionId", { scope: { sessionPin: {}, operationId: "op", argumentHash: "h", projectIdentity: "p" } }],
+    ["operationId missing", { scope: { sessionPin: { sessionId: "s" }, argumentHash: "h", projectIdentity: "p" } }],
+    ["argumentHash missing", { scope: { sessionPin: { sessionId: "s" }, operationId: "op", projectIdentity: "p" } }],
+    ["projectIdentity missing", { scope: { sessionPin: { sessionId: "s" }, operationId: "op", argumentHash: "h" } }],
+    ["projectIdentity wrong type", { scope: { sessionPin: { sessionId: "s" }, operationId: "op", argumentHash: "h", projectIdentity: 7 } }],
+  ];
+  for (const [label, consent] of badScopes) {
+    const r = authorizeExecution({ ...base, consent });
+    assert.equal(r.status, "refused", label);
+    assert.equal(r.reason, "CONSENT_REQUIRED", label);
+  }
+});
+
+test("canonical argument hash: non-finite and non-JSON values never collide", () => {
+  // JSON.stringify collapses NaN/±Infinity to null and drops undefined —
+  // the consent hash must keep them distinct or consent for one value
+  // would silently cover another.
+  const distinct = [
+    ["NaN", { a: NaN }],
+    ["Infinity", { a: Infinity }],
+    ["-Infinity", { a: -Infinity }],
+    ["null", { a: null }],
+    ["zero", { a: 0 }],
+    ["one", { a: 1 }],
+  ];
+  const hashes = new Map(distinct.map(([label, args]) => [label, argumentHash(args)]));
+  for (const [l1, h1] of hashes) {
+    for (const [l2, h2] of hashes) {
+      if (l1 !== l2) assert.notEqual(h1, h2, `${l1} collides with ${l2}`);
+    }
+  }
+  // undefined/function/symbol/bigint are distinct from null and from each
+  // other, and from the "key absent" shape.
+  assert.notEqual(argumentHash({ a: undefined }), argumentHash({}));
+  assert.notEqual(argumentHash({ a: undefined }), argumentHash({ a: null }));
+  assert.notEqual(argumentHash([undefined]), argumentHash([]));
+  assert.notEqual(argumentHash([undefined]), argumentHash([null]));
+  assert.notEqual(argumentHash({ f: () => {} }), argumentHash({ f: null }));
+  assert.notEqual(argumentHash({ f: () => {} }), argumentHash({}));
+  assert.notEqual(argumentHash({ b: 1n }), argumentHash({ b: "1" }));
+  assert.notEqual(argumentHash({ b: 1n }), argumentHash({ b: 1 }));
+  // Non-plain objects do not collapse to "{}".
+  assert.notEqual(argumentHash({ d: new Date(0) }), argumentHash({ d: {} }));
+  assert.equal(canonicalJson(NaN), "#num:NaN#");
+  assert.equal(canonicalJson(Infinity), "#num:+Infinity#");
+  assert.equal(canonicalJson(-Infinity), "#num:-Infinity#");
+  // Sentinels cannot be forged by string values (strings stay quoted).
+  assert.equal(canonicalJson("#num:NaN#"), '"#num:NaN#"');
+  assert.notEqual(canonicalJson("#num:NaN#"), canonicalJson(NaN));
+  // -0 stays JSON-equivalent to 0 (wire semantics).
+  assert.equal(canonicalJson(-0), canonicalJson(0));
+});
+
+test("consent scope equality is checked, not authenticity — forged-but-well-formed scope passes (fake-level boundary)", () => {
+  // This layer validates that the presented scope *equals* the required
+  // scope. It does NOT verify who issued the token — issuance/signature
+  // verification is production authorization (ADR-0005 / ae-a8n #97-#99),
+  // deliberately absent here. This test pins that boundary so a future
+  // change cannot silently imply production-grade consent.
+  const base = {
+    advertisement: ROWS.writeRow,
+    permission: "write",
+    pin: PIN,
+    operationId: "ae.operation.comp.create",
+    args: { name: "Main" },
+    projectIdentity: "proj-A",
+  };
+  // A hand-built scope that happens to equal the required scope passes —
+  // nothing here verifies issuance. That is the documented fake-level
+  // boundary, pinned so it cannot silently become an implied guarantee.
+  const forgedScope = consentScopeFor({
+    pin: base.pin,
+    operationId: base.operationId,
+    args: base.args,
+    projectIdentity: base.projectIdentity,
+  });
+  const result = authorizeExecution({ ...base, consent: { scope: forgedScope, forged: true } });
+  assert.deepEqual(result, { status: "pass" });
 });
 
 test("every class has a declared consent requirement", () => {

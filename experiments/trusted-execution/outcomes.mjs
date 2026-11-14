@@ -37,14 +37,31 @@ export function toContractOutcome(outcome) {
  *   dispatched        — was the request possibly dispatched? (boolean)
  *   reply             — host reply object or null
  *   deadlineExceeded  — poll deadline hit before an attributable reply
- *   hostReportedBusy  — host itself reported a typed busy/modal refusal
- *                       (only trustworthy when it came from inside AE)
+ *   hostBusyEvidence  — attributable in-host attestation that AE was
+ *                       busy/modal AND that this request was proven not
+ *                       dispatched:
+ *                       { source: "ae-host" | "os-signal",
+ *                         provedNonDispatch: true, detail?: string }
+ *                       A bare boolean or client-side inference ("AE
+ *                       seems busy") is NOT accepted — per the probe
+ *                       outcome model, indistinguishable-from-outside
+ *                       busy is UNKNOWN. Only an in-host typed signal or
+ *                       an OS-visible attributable signal qualifies.
  *   partialMutation   — host admits the mutation may be partial
  * @returns outcome object per outcome-model.md §2 shape, extended with
  *   `mayHaveMutated` for write paths.
  */
-export function classifyWriteResult(input) {
-  const { dispatched, reply, deadlineExceeded, hostReportedBusy, partialMutation } = input;
+export function classifyWriteResult(input = {}) {
+  const { dispatched, reply, deadlineExceeded, hostBusyEvidence, partialMutation } = input;
+
+  // Host-busy is REFUSED only on attributable host evidence: the attester
+  // must be inside AE or an OS-observable signal, and must prove this
+  // request was not dispatched. Anything weaker stays UNKNOWN.
+  const busyProven =
+    hostBusyEvidence !== null &&
+    typeof hostBusyEvidence === "object" &&
+    (hostBusyEvidence.source === "ae-host" || hostBusyEvidence.source === "os-signal") &&
+    hostBusyEvidence.provedNonDispatch === true;
 
   // 1. Environment/client-side guard: nothing was sent.
   if (!dispatched) {
@@ -98,10 +115,16 @@ export function classifyWriteResult(input) {
   if (deadlineExceeded) {
     // AE UI busy / modal is UNKNOWN unless the HOST said so — from outside,
     // busy and dead-dispatcher are indistinguishable (probe rule, binding).
-    if (hostReportedBusy === true) {
+    if (busyProven) {
       return {
         outcome: "REFUSED",
-        refusal: { code: "HOST_BUSY", message: "host reported busy/modal before execution" },
+        refusal: {
+          code: "HOST_BUSY",
+          message: "host reported busy/modal before execution",
+          ...(typeof hostBusyEvidence.detail === "string"
+            ? { detail: hostBusyEvidence.detail }
+            : {}),
+        },
         requestState: "ACKED",
         mayHaveMutated: false,
         result: null,

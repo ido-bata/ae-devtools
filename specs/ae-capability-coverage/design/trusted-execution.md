@@ -42,6 +42,15 @@ Rules:
   body is always an explicit, separately-authorized payload.
 - Consent is scoped to (session pin, operation id, argument hash). It does
   not survive session re-pin, dispatcher re-activation, or project change.
+  The argument hash uses a canonical encoding in which non-finite numbers,
+  `undefined` and non-plain objects cannot collide with `null`/`{}` the
+  way `JSON.stringify` would collapse them — consent issued for one value
+  never silently covers a different one. Consent *scope equality* is what
+  this layer checks; token issuance/authenticity is production
+  authorization (ADR-0005, ae-a8n #97–#99), not implied by a `pass` here.
+  Malformed pins, operation ids, dispatch inputs and consent scopes are
+  typed refusals, never exceptions (same discipline as the catalog
+  gate's malformed-response).
 
 ## 2. ES3 codec rules (CAP026)
 
@@ -73,7 +82,11 @@ Rules:
 - Host-object references use **snapshot identity descriptors**
   (name + index path + type tag + content hash where cheap), never live
   handles. A descriptor that fails to resolve at dispatch time is
-  `REFUSED STALE_REFERENCE`, not a best-effort re-resolution.
+  `REFUSED STALE_REFERENCE`, not a best-effort re-resolution. A
+  descriptor whose *shape* violates the `aeRef` contract (the codec's
+  type/name/path requirements) is `REFUSED INVALID_REFERENCE` — a caller
+  bug refused before any lookup, kept distinct from state drift so the
+  two failure modes are not conflated.
 - Idempotency: operations that cannot prove idempotence are marked
   `idempotent: false` in the manifest; the client must not auto-retry them
   after `UNKNOWN` (same rule as the probe: unknown outcome is quarantined,
@@ -87,8 +100,9 @@ one vocabulary:
 - `COMPLETED` — host acknowledged and returned a result.
 - `REFUSED <code>` — terminal, pre-execution rejection (`WRONG_TARGET`,
   `MISSING_PERMISSION`, `NOT_IMPLEMENTED`, `UNVERIFIED`,
-  `NO_EXECUTION_PATH`, `STALE_REFERENCE`, `CONSENT_REQUIRED`, ...). Releases
-  the in-flight guard immediately.
+  `NO_EXECUTION_PATH`, `STALE_REFERENCE`, `INVALID_REFERENCE`,
+  `CONSENT_REQUIRED`, `CONSENT_SCOPE_MISMATCH`, `MALFORMED_REQUEST`,
+  ...). Releases the in-flight guard immediately.
 - `FAILED` — executed and reported an error; includes partial-mutation
   flag when the host cannot prove atomicity.
 - `UNKNOWN` — dispatched or possibly dispatched, no definitive reply;
@@ -109,7 +123,11 @@ model apply unchanged).
 Additional write-specific rules:
 
 - AE UI busy / modal state → `REFUSED HOST_BUSY` (pre-execution) rather
-  than `UNKNOWN`, when the host can prove non-dispatch.
+  than `UNKNOWN`, **only** on attributable host evidence — an in-host
+  typed signal or an OS-visible attributable signal that also proves this
+  request was not dispatched (probe outcome-model rule, binding). A
+  client-side "AE seems busy" inference, a bare flag, or evidence without
+  proven non-dispatch stays `UNKNOWN`.
 - Undo is a separate named operation; a failed undo is `FAILED`, never
   folded into the original operation's success.
 - Timeout-after-possible-dispatch is always `UNKNOWN`; the client records

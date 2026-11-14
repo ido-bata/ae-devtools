@@ -72,18 +72,44 @@ test("timeout after possible dispatch → UNKNOWN + mayHaveMutated, never retrie
   assert.match(r.note, /do not resend/);
 });
 
-test("client-side 'AE seems busy' is UNKNOWN — only a host-reported busy is REFUSED HOST_BUSY", () => {
+test("client-side 'AE seems busy' is UNKNOWN — only attributable host evidence is REFUSED HOST_BUSY", () => {
   const guessed = classifyWriteResult({ dispatched: true, reply: null, deadlineExceeded: true });
-  assert.equal(guessed.outcome, "UNKNOWN"); // no hostReportedBusy → cannot claim busy
-  const hostSaid = classifyWriteResult({
-    dispatched: true,
-    reply: null,
-    deadlineExceeded: true,
-    hostReportedBusy: true,
-  });
-  assert.equal(hostSaid.outcome, "REFUSED");
-  assert.equal(hostSaid.refusal.code, "HOST_BUSY");
-  assert.equal(hostSaid.mayHaveMutated, false);
+  assert.equal(guessed.outcome, "UNKNOWN"); // no evidence → cannot claim busy
+
+  // Weak or non-attributable signals must NOT produce HOST_BUSY.
+  const weak = [
+    ["bare boolean (legacy guess)", true],
+    ["string guess", "busy"],
+    ["client-sourced evidence", { source: "client", provedNonDispatch: true }],
+    ["host source without non-dispatch proof", { source: "ae-host" }],
+    ["os-signal without non-dispatch proof", { source: "os-signal", provedNonDispatch: false }],
+    ["proof flag not exactly true", { source: "ae-host", provedNonDispatch: "yes" }],
+    ["scalar", 1],
+  ];
+  for (const [label, hostBusyEvidence] of weak) {
+    const r = classifyWriteResult({
+      dispatched: true,
+      reply: null,
+      deadlineExceeded: true,
+      hostBusyEvidence,
+    });
+    assert.equal(r.outcome, "UNKNOWN", label);
+    assert.equal(r.unknownCategory, "NO_REPLY_BEFORE_DEADLINE", label);
+  }
+
+  // Attributable in-host attestation with proven non-dispatch → HOST_BUSY.
+  for (const source of ["ae-host", "os-signal"]) {
+    const hostSaid = classifyWriteResult({
+      dispatched: true,
+      reply: null,
+      deadlineExceeded: true,
+      hostBusyEvidence: { source, provedNonDispatch: true, detail: "modal up" },
+    });
+    assert.equal(hostSaid.outcome, "REFUSED", source);
+    assert.equal(hostSaid.refusal.code, "HOST_BUSY");
+    assert.equal(hostSaid.refusal.detail, "modal up");
+    assert.equal(hostSaid.mayHaveMutated, false);
+  }
 });
 
 test("unattributable reply → UNKNOWN, not accepted", () => {

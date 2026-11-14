@@ -19,14 +19,35 @@
  * `descriptor.path` indexes into `items` arrays level by level
  * (path[0] → root item index, path[1] → its first child index, ...).
  *
- * @returns {{status:"resolved",node:object}|{status:"refused",reason:"STALE_REFERENCE",detail:string}}
- *   A descriptor that fails to resolve is STALE_REFERENCE — never a
- *   best-effort re-resolution (design §3).
+ * @returns {{status:"resolved",node:object}|{status:"refused",reason:"INVALID_REFERENCE"|"STALE_REFERENCE",detail:string}}
+ *   A descriptor whose *shape* violates the aeRef contract (codec §2:
+ *   type + name + index path, optional contentHash) is INVALID_REFERENCE —
+ *   a caller bug, refused before any lookup. A well-formed descriptor that
+ *   fails to resolve against the current snapshot is STALE_REFERENCE —
+ *   never a best-effort re-resolution (design §3).
  */
 export function resolveDescriptor(descriptor, snapshot) {
+  const invalid = (detail) => ({ status: "refused", reason: "INVALID_REFERENCE", detail });
   const ref = descriptor?.aeRef;
-  if (ref === undefined || typeof ref !== "object") {
-    return { status: "refused", reason: "STALE_REFERENCE", detail: "not an aeRef descriptor" };
+  if (ref === null || ref === undefined || typeof ref !== "object" || Array.isArray(ref)) {
+    return invalid("not an aeRef descriptor");
+  }
+  if (typeof ref.type !== "string" || ref.type.length === 0) {
+    return invalid("aeRef.type must be a non-empty string");
+  }
+  if (typeof ref.name !== "string") {
+    return invalid("aeRef.name must be a string");
+  }
+  if (!Array.isArray(ref.path)) {
+    return invalid("aeRef.path must be an array of indices");
+  }
+  for (const idx of ref.path) {
+    if (!Number.isInteger(idx) || idx < 0) {
+      return invalid(`aeRef.path entry ${JSON.stringify(idx)} is not a non-negative integer`);
+    }
+  }
+  if (ref.contentHash !== undefined && typeof ref.contentHash !== "string") {
+    return invalid("aeRef.contentHash must be a string");
   }
   if (!Array.isArray(snapshot?.items)) {
     return { status: "refused", reason: "STALE_REFERENCE", detail: "snapshot has no items" };
@@ -35,7 +56,7 @@ export function resolveDescriptor(descriptor, snapshot) {
   let node = null;
   for (let i = 0; i < ref.path.length; i++) {
     const idx = ref.path[i];
-    if (!Number.isInteger(idx) || idx < 0 || idx >= level.length) {
+    if (idx >= level.length) {
       return {
         status: "refused",
         reason: "STALE_REFERENCE",
@@ -60,14 +81,14 @@ export function resolveDescriptor(descriptor, snapshot) {
   if (node === null || typeof node !== "object") {
     return { status: "refused", reason: "STALE_REFERENCE", detail: "path resolved to nothing" };
   }
-  if (ref.type !== undefined && node.type !== ref.type) {
+  if (node.type !== ref.type) {
     return {
       status: "refused",
       reason: "STALE_REFERENCE",
       detail: `type mismatch: descriptor ${ref.type} vs snapshot ${node.type}`,
     };
   }
-  if (ref.name !== undefined && node.name !== ref.name) {
+  if (node.name !== ref.name) {
     return {
       status: "refused",
       reason: "STALE_REFERENCE",

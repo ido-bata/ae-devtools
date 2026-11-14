@@ -72,32 +72,49 @@ catalog dispatch gate (`assertDispatchAllowed`):
   `null` and fail closed.
 - `consentScopeFor(...)` builds the consent scope — session pin
   (`sessionId`/`aeVersion`/`dispatchId`), operation id, canonical
-  argument hash (sha256), project identity.
+  argument hash (sha256), project identity. `canonicalJson` gives every
+  JS value a distinct preimage: non-finite numbers, `undefined`,
+  functions and non-plain objects get `#`-sentinels instead of collapsing
+  to `null`/`{}` the way `JSON.stringify` would — consent for `{a: NaN}`
+  can never silently cover `{a: null}`.
 - `authorizeExecution(input)` enforces, in order: class resolution →
   per-class consent requirement (`session-pin` / `per-dispatch` /
   `explicit-opt-in`) → exact scope match. Consent never survives session
   re-pin, project change, or argument drift; `trusted-dev-script`
   additionally requires an explicit opt-in flag and a provenance
-  declaration.
+  declaration. Malformed dispatch input, session pin, operation id or
+  consent scope are **typed refusals** (`MALFORMED_REQUEST` /
+  `CONSENT_REQUIRED`), never exceptions.
+- **Consent authenticity boundary:** this layer checks scope *equality*
+  only. A consent token is unauthenticated plain data here — issuance,
+  signing and verification against a trusted authority are production
+  authorization (ADR-0005 / ae-a8n #97–#99) and deliberately absent. A
+  forged-but-well-formed scope passes this check by design; do not read
+  `pass` as production-grade authorization.
 
 ## Mutation guard and outcomes (CAP027/CAP028 groundwork)
 
 - `mutation-guard.mjs` — `resolveDescriptor` resolves an `aeRef` against a
-  plain project snapshot; any failure is `STALE_REFERENCE`, never a
-  best-effort re-resolution. `guardMutation` additionally binds the
-  dispatch's project identity to the snapshot's (`PROJECT_MISMATCH` /
+  plain project snapshot. Shape violations (missing/non-string `type` or
+  `name`, non-array or non-integer `path`, wrong-typed `contentHash`) are
+  `INVALID_REFERENCE` — a caller bug refused before lookup; a
+  well-formed descriptor that fails to resolve is `STALE_REFERENCE`,
+  never a best-effort re-resolution. `guardMutation` additionally binds
+  the dispatch's project identity to the snapshot's (`PROJECT_MISMATCH` /
   `PROJECT_UNKNOWN`). `retryDecision` encodes the quarantine rule:
   `UNKNOWN` is never resent for any operation.
 - `outcomes.mjs` — `classifyWriteResult` extends the probe outcome model
   to write paths: `BLOCKED`/`not-sent` only when nothing was dispatched,
-  `REFUSED HOST_BUSY` only when the *host itself* reported busy (a
-  client-side "AE seems busy" guess stays `UNKNOWN`), `FAILED` carries
-  `mayHaveMutated` when the host cannot prove atomicity, and timeout
-  after possible dispatch is always `UNKNOWN` + `mayHaveMutated: true`.
-  `toContractOutcome` maps wire outcomes onto catalog contract §5
-  (`not-sent`/`refused`/`completed`/`failed`/`unknown`). Undo is a
-  separate operation whose failure is never folded into the original
-  operation's success.
+  `REFUSED HOST_BUSY` only on **attributable host evidence**
+  (`hostBusyEvidence: { source: "ae-host" | "os-signal",
+  provedNonDispatch: true }`) — a bare boolean or client-side "AE seems
+  busy" guess stays `UNKNOWN` per the probe outcome model, `FAILED`
+  carries `mayHaveMutated` when the host cannot prove atomicity, and
+  timeout after possible dispatch is always `UNKNOWN` +
+  `mayHaveMutated: true`. `toContractOutcome` maps wire outcomes onto
+  catalog contract §5 (`not-sent`/`refused`/`completed`/`failed`/
+  `unknown`). Undo is a separate operation whose failure is never folded
+  into the original operation's success.
 
 ## Running
 
