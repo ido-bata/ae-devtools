@@ -1,8 +1,11 @@
 /*
  * csinterface-wrapper.js
  *
- * Thin wrapper around the host-provided CSInterface with corrected
- * documentation of getCurrentApiVersion().
+ * Thin wrapper around CSInterface.js — which is BUNDLED with the
+ * extension (scaffold.mjs copies the official Adobe-CEP CEP_12.x file
+ * to the extension root). The CEP host does NOT provide it; the
+ * official cookbook requires including it in the extension. This file
+ * corrects the earlier "host-provided" assumption (Issue #36 review).
  *
  * Status: UNVERIFIED. This file has not been executed against a real
  * After Effects instance in the environment that produced this
@@ -34,30 +37,30 @@
  *   - `csWrap.evalScriptJson(src, cb)` : convenience wrapper that
  *     JSON.parses the callback result if it is non-empty.
  *   - `csWrap.evalScriptFile(path, cb)` : convenience wrapper that
- *     loads a script from a fixed path and evalScripts it. Used by
- *     main.js to fire the .jsx probes.
+ *     loads a script from a fixed path and evalScripts it.
  *
- * Note: CSInterface.js is provided by the host at runtime; this
- * wrapper relies on `new CSInterface()` being available in the global
- * scope. See research/02-cep-deep-dive.md §CSInterface for the
- * contract.
+ * Note: CSInterface.js is bundled at the extension root by
+ * scaffold.mjs (official CEP_12.x file). `new CSInterface()` must be
+ * available in the global scope once that script has loaded; if the
+ * bundle is missing the wrapper surfaces a clear console error.
  */
 (function (root) {
   "use strict";
 
   if (typeof CSInterface !== "function") {
-    // CSInterface.js is host-provided. If it is missing, surface a
-    // clear error in the console instead of throwing at first use.
+    // CSInterface.js is bundled at the extension root. If it failed to
+    // load, surface a clear error in the console instead of throwing
+    // at first use.
     console.error(
       "[csinterface-wrapper] CSInterface is not defined. " +
-      "This panel expects CSInterface.js to be provided by the host " +
-      "(see research/02-cep-deep-dive.md §CSInterface)."
+      "CSInterface.js should be bundled at the extension root " +
+      "(scaffold.mjs copies the official CEP_12.x file there)."
     );
   }
 
   function CsWrap() {
     if (typeof CSInterface !== "function") {
-      throw new Error("CSInterface is not defined (host did not provide CSInterface.js).");
+      throw new Error("CSInterface is not defined (bundled CSInterface.js failed to load).");
     }
     this.cs = new CSInterface();
   }
@@ -86,27 +89,35 @@
 
   /**
    * Convenience: evalScript + JSON.parse the callback result.
-   * The callback receives `err` (non-null on failure) and `value`
-   * (parsed JSON object, or the raw string on parse failure).
+   * The callback receives `err` (non-null only when the host returns
+   * EvalScript_ErrMessage) and `value` (parsed JSON when the result
+   * string is JSON, otherwise the raw string).
    *
-   * ExtendScript-side scripts MUST JSON.stringify their return value.
-   * CSInterface.evalScript's callback always receives a string.
+   * CSInterface.evalScript's callback always receives ONE string
+   * argument; ExtendScript failure is reported as the
+   * "EvalScript error." sentinel string, not a separate error arg.
    */
   CsWrap.prototype.evalScriptJson = function (source, callback) {
     var self = this;
     self.evalScript(source, function (raw) {
+      // ExtendScript failure arrives as the EvalScript_ErrMessage
+      // string, not as a separate error argument (single-result
+      // callback contract).
+      if (typeof raw === "string" && raw.indexOf("EvalScript error.") === 0) {
+        callback({ kind: "evalscript_error", raw: raw }, null);
+        return;
+      }
       if (typeof raw === "string" && raw.length > 0) {
         try {
           callback(null, JSON.parse(raw));
           return;
         } catch (parseErr) {
-          // Some ExtendScript errors are returned as plain strings
-          // (EvalScript_ErrMessage). Forward them as a structured error.
-          callback({ kind: "parse_error", raw: raw, cause: parseErr }, null);
+          // Non-JSON string result: forward raw as the value.
+          callback(null, raw);
           return;
         }
       }
-      callback({ kind: "empty_result", raw: raw }, null);
+      callback(null, raw === undefined ? null : raw);
     });
   };
 

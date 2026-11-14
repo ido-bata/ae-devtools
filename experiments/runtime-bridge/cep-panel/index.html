@@ -5,8 +5,8 @@
   <title>ae-devtools bridge panel</title>
 
   <!--
-    Panel-specific CSP. The CEP extension provides CSInterface.js and
-    CEPEngine_extensions.js at runtime; we do NOT bundle them.
+    Panel-specific CSP. CSInterface.js is bundled at the extension
+    root (official CEP_12.x file); the host does NOT provide it.
     See research/02-cep-deep-dive.md for the CEP 12 CORS/CSP defaults.
 
     `'unsafe-eval'` is REQUIRED for CEP 12: CSInterface.js and
@@ -57,8 +57,8 @@
   <pre id="result">(none)</pre>
 
   <!--
-    CSInterface.js is provided by the host at runtime; do NOT bundle.
-    See research/02-cep-deep-dive.md §CSInterface for the contract.
+    CSInterface.js is bundled at the extension root — the CEP host
+    does NOT provide it (official cookbook requires bundling).
     Order matters: load our wrapper BEFORE main.js so it can register.
   -->
   <script src="CSInterface.js"></script>
