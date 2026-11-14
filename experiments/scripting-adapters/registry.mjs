@@ -304,7 +304,7 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index });
     issue: "15",
     permission: "execute",
     mutating: true,
-    members: [S("Property", "setValue"), S("PropertyBase", "name")],
+    members: [S("Property", "setValue"), S("Property", "value")],
     args: ["compName", "layerName", "x", "y"],
     validate: (a) => {
       requireArgs(a, ["compName", "layerName", "x", "y"]);
@@ -389,7 +389,7 @@ return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: du
     issue: "15",
     permission: "execute",
     mutating: false,
-    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "id")],
+    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
     args: [],
     source: () => `${PRELUDE}
 var items = __adp_items();
@@ -507,7 +507,7 @@ return __adp_json({ ok: true, effect: String(fx.name), matchName: ${js(a.effectM
     domain: "animation-effects-render",
     permission: "execute",
     mutating: true,
-    members: [S("Project", "renderQueue"), S("RenderQueue", "items"), S("RenderQueueItem", "comp")],
+    members: [S("Project", "renderQueue"), S("RenderQueue", "items")],
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
     source: (a) => `${PRELUDE}
@@ -533,7 +533,7 @@ return __adp_json({ ok: true, queued: comp.name, index: item.index });
     // Output destination/ownership verification is host-side and remains
     // UNVERIFIED until a real render runs on an owned session.
     requiresConfirm: "render",
-    members: [S("RenderQueue", "render"), S("RenderQueue", "rendering")],
+    members: [S("RenderQueue", "render")],
     args: [],
     validate: () => {},
     source: () => `${PRELUDE}

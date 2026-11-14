@@ -7,7 +7,7 @@
   "generatedFrom": [
     {
       "path": "experiments/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "29dc27bceae1c6f1fdb74b2677d9d0147f3b439352006e61ae07fbe7515589a4"
+      "sha256": "0f4551a3f9e1ebfc1baf45314c4a0132b88aa0649eaaaf0b960fc6477128d724"
     },
     {
       "path": "inventories/scripting/generated/summary.json",
@@ -22525,12 +22525,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemtypename"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (read.projectSummary)"
           }
         ]
       }
@@ -32077,12 +32081,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertyvalue"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.setTransformPosition)"
           }
         ]
       }
@@ -32597,16 +32605,12 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "implementation": "unknown",
+        "verification": "not-run",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/propertybase/#propertybasename"
-          },
-          {
-            "kind": "automated-test",
-            "ref": "experiments/scripting-adapters (layer.setTransformPosition)"
           }
         ]
       }
@@ -33497,16 +33501,12 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "implementation": "unknown",
+        "verification": "not-run",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueue/#renderqueuerendering"
-          },
-          {
-            "kind": "automated-test",
-            "ref": "experiments/scripting-adapters (render.renderQueued)"
           }
         ]
       }
@@ -33661,16 +33661,12 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "implementation": "unknown",
+        "verification": "not-run",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemcomp"
-          },
-          {
-            "kind": "automated-test",
-            "ref": "experiments/scripting-adapters (render.queueComp)"
           }
         ]
       }

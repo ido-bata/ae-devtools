@@ -59,7 +59,7 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.PropertyBase.name": {
+    "ae.scripting.Property.value": {
       "ops": [
         "layer.setTransformPosition"
       ],
@@ -102,6 +102,12 @@
       "evidence": "fake/mock only"
     },
     "ae.scripting.Item.id": {
+      "ops": [
+        "read.projectSummary"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.typeName": {
       "ops": [
         "read.projectSummary"
       ],
@@ -167,19 +173,7 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.RenderQueueItem.comp": {
-      "ops": [
-        "render.queueComp"
-      ],
-      "evidence": "fake/mock only"
-    },
     "ae.scripting.RenderQueue.render": {
-      "ops": [
-        "render.renderQueued"
-      ],
-      "evidence": "fake/mock only"
-    },
-    "ae.scripting.RenderQueue.rendering": {
       "ops": [
         "render.renderQueued"
       ],

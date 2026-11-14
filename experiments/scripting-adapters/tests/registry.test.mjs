@@ -302,3 +302,23 @@ test("fixture: expression on non-expressionable property and addProperty misuse 
     () => run("effect.add", { compName: "C", layerName: "N", effectMatchName: "ADBE NotARealEffect" }),
     /cannot be added|unknown effect matchName/);
 });
+
+test("coverage claims only reference members actually exercised AND present in the catalog", () => {
+  const claims = JSON.parse(readFileSync(
+    join(here, "..", "generated", "coverage-claims.json"), "utf8"));
+  const catalog = JSON.parse(readFileSync(
+    join(here, "..", "..", "..", "packages", "capability-catalog", "generated", "catalog.json"), "utf8"));
+  const recordIds = new Set(catalog.records.map((r) => r.id));
+  for (const [memberId, claim] of Object.entries(claims.claims)) {
+    assert.ok(recordIds.has(memberId), `claim ${memberId} has no catalog record`);
+    assert.ok(claim.ops.length > 0);
+    assert.equal(claim.evidence, "fake/mock only");
+  }
+  // Spot-check the audit fixes: members the ops do NOT actually read
+  // must not be claimed (PR review — declaration-only promotion banned).
+  const opMembers = {};
+  for (const op of OPERATIONS) for (const m of op.members) (opMembers[m] ??= []).push(op.id);
+  assert.ok(!opMembers["provisional.ae.scripting.RenderQueue.rendering"], "rendering is not read by any op");
+  assert.ok(!opMembers["provisional.ae.scripting.RenderQueueItem.comp"], "item.comp is not read by queueComp");
+  assert.ok(!opMembers["provisional.ae.scripting.PropertyBase.name"], "PropertyBase.name was a wrong-owner claim");
+});
