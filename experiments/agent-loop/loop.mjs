@@ -6,148 +6,136 @@
  *   corrected source -> rerun -> on success, rerun once more as a
  *   regression check.
  *
- * Evidence level: fake/mock only. The "host" is experiments/agent-loop/
- * fake-host.mjs (a Node vm sandbox), the "fixer" is injected — in
- * tests it is a deterministic stand-in for an agent. This proves the
- * LOOP mechanics and diagnostic plumbing, not real AE behavior, real
- * ExtendScript semantics, consent, or transport. Those stay gated on
- * PR #42 (trusted runner) and an owned AE session.
+ * Dispatch, consent gating, reply-identity checks, outcome
+ * classification, deadline handling and UNKNOWN quarantine are ALL
+ * delegated to the canonical trusted-execution runner
+ * (experiments/trusted-execution/runner.mjs, PR #42). This module adds
+ * only the loop policy: fix budget, diagnostic normalization, and the
+ * regression rerun. It does not re-implement dispatch.
+ *
+ * Evidence level: fake/mock only. The "host" is fake-host.mjs (a Node
+ * vm sandbox), the "fixer" is injected — in tests a deterministic
+ * stand-in for an agent. This proves loop mechanics and diagnostic
+ * plumbing, not real AE behavior, real ExtendScript semantics, or
+ * production authorization (consent-token authenticity, host-side
+ * re-validation and catalog-gate integration remain unproven per
+ * runner.mjs non-claims).
  *
  * Diagnostic records intentionally mirror the experiments/diagnostics
  * schema (Issue #37, PR #41) field names — kind/severity/location —
  * but are produced here without importing that branch so this
- * experiment stands alone on release-0-1-0.
+ * experiment stands alone.
  */
-import vm from "node:vm";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { classifyWriteResult } from "../trusted-execution/outcomes.mjs";
+import { createJsxRunner } from "../trusted-execution/runner.mjs";
+import { consentScopeFor } from "../trusted-execution/permissions.mjs";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const codecSource = readFileSync(
-  join(here, "..", "trusted-execution", "codec", "trusted-codec.js"),
-  "utf8",
-);
+/* Fake-session defaults. A real deployment pins the actual AE session
+ * identity; these exist so the consent scope has a stable target. */
+export const FAKE_SESSION = {
+  pin: { sessionId: "agent-loop-fake-session", aeVersion: "fake", dispatchId: "fake" },
+  operationId: "op.devloop.eval",
+  projectIdentity: "proj-fake",
+};
 
-export function loadCodec() {
-  const ctx = vm.createContext({
-    Object, Array, String, Number, Boolean, Date, RegExp,
-    isFinite, parseInt, parseFloat, Error, Math,
-  });
-  vm.runInContext("var JSON = undefined;", ctx);
-  return vm.runInContext(`${codecSource}\nTrustedCodec`, ctx, { filename: "trusted-codec.js" });
+function consentFor(source, session) {
+  const s = session ?? FAKE_SESSION;
+  return {
+    scope: consentScopeFor({
+      pin: s.pin,
+      operationId: s.operationId,
+      args: { source, dispatchArgs: null },
+      projectIdentity: s.projectIdentity,
+    }),
+  };
 }
 
-let requestCounter = 0;
-function nextRequestId(prefix = "loop") {
-  requestCounter += 1;
-  return `${prefix}-${Date.now().toString(36)}-${requestCounter}`;
+function runInput(source, session) {
+  const s = session ?? FAKE_SESSION;
+  return {
+    source,
+    pin: s.pin,
+    operationId: s.operationId,
+    projectIdentity: s.projectIdentity,
+    consent: consentFor(source, s),
+    trustedScriptOptIn: true,
+    scriptProvenance: "agent-loop-fixture",
+  };
 }
 
-/* Normalize a host error into a diagnostics-shaped record. Positions
- * come ONLY from host-reported fields — never inferred. */
-export function toDiagnostic(reply, requestId) {
-  const err = reply && reply.error;
+/* Normalize a runner FAILED outcome into a diagnostics-shaped record.
+ * Positions come ONLY from host-reported fields (runner marks them
+ * hostReported) — never inferred. */
+export function toDiagnostic(outcome, requestId) {
+  const err = outcome && outcome.error;
   if (!err) return null;
   return {
     schema: "diagnostics/v1",
     kind: "script-exception",
     severity: "error",
-    source: { assetKind: "jsx-script", requestId },
+    source: { assetKind: "jsx-script", requestId: requestId ?? outcome.requestId ?? null },
     message: String(err.message || ""),
     location:
       err.line != null || err.file != null
-        ? { line: err.line ?? null, file: err.file ?? null, origin: "host-reported" }
+        ? {
+            line: err.line ?? null,
+            file: err.file ?? null,
+            origin: err.hostReported === true ? "host-reported" : "unverified",
+          }
         : null,
     hostError: { name: err.name ?? null },
   };
 }
 
-/*
- * dispatchOnce: encode -> transport.send -> parse reply -> classify.
- * Exactly one send; no retry inside this function.
- */
-async function dispatchOnce({ source, transport, codec, requestId }) {
-  const requestText = codec.stringify({
-    v: 1,
-    kind: "extendscript.eval",
-    requestId,
-    source,
-  });
-  let replyText;
-  try {
-    replyText = await transport.send(requestText);
-  } catch {
-    replyText = null; // indistinguishable from no reply -> UNKNOWN
-  }
-  let reply = null;
-  if (typeof replyText === "string") {
-    try {
-      reply = codec.parse(replyText);
-    } catch {
-      reply = null;
-    }
-  }
-  // Reply identity: must echo our requestId, else unattributable.
-  const identityOk =
-    reply != null && reply.requestId != null && reply.requestId === requestId;
-  const classified = classifyWriteResult({
-    dispatched: true,
-    reply: identityOk ? reply : null,
-    deadlineExceeded: false,
-  });
-  if (!identityOk && reply != null) {
-    return { ...classified, outcome: "UNKNOWN", unknownCategory: "REQUEST_ID_MISMATCH" };
-  }
-  return classified;
-}
-
 /**
- * runDevLoop({source, transport, fixer, codec?, maxFixes?})
+ * runDevLoop({source, transport, fixer, session?, maxFixes?})
  *
  * fixer(diagnostic, source, attempt) -> corrected source string, or
- * null to give up. Returns a report; never throws for script errors.
+ * null to give up. One runner instance is shared across attempts so
+ * requestId single-use and UNKNOWN quarantine apply loop-wide.
+ * Returns a report; never throws for script errors.
  */
 export async function runDevLoop({
   source,
   transport,
   fixer,
-  codec = loadCodec(),
+  session,
   maxFixes = 3,
 }) {
+  const runner = createJsxRunner({ transport });
   const report = {
     iterations: [],
     diagnostics: [],
     finalSource: source,
     outcome: null,
+    quarantined: [],
   };
   let current = source;
 
   for (let attempt = 0; attempt <= maxFixes; attempt += 1) {
-    const requestId = nextRequestId();
-    const classified = await dispatchOnce({ source: current, transport, codec, requestId });
-    const entry = {
+    const out = await runner.runScript(runInput(current, session));
+    report.iterations.push({
       attempt,
-      requestId,
-      outcome: classified.outcome,
-      result: classified.result ?? null,
-      error: classified.error ?? null,
-    };
-    report.iterations.push(entry);
+      requestId: out.requestId,
+      outcome: out.outcome,
+      contractOutcome: out.contractOutcome ?? null,
+      result: out.result ?? null,
+      error: out.error ?? null,
+      retry: out.retry ?? null,
+    });
+    if (out.outcome === "UNKNOWN") report.quarantined.push(out.requestId);
 
-    if (classified.outcome === "COMPLETED") {
+    if (out.outcome === "COMPLETED") {
       report.outcome = "COMPLETED";
       report.finalSource = current;
       return report;
     }
-    if (classified.outcome !== "FAILED") {
+    if (out.outcome !== "FAILED") {
       // REFUSED/BLOCKED/UNKNOWN: stop, never silently retry.
-      report.outcome = classified.outcome;
+      report.outcome = out.outcome;
       return report;
     }
 
-    const diag = toDiagnostic(classified, requestId);
+    const diag = toDiagnostic(out);
     if (diag) report.diagnostics.push(diag);
     if (!fixer) {
       report.outcome = "FAILED";
@@ -168,15 +156,16 @@ export async function runDevLoop({
 }
 
 /*
- * regressionCheck: rerun the final source once more and require
- * COMPLETED — proves the fix did not depend on transient state.
+ * regressionCheck: rerun the final source once more through the same
+ * runner contract and require COMPLETED — proves the fix did not
+ * depend on transient state.
  */
-export async function regressionCheck({ source, transport, codec = loadCodec() }) {
-  const classified = await dispatchOnce({
-    source,
-    transport,
-    codec,
-    requestId: nextRequestId("regression"),
-  });
-  return { ok: classified.outcome === "COMPLETED", outcome: classified.outcome };
+export async function regressionCheck({ source, transport, session }) {
+  const runner = createJsxRunner({ transport });
+  const out = await runner.runScript(runInput(source, session));
+  return {
+    ok: out.outcome === "COMPLETED",
+    outcome: out.outcome,
+    result: out.result ?? null,
+  };
 }

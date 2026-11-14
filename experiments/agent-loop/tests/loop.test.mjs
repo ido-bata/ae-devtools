@@ -1,7 +1,8 @@
 /*
  * agent-loop tests — fake-level E2E for Issue #38 (CAP065).
- * Evidence: fake/mock only. Proves loop mechanics: error -> diagnostic
- * -> fix -> rerun -> regression. NOT real AE, NOT real ExtendScript.
+ * Evidence: fake/mock only. Dispatch/consent/identity/classification
+ * are delegated to the canonical trusted-execution runner (PR #42);
+ * these tests prove the LOOP policy on top of it. NOT real AE.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -9,13 +10,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFakeHost, createFakeApp } from "../fake-host.mjs";
-import { loadCodec, runDevLoop, regressionCheck, toDiagnostic } from "../loop.mjs";
+import { loadTrustedCodec } from "../../trusted-execution/runner.mjs";
+import { runDevLoop, regressionCheck, toDiagnostic } from "../loop.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => readFileSync(join(here, "..", "fixtures", name), "utf8");
 
 function makeTransport() {
-  const codec = loadCodec();
+  const codec = loadTrustedCodec();
   const host = createFakeHost({ app: createFakeApp() });
   const calls = [];
   return {
@@ -56,6 +58,12 @@ test("E2E: broken fixture -> diagnostic -> fix -> rerun -> COMPLETED", async () 
   assert.equal(report.iterations[0].outcome, "FAILED");
   assert.equal(report.iterations[1].outcome, "FAILED");
   assert.equal(report.iterations[2].outcome, "COMPLETED");
+  // Consent was evaluated per attempt: every iteration carries a
+  // requestId and the runner's contract outcome.
+  for (const it of report.iterations) {
+    assert.ok(it.requestId);
+    assert.ok(it.contractOutcome);
+  }
   // Two diagnostics collected, both host-positioned script exceptions.
   assert.equal(report.diagnostics.length, 2);
   for (const d of report.diagnostics) {
@@ -113,19 +121,26 @@ test("fix budget exhausted -> FAILED, bounded sends", async () => {
 });
 
 test("toDiagnostic preserves host fields and never invents positions", () => {
-  const d = toDiagnostic(
-    { error: { name: "ReferenceError", message: "x is not defined", line: 9, file: "probe.jsx" } },
-    "req-1"
-  );
+  const d = toDiagnostic({
+    requestId: "req-1",
+    error: {
+      name: "ReferenceError",
+      message: "x is not defined",
+      line: 9,
+      file: "probe.jsx",
+      hostReported: true,
+    },
+  });
   assert.equal(d.location.line, 9);
   assert.equal(d.location.file, "probe.jsx");
-  const noPos = toDiagnostic({ error: { name: "E", message: "m" } }, "req-2");
+  assert.equal(d.location.origin, "host-reported");
+  const noPos = toDiagnostic({ error: { name: "E", message: "m" } });
   assert.equal(noPos.location, null);
-  assert.equal(toDiagnostic({ ok: true }, "req-3"), null);
+  assert.equal(toDiagnostic({ outcome: "COMPLETED" }), null);
 });
 
-test("reply with wrong requestId -> UNKNOWN, loop stops without retry", async () => {
-  const codec = loadCodec();
+test("reply with wrong requestId -> UNKNOWN via runner, loop stops, id quarantined", async () => {
+  const codec = loadTrustedCodec();
   const host = createFakeHost({ app: createFakeApp() });
   const t = {
     send: async (text) => {
@@ -138,4 +153,6 @@ test("reply with wrong requestId -> UNKNOWN, loop stops without retry", async ()
   const report = await runDevLoop({ source: fixture("clean.jsx"), transport: t });
   assert.equal(report.outcome, "UNKNOWN");
   assert.equal(report.iterations.length, 1);
+  assert.equal(report.iterations[0].outcome, "UNKNOWN");
+  assert.equal(report.quarantined.length, 1);
 });
