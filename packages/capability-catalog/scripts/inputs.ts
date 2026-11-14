@@ -5,7 +5,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { importScripting } from "../src/import-scripting.ts";
 import {
@@ -46,10 +46,14 @@ export type RepoInputs = {
 };
 
 export function loadRepoInputs(): RepoInputs {
+  const ADAPTER_CLAIMS_PATH = "experiments/scripting-adapters/generated/coverage-claims.json";
   const scripting = importScripting({
     symbols: load(INPUT_PATHS.scriptingSymbols),
     summary: load(INPUT_PATHS.scriptingSummary),
     sourcesLock: load(INPUT_PATHS.scriptingLock),
+    adapterClaims: existsSync(join(REPO_ROOT, ADAPTER_CLAIMS_PATH))
+      ? (load(ADAPTER_CLAIMS_PATH) as Parameters<typeof importScripting>[0]["adapterClaims"])
+      : undefined,
   });
   const operations = load<{ operations: Parameters<typeof importToolOperations>[0]["operations"]["operations"] }>(
     INPUT_PATHS.toolsOperations,
@@ -73,6 +77,9 @@ export function loadRepoInputs(): RepoInputs {
   });
   const files = Object.fromEntries(
     Object.values(INPUT_PATHS).map((path) => [path, sha256(path)]),
-  );
+  ) as Record<string, string>;
+  if (existsSync(join(REPO_ROOT, ADAPTER_CLAIMS_PATH))) {
+    files[ADAPTER_CLAIMS_PATH] = sha256(ADAPTER_CLAIMS_PATH);
+  }
   return { scripting, tools, semantics, sdk, files };
 }

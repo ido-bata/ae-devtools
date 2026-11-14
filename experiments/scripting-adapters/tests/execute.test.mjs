@@ -167,6 +167,8 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     name: "N", compName: "C", layerName: "Null 1", parentName: "Null 1",
     type: "CompItem", to: "top", path: "/tmp/x.aep",
     width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30, x: 0, y: 0,
+    propertyPath: ["ADBE Transform Group", "ADBE Position"], time: 0, keyIndex: 1, value: [0, 0],
+    expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -178,9 +180,27 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "item.addComp") args.name = "C";
     if (op.id === "item.addFolder") args.name = "F";
     if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
+    if (op.id === "layer.setParent") args.parentName = null;
     if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate"].includes(op.id)) args.compName = "C";
+    // setKeyframe needs an existing key: seed one via setValueAtTime first.
+    if (op.id === "anim.setKeyframe") {
+      await runOperation({ opId: "anim.setValueAtTime",
+        args: { compName: "C", layerName: "Null 1", propertyPath: args.propertyPath, time: 0, value: [0, 0] },
+        consentProvider: provider, confirmDestructive: true, ...t });
+    }
     const r = await runOperation({ opId: op.id, args, consentProvider: provider,
-      confirmDestructive: true, ...t });
+      confirmDestructive: true, confirmRender: true, ...t });
     assert.equal(r.outcome, "COMPLETED", `${op.id}: ${JSON.stringify(r).slice(0, 200)}`);
   }
+});
+
+test("render.renderQueued requires confirmRender in addition to consent+destructive", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const r = await runOperation({ opId: "render.renderQueued", args: {}, consentProvider: provider, ...t });
+  assert.equal(r.reason, "RENDER_CONFIRMATION_REQUIRED");
+  assert.equal(t.transport.calls.length, 0);
+  const ok = await runOperation({ opId: "render.renderQueued", args: {}, consentProvider: provider, confirmRender: true, ...t });
+  assert.equal(ok.outcome, "COMPLETED");
 });
