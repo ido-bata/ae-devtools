@@ -131,11 +131,12 @@ async function main() {
     if (error !== null && typeof error === "object") {
       evidence.sessionRoot = error.sliceSessionRoot ?? null;
       evidence.workdir = error.sliceWorkdir ?? null;
-      evidence.trace = traceSnippet(
-        typeof error.sliceSessionRoot === "string"
+      const tracePath = typeof error.sliceTracePath === "string"
+        ? error.sliceTracePath
+        : typeof error.sliceSessionRoot === "string"
           ? join(error.sliceSessionRoot, "trace.jsonl")
-          : null,
-      );
+          : null;
+      evidence.trace = traceSnippet(tracePath);
     }
     // A failed launch may still have left an AE process behind (e.g. AE
     // started but readiness/ownership failed) — record it, never hide it.

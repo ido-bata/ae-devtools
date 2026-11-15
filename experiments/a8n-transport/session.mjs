@@ -129,7 +129,15 @@ export async function openSliceSession(options = {}) {
   const ownership = ae.ownership();
   if (!ownership || ownership.kind !== "owned") {
     await ae.close({ unsavedChanges: "refuse" }).catch(() => {});
-    throw new Error(`slice requires an owned AE session, got ownership ${JSON.stringify(ownership)}`);
+    const refusal = new Error(
+      `slice requires an owned AE session, got ownership ${JSON.stringify(ownership)}`,
+    );
+    // Same evidence context as a launch failure: the session DID start
+    // (attached/unknown), so its trace exists and must be preserved.
+    refusal.sliceWorkdir = workdir;
+    refusal.sliceSessionRoot = sessionRoot;
+    refusal.sliceTracePath = ae.tracePath;
+    throw refusal;
   }
 
   const pin = {

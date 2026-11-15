@@ -1,0 +1,69 @@
+{
+  "issue": 49,
+  "startedAt": "2026-11-15T01:18:15.605Z",
+  "platform": "darwin/arm64",
+  "node": "v24.22.1",
+  "installDir": "/Applications/Adobe After Effects 2027",
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": 84658,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects"
+    },
+    {
+      "pid": 84755,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/72435b47-53e4-4c9a-eea3-98eeb4860575.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/72435b47-53e4-4c9a-eea3-98eeb4860575.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/72435b47-53e4-4c9a-eea3-98eeb4860575.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/external/5837a138-6cbe-4779-3a0c-699aad8a62df.envelope --report-id=5837a138-6cbe-4779-3a0c-699aad8a62df --handshake-fd=5"
+    },
+    {
+      "pid": 84757,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/dynamiclinkmanager"
+    },
+    {
+      "pid": 84758,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    },
+    {
+      "pid": 92459,
+      "args": "bash -c cd /Users/rebui/work/ae-devtools-49 && node experiments/a8n-transport/real-run.mjs --install-dir \"/Applications/Adobe After Effects 2027\" --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-failpath-attached-2027.json; echo \"exit=$?\"; python3 -c \"\\012import json\\012d=json.load(open('experiments/a8n-transport/evidence/run-failpath-attached-2027.json'))\\012print('sessionRoot:', d.get('sessionRoot'))\\012print('trace bytes:', len(d.get('trace') or ''))\\012\""
+    },
+    {
+      "pid": 92460,
+      "args": "node experiments/a8n-transport/real-run.mjs --install-dir /Applications/Adobe After Effects 2027 --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-failpath-attached-2027.json"
+    }
+  ],
+  "steps": [],
+  "close": null,
+  "launchError": {
+    "name": "Error",
+    "message": "slice requires an owned AE session, got ownership {\"kind\":\"attached\",\"evidence\":\"already running before launch: pid 84658\"}"
+  },
+  "sessionRoot": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-yyAJZI/a8n-session",
+  "workdir": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-yyAJZI",
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-15T01:18:16.615Z\",\"op\":\"session.probe\",\"status\":\"ok\",\"durationMs\":363,\"args\":{\"method\":\"app.info\"},\"result\":{\"version\":\"27.0x78\",\"build\":\"78\"}}\n{\"seq\":1,\"ts\":\"2026-11-15T01:18:16.616Z\",\"op\":\"session.launch\",\"status\":\"ok\",\"durationMs\":500,\"args\":{\"transport\":\"script-invocation\"},\"result\":{\"version\":\"27.0x78\",\"build\":\"78\",\"ownership\":{\"kind\":\"attached\",\"evidence\":\"already running before launch: pid 84658\"}}}\n{\"seq\":2,\"ts\":\"2026-11-15T01:18:16.616Z\",\"op\":\"session.close\",\"status\":\"ok\",\"durationMs\":0,\"result\":{\"quit\":false,\"ownership\":\"attached\",\"reason\":\"not quitting a host this session does not own (already running before launch: pid 84658)\"}}\n",
+  "aeProcessesAfterLaunchFailure": [
+    {
+      "pid": 84658,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects"
+    },
+    {
+      "pid": 84755,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/72435b47-53e4-4c9a-eea3-98eeb4860575.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/72435b47-53e4-4c9a-eea3-98eeb4860575.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/72435b47-53e4-4c9a-eea3-98eeb4860575.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/external/5837a138-6cbe-4779-3a0c-699aad8a62df.envelope --report-id=5837a138-6cbe-4779-3a0c-699aad8a62df --handshake-fd=5"
+    },
+    {
+      "pid": 84757,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/dynamiclinkmanager"
+    },
+    {
+      "pid": 84758,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    },
+    {
+      "pid": 92459,
+      "args": "bash -c cd /Users/rebui/work/ae-devtools-49 && node experiments/a8n-transport/real-run.mjs --install-dir \"/Applications/Adobe After Effects 2027\" --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-failpath-attached-2027.json; echo \"exit=$?\"; python3 -c \"\\012import json\\012d=json.load(open('experiments/a8n-transport/evidence/run-failpath-attached-2027.json'))\\012print('sessionRoot:', d.get('sessionRoot'))\\012print('trace bytes:', len(d.get('trace') or ''))\\012\""
+    },
+    {
+      "pid": 92460,
+      "args": "node experiments/a8n-transport/real-run.mjs --install-dir /Applications/Adobe After Effects 2027 --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-failpath-attached-2027.json"
+    }
+  ],
+  "finishedAt": "2026-11-15T01:18:16.745Z"
+}
