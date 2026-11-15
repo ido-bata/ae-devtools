@@ -12,10 +12,12 @@
  *   - The callback writes its (err, value) pair into #result as JSON.
  *   - The "getCurrentApiVersion()" button writes into #api-version.
  *
- * The probes live under ../../extendscript/ relative to this panel
- * once installed into the CEP extension folder
- * (%USERPROFILE%\AppData\Roaming\Adobe\CEP\extensions\ae-devtools-bridge\).
- * Adjust the paths if the install layout differs.
+ * The probes are bundled under ./extendscript/ inside this extension
+ * (pre-inlined copies of the probes in ../extendscript/ with
+ * lib/util.jsx expanded, because evalScript strings do not process
+ * #include).
+ * CEP restricts file reads to the extension directory, so probes must
+ * live inside the bundle.
  */
 (function () {
   "use strict";
@@ -23,14 +25,14 @@
   // Resolve the probes directory once. The panel's install root is
   // its own folder; the extendscript probes sit alongside it.
   var PROBES = {
-    "01": "../../extendscript/01-version.jsx",
-    "02": "../../extendscript/02-active-item.jsx",
-    "03": "../../extendscript/03-mutate-then-inspect.jsx",
-    "04": "../../extendscript/04-exception.jsx",
-    "05": "../../extendscript/05-concurrent-A.jsx",
-    "06": "../../extendscript/06-concurrent-B.jsx",
-    "07": "../../extendscript/07-snapshot.jsx",
-    "08": "../../extendscript/08-identity.jsx"
+    "01": "./extendscript/01-version.jsx",
+    "02": "./extendscript/02-active-item.jsx",
+    "03": "./extendscript/03-mutate-then-inspect.jsx",
+    "04": "./extendscript/04-exception.jsx",
+    "05": "./extendscript/05-concurrent-A.jsx",
+    "06": "./extendscript/06-concurrent-B.jsx",
+    "07": "./extendscript/07-snapshot.jsx",
+    "08": "./extendscript/08-identity.jsx"
   };
 
   function setResult(label, err, value) {
