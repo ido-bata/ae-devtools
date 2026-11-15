@@ -52,6 +52,14 @@ const RECEIVER_TO_SUITE: Record<string, string> = {
 
 /** Members that count as suite calls for reconciliation. */
 const CALL_RE = /([A-Za-z_]\w*)\s*->\s*([A-Za-z_]\w*)\s*\(/g;
+/**
+ * The ACTUAL emitted grammar is the `OpRecordV(utilP, "<id>", ...)`
+ * string literal, not the `->` call site. Extract those literals too
+ * and require they are either registry ids or the `__overflow`
+ * sentinel — a typo'd literal would otherwise pass reconciliation
+ * while emitting an op record the registry cannot name.
+ */
+const OP_RECORD_RE = /OpRecordV\s*\([^,]+,\s*"([^"]+)"/g;
 
 function probeCallIds(): Set<string> {
   const src = readFileSync(PROBE_CPP, "utf8");
@@ -87,6 +95,17 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
   test("every registry entry is a call probe.cpp actually makes", () => {
     const phantom = [...registryIds].filter((id) => !callIds.has(id)).sort();
     expect(phantom).toEqual([]);
+  });
+
+  test("every OpRecordV literal is a registry id or the overflow sentinel", () => {
+    const src = readFileSync(PROBE_CPP, "utf8");
+    const literals = new Set<string>();
+    for (const m of src.matchAll(OP_RECORD_RE)) literals.add(m[1]!);
+    expect(literals.size).toBeGreaterThan(0);
+    for (const id of literals) {
+      if (id === "__overflow") continue;
+      expect(registryIds.has(id), `OpRecordV literal ${id} is not a registry id`).toBe(true);
+    }
   });
 
   test("known-tricky members are present (regression pins)", () => {

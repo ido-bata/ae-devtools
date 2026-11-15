@@ -21,7 +21,7 @@ import {
 
 function validProvenance(): ProbeResult["provenance"] {
   return {
-    observed: ["environment", "execution.kind", "execution.reason", "calls", "projects"],
+    observed: ["environment", "execution.kind", "execution.reason", "calls", "diagnostics", "projects"],
     derived: ["execution.ordinal", "execution.bounded", "outcome", "firstError", "completeness"],
     supplied: ["plugin", "evidence"],
   };

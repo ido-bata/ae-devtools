@@ -281,6 +281,30 @@ export function validateProbeResult(value: unknown): string[] {
     for (const p of value.provenance.supplied) {
       if (!SUPPLIED_SET.has(p)) errors.push(`provenance.supplied has unknown path ${JSON.stringify(p)}`);
     }
+    // Populated sections must be declared: an observed `calls` array
+    // with "calls" missing from provenance.observed is exactly the
+    // observed/inferred confusion this contract exists to prevent.
+    const declared = new Set(all);
+    const populated: Array<[string, boolean]> = [
+      ["environment", isRecord(value.environment) && Object.keys(value.environment).length > 0],
+      ["execution.kind", isRecord(value.execution)],
+      ["execution.reason", isRecord(value.execution) && value.execution.reason !== undefined],
+      ["calls", Array.isArray(value.calls) && value.calls.length > 0],
+      ["diagnostics", Array.isArray(value.diagnostics) && value.diagnostics.length > 0],
+      ["projects", Array.isArray(value.projects) && value.projects.length > 0],
+      ["execution.ordinal", isRecord(value.execution)],
+      ["execution.bounded", isRecord(value.execution)],
+      ["outcome", typeof value.outcome === "string"],
+      ["firstError", value.firstError !== undefined],
+      ["completeness", isRecord(value.completeness)],
+      ["plugin", isRecord(value.plugin)],
+      ["evidence", isRecord(value.evidence)],
+    ];
+    for (const [path, present] of populated) {
+      if (present && !declared.has(path)) {
+        errors.push(`populated section ${JSON.stringify(path)} is not declared in provenance`);
+      }
+    }
   }
 
   if (!isRecord(value.plugin) || !isNonEmptyString(value.plugin.name) ||
