@@ -9,12 +9,14 @@
  *                   real projects).
  *   buildProject  — multi-file: esbuild bundles the module graph to a
  *                   single ES2015 IIFE (bundle.mjs), tsc lowers it to
- *                   ES5, the AST lint proves the result is ES3.
+ *                   ES5, lintOutput proves the result parses as ES3 and
+ *                   uses no builtin absent from the ES3 host.
  *
- * TS 5.9 removed `target=ES3`; ES5 emit is verified ES3-clean
- * structurally by lintOutputAst — every node in the parsed output must
- * be an ES3 kind. That is the compatibility proof; regexes are not
- * involved.
+ * TS 5.9 removed `target=ES3`; ES5 emit is verified by lintOutput:
+ * an actual ES3 grammar parse (acorn ecmaVersion 3) plus a separate
+ * ExtendScript runtime-API check (es3-syntax.mjs / es3-api.mjs). See
+ * es3-lint.mjs for the guarantee scope — this is a grammar + curated
+ * API-table proof, not a proof about every host behavior.
  *
  * Emits `<name>.jsx` + `<name>.jsx.map` (jsx -> bundle) +
  * `<name>.bundle.js.map` (bundle -> original TS, sourcesContent
@@ -181,7 +183,7 @@ export async function buildProject(entryPath, { outDir = null, name = null } = {
   result.map.file = `${base}.jsx`;
   result.bundleMap = bundle.map;
 
-  // Structural ES3 proof on the final artifact.
+  // ES3 grammar + runtime-API proof on the final artifact.
   result.diagnostics.push(...lintOutput(result.output, { filename: `${base}.jsx` }));
   if (hasErrors(result.diagnostics)) {
     result.status = "output-lint-failed";

@@ -2,7 +2,7 @@
 /**
  * cli.mjs — jsx-toolchain CLI (Issue #52).
  *
- *   jsx-toolchain lint <file.ts>             ES3-compat lint (AST-based)
+ *   jsx-toolchain lint <file.ts>             ES3-compat lint (AST-based source lint)
  *   jsx-toolchain build <file.ts> [-o dir]   single-file -> ES3 JSX + map
  *   jsx-toolchain build-project <entry> [-o dir] [--name n]
  *                                          multi-file -> bundled ES3 JSX

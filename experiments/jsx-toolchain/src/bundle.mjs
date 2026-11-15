@@ -5,7 +5,8 @@
  * esbuild's bundler: every `import`/`export` in the project is resolved
  * and flattened into one script. esbuild emits ES2015 at most — it
  * cannot target ES5 — so the bundle is then lowered to ES5 by tsc in
- * build.mjs and proven ES3-clean by the AST lint.
+ * build.mjs and verified by lintOutput (ES3 grammar parse + runtime
+ * API check).
  *
  * Sourcemaps are chained, not composed: esbuild's map points
  * bundle→original TS (with sourcesContent), tsc's map points

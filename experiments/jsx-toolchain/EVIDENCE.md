@@ -51,7 +51,7 @@ After the four real runs above, the toolchain gained (all covered by
 is still in effect):
 
 - AST-based ES3 lint replacing the earlier regex lint
-  (`src/es3-ast.mjs`): source lint and a structural output proof.
+  (`src/es3-ast.mjs`): source lint only.
 - Multi-file project builds (`build-project`): esbuild bundling,
   two-hop sourcemaps (`resolve` CLI), `check <dir>` cross-file
   typecheck.
@@ -60,7 +60,35 @@ is still in effect):
 - Source-positioned diagnostics (file/line/column) across
   lint/build/check.
 
-The single-file `build`/`lint`/`map`/`check` commands used by
-`real-run.mjs` are unchanged in behavior; the real-host evidence above
-still applies to that path. The project pipeline would need a new
-real-host run (frozen) before it can be claimed verified.
+## Post-evidence lint rework (automated test only — NOT real-host verified)
+
+The earlier "structural output proof" (a TypeScript SyntaxKind
+whitelist in `es3-ast.mjs`) was **not** a complete ES3 proof and was
+replaced:
+
+- `src/es3-syntax.mjs` — final syntax validation is now an actual ES3
+  *grammar* parse (acorn `ecmaVersion: 3`) plus an explicit ES3
+  ReservedWord check for the cases acorn accepts (`var class`,
+  `o.class`). Regression tests cover misses the whitelist had (object
+  trailing commas) and false rejections (array trailing commas, `with`).
+- `src/es3-api.mjs` — runtime API compatibility is a separate curated
+  table. Fixed false positives: `Date.UTC` and `String.fromCharCode`
+  are ES3 and are no longer flagged (along with `Date.parse`,
+  `Array.prototype`, `Function.prototype`, etc.).
+- Bundler/transpiler helpers are regression-tested both ways: helpers
+  that stay ES3-clean pass; helpers needing ES5 builtins
+  (`Object.defineProperty` via class fields under define semantics,
+  `Object.setPrototypeOf`/`Object.create` via tsc `__extends`) fail
+  closed with `es3-api-*` diagnostics.
+
+Guarantee scope is documented in `README.md` §"What this does NOT
+prove". All of the above is automated-test level; nothing here was
+exercised against real AE (launch/GUI freeze remains in effect).
+
+The single-file `build`/`lint`/`map`/`check` commands and artifact
+formats used by `real-run.mjs` are unchanged; the real-host evidence
+above still applies to the dispatch/sourcemap path. The reworked lint
+internals themselves are automated-test only — they have NOT been
+exercised against real AE (launch/GUI freeze remains in effect). The
+project pipeline would need a new real-host run (frozen) before it can
+be claimed verified.

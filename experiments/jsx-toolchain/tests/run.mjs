@@ -108,6 +108,93 @@ t("output lint ignores keywords inside strings", () => {
   assert.equal(hasErrors(d), false);
 });
 
+// --- ES3 grammar proof (acorn ecmaVersion 3) -------------------------
+// These are cases the previous SyntaxKind whitelist could not see:
+// it only enumerated forbidden kinds and passed anything it did not
+// recognize. A real ES3 parser accepts/rejects actual grammar.
+
+t("ES3 parser rejects object-literal trailing comma (whitelist missed it)", () => {
+  const d = lintOutput("var o = {a:1,};");
+  assert.ok(d.some((x) => x.code === "es3-syntax"), JSON.stringify(d));
+});
+
+t("ES3 parser rejects getter syntax", () => {
+  const d = lintOutput("var o = { get x() { return 1; } };");
+  assert.ok(d.some((x) => x.code === "es3-syntax"), JSON.stringify(d));
+});
+
+t("ES3 reserved words as identifiers are rejected (acorn gap, closed)", () => {
+  for (const src of ["var class = 1;", "var o = {}; o.class = 1;", "function f() { var delete = 2; }"]) {
+    const d = lintOutput(src);
+    // hard keywords fail the grammar parse (es3-syntax); future reserved
+    // words acorn accepts fail the reserved-word check (es3-reserved-word)
+    assert.ok(d.some((x) => x.code === "es3-reserved-word" || x.code === "es3-syntax"), `${src} -> ${JSON.stringify(d)}`);
+  }
+});
+
+t("reserved words as object-literal keys are tolerated (JScript/ES5 reality)", () => {
+  const d = lintOutput("var o = {default: 1, function: 2};");
+  assert.equal(hasErrors(d), false, JSON.stringify(d));
+});
+
+t("ES3-clean constructs still pass the grammar proof", () => {
+  const src = [
+    "var a = [1,2,];",          // array trailing comma IS ES3
+    "with (o) { x = 1; }",      // with is ES3
+    "try { f(); } catch (e) { g(e); }",
+    "var re = /a+/g;",
+    "label: for (var i = 0; i < 3; i++) { if (i) continue label; }",
+  ].join("\n");
+  const d = lintOutput(src);
+  assert.equal(hasErrors(d), false, JSON.stringify(d));
+});
+
+// --- runtime API compatibility (separate from syntax) ----------------
+
+t("ES3 host builtins are NOT flagged (Date.UTC / String.fromCharCode false-positive fix)", () => {
+  const src = [
+    "var t = Date.UTC(2020, 0, 1);",
+    "var p = Date.parse('x');",
+    "var c = String.fromCharCode(65);",
+    "var i = 'abc'.indexOf('b');",
+    "var s = 'x'.substring(0, 1);",
+    "var h = o.hasOwnProperty('k');",
+    "var pr = Array.prototype.slice.call(a);",
+  ].join("\n");
+  assert.equal(hasErrors(lintOutput(src)), false, JSON.stringify(lintOutput(src)));
+  assert.equal(hasErrors(lintSource(src, { filename: "x.js", allowModules: false })), false);
+});
+
+t("ES5+ builtins ARE flagged in output with es3-api codes", () => {
+  const cases = [
+    ["var j = JSON.parse('{}');", "es3-api-builtin"],
+    ["var k = Object.keys(o);", "es3-api-builtin"],
+    ["var n = Date.now();", "es3-api-builtin"],
+    ["var m = Math.trunc(x);", "es3-api-builtin"],
+    ["var c = String.fromCodePoint(65);", "es3-api-builtin"],
+    ["var s = Object.setPrototypeOf(a, b);", "es3-api-builtin"], // tsc __extends helper dep
+    ["var o = Object.create(null);", "es3-api-builtin"],
+    ["xs.forEach(function (v) {});", "es3-api-method"],
+    ["var f = g.bind(null);", "es3-api-method"],
+  ];
+  for (const [src, code] of cases) {
+    const d = lintOutput(src);
+    assert.ok(d.some((x) => x.code === code), `${src} -> ${JSON.stringify(d)}`);
+  }
+});
+
+t("syntax-legality and API-absence are reported under different codes", () => {
+  const d = lintOutput("var j = JSON.parse('{}'); var f = () => 1;");
+  // the arrow fails the grammar proof first (parse fails -> API pass
+  // cannot run); JSON alone surfaces under es3-api-builtin (see above)
+  assert.ok(d.some((x) => x.code === "es3-syntax"), JSON.stringify(d));
+});
+
+t("ambiguous .indexOf is deliberately not flagged (String ES3 vs Array ES5)", () => {
+  const d = lintOutput("var i = a.indexOf(x);");
+  assert.equal(hasErrors(d), false, JSON.stringify(d));
+});
+
 t("sourcemap lookup maps generated line to TS source", () => {
   const r = buildFile(join(FIX, "runtime-error.ts"));
   assert.equal(r.status, "ok");
@@ -230,6 +317,44 @@ t("checkProject catches cross-file type error", () => {
     assert.equal(r.ok, false);
     assert.ok(r.diagnostics.some((d) => d.file.includes("a.ts")));
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("buildProject lowers bundler/transpiler helpers to ES3 (enum, class, re-export)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const r = await buildProject(join(FIX, "project-helpers/main.ts"), { outDir: dir, name: "helpers" });
+    assert.equal(r.status, "ok", JSON.stringify(r.diagnostics));
+    const jsx = readFileSync(join(dir, "helpers.jsx"), "utf8");
+    // transpiler helpers are present AND the artifact is still ES3
+    assert.match(jsx, /Kind\[/);
+    assert.equal(lintOutput(jsx).length, 0, JSON.stringify(lintOutput(jsx)));
+    assert.doesNotMatch(jsx, /Object\.defineProperty/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("buildProject fails closed when bundler helpers need ES5 builtins", async () => {
+  // Same sources WITHOUT the fixture tsconfig (define semantics on):
+  // esbuild emits __publicField -> Object.defineProperty, which the
+  // output API check must reject — helpers are not blindly trusted.
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const { mkdirSync, cpSync } = await import("node:fs");
+    mkdirSync(join(dir, "lib"), { recursive: true });
+    cpSync(join(FIX, "project-helpers/lib/report.ts"), join(dir, "lib/report.ts"));
+    cpSync(join(FIX, "project-helpers/lib/index.ts"), join(dir, "lib/index.ts"));
+    cpSync(join(FIX, "project-helpers/main.ts"), join(dir, "main.ts"));
+    const r = await buildProject(join(dir, "main.ts"), { outDir: dir, name: "helpers" });
+    assert.equal(r.status, "output-lint-failed", JSON.stringify(r.status));
+    assert.ok(r.diagnostics.some((d) => d.code === "es3-api-builtin" && d.message.includes("Object.defineProperty")),
+      JSON.stringify(r.diagnostics));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("resolvePosition returns null when the middle hop is unmapped", async () => {
+  const { resolvePosition } = await import("../src/bundle.mjs");
+  const jsxMap = { version: 3, sources: ["b.js"], names: [], mappings: "AAAA" };
+  const bundleMap = { version: 3, sources: ["a.ts"], names: [], mappings: "" };
+  assert.equal(resolvePosition({ jsxMap, bundleMap, line: 1, column: 0 }), null);
 });
 
 t("ae-api.d.ts catches bogus AE member names", () => {
