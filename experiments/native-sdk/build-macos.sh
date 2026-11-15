@@ -2,7 +2,8 @@
 # build-macos.sh — reproducible macOS build probe for the AE SDK samples
 # (Issue #17 CAP037 / Issue #18 CAP042 groundwork).
 #
-# Builds one AEGP sample and one CPU-only Effect sample with xcodebuild.
+# Builds two SDK samples (AEGP Sweetie, CPU-only Effect Checkout) plus
+# ae-a8n's own minimal read-only AEGP probe (minimal-plugin/, CAP038).
 # This proves the *build* path only: plugin load/registration inside AE is
 # a separate real-host gate (CAP040/CAP042) that this script does not claim.
 #
@@ -26,6 +27,7 @@ fi
 
 OUT="${1:-./build}"
 mkdir -p "$OUT"
+HERE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 build() {
   name="$1"; proj="$2"
@@ -43,4 +45,11 @@ build() {
 FAILED=0
 build Sweetie "$SDK_ROOT/Examples/AEGP/Sweetie/Mac/Sweetie.xcodeproj" || FAILED=1
 build Checkout "$SDK_ROOT/Examples/Effect/Checkout/Mac/Checkout.xcodeproj" || FAILED=1
+
+# ae-a8n's own minimal read-only AEGP probe (CAP038) — built directly
+# with clang/Rez against the same SDK headers, no Xcode project.
+echo "=== building NativeProbe (minimal-plugin) ==="
+"$HERE_DIR/minimal-plugin/build.sh" "$OUT/minimal-plugin" \
+  || { echo "NativeProbe: BUILD FAILED"; FAILED=1; }
+
 exit "$FAILED"
