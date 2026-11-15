@@ -122,6 +122,7 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
     }
   });
 
+
   test("known-tricky members are present (regression pins)", () => {
     // These were missing/false in the pre-audit registry.
     for (const id of [
