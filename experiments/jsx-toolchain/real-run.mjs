@@ -134,6 +134,56 @@ try {
     mapped,
   });
 
+  // --- step 3: unknown-problem loop — a runtime-generated fault is
+  // diagnosed via host error + sourcemap, fixed, rebuilt, re-dispatched,
+  // and verified. The fault is NOT a canned fixture: the undeclared
+  // identifier name is minted per run so the diagnosis path (host error
+  // -> sourcemap -> source line) does the work, not a lookup table.
+  const badId = `__tcMystery_${Date.now().toString(36)}`;
+  const mysteryTs = [
+    "// generated per-run; the fault below is intentional but unnamed ahead of time",
+    "function mystery(): void {",
+    `  var missing = ${badId};`,
+    "  $.global.__toolchainMystery = missing;",
+    "}",
+    "mystery();",
+    "",
+  ].join("\n");
+  const mysteryPath = join(session.workdir, "mystery.ts");
+  writeFileSync(mysteryPath, mysteryTs);
+
+  const mBuild = buildFile(mysteryPath);
+  step("mystery.build", { ok: mBuild.status === "ok", status: mBuild.status });
+  const mRun = await dispatch(session, mBuild.output, `tc-mystery-${Date.now()}`);
+  const mLine = mRun.error?.line ?? null;
+  const mMapped = mLine != null ? lookup(mBuild.map, mLine, 1e9) : null;
+  const diagnosed =
+    mRun.outcome === "FAILED" &&
+    typeof mRun.error?.message === "string" &&
+    mRun.error.message.includes(badId) &&
+    mMapped != null && mMapped.line === 3;
+  step("mystery.detect+diagnose", {
+    ok: diagnosed,
+    outcome: mRun.outcome,
+    hostErrorName: mRun.error?.name ?? null,
+    hostLine: mLine,
+    mapped: mMapped ? { source: mMapped.source, line: mMapped.line } : null,
+  });
+
+  // Fix: declare the identifier, rebuild, re-dispatch, verify the write.
+  const fixedTs = mysteryTs.replace(`var missing = ${badId};`, `var ${badId} = "fixed"; var missing = ${badId};`);
+  writeFileSync(mysteryPath, fixedTs);
+  const fBuild = buildFile(mysteryPath);
+  const fRun = await dispatch(session, fBuild.output, `tc-fixed-${Date.now()}`);
+  step("mystery.fix+rerun", { ok: fRun.outcome === "COMPLETED", outcome: fRun.outcome });
+
+  const vRun = await dispatch(session, '"" + $.global.__toolchainMystery', `tc-verify-${Date.now()}`);
+  step("mystery.verify", {
+    ok: vRun.outcome === "COMPLETED" && vRun.result === "fixed",
+    observed: vRun.result ?? null,
+    outcome: vRun.outcome,
+  });
+
   evidence.ok = evidence.steps.every((s) => s.ok !== false);
 } catch (error) {
   evidence.ok = false;

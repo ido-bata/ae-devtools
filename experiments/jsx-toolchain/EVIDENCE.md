@@ -18,14 +18,25 @@ Recorded per the repo verification taxonomy. The toolchain core is
 
 | evidence | AE | version | ownership | result |
 | --- | --- | --- | --- | --- |
-| `run-real-2027-a.json` | 2027 | 27.0x78 | owned | all steps ok |
-| `run-real-2026-a.json` | 2026 | 26.5.3x9 | owned | all steps ok |
+| `run-real-2027-a.json` | 2027 | 27.0x78 | owned | all steps ok (fixture loop) |
+| `run-real-2026-a.json` | 2026 | 26.5.3x9 | owned | all steps ok (fixture loop) |
+| `run-real-2027-b.json` | 2027 | 27.0x78 | owned | all steps ok (+ unknown-problem loop) |
+| `run-real-2026-b.json` | 2026 | 26.5.3x9 | owned | all steps ok (+ unknown-problem loop) |
 
 Each run: owned session launch → `ok.ts` build (status ok) → dispatch
 COMPLETED → `$.global.__toolchainProbe` read-back `"hello ae <ver>"` →
 `runtime-error.ts` build → dispatch FAILED (`ReferenceError`,
 `__toolchainUndeclaredIdentifierは未定義です`, host line 3) → sourcemap
 lookup → `runtime-error.ts:3` → close, no surviving main AE process.
+
+The `-b` runs add the unknown-problem loop: a per-run generated fault
+(`__tcMystery_<ts>` undeclared identifier, minted at runtime — not a
+canned fixture) → FAILED with the host error naming that identifier →
+sourcemap maps host line 3 to `mystery.ts:3` → fix applied → rebuild →
+re-dispatch COMPLETED → `$.global.__toolchainMystery === "fixed"`
+verified by a read-back dispatch. The *detection, diagnosis, rebuild and
+verification* are real; the fix itself is a templated string edit — an
+agent would perform the same edit from the diagnosed source position.
 
 ## What this does and does not prove
 
