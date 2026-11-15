@@ -15,7 +15,7 @@ trusted runner, quarantine).
 | `execute <opId> [--args json] [--confirm-destructive] [--confirm-render]` | dispatch via canonical path |
 | `verify [--read-op opId]` | post-execution read-back; never infers success from the write |
 | `runs` | list run-guard markers — residue from runs that did not close cleanly (exit 1 when any exist) |
-| `reap <runId> [--confirm]` | recover ONE stale leftover; only when the marker proves `ownership: owned`, the runner pid is dead (PID-reuse checked via start stamp), and exactly one AE process matches the recorded install. Attached/unknown hosts are reported, never quit |
+| `reap <runId> [--confirm]` | recover ONE stale leftover; only when the marker proves `ownership: owned` **with ae-a8n attestation provenance** (`session.process.attestation` recorded from `AfterEffects.recoveryTarget()`/`ownership()` at open — a self-declared claim cannot authorize a quit), the runner pid is dead (PID-reuse checked via start stamp), and the single AE candidate **is the attested aePid** with a matching start stamp. Attached/unknown hosts and unattested markers are reported, never quit |
 
 ## Sessions
 
@@ -46,9 +46,10 @@ it is deliberately narrower than ae-a8n #108's adopt/resume — it can only
 
 ## Verification
 
-- `node tests/run.mjs` — 15 fake-level tests covering success, refusal,
+- `node tests/run.mjs` — 17 fake-level tests covering success, refusal,
   close failure, close timeout, SIGTERM, stale-marker reap, ownership
-  refusal, and PID reuse.
+  refusal, PID reuse, missing/forged attestation, and quit-target
+  identity (attested pid vs. any AE under the install).
 - Real-host: `node cli.mjs execute read.projectSummary --session a8n
   --ae-a8n-root <local-a8n> --consent grant` on an owned macOS session —
   evidence in `evidence/run-real-2027-readprojectsummary.json`.

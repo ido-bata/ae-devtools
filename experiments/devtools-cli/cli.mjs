@@ -50,7 +50,7 @@ import { fileURLToPath } from "node:url";
 
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openFakeSession } from "./fake-session.mjs";
-import { beginRun, markSession, endRun, listRuns, reapRun, RUNS_DIR } from "./session-guard.mjs";
+import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
@@ -104,12 +104,38 @@ async function openSession(flags) {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     });
+    // Attest the owned target for recovery authorization: the pid and GUI
+    // session must come from ae-a8n's own ownership proof (recoveryTarget),
+    // never from a pid discovered by other means. Older ae-a8n builds lack
+    // the accessor — the marker then records nulls and recover refuses.
+    const target = typeof s.ae?.recoveryTarget === "function" ? s.ae.recoveryTarget() : null;
+    // Attestation provenance: recorded ONLY from the live ae-a8n session
+    // object. recoveryTarget() null (unowned/closed/unattested transport)
+    // or missing ownership evidence → attestation null → recover/reap
+    // refuse. The marker stays an attribution record; authority comes
+    // from this ae-a8n contract trace, never from the JSON itself.
+    const attestation = target === null ? null : {
+      source: ATTESTATION_SOURCE,
+      ownershipKind: typeof s.ownership?.kind === "string" ? s.ownership.kind : null,
+      ownershipEvidence: typeof s.ownership?.evidence === "string" ? s.ownership.evidence : null,
+      transportKind: typeof s.transportKind === "string" ? s.transportKind : null,
+      aeA8nVersion: typeof s.aeA8nHead === "string" ? s.aeA8nHead : null,
+    };
+    const processEvidence = target === null ? null : {
+      aePid: target.pid,
+      aePidStartStamp: await processStartStamp(target.pid),
+      guiSession: target.session === null || target.session === undefined
+        ? null
+        : { uid: target.session.uid, asid: target.session.asid ?? null },
+      attestation,
+    };
     return {
       kind: "a8n",
       evidenceLevel: "verified on real host (macOS)",
       runner: s.runner,
       pin: s.pin,
       close: () => s.close(),
+      processEvidence,
       meta: { aeVersion: s.info?.version ?? null, ownership: s.ownership?.kind ?? null, aeA8nHead: s.aeA8nHead ?? null },
       ownership: s.ownership ?? null,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : (s.installDir ?? null),
@@ -295,11 +321,17 @@ async function main() {
       try {
         state.session = await openSession(flags);
         markSession(RUNS_DIR, guard.runId, state.session);
+        // Record attested process evidence when the opener could prove it.
+        // Absent evidence is recorded as absent — recovery authorization
+        // refuses markers without it, which is the intended fail-closed
+        // state until the owned-session path supplies proof.
+        noteSessionProcess(RUNS_DIR, guard.runId, state.session.processEvidence ?? {});
         const evidence = {
           schema: "ae-devtools.cli.run/v1",
           runId: guard.runId,
           command: cmd,
           opId: opId ?? null,
+          requestId: null, // filled below once minted
           session: {
             kind: state.session.kind,
             evidenceLevel: state.session.evidenceLevel,
@@ -308,6 +340,17 @@ async function main() {
           },
           at: new Date().toISOString(),
         };
+        // Every dispatched request is recorded in the run marker so a
+        // later recovery can prove the request actually timed out — a
+        // self-declared requestId is not evidence. requestId is single-use
+        // in the trusted-execution runner, so it is minted per invocation.
+        const requestId = typeof flags["request-id"] === "string" && flags["request-id"].length > 0
+          ? flags["request-id"]
+          : `req-${guard.runId}-${opId ?? "verify"}`;
+        evidence.requestId = requestId;
+        recordRequestEvent(RUNS_DIR, guard.runId, {
+          requestId, method: opId ?? flags["read-op"] ?? "read.projectSummary", event: "dispatched",
+        });
         const shared = {
           runner: state.session.runner,
           pin: state.session.pin,
@@ -315,6 +358,7 @@ async function main() {
           consentProvider: consentProviderFor(flags),
           trustedScriptOptIn: true,
           scriptProvenance: "devtools-cli",
+          requestId,
         };
         const result = cmd === "execute"
           ? await execute({
@@ -325,6 +369,14 @@ async function main() {
           : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary" });
         evidence.result = result;
         evidence.outcome = result.outcome ?? result.status ?? null;
+        // UNKNOWN means the request may still be in flight behind a modal —
+        // exactly the state GUI recovery exists for. Anything else is a
+        // settled request and is not recoverable.
+        recordRequestEvent(RUNS_DIR, guard.runId, {
+          requestId,
+          method: opId ?? flags["read-op"] ?? "read.projectSummary",
+          event: evidence.outcome === "UNKNOWN" ? "timeout" : "resolved",
+        });
         const bad = ["refused", "failed", "BLOCKED", "UNKNOWN"].includes(evidence.outcome);
         code = bad ? 1 : 0;
         payload = { ...evidence, ...(typeof flags.out === "string" ? { evidenceFile: flags.out } : {}) };

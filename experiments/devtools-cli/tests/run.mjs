@@ -9,7 +9,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  beginRun, markSession, endRun, listRuns, reapRun,
+  beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
+  ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -178,6 +179,18 @@ await at("guard: stale owned marker is reapable only with confirm + single candi
       close: async () => {},
     });
     endRun(dir, runId, "close-failed"); // simulate runner died mid-cleanup
+    // Attested process evidence: the quit target must BE the ae-a8n
+    // attested pid, not merely "an AE under the install dir".
+    noteSessionProcess(dir, runId, {
+      aePid: 4242,
+      aePidStartStamp: "stamp-ae",
+      guiSession: { uid: 501, asid: 42 },
+      attestation: {
+        source: ATTESTATION_SOURCE,
+        ownershipKind: "owned",
+        ownershipEvidence: "probe answered in owned session",
+      },
+    });
 
     const dead = () => false;
     const psOut = "  4242 /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects\n";
@@ -189,15 +202,16 @@ await at("guard: stale owned marker is reapable only with confirm + single candi
     };
     const noWait = async () => {};
     const t0 = Date.now();
+    const stampFn = async (pid) => (pid === 4242 ? "stamp-ae" : null);
 
     // no --confirm → refused, names the candidate
-    let v = await reapRun(runId, { dir, confirm: false, aliveFn: dead, exec, wait: noWait, now: () => t0 });
+    let v = await reapRun(runId, { dir, confirm: false, aliveFn: dead, stampFn, exec, wait: noWait, now: () => t0 });
     assert.equal(v.verdict, "REFUSED");
     assert.equal(v.reason, "CONFIRM_REQUIRED");
     assert.equal(v.candidate.pid, 4242);
 
     // --confirm → graceful quit verified
-    v = await reapRun(runId, { dir, confirm: true, aliveFn: dead, exec, wait: noWait, now: () => Date.now() });
+    v = await reapRun(runId, { dir, confirm: true, aliveFn: dead, stampFn, exec, wait: noWait, now: () => Date.now() });
     assert.equal(v.verdict, "REAPED");
     assert.equal(existsSync(join(dir, `${runId}.json`)), false);
   } finally {
@@ -246,6 +260,15 @@ await at("guard: live runner and PID reuse both refuse reap", async () => {
       installDir: "/x", appPath: "/x.app",
     });
     endRun(dir, runId2, "close-failed");
+    noteSessionProcess(dir, runId2, {
+      aePid: 5555,
+      guiSession: { uid: 501, asid: 42 },
+      attestation: {
+        source: ATTESTATION_SOURCE,
+        ownershipKind: "owned",
+        ownershipEvidence: "probe answered in owned session",
+      },
+    });
     // craft marker with a start stamp, then simulate reuse
     const { readFileSync, writeFileSync } = await import("node:fs");
     const mf = join(dir, `${runId2}.json`);
@@ -258,9 +281,88 @@ await at("guard: live runner and PID reuse both refuse reap", async () => {
     };
     // stampFn signature is (pid) → stamp string; simulate PID reuse
     const stampFn = async () => "Tue Feb  2 00:00:00 2026";
-    v = await reapRun(runId2, { dir, confirm: true, aliveFn: () => true, stampFn, exec });
-    // stamp mismatch → runnerAlive=false → owned + zero candidates → CLEAN
+    // Runner pid (this test process) is alive but stamp-mismatched → dead;
+    // the attested aePid 5555 is dead too → zero candidates → CLEAN.
+    const aliveOnlyRunner = (pid) => pid === process.pid;
+    v = await reapRun(runId2, { dir, confirm: true, aliveFn: aliveOnlyRunner, stampFn, exec });
+    // stamp mismatch → runnerAlive=false → owned + attested + zero candidates → CLEAN
     assert.equal(v.verdict, "CLEAN");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+await at("guard: owned marker without ae-a8n attestation is never reaped", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    const { runId } = await beginRun({ dir, sessionKind: "a8n" });
+    markSession(dir, runId, {
+      kind: "a8n", ownership: { kind: "owned", evidence: "self-declared" },
+      installDir: "/x", appPath: "/x.app",
+    });
+    endRun(dir, runId, "close-failed");
+    // No noteSessionProcess → no attestation → refuse before any process scan.
+    let v = await reapRun(runId, {
+      dir, confirm: true, aliveFn: () => false,
+      exec: async () => ({ stdout: "" }),
+    });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "NO_A8N_ATTESTATION");
+
+    // Attestation with wrong source is equally refused.
+    const { runId: runId2 } = await beginRun({ dir, sessionKind: "a8n" });
+    markSession(dir, runId2, {
+      kind: "a8n", ownership: { kind: "owned", evidence: "t" },
+      installDir: "/x", appPath: "/x.app",
+    });
+    endRun(dir, runId2, "close-failed");
+    noteSessionProcess(dir, runId2, {
+      aePid: 4242,
+      attestation: { source: "self-declared", ownershipKind: "owned", ownershipEvidence: "fake" },
+    });
+    v = await reapRun(runId2, {
+      dir, confirm: true, aliveFn: () => false,
+      exec: async () => ({ stdout: "" }),
+    });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "NO_A8N_ATTESTATION");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+await at("guard: single AE candidate that is NOT the attested pid is never quit", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    const { runId } = await beginRun({ dir, sessionKind: "a8n" });
+    markSession(dir, runId, {
+      kind: "a8n", ownership: { kind: "owned", evidence: "t" },
+      installDir: "/Applications/Adobe After Effects 2027",
+      appPath: "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+    });
+    endRun(dir, runId, "close-failed");
+    // The run's AE (pid 4242) is gone; a DIFFERENT AE (pid 9999 — e.g. the
+    // user's own session) is alive under the same install.
+    noteSessionProcess(dir, runId, {
+      aePid: 4242,
+      attestation: {
+        source: ATTESTATION_SOURCE,
+        ownershipKind: "owned",
+        ownershipEvidence: "probe answered in owned session",
+      },
+    });
+    const exec = async (cmd, args) => {
+      if (cmd === "ps" && args[0] === "-axo") {
+        return { stdout: "  9999 /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects\n" };
+      }
+      return { stdout: "" };
+    };
+    const v = await reapRun(runId, {
+      dir, confirm: true, aliveFn: () => false, exec,
+    });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "PID_NOT_ATTESTED");
+    assert.equal(v.attestedPid, 4242);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
