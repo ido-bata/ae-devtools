@@ -395,6 +395,90 @@ export function observeScreen({ gui, screenshotDir, requestId }) {
   };
 }
 
+// ------------------------------------------------------------ session confirm
+
+/**
+ * Confirm the claimed GUI session AND the target pid's attribution to it.
+ *
+ * Two independent facts, kept separate on purpose:
+ *
+ *   1. GUI session identity — `readGuiSession(uid)` resolves a live
+ *      session whose asid equals the claim. This is a property of the
+ *      login session, NOT of the target process, so it holds whether or
+ *      not the target pid is still alive.
+ *   2. pid attribution — `listAppInstances` (live lsappinfo) attributes a
+ *      LIVE pid to a uid/asid. lsappinfo only lists running app
+ *      instances, so a dead pid can never appear: for `verify-exit` the
+ *      expected state IS a dead pid, and treating its absence from
+ *      lsappinfo as "unconfirmed" made `clean`/`crash-verified`
+ *      unreachable. A dead pid is therefore recorded as
+ *      `pidAttribution: "dead"` — not a failure — while a live pid that
+ *      is not attributable still refuses.
+ *
+ * `deps` are injected for testing: `readGuiSession(uid)`,
+ * `listAppInstances()`, `pidAlive(pid)`.
+ */
+export function confirmGuiSession({ deps, uid, asid, pid }) {
+  if (!Number.isFinite(uid)) return { confirmed: false, reason: "--session-uid missing or invalid" };
+  if (asid === null || asid === undefined || !Number.isFinite(asid)) {
+    return { confirmed: false, reason: "--session-asid is required — a session without asid cannot be confirmed" };
+  }
+  let live;
+  try {
+    live = deps.readGuiSession(uid);
+  } catch (error) {
+    return { confirmed: false, reason: `readGuiSession failed: ${String(error?.message ?? error)}` };
+  }
+  if (live === null) {
+    return { confirmed: false, reason: `no GUI session found for uid ${uid}` };
+  }
+  if (live.asid === null) {
+    return { confirmed: false, reason: `uid ${uid} GUI session has no asid — cannot confirm session identity` };
+  }
+  if (live.asid !== asid) {
+    return { confirmed: false, reason: `claimed asid ${asid} but uid ${uid} GUI session is asid ${live.asid}` };
+  }
+
+  // Pid attribution is only defined for a live process.
+  let alive;
+  try {
+    alive = deps.pidAlive(pid);
+  } catch (error) {
+    return { confirmed: false, reason: `pid liveness probe failed: ${String(error?.message ?? error)}` };
+  }
+  if (!alive) {
+    return {
+      confirmed: true,
+      session: live,
+      pidAttribution: "dead",
+      pidAttributionDetail:
+        `pid ${pid} is not running — lsappinfo cannot list it; ` +
+        "session identity is confirmed independently of the target process",
+    };
+  }
+  let instances;
+  try {
+    instances = deps.listAppInstances();
+  } catch {
+    instances = null;
+  }
+  if (!Array.isArray(instances)) {
+    return { confirmed: false, reason: "lsappinfo attribution unavailable — pid session membership unproven" };
+  }
+  const mine = instances.filter((i) => i && i.pid === pid);
+  if (mine.length === 0) {
+    return { confirmed: false, reason: `pid ${pid} is not a registered app instance — session membership unproven` };
+  }
+  const inSession = mine.some((i) => i.uid === uid && i.asid === asid);
+  if (!inSession) {
+    return {
+      confirmed: false,
+      reason: `pid ${pid} is attributed to uid/asid ${mine[0]?.uid}/${mine[0]?.asid}, not the claimed ${uid}/${asid}`,
+    };
+  }
+  return { confirmed: true, session: live, pidAttribution: "live-attributed", pidAttributionDetail: null };
+}
+
 // ------------------------------------------------------------ run marker auth
 
 /**
@@ -415,11 +499,25 @@ export function observeScreen({ gui, screenshotDir, requestId }) {
  *   - the request's LATEST recorded event is "timeout" with a matching
  *     method — dispatched-then-resolved or never-recorded requests are
  *     not recoverable
+ *   - `session.process.attestation` carries the ae-a8n ownership
+ *     attestation recorded at session open (`recoveryTarget()` +
+ *     `ownership()` evidence). The run marker is an ATTRIBUTION record,
+ *     not an authority: GUI-change permission exists only where the
+ *     claim traces back to ae-a8n's ownership contract. A marker without
+ *     ae-a8n attestation provenance — including one a same-uid process
+ *     fabricated — refuses before any GUI surface loads.
  *
  * Until a session producer records session.process evidence, every check
  * fails closed and `recover` cannot reach the GUI — which is the intended
  * state while the a8n session path is unverified.
+ *
+ * Boundary: like ae-a8n's own GUI lease, this coordinates cooperating
+ * processes. It is not authentication against a malicious same-uid
+ * process; a cross-process signed attestation would have to come from
+ * ae-a8n itself.
  */
+export const ATTESTATION_SOURCE = "ae-a8n:AfterEffects.recoveryTarget()";
+
 const TERMINAL_MARKER_STATUSES = new Set([
   "closed", "corrupt", "open-failed", "interrupted", "error", "close-failed",
 ]);
@@ -467,6 +565,23 @@ export function authorizeRecovery({ marker, requestId, method, probes }) {
     return {
       ok: false,
       reason: "run marker carries no session.process evidence (aePid/guiSession) — the session opener did not prove which process and GUI session it owns",
+    };
+  }
+  // Authority, not attribution: the process evidence must trace back to
+  // ae-a8n's ownership contract. A self-declared JSON that merely *claims*
+  // ownership — with no attestation recorded from the live ae-a8n session
+  // object at open time — is not a basis for GUI mutation.
+  const att = proc.attestation;
+  if (!att || typeof att !== "object" || att.source !== ATTESTATION_SOURCE) {
+    return {
+      ok: false,
+      reason: `session.process has no ae-a8n ownership attestation (expected source '${ATTESTATION_SOURCE}') — the marker is self-declared and cannot authorize a GUI mutation`,
+    };
+  }
+  if (typeof att.ownershipEvidence !== "string" || att.ownershipEvidence.length === 0) {
+    return {
+      ok: false,
+      reason: "ae-a8n attestation carries no ownership().evidence — ownership kind alone is not proof of which contract granted it",
     };
   }
 
@@ -632,12 +747,13 @@ export function verifyHostExit({
     checkedAt: new Date().toISOString(),
     channels: {
       process: { state: "unknown", detail: null },
-      windows: { state: "unknown", detail: null, windowCount: null, onScreenCount: null },
+      windows: { state: "unknown", detail: null, windowCount: null, onScreenCount: null, pidAttribution: null },
       evidence: { state: "not-requested", detail: null, correlated: null, candidates: null },
     },
     verdict: "unknown",
     reasons: [],
   };
+  result.channels.windows.pidAttribution = session?.pidAttribution ?? null;
 
   // --- channel 1: process liveness -------------------------------------
   try {

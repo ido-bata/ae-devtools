@@ -29,15 +29,30 @@ lease + dialog classes).
   requires complete evidence. Any failed/missing/incomplete channel →
   `unknown`, never `clean`.
 - Run-marker authorization (`loadRunMarker`/`authorizeRecovery`) —
-  `recover` cannot reach a GUI mutation on self-declared flags. It
-  requires a live `ae-devtools.cli.run-guard/v1` marker (written by
-  devtools-cli before session open) with: non-terminal status,
-  `ownership.kind === "owned"`, recorded `session.process` evidence
-  (aePid + start stamp + guiSession uid/asid), the runner pid still
-  alive with a matching start stamp (no PID reuse), the AE pid still
-  alive with a matching start stamp, and the request's **latest**
-  recorded event being `timeout` for the claimed method. Anything less
-  refuses before any ae-a8n surface loads.
+  `recover` cannot reach a GUI mutation on self-declared flags. The run
+  marker is an **attribution record** (which run, which request timed
+  out), not an authority. Authorization requires a live
+  `ae-devtools.cli.run-guard/v1` marker (written by devtools-cli before
+  session open) with: non-terminal status, `ownership.kind === "owned"`,
+  recorded `session.process` evidence (aePid + start stamp +
+  guiSession uid/asid) **carrying ae-a8n ownership attestation
+  provenance** (`session.process.attestation.source ===
+  "ae-a8n:AfterEffects.recoveryTarget()"` plus non-empty
+  `ownership().evidence`, recorded from the live ae-a8n session object
+  at open time — never from caller input), the runner pid still alive
+  with a matching start stamp (no PID reuse), the AE pid still alive
+  with a matching start stamp, and the request's **latest** recorded
+  event being `timeout` for the claimed method. Anything less refuses
+  before any ae-a8n surface loads. The ae-a8n #111 GUI lease still
+  serializes the actual mutation; `recover` records the pre-attempt
+  lease state (`guiLease`) for attribution.
+- Session confirmation (`confirmGuiSession`) — split into GUI-session
+  identity (`readGuiSession` uid/asid, independent of the target
+  process) and pid attribution (`listAppInstances`/lsappinfo). lsappinfo
+  only lists LIVE app instances, so a dead pid — the expected
+  `verify-exit` state — is recorded as `pidAttribution: "dead"`, not
+  treated as unconfirmed; a live pid that is not attributable to the
+  claimed session still refuses.
 
 ## Verdicts
 
@@ -67,17 +82,21 @@ node cli.mjs verify-exit --pid N --session-uid U --session-asid A \
 uid/asid is then cross-checked against live `lsappinfo` attribution of
 the AE pid before any GUI object is constructed — a marker claim that
 does not match the live session refuses. The ae-a8n #111 GUI lease
-still serializes the actual mutation on top. `verify-exit` runs the
+still serializes the actual mutation on top; its pre-attempt state is
+recorded as `guiLease` in the result. `verify-exit` runs the
 census inside the confirmed GUI session (`readGuiSession` +
-`censusRunnerInSession`); an unconfirmed session — missing asid,
-asid mismatch, or pid not attributable to that session — degrades the
-census channel to unavailable → `unknown`.
+`censusRunnerInSession`); an unconfirmed session — missing asid or
+asid mismatch — degrades the census channel to unavailable →
+`unknown`. For a dead pid, lsappinfo attribution is recorded as
+`pidAttribution: "dead"` (lsappinfo cannot list a dead process) and
+the census simply finds no windows for that pid.
 
 ## Evidence level
 
 **fake only** — `tests/run.mjs` covers parsing, correlation,
-marker authorization, completeness gating and verdict honesty against
-fakes (33 tests). The real-host path is **UNVERIFIED** while macOS GUI
+marker authorization (incl. attestation provenance), session
+confirmation (incl. dead-pid attribution), completeness gating and
+verdict honesty against fakes (39 tests). The real-host path is **UNVERIFIED** while macOS GUI
 testing is frozen; it requires a built ae-a8n checkout containing the
 #109/#111 exports (`censusRunnerInSession`, `readGuiSession`,
 `listAppInstances`) and a devtools-cli run that recorded

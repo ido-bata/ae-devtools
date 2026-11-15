@@ -13,7 +13,9 @@ import { fileURLToPath } from "node:url";
 
 import {
   authorizeRecovery,
+  ATTESTATION_SOURCE,
   collectCrashEvidence,
+  confirmGuiSession,
   correlateReport,
   GUARD_SCHEMA,
   loadRunMarker,
@@ -212,6 +214,65 @@ t("observeScreen failure is unknown, never empty", () => {
   assert.equal(s.verdict, "unknown");
 });
 
+// ------------------------------------------------ session confirmation
+
+function sessionDeps({ alive = true, instances = null, liveSession = { uid: 501, asid: 42, username: "u", kind: "Aqua" } } = {}) {
+  return {
+    readGuiSession: (uid) => (uid === 501 ? liveSession : null),
+    listAppInstances: () => {
+      if (instances === null) throw new Error("lsappinfo unavailable");
+      return instances;
+    },
+    pidAlive: () => alive,
+  };
+}
+
+t("confirmGuiSession: dead pid confirms session with pidAttribution dead (lsappinfo cannot list it)", () => {
+  const r = confirmGuiSession({
+    deps: sessionDeps({ alive: false, instances: [] }),
+    uid: 501, asid: 42, pid: 4242,
+  });
+  assert.equal(r.confirmed, true);
+  assert.equal(r.pidAttribution, "dead");
+  assert.equal(r.session.asid, 42);
+});
+
+t("confirmGuiSession: live pid must be attributed to the claimed session", () => {
+  const ok = confirmGuiSession({
+    deps: sessionDeps({ alive: true, instances: [{ name: "AE", pid: 4242, uid: 501, asid: 42 }] }),
+    uid: 501, asid: 42, pid: 4242,
+  });
+  assert.equal(ok.confirmed, true);
+  assert.equal(ok.pidAttribution, "live-attributed");
+
+  const unattributed = confirmGuiSession({
+    deps: sessionDeps({ alive: true, instances: [{ name: "AE", pid: 4242, uid: 501, asid: 99 }] }),
+    uid: 501, asid: 42, pid: 4242,
+  });
+  assert.equal(unattributed.confirmed, false);
+  assert.match(unattributed.reason, /uid\/asid 501\/99/);
+
+  const missing = confirmGuiSession({
+    deps: sessionDeps({ alive: true, instances: [] }),
+    uid: 501, asid: 42, pid: 4242,
+  });
+  assert.equal(missing.confirmed, false);
+  assert.match(missing.reason, /not a registered app instance/);
+});
+
+t("confirmGuiSession: session identity failures refuse regardless of pid state", () => {
+  for (const [deps, uid, asid, frag] of [
+    [sessionDeps({ liveSession: null }), 501, 42, /no GUI session/],
+    [sessionDeps({ liveSession: { uid: 501, asid: null } }), 501, 42, /no asid/],
+    [sessionDeps({ liveSession: { uid: 501, asid: 7 } }), 501, 42, /claimed asid 42 but/],
+    [sessionDeps({}), 501, null, /--session-asid is required/],
+  ]) {
+    const r = confirmGuiSession({ deps, uid, asid, pid: 4242 });
+    assert.equal(r.confirmed, false);
+    assert.match(r.reason, frag);
+  }
+});
+
 // ------------------------------------------------ run marker authorization
 
 function marker(over = {}) {
@@ -235,6 +296,14 @@ function marker(over = {}) {
         aePid: 4242,
         aePidStartStamp: "stamp-ae",
         guiSession: { uid: 501, asid: 42 },
+        attestation: {
+          source: ATTESTATION_SOURCE,
+          ownershipKind: "owned",
+          ownershipEvidence: "launched by this session; probe answered in session uid 501 asid 42",
+          transportKind: "script-invocation",
+          aeA8nVersion: "test",
+          recordedAt: new Date().toISOString(),
+        },
         recordedAt: new Date().toISOString(),
       },
     },
@@ -290,6 +359,26 @@ t("authorizeRecovery refuses dead runner, reused runner pid, dead/reused aePid",
   assert.match(authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: deadAe }).reason, /aePid 4242 is dead/);
   const reusedAe = { ...liveProbes, pidStartStamp: (pid) => (pid === 1000 ? "stamp-runner" : "other") };
   assert.match(authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: reusedAe }).reason, /aePid 4242 was reused/);
+});
+
+t("authorizeRecovery refuses markers without ae-a8n attestation provenance", () => {
+  const noAtt = marker();
+  delete noAtt.session.process.attestation;
+  let r = authorizeRecovery({ marker: noAtt, requestId: "req-1", method: "op.x", probes: liveProbes });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /no ae-a8n ownership attestation/);
+
+  const wrongSource = marker();
+  wrongSource.session.process.attestation = { ...wrongSource.session.process.attestation, source: "self-declared" };
+  r = authorizeRecovery({ marker: wrongSource, requestId: "req-1", method: "op.x", probes: liveProbes });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /no ae-a8n ownership attestation/);
+
+  const noEvidence = marker();
+  noEvidence.session.process.attestation = { ...noEvidence.session.process.attestation, ownershipEvidence: "" };
+  r = authorizeRecovery({ marker: noEvidence, requestId: "req-1", method: "op.x", probes: liveProbes });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /ownership\(\)\.evidence/);
 });
 
 t("authorizeRecovery refuses unrecorded/resolved/recovery-attempted/wrong-method requests", () => {
@@ -508,7 +597,14 @@ t("cli recover refuses when the recorded request is not timed out", () => {
     pidStartStamp: null,
     session: {
       ...marker().session,
-      process: { aePid: 1, aePidStartStamp: null, guiSession: { uid: 501, asid: 42 }, recordedAt: "" },
+      process: {
+        aePid: 1, aePidStartStamp: null, guiSession: { uid: 501, asid: 42 }, recordedAt: "",
+        attestation: {
+          source: ATTESTATION_SOURCE,
+          ownershipKind: "owned",
+          ownershipEvidence: "probe answered in owned session",
+        },
+      },
     },
     requests: [{ requestId: "req-1", method: "op.x", event: "resolved", at: "" }],
   });

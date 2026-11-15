@@ -39,6 +39,14 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 export const GUARD_SCHEMA = "ae-devtools.cli.run-guard/v1";
+/**
+ * Canonical provenance marker for `session.process.attestation.source`.
+ * The value is recorded by devtools-cli's a8n session opener from the LIVE
+ * ae-a8n session object (`AfterEffects.recoveryTarget()` +
+ * `ownership()`); recovery authorization and reap refuse markers that do
+ * not carry it, so a self-declared JSON cannot mint GUI-change authority.
+ */
+export const ATTESTATION_SOURCE = "ae-a8n:AfterEffects.recoveryTarget()";
 // Env override exists for tests; production runs always use the tmpdir
 // default so markers are visible to ANY later CLI invocation (that is the
 // point of an external reaper).
@@ -139,6 +147,7 @@ export function markSession(dir, runId, session) {
 export function noteSessionProcess(dir, runId, evidence = {}) {
   const marker = readMarker(dir, runId);
   if (marker === null) return;
+  const att = evidence.attestation;
   marker.session = {
     ...(marker.session ?? {}),
     process: {
@@ -146,6 +155,19 @@ export function noteSessionProcess(dir, runId, evidence = {}) {
       aePidStartStamp: typeof evidence.aePidStartStamp === "string" ? evidence.aePidStartStamp : null,
       guiSession: evidence.guiSession && Number.isFinite(evidence.guiSession.uid)
         ? { uid: evidence.guiSession.uid, asid: evidence.guiSession.asid ?? null }
+        : null,
+      // Provenance of the ownership claim: which ae-a8n contract attested
+      // it and what ownership().evidence said. Absent attestation is
+      // recorded as absent — recover/reap refuse it (fail-closed).
+      attestation: att && typeof att === "object" && typeof att.source === "string"
+        ? {
+            source: att.source,
+            ownershipKind: typeof att.ownershipKind === "string" ? att.ownershipKind : null,
+            ownershipEvidence: typeof att.ownershipEvidence === "string" ? att.ownershipEvidence : null,
+            transportKind: typeof att.transportKind === "string" ? att.transportKind : null,
+            aeA8nVersion: typeof att.aeA8nVersion === "string" ? att.aeA8nVersion : null,
+            recordedAt: new Date().toISOString(),
+          }
         : null,
       recordedAt: new Date().toISOString(),
     },
@@ -298,6 +320,24 @@ export async function reapRun(runId, {
     };
   }
 
+  // Quitting a process is a GUI-class mutation: the marker's ownership
+  // claim must trace back to ae-a8n's attestation, and the process to be
+  // quit must BE the attested aePid — "an AE under the same install dir"
+  // is not proof it is this run's leftover (it could be the user's own
+  // session). No attestation → refuse; identity mismatch → refuse.
+  const proc = marker.session?.process;
+  const attestation = proc?.attestation;
+  if (
+    !proc || !Number.isInteger(proc.aePid) ||
+    !attestation || attestation.source !== ATTESTATION_SOURCE ||
+    typeof attestation.ownershipEvidence !== "string" || attestation.ownershipEvidence.length === 0
+  ) {
+    return {
+      runId, verdict: "REFUSED", reason: "NO_A8N_ATTESTATION",
+      note: "marker lacks ae-a8n ownership attestation (session.process.attestation) — a self-declared owned claim cannot authorize a quit",
+    };
+  }
+
   const appPath = marker.session?.appPath ?? null;
   const installDir = marker.session?.installDir ?? null;
   if (appPath === null && installDir === null) {
@@ -311,6 +351,16 @@ export async function reapRun(runId, {
     return { runId, verdict: "REFUSED", reason: "PROCESS_SCAN_FAILED", message: String(e?.message ?? e) };
   }
   if (candidates.length === 0) {
+    // No AE under the recorded install — but the attested pid itself may
+    // still be alive somewhere the path-based scan cannot see. Declaring
+    // CLEAN then would be a lie.
+    if (aliveFn(proc.aePid)) {
+      return {
+        runId, verdict: "REFUSED", reason: "ATTESTED_PID_ALIVE_UNMATCHED",
+        attestedPid: proc.aePid,
+        note: "the attested aePid is still alive but was not found under the recorded install path — refusing to declare clean",
+      };
+    }
     endRun(dir, runId, "closed");
     return { runId, verdict: "CLEAN", note: "no live AE process for the recorded install" };
   }
@@ -320,6 +370,27 @@ export async function reapRun(runId, {
       candidates: candidates.map((c) => c.pid),
       note: "multiple AE processes match the install; refusing to pick one",
     };
+  }
+  // Single candidate must be the attested process, with the recorded
+  // start stamp when one exists (PID-reuse check).
+  const candidate = candidates[0];
+  if (candidate.pid !== proc.aePid) {
+    return {
+      runId, verdict: "REFUSED", reason: "PID_NOT_ATTESTED",
+      candidate,
+      attestedPid: proc.aePid,
+      note: "the only AE under the recorded install is not the attested aePid — it may be another session's process; refusing to quit",
+    };
+  }
+  if (proc.aePidStartStamp && stampFn) {
+    const stamp = await stampFn(candidate.pid);
+    if (stamp === null || stamp !== proc.aePidStartStamp) {
+      return {
+        runId, verdict: "REFUSED", reason: "PID_REUSED",
+        candidate,
+        note: "the attested pid's start stamp no longer matches — the recorded process is gone and the number was reused",
+      };
+    }
   }
   if (!confirm) {
     return {

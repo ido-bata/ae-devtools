@@ -27,14 +27,18 @@
  *                   whose owning runner is alive, whose session is owned,
  *                   whose recorded process evidence (aePid + start stamp +
  *                   guiSession uid/asid) still matches the live processes,
- *                   and whose request's LATEST recorded event is
- *                   "timeout". Self-declared flags cannot substitute.
- *                   The ae-a8n #111 lease serializes on top.
+ *                   whose session.process carries ae-a8n ownership
+ *                   ATTESTATION provenance (the marker is attribution,
+ *                   not authority), and whose request's LATEST recorded
+ *                   event is "timeout". Self-declared flags cannot
+ *                   substitute. The ae-a8n #111 lease serializes on top.
  *   verify-exit   — read-only verification. The WindowServer census runs
  *                   INSIDE the confirmed target session via ae-a8n's
  *                   censusRunnerInSession; uid AND asid must both be
- *                   confirmed AND the target pid must be attributed to
- *                   that session via lsappinfo, else UNKNOWN.
+ *                   confirmed. Pid attribution via lsappinfo applies only
+ *                   to LIVE pids — a dead pid (the expected verify-exit
+ *                   state) is recorded as pidAttribution "dead", not as
+ *                   unconfirmed, since lsappinfo cannot list it.
  *
  * UNVERIFIED on real host while GUI testing is frozen; the orchestration
  * logic is covered by tests/run.mjs against fakes.
@@ -48,6 +52,7 @@ import { fileURLToPath } from "node:url";
 import {
   authorizeRecovery,
   collectCrashEvidence,
+  confirmGuiSession,
   loadRunMarker,
   observeScreen,
   runTimeoutRecovery,
@@ -121,61 +126,60 @@ function pidStartStamp(pid) {
 }
 
 /**
- * Confirm the claimed GUI session AND the target pid's attribution to it.
- *
- * Three independent facts must all hold, or the session is unconfirmed
- * and every downstream channel degrades to UNKNOWN:
- *   1. `readGuiSession(uid)` resolves a live session with a non-null asid
- *   2. the claimed asid equals the live asid (both must be known — a
- *      missing asid on either side is not a match)
- *   3. `listAppInstances` attributes `pid` to that same uid+asid — the
- *      process must be a registered app instance OF that session, not
- *      merely alive somewhere
+ * Confirm the claimed GUI session and the target pid's attribution via
+ * ae-a8n's live surfaces. Delegates to orchestrator.confirmGuiSession;
+ * the pid-alive probe is pidAliveDefault so dead pids take the
+ * "dead — lsappinfo cannot list it" path instead of never confirming.
  */
 function confirmSession(a8n, flags, pid) {
   const uid = Number(flags["session-uid"]);
   const asid = flags["session-asid"] === undefined ? null : Number(flags["session-asid"]);
-  if (!Number.isFinite(uid)) return { confirmed: false, reason: "--session-uid missing or invalid" };
-  if (asid === null || !Number.isFinite(asid)) {
-    return { confirmed: false, reason: "--session-asid is required — a session without asid cannot be confirmed" };
-  }
-  let live;
+  return confirmGuiSession({
+    deps: {
+      readGuiSession: (u) => a8n.readGuiSession(u),
+      listAppInstances: () => a8n.listAppInstances(),
+      pidAlive: pidAliveDefault,
+    },
+    uid, asid, pid,
+  });
+}
+
+/**
+ * Read the ae-a8n GUI lease state for a session — evidence only. The
+ * lease itself is acquired inside MacHostRecovery.attempt; this records
+ * what the canonical contract said BEFORE the attempt so a refusal is
+ * attributable. Returns null when the ae-a8n build lacks the lease
+ * surface.
+ */
+function guiLeaseState(a8n, session) {
   try {
-    live = a8n.readGuiSession(uid);
-  } catch (error) {
-    return { confirmed: false, reason: `readGuiSession failed: ${String(error?.message ?? error)}` };
-  }
-  if (live === null) {
-    return { confirmed: false, reason: `no GUI session found for uid ${uid}` };
-  }
-  if (live.asid === null) {
-    return { confirmed: false, reason: `uid ${uid} GUI session has no asid — cannot confirm session identity` };
-  }
-  if (live.asid !== asid) {
-    return { confirmed: false, reason: `claimed asid ${asid} but uid ${uid} GUI session is asid ${live.asid}` };
-  }
-  // Attribute the target pid to this session via lsappinfo.
-  let instances;
-  try {
-    instances = a8n.listAppInstances();
-  } catch {
-    instances = null;
-  }
-  if (!Array.isArray(instances)) {
-    return { confirmed: false, reason: "lsappinfo attribution unavailable — pid session membership unproven" };
-  }
-  const mine = instances.filter((i) => i && i.pid === pid);
-  if (mine.length === 0) {
-    return { confirmed: false, reason: `pid ${pid} is not a registered app instance — session membership unproven` };
-  }
-  const inSession = mine.some((i) => i.uid === uid && i.asid === asid);
-  if (!inSession) {
+    if (
+      typeof a8n.inspectGuiLease !== "function" ||
+      typeof a8n.guiLeasePaths !== "function" ||
+      typeof a8n.defaultGuiLeaseRoot !== "function"
+    ) {
+      return { available: false, reason: "ae-a8n build does not export the GUI lease surface" };
+    }
+    const { dir } = a8n.guiLeasePaths(a8n.defaultGuiLeaseRoot());
+    // Same naming as ae-a8n's gui-lease.ts: gui-<uid>-<asid|none>.json.
+    const leasePath = join(dir, `gui-${session.uid}-${session.asid ?? "none"}.json`);
+    const state = a8n.inspectGuiLease(leasePath, {
+      pidAlive: typeof a8n.defaultPidAlive === "function" ? a8n.defaultPidAlive : pidAliveDefault,
+      pidStartedAt: typeof a8n.defaultPidStartedAt === "function" ? a8n.defaultPidStartedAt : pidStartStamp,
+    });
     return {
-      confirmed: false,
-      reason: `pid ${pid} is attributed to uid/asid ${mine[0]?.uid}/${mine[0]?.asid}, not the claimed ${uid}/${asid}`,
+      available: true,
+      state: state.state,
+      holder: state.record === null ? null : {
+        ownerId: state.record.ownerId,
+        pid: state.record.pid,
+        acquiredAt: state.record.acquiredAt,
+        purpose: state.record.purpose ?? null,
+      },
     };
+  } catch (error) {
+    return { available: false, reason: `lease inspection failed: ${String(error?.message ?? error)}` };
   }
-  return { confirmed: true, session: live };
 }
 
 function pidAliveDefault(pid) {
@@ -293,6 +297,11 @@ async function main() {
       ownerId: auth.ownerId,
       screenshotDir: shotDir,
     });
+    // Evidence, not authorization: the ae-a8n GUI lease state before the
+    // attempt. MacHostRecovery.attempt acquires the lease itself; this
+    // records what the canonical contract said so a lease refusal is
+    // attributable to a named holder.
+    result.guiLease = guiLeaseState(a8n, session);
     emit(result);
     return result.verdict === "await-original" ? 0 : 1;
   }
@@ -330,7 +339,12 @@ async function main() {
       pidAlive: pidAliveDefault,
       census,
       session: sessionCheck.confirmed
-        ? { uid: sessionCheck.session.uid, asid: sessionCheck.session.asid ?? null, confirmed: true }
+        ? {
+            uid: sessionCheck.session.uid,
+            asid: sessionCheck.session.asid ?? null,
+            confirmed: true,
+            pidAttribution: sessionCheck.pidAttribution ?? null,
+          }
         : { uid: Number(flags["session-uid"]), asid: flags["session-asid"] === undefined ? null : Number(flags["session-asid"]), confirmed: false, reason: sessionCheck.reason },
       evidenceDir: typeof flags["evidence-dir"] === "string" ? flags["evidence-dir"] : null,
       target: targetFromFlags(flags),

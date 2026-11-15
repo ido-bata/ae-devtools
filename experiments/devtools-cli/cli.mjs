@@ -50,7 +50,7 @@ import { fileURLToPath } from "node:url";
 
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openFakeSession } from "./fake-session.mjs";
-import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, RUNS_DIR } from "./session-guard.mjs";
+import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
@@ -109,12 +109,25 @@ async function openSession(flags) {
     // never from a pid discovered by other means. Older ae-a8n builds lack
     // the accessor — the marker then records nulls and recover refuses.
     const target = typeof s.ae?.recoveryTarget === "function" ? s.ae.recoveryTarget() : null;
+    // Attestation provenance: recorded ONLY from the live ae-a8n session
+    // object. recoveryTarget() null (unowned/closed/unattested transport)
+    // or missing ownership evidence → attestation null → recover/reap
+    // refuse. The marker stays an attribution record; authority comes
+    // from this ae-a8n contract trace, never from the JSON itself.
+    const attestation = target === null ? null : {
+      source: ATTESTATION_SOURCE,
+      ownershipKind: typeof s.ownership?.kind === "string" ? s.ownership.kind : null,
+      ownershipEvidence: typeof s.ownership?.evidence === "string" ? s.ownership.evidence : null,
+      transportKind: typeof s.transportKind === "string" ? s.transportKind : null,
+      aeA8nVersion: typeof s.aeA8nHead === "string" ? s.aeA8nHead : null,
+    };
     const processEvidence = target === null ? null : {
       aePid: target.pid,
       aePidStartStamp: await processStartStamp(target.pid),
       guiSession: target.session === null || target.session === undefined
         ? null
         : { uid: target.session.uid, asid: target.session.asid ?? null },
+      attestation,
     };
     return {
       kind: "a8n",
