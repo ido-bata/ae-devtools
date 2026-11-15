@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extendscript-debug",
+      "request": "attach",
+      "name": "old style",
+      "targetSpecifier": "aftereffects-27.0",
+      "program": "script.jsx",
+      "excludes": ["builtin"]
+    }
+  ]
+}

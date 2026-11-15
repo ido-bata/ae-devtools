@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extendscript-debug",
+      "request": "attach",
+      "name": "bad fields",
+      "hostAppSpecifier": "AE 2027",
+      "hiddenTypes": "builtin",
+      "debugLevel": 7
+    }
+  ]
+}

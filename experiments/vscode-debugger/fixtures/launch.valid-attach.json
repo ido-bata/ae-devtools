@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extendscript-debug",
+      "request": "attach",
+      "name": "Attach to After Effects (ae-devtools)",
+      "hostAppSpecifier": "aftereffects-27.0",
+      "engineName": "main",
+      "hiddenTypes": ["builtin"]
+    }
+  ]
+}
