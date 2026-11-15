@@ -126,22 +126,22 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
     // These were missing/false in the pre-audit registry.
     for (const id of [
       "AEGPMemorySuite1.AEGP_GetMemHandleSize",
-      "AEGPMemorySuite1.AEGP_NewMemHandle", // must NOT be registered: never called
       "AEGP_RegisterSuite5.AEGP_RegisterIdleHook",
       "AEGP_ProjSuite6.AEGP_GetProjectPath",
-      "SPBasicSuite.IsEqual", // must NOT be registered: never called
     ]) {
-      const called = callIds.has(id);
-      const registered = registryIds.has(id);
-      if (id.endsWith("NewMemHandle") || id.endsWith("IsEqual")) {
-        expect({ id, registered }).toEqual({ id, registered: false });
-        expect(called).toBe(false);
-      } else {
-        expect({ id, registered, called }).toEqual({
-          id,
-          registered: true,
-          called: true,
-        });
+      expect({ id, registered: registryIds.has(id), called: callIds.has(id) })
+        .toEqual({ id, registered: true, called: true });
+    }
+    // Members probe.cpp never calls may be registered inventory-only
+    // (CAP047 clusters) but must NEVER be marked implemented.
+    for (const id of [
+      "AEGPMemorySuite1.AEGP_NewMemHandle",
+      "SPBasicSuite.IsEqual",
+    ]) {
+      const entry = DISPATCH_ENTRIES.find((e) => e.id === id);
+      expect(callIds.has(id)).toBe(false);
+      if (entry !== undefined) {
+        expect(entry.implemented).toBe(false);
       }
     }
   });
