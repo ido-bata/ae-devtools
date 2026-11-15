@@ -51,7 +51,7 @@ static A_Err CallIdle(FakeHost& h)
 
 static void SuitesBalanced(FakeHost& h)
 {
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 8; i++)
     {
         CHECK(h.acquireCount[i] == h.releaseCount[i]);
     }
@@ -217,6 +217,70 @@ static void TestProbeZeroProjects()
     CHECK(h->LogContains("app.numProjects=0"));
     CHECK(h->LogContains("probe.end"));
     CHECK(!h->LogContains("project[0].name")); /* no project queries ran */
+    SuitesBalanced(*h);
+}
+
+/* Issue #64: read-only render-queue slice emits per-op records and
+   log lines, acquires/releases both suites, and stays silent on
+   quiet ticks. */
+static void TestProbeRenderQueueSlice()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->numProjects = 0;
+    h->numRQItems = 2;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("renderQueue.state=0"));
+    CHECK(h->LogContains("renderQueue.numItems=2"));
+    CHECK(h->LogContains("rq[0].renderState=0"));
+    CHECK(h->LogContains("rq[0].logType=0"));
+    CHECK(h->LogContains("rq[0].numOutputModules=1"));
+    CHECK(h->LogContains("rq[0].comment: fake rq comment"));
+    CHECK(h->LogContains("rq[1].renderState=0"));
+    CHECK(h->LogContains("op AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState err=0"));
+    CHECK(h->LogContains("op AEGP_RQItemSuite4.AEGP_GetNumRQItems err=0"));
+    CHECK(h->LogContains("op AEGP_RQItemSuite4.AEGP_GetRQItemByIndex err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_RQItemSuite4.AEGP_GetComment err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_RQItemSuite4.AEGP_GetCompFromRQItem err=0"));
+    SuitesBalanced(*h);
+
+    /* quiet tick: no second run, no RQ re-acquire */
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->acquireCount[5] == 1);
+    CHECK(h->acquireCount[6] == 1);
+}
+
+static void TestProbeRenderQueueSuiteAcquireFails_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->numProjects = 0;
+    h->numRQItems = 1;
+    h->failAcquireRQ = true;
+    h->PopulateSuites();
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end")); /* core probe still completed */
+    CHECK(h->LogContains("probe.error: AEGP Render Queue suite unavailable"));
+    CHECK(!h->LogContains("renderQueue.state="));
+    SuitesBalanced(*h);
+}
+
+static void TestProbeRenderQueueItemsQueryFails()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->numProjects = 0;
+    h->numRQItems = 1;
+    h->rqItemsErr = A_Err_GENERIC;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->LogContains("op AEGP_RQItemSuite4.AEGP_GetNumRQItems err=1"));
+    CHECK(!h->LogContains("rq[0].renderState"));
     SuitesBalanced(*h);
 }
 
@@ -654,6 +718,9 @@ int main()
 
     TestProbeHappyPathOneProject();
     TestProbeZeroProjects();
+    TestProbeRenderQueueSlice();
+    TestProbeRenderQueueSuiteAcquireFails_NonFatal();
+    TestProbeRenderQueueItemsQueryFails();
     TestProbeTwoProjects();
     TestIdleUnchangedCountDoesNotReprobe();
     TestIdleReprobesOnProjectCountChange();

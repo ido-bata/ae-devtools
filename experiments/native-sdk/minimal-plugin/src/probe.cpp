@@ -70,6 +70,8 @@
 /* Cap on projects inspected per run (AE normally has <= 1 open).
    The fingerprint covers the same prefix. */
 #define MAX_PROJECTS_SCANNED 4L
+/* Cap on render-queue items inspected per run. */
+#define MAX_RQ_ITEMS_SCANNED 16L
 
 /* ---- op-record ring buffer --------------------------------------
    Every suite call produces one "op <id> err=<n> [k=v]" record.
@@ -781,6 +783,153 @@ static A_Boolean MemoryEntriesOk(const AEGP_MemorySuite1* m)
            m->AEGP_UnlockMemHandle && m->AEGP_FreeMemHandle;
 }
 
+/* Render-queue slice (Issue #64): only the entries the probe actually
+   calls are required; missing entries degrade to "suite unavailable"
+   for this section, not a whole-run abort. */
+static A_Boolean RQEntriesOk(const AEGP_RenderQueueSuite1* r)
+{
+    return r && r->AEGP_GetRenderQueueState;
+}
+
+static A_Boolean RQItemEntriesOk(const AEGP_RQItemSuite4* r)
+{
+    return r && r->AEGP_GetNumRQItems && r->AEGP_GetRQItemByIndex &&
+           r->AEGP_GetRenderState && r->AEGP_GetStartedTime &&
+           r->AEGP_GetElapsedTime && r->AEGP_GetLogType &&
+           r->AEGP_GetNumOutputModulesForRQItem && r->AEGP_GetComment &&
+           r->AEGP_GetCompFromRQItem;
+}
+
+/* Read-only render-queue observation. Every call is op-recorded; the
+   only handle we dereference is the comment mem handle (freed via
+   the memory suite). RQItemRefH values are opaque — we never store
+   them past this call. */
+static void ProbeRenderQueue(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_RenderQueueSuite1* rqP,
+    const AEGP_RQItemSuite4* rqItemP,
+    const AEGP_MemorySuite1* memP)
+{
+    A_Err err;
+    AEGP_RenderQueueState state = AEGP_RenderQueueState_STOPPED;
+    A_long num_itemsL = 0;
+    A_long i;
+
+    err = rqP->AEGP_GetRenderQueueState(&state);
+    OpRecordV(utilP, "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
+              (long)err, err == A_Err_NONE ? " value" : NULL);
+    if (err == A_Err_NONE)
+    {
+        LogFormatted(utilP, "renderQueue.state=%ld", (long)state);
+    }
+
+    err = rqItemP->AEGP_GetNumRQItems(&num_itemsL);
+    OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetNumRQItems", (long)err, NULL);
+    if (err == A_Err_NONE)
+    {
+        LogFormatted(utilP, "renderQueue.numItems=%ld", num_itemsL);
+    }
+    else
+    {
+        return;
+    }
+
+    for (i = 0; i < num_itemsL && i < MAX_RQ_ITEMS_SCANNED; i++)
+    {
+        AEGP_RQItemRefH rq_itemH = NULL;
+        char idx[32];
+        snprintf(idx, sizeof(idx), " i=%ld", (long)i);
+        idx[sizeof(idx) - 1] = '\0';
+
+        err = rqItemP->AEGP_GetRQItemByIndex(i, &rq_itemH);
+        OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
+                  (long)err, idx);
+        if (err != A_Err_NONE || !rq_itemH)
+        {
+            LogFormatted(utilP, "rq[%ld]: get failed", i);
+            continue;
+        }
+
+        {
+            AEGP_RenderItemStatusType status = 0;
+            err = rqItemP->AEGP_GetRenderState(rq_itemH, &status);
+            OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetRenderState",
+                      (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "rq[%ld].renderState=%ld", i, (long)status);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = rqItemP->AEGP_GetStartedTime(rq_itemH, &t);
+            OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetStartedTime",
+                      (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "rq[%ld].started=%ld/%lu", i, t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = rqItemP->AEGP_GetElapsedTime(rq_itemH, &t);
+            OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetElapsedTime",
+                      (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "rq[%ld].elapsed=%ld/%lu", i, t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            AEGP_LogType logtype = AEGP_LogType_NONE;
+            err = rqItemP->AEGP_GetLogType(rq_itemH, &logtype);
+            OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetLogType",
+                      (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "rq[%ld].logType=%ld", i, (long)logtype);
+            }
+        }
+        {
+            A_long nout = 0;
+            err = rqItemP->AEGP_GetNumOutputModulesForRQItem(rq_itemH, &nout);
+            OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
+                      (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "rq[%ld].numOutputModules=%ld", i, nout);
+            }
+        }
+        {
+            AEGP_MemHandle commentH = NULL;
+            err = rqItemP->AEGP_GetComment(rq_itemH, &commentH);
+            OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetComment",
+                      (long)err, idx);
+            if (err == A_Err_NONE && commentH)
+            {
+                char label[64];
+                snprintf(label, sizeof(label), "rq[%ld].comment", (long)i);
+                label[sizeof(label) - 1] = '\0';
+                LogMemHandleUtf16(utilP, memP, label, commentH); /* consumes handle */
+            }
+        }
+        {
+            AEGP_CompH compH = NULL;
+            err = rqItemP->AEGP_GetCompFromRQItem(rq_itemH, &compH);
+            {
+                char extra[48];
+                snprintf(extra, sizeof(extra), "%s hasComp=%d", idx,
+                         compH != NULL ? 1 : 0);
+                extra[sizeof(extra) - 1] = '\0';
+                OpRecordV(utilP, "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
+                          (long)err, err == A_Err_NONE ? extra : idx);
+            }
+        }
+    }
+}
+
 /* ---- idle hook: the host-guaranteed query context -----------------
    Dispatched by AE on the main thread while the application is idle.
    This is the same class of context in which the SDK AEGP samples run
@@ -803,6 +952,8 @@ static A_Err ProbeIdleHook(
     const AEGP_ProjSuite6* projP = NULL;
     const AEGP_ItemSuite9* itemP = NULL;
     const AEGP_MemorySuite1* memP = NULL;
+    const AEGP_RenderQueueSuite1* rqP = NULL;
+    const AEGP_RQItemSuite4* rqItemP = NULL;
     A_Err first_err = A_Err_NONE;
     A_long num_projectsL = 0;
     const char* reasonZ = NULL;
@@ -1030,6 +1181,24 @@ static A_Err ProbeIdleHook(
             }
         }
 
+        /* Render-queue slice (Issue #64): read-only getters only.
+           Acquisition failure is NON-fatal — the queue is auxiliary
+           evidence, not core project/item data; log and continue. */
+        if (AcquireSuite(s_basicP, utilP, kAEGPRenderQueueSuite,
+                         kAEGPRenderQueueSuiteVersion1,
+                         (const void**)&rqP) == A_Err_NONE &&
+            AcquireSuite(s_basicP, utilP, kAEGPRQItemSuite,
+                         kAEGPRQItemSuiteVersion4,
+                         (const void**)&rqItemP) == A_Err_NONE &&
+            RQEntriesOk(rqP) && RQItemEntriesOk(rqItemP))
+        {
+            ProbeRenderQueue(utilP, rqP, rqItemP, memP);
+        }
+        else
+        {
+            LogLine(utilP, "probe.error: AEGP Render Queue suite unavailable");
+        }
+
         /* num_projectsL == 0 is a NORMAL host state (no project open),
            not an error: ProbeProject logs app.numProjects=0 and skips
            per-project queries. */
@@ -1044,6 +1213,14 @@ done:
     /* Suite releases are op-recorded too: on probe ticks the mode is
        still DIRECT so they land inside this execution's evidence;
        on quiet ticks they stay buffered and are discarded. */
+    if (rqItemP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+    }
+    if (rqP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPRenderQueueSuite, kAEGPRenderQueueSuiteVersion1);
+    }
     if (itemP)
     {
         ReleaseSuiteSafe(s_basicP, utilP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
