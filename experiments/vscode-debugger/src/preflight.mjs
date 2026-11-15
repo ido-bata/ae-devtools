@@ -13,16 +13,28 @@
  *      a CANDIDATE, never as proof.
  *
  *   2. How many After Effects processes are running? `hostAppSpecifier`
- *      selects family+version, NOT a PID. With multiple AE instances
- *      the extension's target is ambiguous — attach could land on a
- *      non-owned instance. Multiple instances therefore refuse the
- *      unambiguous-target verdict unless `--owned-pid` attests which
- *      process is the ae-a8n owned session.
+ *      selects family+version, NOT a PID — and the debugger has no way
+ *      to be aimed at a PID either. With multiple AE instances the
+ *      attach target is ambiguous and CANNOT be disambiguated:
+ *      `--owned-pid` records which process the ae-a8n session owns,
+ *      but it does not and cannot tell the extension which instance
+ *      to attach to. Multiple instances therefore NEVER produce an
+ *      attachable verdict.
  *
  *   3. Can we prove the attach lands on the OWNED session? launch.json
  *      cannot express PID pinning. `--owned-pid` is a caller attestation
  *      (the session owner knows which PID it launched); without it,
- *      ownership is UNPROVEN and the verdict says so explicitly.
+ *      or when it does not match the single running AE process,
+ *      ownership is UNPROVEN and the verdict is not attachable.
+ *
+ * Ownership is graded against the ae-a8n contract (`HostOwnership` in
+ * ae-a8n `src/driver/transport.ts`): "owned" there means *this session
+ * launched it and it is still that process*, backed by launch
+ * provenance and a pinned process start time. `--owned-pid` is weaker
+ * — a caller claim with no provenance check — so even the single
+ * attachable verdict is attestation-grade, not contract-grade proof.
+ * Contract-grade owned-session proof remains a real-session acceptance
+ * item (see README "Honest limitations").
  *
  * Nothing here claims debug completion: even a clean preflight leaves
  * protocol acceptance (ESTK-derived debug protocol on AE 2026/2027)
@@ -127,28 +139,37 @@ export function evaluatePreflight({ specifier = null, installedApps = [], aeProc
   }
 
   // --- verdict ---
+  // `--owned-pid` never makes an ambiguous target attachable: the
+  // debugger cannot be aimed at a PID, so >1 AE process always refuses.
+  // A single instance is attachable only when the caller attests it is
+  // the owned session; otherwise ownership is unproven and attach is
+  // refused (fail closed — attaching to someone's personal AE is not
+  // a preflight pass).
   let verdict;
   if (checks.specifier.status === "invalid" || checks.specifier.status === "out-of-scope" || checks.specifier.status === "no-installed-match") {
     verdict = "blocked-specifier";
   } else if (aeProcesses.length === 0) {
     verdict = "no-running-instance";
     reasons.push("no After Effects process is running — attach has no target (launch AE via the owned-session path first)");
-  } else if (aeProcesses.length > 1 && !ownedAttested) {
+  } else if (aeProcesses.length > 1) {
     verdict = "ambiguous-multiple-instances";
-    reasons.push(`${aeProcesses.length} After Effects processes are running and no --owned-pid attests which is the owned session — attach target is ambiguous; refusing to claim an unambiguous attach`);
-  } else if (aeProcesses.length > 1 && ownedAttested) {
-    verdict = "ready-owned-session";
+    reasons.push(
+      ownedAttested
+        ? `${aeProcesses.length} After Effects processes are running; --owned-pid ${ownedPid} records the owned process but the debugger cannot be aimed at a PID — the attach target stays ambiguous`
+        : `${aeProcesses.length} After Effects processes are running and no --owned-pid attests which is the owned session — attach target is ambiguous; refusing to claim an unambiguous attach`,
+    );
   } else if (ownedAttested) {
     verdict = "ready-owned-session";
+    reasons.push("attestation-grade only: --owned-pid matches the single running AE process; ae-a8n contract-grade ownership (launch provenance + pinned start time) is not proven here");
   } else {
-    verdict = "ready-unowned-single-instance";
-    reasons.push("exactly one After Effects process is running, but nothing proves it is the ae-a8n owned session — attach would reach it, ownership UNPROVEN");
+    verdict = "unowned-single-instance";
+    reasons.push("exactly one After Effects process is running, but nothing proves it is the ae-a8n owned session — attach would reach it, ownership UNPROVEN; refusing to claim attachable");
   }
 
   return {
     schema: PREFLIGHT_SCHEMA,
     verdict,
-    attachAttemptable: ["ready-owned-session", "ready-unowned-single-instance"].includes(verdict),
+    attachAttemptable: verdict === "ready-owned-session",
     // We never claim the debug session will succeed: protocol
     // acceptance on this AE version is real-host UNVERIFIED.
     debugCompletionClaimed: false,

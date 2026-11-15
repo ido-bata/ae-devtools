@@ -54,18 +54,25 @@ Checked against `Adobe.extendscript-debug` marketplace docs +
 
 | verdict | meaning |
 | --- | --- |
-| `ready-owned-session` | `--owned-pid` attested a running AE process; unambiguous target |
-| `ready-unowned-single-instance` | exactly one AE running, but **ownership UNPROVEN** — attach would reach it, nothing proves it is the owned session |
-| `ambiguous-multiple-instances` | >1 AE process, no attestation → **refused** (cannot pin instance) |
+| `ready-owned-session` | exactly one AE running AND `--owned-pid` attests it is the owned session — the **only** attachable verdict. Attestation-grade, not ae-a8n contract-grade (see below) |
+| `unowned-single-instance` | exactly one AE running, but **ownership UNPROVEN** — attach refused (fail closed) |
+| `ambiguous-multiple-instances` | >1 AE process → **always refused**. `--owned-pid` cannot aim the debugger at a PID, so attestation never rescues this verdict |
 | `no-running-instance` | nothing to attach to |
 | `blocked-specifier` | specifier malformed / out of lane scope / no installed app plausibly matches |
 
 `debugCompletionClaimed` is **always false**: even a clean preflight
 leaves protocol acceptance (ESTK-derived debug protocol on AE
-2026/2027) UNVERIFIED — that requires a real attach. Multiple-instance
-discrimination is enforced only when the caller supplies `--owned-pid`
-(the ae-a8n session owner knows which PID it launched); launch.json
-itself cannot express PID pinning.
+2026/2027) UNVERIFIED — that requires a real attach.
+
+`--owned-pid` is a **caller attestation, not a debugger target**:
+`hostAppSpecifier` selects app family+version and the ExtendScript
+debugger offers no PID pinning, so the flag only records which process
+the ae-a8n session owns. It is graded against the ae-a8n ownership
+contract (`HostOwnership` in ae-a8n `src/driver/transport.ts`): contract
+"owned" requires launch provenance plus a pinned process start time,
+while `--owned-pid` is a bare claim — hence `ready-owned-session` is
+attestation-grade. Contract-grade proof (the debugger actually landing
+on the owned instance) remains a real-session acceptance item.
 
 ## Design boundary (persisted on Issue #53)
 

@@ -276,15 +276,40 @@ t("preflight: multiple AE instances refuse unambiguous attach", () => {
   assert.equal(r.debugCompletionClaimed, false);
 });
 
-t("preflight: owned-pid attestation resolves multi-instance ambiguity", () => {
+t("preflight: owned-pid attestation does NOT rescue multi-instance ambiguity", () => {
+  // --owned-pid records which process the session owns; it cannot aim
+  // the debugger at that PID. Multiple instances stay unattachable.
   const r = evaluatePreflight({
     specifier: "aftereffects-27.0",
     installedApps: [{ name: "AE2027", version: "27.0.0" }],
     aeProcesses: [{ pid: 1, command: "a" }, { pid: 2, command: "b" }],
     ownedPid: 2,
   });
-  assert.equal(r.verdict, "ready-owned-session");
+  assert.equal(r.verdict, "ambiguous-multiple-instances");
+  assert.equal(r.attachAttemptable, false);
   assert.equal(r.checks.ownedSession.status, "attested");
+});
+
+t("preflight: single instance + matching owned-pid is the only attachable verdict", () => {
+  const r = evaluatePreflight({
+    specifier: "aftereffects-27.0",
+    installedApps: [{ name: "AE2027", version: "27.0.0" }],
+    aeProcesses: [{ pid: 1, command: "a" }],
+    ownedPid: 1,
+  });
+  assert.equal(r.verdict, "ready-owned-session");
+  assert.equal(r.attachAttemptable, true);
+  assert.equal(r.checks.ownedSession.status, "attested");
+});
+
+t("preflight: single instance without ownership proof is not attachable", () => {
+  const r = evaluatePreflight({
+    specifier: "aftereffects-27.0",
+    installedApps: [{ name: "AE2027", version: "27.0.0" }],
+    aeProcesses: [{ pid: 1, command: "a" }],
+  });
+  assert.equal(r.verdict, "unowned-single-instance");
+  assert.equal(r.attachAttemptable, false);
 });
 
 t("preflight: owned-pid that is not an AE process fails", () => {
@@ -295,7 +320,8 @@ t("preflight: owned-pid that is not an AE process fails", () => {
     ownedPid: 999,
   });
   assert.equal(r.checks.ownedSession.status, "attestation-failed");
-  assert.equal(r.verdict, "ready-unowned-single-instance");
+  assert.equal(r.verdict, "unowned-single-instance");
+  assert.equal(r.attachAttemptable, false);
 });
 
 t("preflight: no running instance blocks", () => {
