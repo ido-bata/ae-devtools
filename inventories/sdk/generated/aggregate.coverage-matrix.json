@@ -1,0 +1,846 @@
+{
+  "schema": "ae-devtools/sdk-coverage-matrix/1",
+  "release": {
+    "identifier": "26.5",
+    "distribution": "macOS",
+    "headersRoot": "Headers"
+  },
+  "evidenceLevel": {
+    "inventory": "source-reviewed",
+    "verification": "not-run",
+    "realHost": "not-run",
+    "statement": "Symbols were extracted from AE SDK 26.5 macOS headers by a deterministic parser. No After Effects process was started; no plug-in was built or loaded; no symbol was executed. Windows headers were not obtained; Windows ABI/layout claims are UNVERIFIED."
+  },
+  "totals": {
+    "symbols": 4677,
+    "unknown": 552,
+    "unknownByReason": {
+      "deprecated-header-only": 0,
+      "pure-data-type": 534,
+      "reserved-selector": 5,
+      "unattributed-callable": 13
+    },
+    "headerFilesParsed": 70
+  },
+  "classes": {
+    "build-test-lifecycle": {
+      "symbols": 74,
+      "state": "build-probe-only",
+      "note": "Sample projects compile (Sweetie/Checkout, macOS arm64). Load/execution UNVERIFIED.",
+      "implemented": false,
+      "verifiedOnRealHost": false
+    },
+    "external-command": {
+      "symbols": 3766,
+      "state": "inventory-only",
+      "note": "Selector strings attributed from headers. No adapter, no real-host dispatch evidence.",
+      "implemented": false,
+      "verifiedOnRealHost": false
+    },
+    "host-callback": {
+      "symbols": 154,
+      "state": "inventory-only",
+      "note": "Callback slots/types enumerated. Lifetime/thread-safety rules documented, unexercised.",
+      "implemented": false,
+      "verifiedOnRealHost": false
+    },
+    "in-host-plugin-command": {
+      "symbols": 131,
+      "state": "inventory-only",
+      "note": "In-plugin command surface enumerated. Not reachable from devtools yet.",
+      "implemented": false,
+      "verifiedOnRealHost": false
+    },
+    "unsupported-or-unknown": {
+      "symbols": 552,
+      "state": "unsupported-or-unknown",
+      "note": "Extractor could not attribute; see unknownByReason. Requires per-family review (CAP047).",
+      "implemented": false,
+      "verifiedOnRealHost": false
+    }
+  },
+  "headers": [
+    {
+      "path": "A.h",
+      "symbols": 40,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 40
+      }
+    },
+    {
+      "path": "AEConfig.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AEFX_SuiteHandlerTemplate.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_AdvEffectSuites.h",
+      "symbols": 54,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 50,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 4
+      }
+    },
+    {
+      "path": "AE_BlendModes.h",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      }
+    },
+    {
+      "path": "AE_CacheOnLoadSuite.h",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_ChannelSuites.h",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_ComputeCacheSuite.h",
+      "symbols": 19,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 7,
+        "host-callback": 4,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 8
+      }
+    },
+    {
+      "path": "AE_CreatorInfo.h",
+      "symbols": 1,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "AE_Effect.h",
+      "symbols": 234,
+      "byClass": {
+        "build-test-lifecycle": 70,
+        "external-command": 0,
+        "host-callback": 14,
+        "in-host-plugin-command": 31,
+        "unsupported-or-unknown": 119
+      }
+    },
+    {
+      "path": "AE_EffectCB.h",
+      "symbols": 84,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 69,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 15
+      }
+    },
+    {
+      "path": "AE_EffectCBSuites.h",
+      "symbols": 148,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 148,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_EffectGPUSuites.h",
+      "symbols": 17,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 16,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "AE_EffectPixelFormat.h",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      }
+    },
+    {
+      "path": "AE_EffectSuites.h",
+      "symbols": 73,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 63,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 10
+      }
+    },
+    {
+      "path": "AE_EffectSuitesHelper.h",
+      "symbols": 8,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      }
+    },
+    {
+      "path": "AE_EffectSuitesOld.h",
+      "symbols": 38,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 38,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_EffectUI.h",
+      "symbols": 46,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 8,
+        "in-host-plugin-command": 14,
+        "unsupported-or-unknown": 24
+      }
+    },
+    {
+      "path": "AE_EffectVers.h",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 4,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_GeneralPlug.h",
+      "symbols": 988,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 832,
+        "host-callback": 11,
+        "in-host-plugin-command": 7,
+        "unsupported-or-unknown": 138
+      }
+    },
+    {
+      "path": "AE_GeneralPlugOld.h",
+      "symbols": 2280,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2274,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 5
+      }
+    },
+    {
+      "path": "AE_GeneralPlugPanels.h",
+      "symbols": 18,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 1,
+        "in-host-plugin-command": 3,
+        "unsupported-or-unknown": 8
+      }
+    },
+    {
+      "path": "AE_GeneralPlugPost.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_GeneralPlugPre.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_HashSuite.h",
+      "symbols": 3,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 3,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_Hook.h",
+      "symbols": 12,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 4,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 8
+      }
+    },
+    {
+      "path": "AE_IO.h",
+      "symbols": 89,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 2,
+        "in-host-plugin-command": 49,
+        "unsupported-or-unknown": 38
+      }
+    },
+    {
+      "path": "AE_IO_ColorMetadata.h",
+      "symbols": 3,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 3
+      }
+    },
+    {
+      "path": "AE_IO_FileExt.h",
+      "symbols": 1,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "AE_Macros.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "AE_PluginData.h",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 6,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "FIEL_Public.h",
+      "symbols": 3,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 3
+      }
+    },
+    {
+      "path": "Mach-O_prefix.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "PF_Masks.h",
+      "symbols": 2,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "PR_Public.h",
+      "symbols": 43,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 20,
+        "in-host-plugin-command": 11,
+        "unsupported-or-unknown": 12
+      }
+    },
+    {
+      "path": "PT_Public.h",
+      "symbols": 12,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 10,
+        "unsupported-or-unknown": 2
+      }
+    },
+    {
+      "path": "PrSDKAESupport.h",
+      "symbols": 100,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 80,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 20
+      }
+    },
+    {
+      "path": "PrSDKPixelFormat.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPAccess.h",
+      "symbols": 17,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 13,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 3
+      }
+    },
+    {
+      "path": "SP/SPAdapts.h",
+      "symbols": 12,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 11,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "SP/SPBasic.h",
+      "symbols": 8,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 8,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPBckDbg.h",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 6,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPBlocks.h",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 4,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPCOM.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPCaches.h",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 2,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "SP/SPConfig.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPErrorCodes.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPErrors.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPFiles.h",
+      "symbols": 40,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 26,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 14
+      }
+    },
+    {
+      "path": "SP/SPHost.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPInterf.h",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 5,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "SP/SPMData.h",
+      "symbols": 1,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "SP/SPObject.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPPiPL.h",
+      "symbols": 13,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 13
+      }
+    },
+    {
+      "path": "SP/SPPlugs.h",
+      "symbols": 61,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 58,
+        "host-callback": 1,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 2
+      }
+    },
+    {
+      "path": "SP/SPProps.h",
+      "symbols": 17,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 16,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 1
+      }
+    },
+    {
+      "path": "SP/SPRuntme.h",
+      "symbols": 43,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 18,
+        "host-callback": 17,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 8
+      }
+    },
+    {
+      "path": "SP/SPSTSPrp.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPStrngs.h",
+      "symbols": 4,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 4,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPSuites.h",
+      "symbols": 16,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 16,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/SPTypes.h",
+      "symbols": 19,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 19
+      }
+    },
+    {
+      "path": "SP/artemis/config/platform.hpp",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SP/photoshop/config/platform.hpp",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SimpleSuiteHelper.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "SuiteHelper.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "adobesdk/DrawbotSuite.h",
+      "symbols": 51,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 46,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 5
+      }
+    },
+    {
+      "path": "adobesdk/config/AdobesdkTypes.h",
+      "symbols": 6,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 6
+      }
+    },
+    {
+      "path": "adobesdk/config/PostConfig.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "adobesdk/config/PreConfig.h",
+      "symbols": 0,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 0
+      }
+    },
+    {
+      "path": "adobesdk/drawbotsuite/DrawbotSuiteTypes.h",
+      "symbols": 11,
+      "byClass": {
+        "build-test-lifecycle": 0,
+        "external-command": 0,
+        "host-callback": 0,
+        "in-host-plugin-command": 0,
+        "unsupported-or-unknown": 11
+      }
+    }
+  ],
+  "denominatorCaveats": [
+    "The count is the number of symbol rows this extractor can attribute structurally. It is not a claim that the SDK's public surface is fully enumerated.",
+    "unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.",
+    "Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.",
+    "Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.",
+    "No behavioural claim about any AE build is implied. Nothing here was executed against After Effects."
+  ],
+  "claims": {
+    "implemented": "code exists and compiles",
+    "verifiedOnRealHost": "observed running against an installed After Effects",
+    "statement": "No row in this matrix is verifiedOnRealHost. Build-probe-only means the SDK sample compiles; it does not mean AE loads the plugin."
+  }
+}
