@@ -1,0 +1,16 @@
+{
+  "name": "ae-devtools-vscode-debugger",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Experiment: VSCode Adobe.extendscript-debug launch.json generation + contract validation (Issue #53)",
+  "bin": {
+    "vscode-debugger": "./src/cli.mjs"
+  },
+  "scripts": {
+    "test": "node tests/run.mjs"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
+  }
+}
