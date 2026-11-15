@@ -43,6 +43,35 @@ jobs:
         working-directory: packages/capability-catalog
         run: bun run verify
 
+  native-adapter:
+    name: native-adapter (bun test / typecheck / verify)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect package
+        id: detect
+        run: |
+          if [ -f packages/native-adapter/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "packages/native-adapter not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: oven-sh/setup-bun@v2
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bun install --frozen-lockfile
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bun test
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bunx tsc --noEmit
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bun run verify
+
   read-only-probe:
     name: read-only-probe (node:test, fake responder)
     runs-on: ubuntu-latest

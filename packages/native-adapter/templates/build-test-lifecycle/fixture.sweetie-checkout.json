@@ -1,0 +1,39 @@
+{
+  "fixtureId": "native-sdk-build-probe-sweetie-checkout",
+  "family": "build-test-lifecycle",
+  "sdkRelease": { "identifier": "26.5", "distribution": "macOS" },
+  "matrixState": "build-probe-only",
+  "description": "Compile-only probe of the two AE SDK 26.5 macOS samples that experiments/native-sdk already builds. This fixture exercises the BUILD path only; plugin load and execution inside After Effects are UNVERIFIED and out of scope until LOAD-PROOF.md is executed on an owned AE session.",
+  "preconditions": [
+    "AE_SDK_ROOT points at a license-held AE SDK 26.5 macOS distribution (never vendored; see inventories/sdk/generated/provenance.json)",
+    "macOS arm64 host with xcodebuild available",
+    "no After Effects process required or permitted for this fixture"
+  ],
+  "steps": [
+    {
+      "name": "build-sweetie-aegp",
+      "command": "AE_SDK_ROOT=$AE_SDK_ROOT ./experiments/native-sdk/build-macos.sh <outdir>",
+      "expect": "Sweetie (AEGP sample) BUILD SUCCEEDED"
+    },
+    {
+      "name": "build-checkout-effect",
+      "command": "AE_SDK_ROOT=$AE_SDK_ROOT ./experiments/native-sdk/build-macos.sh <outdir>",
+      "expect": "Checkout (Effect/CPU sample) BUILD SUCCEEDED"
+    }
+  ],
+  "knownBlockers": [
+    "Effect/SDK_Invert_ProcAmp BUILD FAILED: metal_common (AE GPU SDK component) and Boost headers (BOOST_BASE_PATH) absent from the base 26.5 distribution — SmartFX/MFR/GPU slice (CAP043) stays blocked",
+    "ad-hoc ('Sign to Run Locally') signing acceptance by AE is UNVERIFIED until a real load test (CAP040)"
+  ],
+  "expected": {
+    "resultState": "completed",
+    "evidence": "experiments/native-sdk/EVIDENCE.md build log summary",
+    "evidenceLevel": "build-probe-only"
+  },
+  "explicitlyNotClaimed": [
+    "plugin load into AE",
+    "plugin execution of any kind",
+    "Windows build or behaviour",
+    "verified-real-host evidence of any kind"
+  ]
+}
