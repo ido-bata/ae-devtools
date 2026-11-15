@@ -15,8 +15,9 @@
  * session cannot be expressed in launch.json — see README/EVIDENCE.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { validateLaunchJson, hasErrors, HOST_APP_SPECIFIER_RE, DEBUG_TYPE, SCHEMA } from "./schema.mjs";
+import { upsertLaunchConfig } from "./jsonc.mjs";
 
 export const DEFAULT_NAME = "Attach to After Effects (ae-devtools)";
 export const DEFAULT_HIDDEN_TYPES = ["builtin"];
@@ -53,28 +54,26 @@ export function buildAttachConfig({
 
 /**
  * Write `.vscode/launch.json` under `projectDir`, merging with any
- * existing file: our named configuration is replaced, others kept.
+ * existing file: our named configuration is replaced, everything else
+ * kept — including comments, trailing commas, and unrelated settings.
+ *
+ * The update is a surgical JSONC edit (jsonc.mjs): the file is parsed
+ * by a real JSONC tokenizer and only the `configurations` segment is
+ * modified. A file that is not parseable JSONC is refused, never
+ * clobbered.
+ *
  * Returns { path, config, merged, diagnostics }.
  */
 export function writeLaunchJson(projectDir, config) {
   const vscodeDir = join(resolve(projectDir), ".vscode");
   const path = join(vscodeDir, "launch.json");
-  let doc = { version: "0.2.0", configurations: [] };
-  let merged = false;
-  if (existsSync(path)) {
-    try {
-      // launch.json is JSONC in VS Code; we only read/write strict JSON
-      // and refuse to clobber a file we cannot parse.
-      doc = JSON.parse(readFileSync(path, "utf8"));
-      merged = true;
-    } catch (e) {
-      throw new Error(`existing ${path} is not strict JSON — refusing to overwrite: ${e.message}`);
-    }
-  }
-  if (!Array.isArray(doc.configurations)) doc.configurations = [];
-  const idx = doc.configurations.findIndex((c) => c && c.name === config.name);
-  if (idx >= 0) doc.configurations[idx] = config;
-  else doc.configurations.push(config);
+  const existed = existsSync(path);
+  const baseText = existed
+    ? readFileSync(path, "utf8")
+    : '{\n  "version": "0.2.0",\n  "configurations": []\n}\n';
+
+  // Throws when the existing file is not parseable JSONC.
+  const { text, value: doc } = upsertLaunchConfig(baseText, config);
 
   const diags = validateLaunchJson(doc);
   // Fail closed on doc-level breakage or on OUR config being rejected.
@@ -88,6 +87,6 @@ export function writeLaunchJson(projectDir, config) {
     throw new Error(`launch.json would fail validation: ${JSON.stringify(fatal)}`);
   }
   mkdirSync(vscodeDir, { recursive: true });
-  writeFileSync(path, JSON.stringify(doc, null, 4) + "\n");
-  return { path, config, merged, diagnostics: diags };
+  writeFileSync(path, text.endsWith("\n") ? text : text + "\n");
+  return { path, config, merged: existed, diagnostics: diags, preservedComments: existed };
 }

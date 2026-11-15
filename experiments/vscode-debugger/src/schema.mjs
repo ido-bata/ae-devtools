@@ -4,8 +4,21 @@
  *
  * Source of truth: Adobe's official "ExtendScript Debugger" VS Code
  * extension docs (marketplace item Adobe.extendscript-debug, V2
- * rewrite). V1 property names were renamed; accepting them silently
- * would produce a config the extension ignores, so they are errors.
+ * rewrite; extendscript.docsforadobe.dev). V1 property names were
+ * renamed; accepting them silently would produce a config the
+ * extension ignores, so they are errors.
+ *
+ * Contract facts verified against the official docs (2026-11):
+ *   - `hostAppSpecifier` selects app family+version, NOT a process.
+ *     Its exact value is reported only by the extension's app picker
+ *     (grey text); offline existence checks are necessarily
+ *     "plausible", never proof — see preflight.mjs.
+ *   - `engineName` default is `""`; After Effects' main engine is
+ *     officially named `main` (extension docs, "After Effects Basic
+ *     Details"), so `main` is the correct pin for this lane.
+ *   - AE quirk (official docs): breakpoints inside callback sections
+ *     require `$.level = 1` in the evaluated script.
+ *   - `attach` never evaluates files; `launch` does (consent bypass).
  *
  * This module validates the *configuration document*, not whether a
  * debugger can actually attach — that is real-host UNVERIFIED.

@@ -10,10 +10,62 @@ official extension only.
 | Command | Purpose |
 | --- | --- |
 | `vscode-debugger gen --host-app-specifier aftereffects-27.0 [--engine-name main] [--project-dir .]` | writes/merges `.vscode/launch.json` with an **attach** configuration pinned to the declared host specifier |
-| `vscode-debugger validate <launch.json>` | contract-checks a launch.json (JSONC tolerated); exit 1 on errors, warnings reported |
+| `vscode-debugger validate <launch.json>` | contract-checks a launch.json (real JSONC parse — comments/trailing commas legal, `//` inside strings is not a comment); exit 1 on errors, warnings reported |
+| `vscode-debugger preflight [--host-app-specifier …] [--owned-pid <pid>]` | attach precondition checks: installed-app plausibility, running-instance count, owned-session attestation. **Never claims debug completion** — see below |
 
 Requires: VS Code ≥1.62 and the `Adobe.extendscript-debug` extension
-installed. No Node dependencies.
+installed. One runtime dependency: `jsonc-parser` (JSONC tokenize +
+surgical edits).
+
+## JSONC safety (launch.json read/update)
+
+`launch.json` is JSONC and users keep arbitrary settings in it. The
+update path (`src/jsonc.mjs`) therefore:
+
+- parses with `jsonc-parser` — **never** regex-strips comments (a `//`
+  inside a string literal is not a comment),
+- edits **surgically** via `modify`/`applyEdits` on the
+  `configurations` array only — comments, trailing commas, key order,
+  and foreign configs survive byte-for-byte,
+- refuses to write when the existing file is not parseable JSONC, and
+  re-validates the post-edit document before touching disk.
+
+## Contract verification (vs official Adobe docs)
+
+Checked against `Adobe.extendscript-debug` marketplace docs +
+`extendscript.docsforadobe.dev` (2026-11):
+
+- V2 renamed `targetSpecifier→hostAppSpecifier`, `program→script`,
+  `excludes→hiddenTypes`; other V1 props removed → validator rejects.
+- `hostAppSpecifier` selects **app family + version, not a PID**. The
+  authoritative specifier string is only shown by the extension's app
+  picker — offline checks can only establish *plausibility* against
+  installed `.app` bundles (`preflight` reports `candidate-match` with
+  `proof: "unverified"`).
+- `engineName`: official default is `""`; AE's main engine is
+  officially named **`main`** → `gen` default is correct for this lane.
+- AE quirk (official docs): breakpoints inside **callback sections**
+  require the evaluated script to set `$.level = 1`; adjusting
+  breakpoints mid-session triggers the next breakpoint once.
+- `attach` never evaluates files; `launch` does → `gen` emits attach
+  only, `validate` warns on launch.
+
+## Preflight verdicts (`preflight`)
+
+| verdict | meaning |
+| --- | --- |
+| `ready-owned-session` | `--owned-pid` attested a running AE process; unambiguous target |
+| `ready-unowned-single-instance` | exactly one AE running, but **ownership UNPROVEN** — attach would reach it, nothing proves it is the owned session |
+| `ambiguous-multiple-instances` | >1 AE process, no attestation → **refused** (cannot pin instance) |
+| `no-running-instance` | nothing to attach to |
+| `blocked-specifier` | specifier malformed / out of lane scope / no installed app plausibly matches |
+
+`debugCompletionClaimed` is **always false**: even a clean preflight
+leaves protocol acceptance (ESTK-derived debug protocol on AE
+2026/2027) UNVERIFIED — that requires a real attach. Multiple-instance
+discrimination is enforced only when the caller supplies `--owned-pid`
+(the ae-a8n session owner knows which PID it launched); launch.json
+itself cannot express PID pinning.
 
 ## Design boundary (persisted on Issue #53)
 
@@ -32,20 +84,22 @@ installed. No Node dependencies.
 
 - **Real attach is UNVERIFIED.** Whether AE 2026/2027 still accepts the
   ESTK-derived debug protocol is a real-host question; the launch/GUI
-  freeze is in effect, so nothing here has touched a live AE.
-- `hostAppSpecifier` selects app **family + version**, not a PID.
-  Instance-level pinning ("the ae-a8n owned session, not another AE
-  instance") cannot be expressed in launch.json — operational
-  precondition is exactly one AE instance, launched via the owned
-  session path. Two-instance discrimination: UNVERIFIED.
-- `engineName: "main"` assumes the default engine; other engines
-  (`transient`, CEP) are host-dependent.
+  freeze is in effect, so nothing here has touched a live AE. (Note:
+  an AE 2026 instance was observed running on this machine during
+  development — preflight only *read* process/app state; no attach,
+  no launch, no GUI action was performed.)
+- `hostAppSpecifier` existence can only be confirmed by the
+  extension's picker or a real attach — `preflight` reports
+  plausibility, never proof.
+- `engineName: "main"` targets AE's main engine; CEP/transient engines
+  are host-dependent.
 - Breakpoints, stepping, variables, call stack, `$.bp()`: all
   UNVERIFIED pending a disposable owned session + human authorization.
-- Windows: UNVERIFIED.
+- Windows: UNVERIFIED (preflight's app/process discovery is macOS-only;
+  `evaluatePreflight` is platform-neutral).
 
 ## Verification
 
-- `node tests/run.mjs` — 18 contract/unit tests (fixtures for valid
+- `node tests/run.mjs` — 31 contract/unit tests (fixtures for valid
   attach, wrong type, V1 properties, launch request, malformed fields,
-  merge/idempotency, JSONC tolerance, CLI exit codes).
+  JSONC preservation/surgical edits, preflight verdicts, CLI exit codes).

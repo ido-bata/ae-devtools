@@ -7,14 +7,22 @@
  *       → writes .vscode/launch.json attach configuration
  *
  *   vscode-debugger validate <launch.json>
- *       → contract-checks a launch.json; exit 1 on errors
+ *       → contract-checks a launch.json (JSONC tolerated); exit 1 on errors
  *
- * No AE required. Real attach is UNVERIFIED (see README).
+ *   vscode-debugger preflight [--host-app-specifier aftereffects-27.0]
+ *       [--owned-pid <pid>]
+ *       → attach precondition checks: installed-app plausibility,
+ *         running-instance count, owned-session attestation. Never
+ *         claims debug completion — real attach stays UNVERIFIED.
+ *
+ * No AE launch/GUI required. Real attach is UNVERIFIED (see README).
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildAttachConfig, writeLaunchJson } from "./gen.mjs";
 import { validateLaunchJson, hasErrors } from "./schema.mjs";
+import { parseJsonc, printParseErrorCode } from "./jsonc.mjs";
+import { runPreflight } from "./preflight.mjs";
 
 const [cmd, ...args] = process.argv.slice(2);
 
@@ -62,14 +70,22 @@ switch (cmd) {
     if (!file) { console.error("validate requires a launch.json path"); process.exit(2); }
     let doc;
     try {
-      // launch.json is JSONC in VS Code; strip // comments and trailing
-      // commas for validation purposes.
-      const text = readFileSync(resolve(file), "utf8")
-        .replace(/\/\/[^\n]*/g, "")
-        .replace(/,(\s*[}\]])/g, "$1");
-      doc = JSON.parse(text);
+      // launch.json is JSONC: parse with a real JSONC tokenizer —
+      // comments and trailing commas are legal, `//` inside strings is
+      // not a comment. Regex stripping would corrupt string values.
+      const text = readFileSync(resolve(file), "utf8");
+      const { value, errors } = parseJsonc(text);
+      if (errors.length > 0) {
+        out({
+          schema: "ae-devtools.vscode-debugger.validate/v1",
+          file,
+          error: `unparseable: ${errors.slice(0, 5).map((e) => `${printParseErrorCode(e.error)} at offset ${e.offset}`).join("; ")}`,
+        }, 2);
+        break;
+      }
+      doc = value;
     } catch (e) {
-      out({ schema: "ae-devtools.vscode-debugger.validate/v1", file, error: `unparseable: ${e.message}` }, 2);
+      out({ schema: "ae-devtools.vscode-debugger.validate/v1", file, error: `unreadable: ${e.message}` }, 2);
       break;
     }
     const diagnostics = validateLaunchJson(doc);
@@ -81,7 +97,23 @@ switch (cmd) {
     }, hasErrors(diagnostics) ? 1 : 0);
     break;
   }
+  case "preflight": {
+    const spec = arg("--host-app-specifier");
+    const pidRaw = arg("--owned-pid");
+    const ownedPid = pidRaw == null ? null : Number(pidRaw);
+    if (pidRaw != null && (!Number.isInteger(ownedPid) || ownedPid <= 0)) {
+      out({ schema: "ae-devtools.vscode-debugger.preflight/v1", error: `--owned-pid must be a positive integer, got ${JSON.stringify(pidRaw)}` }, 2);
+      break;
+    }
+    try {
+      const r = runPreflight({ specifier: spec, ownedPid });
+      out(r, r.attachAttemptable ? 0 : 1);
+    } catch (e) {
+      out({ schema: "ae-devtools.vscode-debugger.preflight/v1", error: String(e.message ?? e) }, 2);
+    }
+    break;
+  }
   default:
-    console.error("usage: vscode-debugger <gen|validate> ...");
+    console.error("usage: vscode-debugger <gen|validate|preflight> ...");
     process.exit(2);
 }
