@@ -1,0 +1,17 @@
+{
+  "name": "@ae-devtools/native-adapter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Native SDK adapter version-negotiation contract and per-class command/fixture/build-test templates derived from the SDK coverage matrix (Issue #19, CAP046).",
+  "scripts": {
+    "render": "bun run scripts/render-templates.ts",
+    "verify": "bun run scripts/verify.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.4",
+    "typescript": "^5.9.3"
+  }
+}

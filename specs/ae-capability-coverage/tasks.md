@@ -116,6 +116,23 @@ Dependencies: #10, #11, #17, #18. Status: **open / not verified**.
 - [ ] **CAP047** Split uncovered suite families into independent Issues. ([Issue #19](https://github.com/ido-bata/ae-devtools/issues/19))
 - [ ] **CAP048** Verify every public SDK entrypoint has explicit status. ([Issue #19](https://github.com/ido-bata/ae-devtools/issues/19))
 
+#### CAP047 decomposition (recorded 2026-11-15, branch `19`)
+
+Rationale: the coverage matrix's five classes are extractor **reporting buckets**, not capabilities; decomposition is therefore by header/suite cluster, not by class. Clusters were chosen coarse enough to be real tickets and fine enough to map to `packages/native-adapter/src/operations.ts` registry entries. Per-symbol detail cannot be committed (SDK redistribution rules, `inventories/sdk/README.md`), so each child Issue scopes by suite/header and requires per-entry evidence flags.
+
+| Child Issue | Cluster | Matrix classes touched | Primary dependency |
+| --- | --- | --- | --- |
+| [#63](https://github.com/ido-bata/ae-devtools/issues/63) | AEGP project & item suites (`AE_GeneralPlug*.h`) | external-command | #17 |
+| [#64](https://github.com/ido-bata/ae-devtools/issues/64) | AEGP comp/layer/render-queue/output-module suites | external-command | #17, #63 |
+| [#65](https://github.com/ido-bata/ae-devtools/issues/65) | AEGP utility & misc suites (hash/channel/compute-cache/cache-on-load) | external-command | #17, #63/#64 |
+| [#66](https://github.com/ido-bata/ae-devtools/issues/66) | PF/Effect CPU commands, custom UI, sequence/arbitrary data | in-host-plugin-command, host-callback | #18 (CAP041–043) |
+| [#67](https://github.com/ido-bata/ae-devtools/issues/67) | IO/import-export/pixel-format suites (`AE_IO*`, `PR_Public`, `PT_Public`, `FIEL_Public`) | in-host-plugin-command, unsupported-or-unknown | #19 |
+| [#68](https://github.com/ido-bata/ae-devtools/issues/68) | GPU/SmartFX/MFR + host-callback lifecycle | host-callback, external-command | #18 CAP043; **blocked** on GPU SDK addendum + Boost |
+| [#69](https://github.com/ido-bata/ae-devtools/issues/69) | PICA/SP plug-in runtime suites (`SP/*`) | external-command, host-callback | #17 |
+| [#70](https://github.com/ido-bata/ae-devtools/issues/70) | unsupported/unknown triage (534 pure-data-type, 13 unattributed-callable, 5 reserved-selector) | unsupported-or-unknown | #19; review, not implementation |
+
+CAP047 is left **unchecked**: the decomposition exists and is tracked, but the child Issues are open deliverables, not completed coverage. Re-derivation path: `inventories/sdk/generated/aggregate.coverage-matrix.json` `headers[].byClass` + `inventories/sdk/README.md` kind/class tables + `inventories/sdk/constraints.md`.
+
 ### [#20](https://github.com/ido-bata/ae-devtools/issues/20) — VSCode/MCP developer interface
 
 Dependencies: #11–#15. Status: **open / not verified**.
