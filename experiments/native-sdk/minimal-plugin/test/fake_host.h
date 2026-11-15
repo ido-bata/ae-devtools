@@ -58,6 +58,7 @@ struct FakeNameSpec
 struct FakeProject
 {
     std::string name;    /* ASCII/UTF-8 project name */
+    std::string path;    /* ASCII/UTF-8 project path; empty = untitled */
     bool dirty = false;
     AEGP_ProjBitDepth bitDepth = AEGP_ProjBitDepth_8;
     FakeNameSpec rootName;
@@ -71,7 +72,10 @@ struct FakeHost
     int numProjects = 0;
     int numProjectsErr = A_Err_NONE;
     std::vector<FakeProject> projects;
-    int itemNameErr = A_Err_NONE; /* when != NONE, GetItemName fails */
+    int itemNameErr = A_Err_NONE;     /* when != NONE, GetItemName fails */
+    int projectNameErr = A_Err_NONE;  /* when != NONE, GetProjectName fails */
+    int projectPathErr = A_Err_NONE;  /* when != NONE, GetProjectPath fails */
+    int getProjectByIndexErr = A_Err_NONE; /* when != NONE, GetProjectByIndex fails */
 
     bool failAcquireUtility = false;
     bool failAcquireProj = false;

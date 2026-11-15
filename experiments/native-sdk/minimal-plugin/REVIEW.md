@@ -67,12 +67,15 @@ Two SDK-sanctioned contexts were candidates:
   requires `AEGP_GetUniqueCommand` + `AEGP_InsertMenuCommand` +
   `AEGP_EnableCommand` via an update-menu hook, and a user click.
 - **Idle hook** (`AEGP_RegisterIdleHook`; `Commando`/`Grabba`/
-  `Easy_Cheese`/`Mangler` pattern): automatic, no UI, re-runs on
-  project-count change.
+  `Easy_Cheese`/`Mangler` pattern): automatic, no UI, re-runs when
+  the project-set fingerprint changes.
 
 The idle hook was chosen because the probe is a UI-less diagnostic:
-no user interaction keeps the future load proof automatable, and the
-project-count-change guard prevents debug-log spam. No PiPL change is
+no user interaction keeps the future load proof automatable. The
+trigger is a project-set fingerprint (count + per-project name/path,
+first 4 projects), not the raw count — a same-count project switch
+re-probes, and failure windows invalidate the fingerprint so the
+next good tick recovers with `probe.reason=recovery`. No PiPL change is
 required — hooks are runtime registrations, not resources (the
 `ProjDumper` PiPL likewise declares no commands).
 
@@ -105,6 +108,11 @@ required — hooks are runtime registrations, not resources (the
 5. `AEGP_GetNumProjects` result was fetched inside `ProbeProject`
    with no "no project" semantics — now fetched once in the hook;
    0 is a normal logged state.
+6. The re-arm trigger was the raw project **count** — a same-count
+   project switch (close A, open B) went unobserved, and a failure
+   window could hide changes. Replaced by a project-set fingerprint
+   (count + per-project name/path, first 4 projects) with
+   invalidation-on-failure so the next good tick recovers.
 
 ## Remaining UNVERIFIED
 

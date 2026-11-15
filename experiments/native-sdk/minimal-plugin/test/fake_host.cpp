@@ -323,6 +323,10 @@ static A_Err FakeGetProjectByIndex(A_long idxL, AEGP_ProjectH* projPH)
 {
     FakeHost* h = g_host;
     *projPH = NULL;
+    if (h->getProjectByIndexErr != A_Err_NONE)
+    {
+        return (A_Err)h->getProjectByIndexErr;
+    }
     if (idxL < 0 || idxL >= h->numProjects || idxL >= (int)h->projects.size())
     {
         return A_Err_PARAMETER;
@@ -342,6 +346,10 @@ static A_Err FakeGetProjectName(AEGP_ProjectH projH, A_char* nameZ)
     {
         return A_Err_PARAMETER;
     }
+    if (g_host->projectNameErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->projectNameErr;
+    }
     strncpy(nameZ, p->name.c_str(), AEGP_MAX_PROJ_NAME_SIZE);
     nameZ[AEGP_MAX_PROJ_NAME_SIZE] = '\0';
     return A_Err_NONE;
@@ -360,6 +368,24 @@ static A_Err FakeGetProjectBitDepth(AEGP_ProjectH projH, AEGP_ProjBitDepth* dept
     FakeProject* p = ProjectForHandle(projH);
     if (!p) return A_Err_PARAMETER;
     *depthP = p->bitDepth;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetProjectPath(AEGP_ProjectH projH, AEGP_MemHandle* pathPH)
+{
+    FakeProject* p = ProjectForHandle(projH);
+    *pathPH = NULL;
+    if (!p)
+    {
+        return A_Err_PARAMETER;
+    }
+    if (g_host->projectPathErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->projectPathErr;
+    }
+    /* Header contract: empty string when the project has no file. */
+    FakeNameSpec spec = g_host->MakeNameSpec(FakeHost::U16(p->path.c_str()));
+    *pathPH = NewMemHandleFromSpec(spec);
     return A_Err_NONE;
 }
 
@@ -580,6 +606,7 @@ void FakeHost::PopulateSuites()
     if (nullProjEntry != 1) projSuite.AEGP_GetNumProjects = FakeGetNumProjects;
     if (nullProjEntry != 2) projSuite.AEGP_GetProjectByIndex = FakeGetProjectByIndex;
     projSuite.AEGP_GetProjectName = FakeGetProjectName;
+    if (nullProjEntry != 3) projSuite.AEGP_GetProjectPath = FakeGetProjectPath;
     projSuite.AEGP_ProjectIsDirty = FakeProjectIsDirty;
     projSuite.AEGP_GetProjectBitDepth = FakeGetProjectBitDepth;
     projSuite.AEGP_GetProjectRootFolder = FakeGetProjectRootFolder;

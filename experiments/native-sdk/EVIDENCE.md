@@ -55,19 +55,24 @@ against a fake `SPBasicSuite`/AEGP suite-table host — plain `clang++`,
 no After Effects, no GUI:
 
 ```
-261 checks, 0 failures
+413 checks, 0 failures
 ```
 
 Coverage: init-time suite-acquire failure (utility, register),
 null `SPBasicSuite`, idle-hook registration failure,
 `AEGP_RegisterWithAEGP` failure fallback, per-suite acquire failure
-inside the idle hook (utility/proj/item/memory), null function-table
-entries (proj count, mem free, debug log), `AEGP_GetItemName`
+inside the idle hook (utility/proj/memory at fingerprint stage, item
+at probe stage), null function-table entries (proj count/path,
+mem free/size, debug log), `AEGP_GetItemName`
 alloc/lock/size failures with handle still freed and locks balanced,
 NULL handle with success, unterminated + odd-sized UTF-16 payloads,
-lone-surrogate → U+FFFD, `numProjects` 0/1/2, no re-probe while the
-count is unchanged, re-probe on count change, `GetNumProjects`
-query failure. Suite acquire/release counts balance on every path.
+lone-surrogate → U+FFFD, `numProjects` 0/1/2, fingerprint triggers
+(initial, identity-change incl. same-count project switch and
+same-name/different-path, recovery from `GetNumProjects`/name/path
+query failures and from a missing project), silent steady-state
+ticks (no markers, no op records), and `op <Suite>.<member>`
+record emission for entry and probe calls. Suite acquire/release
+counts balance on every path.
 
 **Level: automated test against a fake host — unit-level evidence
 only.** It exercises our code's control flow and memory discipline;

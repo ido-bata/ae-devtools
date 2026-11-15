@@ -64,21 +64,47 @@ during idle — the same class of context in which `ProjDumper`'s
 
 Inside the hook the probe:
 
-1. Acquires the four query suites (`Utility` v6/13, `Proj` v6/9,
-   `Item` v9/14, `Memory` v1/1), validates every function-table entry
-   it will dereference, and releases all of them before returning —
-   on every path.
-2. Calls `AEGP_GetNumProjects`. The probe body runs **only when the
-   count changes** since the last observation (initial value −1, so
-   the first idle always probes). A steady-state idle loop therefore
-   stays silent and does not spam the debug log; opening or closing a
-   project re-arms the probe automatically.
+1. Acquires the fingerprint suites (`Utility` v6/13, `Proj` v6/9,
+   `Memory` v1/1), validates every function-table entry it will
+   dereference, and releases all of them before returning — on every
+   path. The `Item` suite is acquired **only** when a probe run is
+   triggered, so steady-state ticks do not churn it.
+2. Computes a **project-set fingerprint**: project count plus, for up
+   to `MAX_PROJECTS_SCANNED` (4) projects, name and path
+   (`AEGP_GetProjectName` + `AEGP_GetProjectPath`). The full probe
+   body runs **only when the fingerprint differs** from the last
+   successful one. Triggers are `probe.reason=initial` (first
+   dispatch), `probe.reason=identity-change` (fingerprint differs —
+   covers same-count project switches), and `probe.reason=recovery`
+   (the previous fingerprint attempt failed, e.g. `GetNumProjects` or
+   a per-project query errored, and now succeeds again). A
+   steady-state idle loop therefore stays completely silent — no
+   probe markers and no op records reach the debug log.
 3. `num_projects == 0` is logged as `app.numProjects=0` and per-project
    queries are skipped — normal state, not an error.
 4. All results go to `AEGP_WriteToDebugLog` (subsystem `ae-a8n`,
    event `nativeprobe`). Query-level errors are logged and skipped;
    they never fail the hook. Only infrastructure failures (suite
    acquisition, missing suite entries) return an error.
+
+### Per-call evidence records
+
+Every `AEGP_*`/`SPBasicSuite` call emits one record:
+
+```
+op <Suite>.<member> err=<A_Err> [k=v ...]
+```
+
+Records made outside a probe run (suite acquires, `GetNumProjects`,
+fingerprint queries, suite releases on quiet ticks) accumulate in a
+per-tick buffer and are **discarded** unless a probe run follows; a
+run flushes the buffer after `probe.start` and then records live
+through the suite releases. `k=v` suffixes carry observed scalars
+(`value=`, composite `v=`) or call context (`suite=`, `version=`,
+`i=`). `AEGP_WriteToDebugLog` cannot self-evidence — its evidence is
+the existence of the run's output. The result contract these lines
+feed is `specs/ae-capability-coverage/contracts/native-probe-result.md`
+(branch `19`).
 
 The probe registers **no menu commands** (unlike `ProjDumper`): the
 idle hook needs no user interaction, which keeps the later load proof
@@ -92,7 +118,7 @@ for reads only.
 | `kAEGPUtilitySuite` ("AEGP Utility Suite") | `kAEGPUtilitySuiteVersion6` (13) | `AEGP_UtilitySuite6` | init + idle |
 | `kAEGPRegisterSuite` ("AEGP Register Suite") | `kAEGPRegisterSuiteVersion5` (6) | `AEGP_RegisterSuite5` | init only |
 | `kAEGPProjSuite` ("AEGP Proj Suite") | `kAEGPProjSuiteVersion6` (9) | `AEGP_ProjSuite6` | idle only |
-| `kAEGPItemSuite` ("AEGP Item Suite") | `kAEGPItemSuiteVersion9` (14) | `AEGP_ItemSuite9` | idle only |
+| `kAEGPItemSuite` ("AEGP Item Suite") | `kAEGPItemSuiteVersion9` (14) | `AEGP_ItemSuite9` | idle, probe branch only |
 | `kAEGPMemorySuite` ("AEGP Memory Suite") | `kAEGPMemorySuiteVersion1` (1) | `AEGP_MemorySuite1` | idle only |
 
 Every `AcquireSuite` is paired with `ReleaseSuite` on all exit paths.
@@ -105,7 +131,7 @@ Every `AcquireSuite` is paired with `ReleaseSuite` on all exit paths.
 | `AEGP_RegisterIdleHook` | Register | Registers a callback. No project state. |
 | `AEGP_GetDriverPluginInitFuncVersion` / `AEGP_GetDriverImplementationVersion` / `AEGP_GetSuppressInteractiveUI` / `AEGP_HostIsActivated` | Utility | Host-state getters. |
 | `AEGP_WriteToDebugLog` | Utility | Diagnostic output only. |
-| `AEGP_GetNumProjects` / `AEGP_GetProjectByIndex` / `AEGP_GetProjectName` / `AEGP_ProjectIsDirty` / `AEGP_GetProjectBitDepth` / `AEGP_GetProjectRootFolder` | Proj | Project enumeration getters. `AEGP_GetProjectPath` deliberately **not** queried (avoids writing local paths to the debug log). |
+| `AEGP_GetNumProjects` / `AEGP_GetProjectByIndex` / `AEGP_GetProjectName` / `AEGP_ProjectIsDirty` / `AEGP_GetProjectBitDepth` / `AEGP_GetProjectRootFolder` / `AEGP_GetProjectPath` | Proj | Project enumeration getters. `AEGP_GetProjectPath` is queried for the fingerprint **and** logged as `project[i].path` — it writes local paths to the AE debug log, so evidence excerpts must be redacted before sharing. |
 | `AEGP_GetFirstProjItem` / `AEGP_GetNextProjItem` / `AEGP_GetItemType` / `AEGP_GetItemName` | Item | Top-level item iteration getters (capped at 4096 items / 8 names). |
 | `AEGP_GetMemHandleSize` / `AEGP_LockMemHandle` / `AEGP_UnlockMemHandle` / `AEGP_FreeMemHandle` | Memory | Bounded read + mandatory disposal of AE-allocated name strings. Lock/read/free only. |
 
@@ -185,8 +211,12 @@ register) and at each probe suite, idle-hook registration failure,
 `RegisterWithAEGP` failure fallback, null function-table entries,
 memory alloc/lock/size failures (handles still freed, locks balanced),
 unterminated and odd-sized UTF-16 payloads, lone surrogates, NULL
-handles, `numProjects` 0 / 1 / 2, and probe re-arm on project-count
-change. Latest run: **261 checks, 0 failures** (see `../EVIDENCE.md`).
+handles, `numProjects` 0 / 1 / 2, fingerprint triggers (initial,
+identity-change incl. same-count switch and same-name/different-path,
+recovery from count/name/path query failures, missing project),
+silent steady-state ticks (no markers, no op records), and op-record
+emission for entry and probe calls. Latest run: **413 checks, 0
+failures** (see `../EVIDENCE.md`).
 
 These are **unit/mock-level** checks of our own code only — they do
 not exercise real AE dispatch, real suite behaviour, or real timing.
@@ -197,7 +227,7 @@ not exercise real AE dispatch, real suite behaviour, or real timing.
 | --- | --- |
 | Compiles + links on macOS arm64 / Xcode 27.2 | verified on **build host** |
 | `.plugin` bundle structure, arch, linkage, signature | verified on **build host** (see `../EVIDENCE.md`) |
-| Mock-host unit tests (`test/run_tests.sh`) | **automated test** — 261 checks green, fake host only |
+| Mock-host unit tests (`test/run_tests.sh`) | **automated test** — 413 checks green, fake host only |
 | Load into After Effects | **UNVERIFIED** — needs authorized AE session |
 | Entry-point execution / idle-hook dispatch / AEGP query results | **UNVERIFIED** — same gate |
 | Windows build/load | **UNVERIFIED** — no Windows host |

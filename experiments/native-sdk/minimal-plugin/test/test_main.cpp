@@ -84,8 +84,13 @@ static void TestEntryRegistersIdleHook()
     CHECK(h->registeredName == "ae-a8n NativeProbe");
     SuitesBalanced(*h);
     /* init must not probe: no project queries at entry time */
-    CHECK(h->log.empty());
     CHECK(h->StartCount() == 0);
+    /* ...but registration calls leave op-record evidence */
+    CHECK(h->LogContains("op SPBasicSuite.AcquireSuite err=0 suite=\"AEGP Utility Suite\" version=13"));
+    CHECK(h->LogContains("op SPBasicSuite.AcquireSuite err=0 suite=\"AEGP Register Suite\" version=6"));
+    CHECK(h->LogContains("op AEGP_UtilitySuite6.AEGP_RegisterWithAEGP err=0 value=4242"));
+    CHECK(h->LogContains("op AEGP_RegisterSuite5.AEGP_RegisterIdleHook err=0 value=7"));
+    CHECK(h->LogContains("op SPBasicSuite.ReleaseSuite err=0 suite=\"AEGP Register Suite\" version=6"));
 }
 
 static void TestEntrySuiteAcquireFailures()
@@ -140,6 +145,7 @@ static void TestProbeHappyPathOneProject()
     CHECK(CallEntry(*h) == A_Err_NONE);
 
     FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/proj/shot01.aep";
     p.dirty = true;
     p.bitDepth = AEGP_ProjBitDepth_16;
     p.rootName = h->MakeNameSpec(FakeHost::U16("Root Folder"));
@@ -158,6 +164,7 @@ static void TestProbeHappyPathOneProject()
     CHECK(h->LogContains("project[0].name=Shot01"));
     CHECK(h->LogContains("project[0].isDirty=1"));
     CHECK(h->LogContains("project[0].bitDepth=1"));
+    CHECK(h->LogContains("project[0].path: /tmp/proj/shot01.aep"));
     CHECK(h->LogContains("project.rootFolder.name: Root Folder"));
     CHECK(h->LogContains("project.items[0].name: Plate"));
     CHECK(h->LogContains("project.items[1].name: Caf\xC3\xA9"));
@@ -167,11 +174,31 @@ static void TestProbeHappyPathOneProject()
     CHECK(h->LogContains("driver.implementationVersion=26.5"));
     CHECK(h->LogContains("host.isActivated=1"));
 
-    /* every AE-allocated mem handle disposed */
+    /* every AE-allocated mem handle disposed: fingerprint path +
+       probe path + root-folder name + 3 item names */
     CHECK(AllMemFreed(*h) == 0);
     CHECK(h->memHandlesFreed == (int)h->memRecs.size());
-    CHECK(h->memHandlesFreed == 4); /* root + 3 items */
+    CHECK(h->memHandlesFreed == 6);
     CHECK(h->lastGetItemNamePluginId == 4242); /* id from RegisterWithAEGP */
+    /* per-call op records: trigger-phase calls flushed into the run,
+       probe-phase calls recorded live */
+    CHECK(h->LogContains("probe.reason=initial"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetNumProjects err=0 value=1"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectPath err=0"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectName err=0"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_ProjectIsDirty err=0 value=1"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectBitDepth err=0 value=1"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectRootFolder err=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetFirstProjItem err=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemName err=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemType err=0 value=2")); /* AEGP_ItemType_COMP */
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetNextProjItem err=0"));
+    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_GetMemHandleSize err=0"));
+    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_LockMemHandle err=0"));
+    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_UnlockMemHandle err=0"));
+    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_FreeMemHandle err=0"));
+    CHECK(h->LogContains("op SPBasicSuite.AcquireSuite err=0 suite=\"AEGP Item Suite\" version=14"));
+    CHECK(h->LogContains("op SPBasicSuite.ReleaseSuite err=0 suite=\"AEGP Item Suite\" version=14"));
     for (const auto& rec : h->memRecs)
     {
         CHECK(rec->lockCount == 0); /* every lock paired with unlock */
@@ -401,7 +428,9 @@ static void TestGetItemNameErrorPath()
     CHECK(h->LogContains("project.items.count=0")); /* empty project anyway */
     /* root-folder name also fails but probe continues */
     CHECK(h->LogContains("probe.end"));
-    CHECK(h->memHandlesFreed == 0); /* no handles were produced */
+    /* fingerprint + probe path handles were produced and freed */
+    CHECK(h->memHandlesFreed == (int)h->memRecs.size());
+    CHECK(h->memHandlesFreed == 2);
     SuitesBalanced(*h);
 }
 
@@ -417,7 +446,10 @@ static void TestNullHandleFromGetItemName()
 
     CHECK(CallIdle(*h) == A_Err_NONE);
     CHECK(h->LogContains("<null handle>"));
-    CHECK(h->memHandlesFreed == 0); /* NULL handle: nothing to free */
+    /* NULL name handles produce nothing to free; the two project-path
+       handles (fingerprint + probe) are still disposed. */
+    CHECK(h->memHandlesFreed == (int)h->memRecs.size());
+    CHECK(h->memHandlesFreed == 2);
     CHECK(h->StartCount() == 1);
     SuitesBalanced(*h);
 }
@@ -431,6 +463,182 @@ static void TestNumProjectsQueryFails()
     CHECK(CallIdle(*h) == A_Err_NONE); /* query-level error: logged only */
     CHECK(h->LogContains("probe.error: AEGP_GetNumProjects failed"));
     CHECK(h->StartCount() == 0);
+    /* persistent failure logs once, not every tick */
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->CountLogContaining("probe.error: AEGP_GetNumProjects failed") == 1);
+    SuitesBalanced(*h);
+}
+
+static void TestIdleSameCountProjectSwitchReprobes()
+{
+    /* The audit finding: a project switch that keeps the project
+       COUNT unchanged must still re-probe — count alone is not a
+       valid trigger. */
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("Alpha");
+    p.path = "/tmp/alpha.aep";
+    h->numProjects = 1;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.reason=initial"));
+    CHECK(h->LogContains("project[0].name=Alpha"));
+
+    /* Same count, different project identity. */
+    p.name = "Beta";
+    p.path = "/tmp/beta.aep";
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 2);
+    CHECK(h->LogContains("probe.reason=identity-change"));
+    CHECK(h->LogContains("project[0].name=Beta"));
+    CHECK(h->LogContains("project[0].path: /tmp/beta.aep"));
+
+    /* Steady state again: silent. */
+    {
+        size_t before = h->log.size();
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CHECK(h->log.size() == before);
+        CHECK(h->StartCount() == 2);
+    }
+    SuitesBalanced(*h);
+}
+
+static void TestIdleSameNameDifferentPathReprobes()
+{
+    /* Name alone is not identity either: same display name, different
+       file path is a different project. */
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("Untitled");
+    p.path = "/tmp/one.aep";
+    h->numProjects = 1;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+
+    p.path = "/tmp/two.aep";
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 2);
+    CHECK(h->LogContains("project[0].path: /tmp/two.aep"));
+    SuitesBalanced(*h);
+}
+
+static void TestIdleRecoveryAfterCountFailure()
+{
+    /* Failure window: GetNumProjects fails, then recovers. The next
+       successful fingerprint must probe (recovery), even though the
+       project set may be identical to the last good one. */
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.reason=initial"));
+
+    h->numProjectsErr = A_Err_GENERIC;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1); /* no probe during failure */
+
+    h->numProjectsErr = A_Err_NONE; /* recovery: same project set */
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 2);
+    CHECK(h->LogContains("probe.reason=recovery"));
+
+    /* And steady state resumes. */
+    {
+        size_t before = h->log.size();
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CHECK(h->log.size() == before);
+    }
+    SuitesBalanced(*h);
+}
+
+static void TestIdleRecoveryAfterFingerprintFailure()
+{
+    /* A fingerprint component fails (project name query): the tick is
+       skipped, state invalidated, and the next good tick re-probes. */
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+
+    h->projectNameErr = A_Err_GENERIC;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.error: project fingerprint failed"));
+    /* persistent fingerprint failure logs once */
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->CountLogContaining("probe.error: project fingerprint failed") == 1);
+
+    h->projectNameErr = A_Err_NONE;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 2);
+    CHECK(h->LogContains("probe.reason=recovery"));
+    SuitesBalanced(*h);
+}
+
+static void TestIdleFingerprintFailsOnMissingProject()
+{
+    /* numProjects reports a project the host cannot return: the
+       fingerprint fails closed rather than probing on partial data. */
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->numProjects = 1; /* but projects[] is empty */
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 0);
+    CHECK(h->LogContains("probe.error: project fingerprint failed"));
+
+    h->AddProject("Late"); /* recovery: project now resolvable */
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.reason=recovery"));
+    CHECK(h->LogContains("project[0].name=Late"));
+    SuitesBalanced(*h);
+}
+
+static void TestIdlePathQueryFailureFailsFingerprint()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+
+    h->projectPathErr = A_Err_GENERIC;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.error: project fingerprint failed"));
+
+    h->projectPathErr = A_Err_NONE;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 2);
+    CHECK(h->LogContains("probe.reason=recovery"));
+    SuitesBalanced(*h);
+}
+
+static void TestSilentTickEmitsNoOpRecords()
+{
+    /* Steady-state ticks must not spam: no probe markers AND no op
+       records reach the debug log. */
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+
+    int op_records_before = h->CountLogContaining("op ");
+    size_t before = h->log.size();
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->log.size() == before);
+    CHECK(h->CountLogContaining("op ") == op_records_before);
     SuitesBalanced(*h);
 }
 
@@ -458,6 +666,13 @@ int main()
     TestGetItemNameErrorPath();
     TestNullHandleFromGetItemName();
     TestNumProjectsQueryFails();
+    TestIdleSameCountProjectSwitchReprobes();
+    TestIdleSameNameDifferentPathReprobes();
+    TestIdleRecoveryAfterCountFailure();
+    TestIdleRecoveryAfterFingerprintFailure();
+    TestIdleFingerprintFailsOnMissingProject();
+    TestIdlePathQueryFailureFailsFingerprint();
+    TestSilentTickEmitsNoOpRecords();
 
     printf("----\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
