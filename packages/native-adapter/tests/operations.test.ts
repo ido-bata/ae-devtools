@@ -75,11 +75,36 @@ describe("operationState derivation", () => {
     verifiedOnRealHost: false,
   };
 
-  test("implemented+verifiedOnRealHost is the only dispatchable path", () => {
-    expect(operationState({ ...base, implemented: true, verifiedOnRealHost: true })).toBe("dispatchable");
-    expect(operationState({ ...base, implemented: true, verifiedOnRealHost: false })).toBe("implemented-unverified");
-    expect(operationState({ ...base, implemented: false, verifiedOnRealHost: false })).toBe("inventory-only");
-    expect(operationState({ ...base, implemented: false, verifiedOnRealHost: true })).toBe("inventory-only");
+  test("dispatchable requires all three evidence axes — in-AE success alone is not enough", () => {
+    // implemented + verifiedOnRealHost proves the call works INSIDE AE;
+    // it does not authorize external dispatch. Only the third axis
+    // (externalDispatchVerified) completes the path.
+    expect(
+      operationState({ ...base, implemented: true, verifiedOnRealHost: true }),
+    ).toBe("implemented-unverified");
+    expect(
+      operationState({
+        ...base, implemented: true, verifiedOnRealHost: true,
+        externalDispatchVerified: true,
+      }),
+    ).toBe("dispatchable");
+    expect(
+      operationState({ ...base, implemented: true, verifiedOnRealHost: false }),
+    ).toBe("implemented-unverified");
+    expect(
+      operationState({ ...base, implemented: false, verifiedOnRealHost: false }),
+    ).toBe("inventory-only");
+    expect(
+      operationState({ ...base, implemented: false, verifiedOnRealHost: true }),
+    ).toBe("inventory-only");
+    // externalDispatchVerified without the other two axes is rejected
+    // by registry invariants, not silently honoured.
+    expect(() =>
+      assertRegistryInvariants([{
+        ...base, implemented: true, verifiedOnRealHost: false,
+        externalDispatchVerified: true,
+      }]),
+    ).toThrow(/external dispatch/);
   });
 
   test("unsupportedReason forces unsupported-or-unknown", () => {

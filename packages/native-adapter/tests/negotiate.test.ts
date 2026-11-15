@@ -19,6 +19,7 @@ import {
   DISPATCH_ENTRIES,
   dispatchableOperationCount,
   findOperation,
+  isDispatchableEntry,
   operationState,
 } from "../src/operations.ts";
 import {
@@ -312,11 +313,27 @@ describe("hostHelloFromMatrix — per-operation states, classes reporting-only",
     }
   });
 
-  test("a doctored registry entry claiming verifiedOnRealHost yields dispatchable", () => {
-    // Prove the promotion path exists but requires BOTH flags: simulate
-    // by building a host hello whose operation state is dispatchable is
-    // impossible without registry evidence — instead verify the
-    // registry gate directly.
+  test("in-AE real-host success alone cannot yield a dispatchable claim", () => {
+    // Even if a registry entry were promoted to verifiedOnRealHost
+    // (getter observed inside AE), the missing
+    // externalDispatchVerified axis keeps it non-dispatchable: a host
+    // advertising dispatchable for it is malformed.
+    const doctored = {
+      ...findOperation(OP)!,
+      verifiedOnRealHost: true,
+    };
+    expect(isDispatchableEntry(doctored)).toBe(false);
+    expect(operationState(doctored)).toBe("implemented-unverified");
+    const fullyProven = { ...doctored, externalDispatchVerified: true };
+    expect(isDispatchableEntry(fullyProven)).toBe(true);
+    expect(operationState(fullyProven)).toBe("dispatchable");
+  });
+
+  test("registry gate: dispatchable needs all three evidence axes", () => {
+    // Prove the promotion path exists but requires all three flags:
+    // simulate by building a host hello whose operation state is
+    // dispatchable is impossible without registry evidence — instead
+    // verify the registry gate directly.
     const entry = findOperation(OP);
     expect(entry).not.toBeNull();
     expect(entry?.implemented).toBe(true);

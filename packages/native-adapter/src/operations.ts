@@ -56,8 +56,22 @@ export type OperationEntry = {
   matrixClass: MatrixClass;
   /** Code exists and compiles (verification taxonomy `implemented`). */
   implemented: boolean;
-  /** Observed running against an installed After Effects. */
+  /**
+   * The operation was OBSERVED being called successfully inside AE on
+   * a real host (e.g. a NativeProbe `op` record with `err=0` under
+   * LOAD-PROOF.md). This proves the SDK call works in-process; it does
+   * NOT prove an external adapter can dispatch it.
+   */
   verifiedOnRealHost: boolean;
+  /**
+   * An AUTHORIZED external dispatch path exists and was exercised for
+   * this operation — i.e. a transport + authorization model that lets
+   * an adapter outside the AE process invoke it, with real-host
+   * evidence. No such path exists today, so every entry leaves this
+   * false. `dispatchable` requires all three evidence axes; a getter
+   * succeeding inside AE (`verifiedOnRealHost`) alone never suffices.
+   */
+  externalDispatchVerified?: boolean;
   /**
    * Technical basis + re-evaluation condition for an entry judged
    * non-callable (spec FR-013). When present the derived state is
@@ -157,19 +171,33 @@ export function findOperation(id: string): OperationEntry | null {
 
 /**
  * Derive the honest state of an entry. `dispatchable` is reachable
- * ONLY through `implemented && verifiedOnRealHost` — there is no other
- * path, and no entry may carry a `state` field that overrides this.
+ * ONLY through `implemented && verifiedOnRealHost &&
+ * externalDispatchVerified` — there is no other path, and no entry
+ * may carry a `state` field that overrides this.
  */
 export function operationState(entry: OperationEntry): EntryState {
   if (entry.unsupportedReason !== undefined) return "unsupported-or-unknown";
-  if (entry.implemented && entry.verifiedOnRealHost) return "dispatchable";
+  if (entry.implemented && entry.verifiedOnRealHost && entry.externalDispatchVerified === true) {
+    return "dispatchable";
+  }
   if (entry.implemented) return "implemented-unverified";
   return "inventory-only";
 }
 
-/** Entries a host may legitimately advertise as `dispatchable`. */
+/**
+ * Entries a host may legitimately advertise as `dispatchable`.
+ * Three independent evidence axes are required:
+ *   implemented               — code exists and compiles;
+ *   verifiedOnRealHost        — the call succeeded inside AE on a real host;
+ *   externalDispatchVerified  — an authorized external dispatch path exists.
+ * The third axis is what separates "AE can call it" from "an adapter
+ * may dispatch it"; without it, in-host success is not dispatch
+ * authorization.
+ */
 export function isDispatchableEntry(entry: OperationEntry): boolean {
-  return entry.implemented === true && entry.verifiedOnRealHost === true;
+  return entry.implemented === true &&
+         entry.verifiedOnRealHost === true &&
+         entry.externalDispatchVerified === true;
 }
 
 /** Count of entries currently dispatchable. 0 today — fail-closed by design. */
@@ -205,6 +233,13 @@ export function assertRegistryInvariants(entries: readonly OperationEntry[] = DI
     }
     if (entry.verifiedOnRealHost === true && entry.implemented !== true) {
       throw new Error(`operation ${entry.id} claims real-host verification without implementation`);
+    }
+    if (entry.externalDispatchVerified === true &&
+        !(entry.implemented === true && entry.verifiedOnRealHost === true)) {
+      throw new Error(
+        `operation ${entry.id} claims external dispatch verification ` +
+        "without implemented+verifiedOnRealHost evidence",
+      );
     }
   }
 }

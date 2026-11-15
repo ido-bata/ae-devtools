@@ -22,7 +22,9 @@
  * an advertised state below the client's acceptable state all refuse.
  * A host may advertise `dispatchable` for an operation only when the
  * committed registry marks that entry `implemented &&
- * verifiedOnRealHost`; anything weaker is a malformed claim. Nothing
+ * verifiedOnRealHost && externalDispatchVerified` — in-AE call success
+ * alone is not external-dispatch authorization; anything weaker is a
+ * malformed claim. Nothing
  * here launches AE or loads a plug-in; a `compatible` result means
  * "versions and advertised per-operation availability line up", never
  * "verified on a real host".
@@ -98,7 +100,7 @@ export type HostHello = {
    * unadvertised operation is unavailable. Every advertised id must
    * exist in the committed registry, and `dispatchable` may only be
    * claimed for a registry entry that is `implemented &&
-   * verifiedOnRealHost`.
+   * verifiedOnRealHost && externalDispatchVerified`.
    */
   operations: Record<string, { state: EntryState; note?: string }>;
   /**
@@ -216,8 +218,9 @@ function validateHello(value: unknown, side: "adapter" | "host"): string | null 
       if (advertisedState === "dispatchable" && !isDispatchableEntry(registryEntry)) {
         return (
           `host claims ${op} dispatchable but the registry entry is ` +
-          `implemented=${registryEntry.implemented} verifiedOnRealHost=${registryEntry.verifiedOnRealHost}; ` +
-          "a dispatchable claim requires per-entry implemented+verifiedOnRealHost evidence"
+          `implemented=${registryEntry.implemented} verifiedOnRealHost=${registryEntry.verifiedOnRealHost} ` +
+          `externalDispatchVerified=${registryEntry.externalDispatchVerified === true}; ` +
+          "a dispatchable claim requires per-entry implemented+verifiedOnRealHost+externalDispatchVerified evidence"
         );
       }
       // A host may downgrade (claim less than the registry supports) but

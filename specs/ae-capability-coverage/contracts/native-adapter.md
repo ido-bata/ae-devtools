@@ -21,14 +21,14 @@ Dispatchability is defined per concrete **operation entry** (`src/operations.ts`
 
 | Entry state | Derivation |
 | --- | --- |
-| `dispatchable` | `implemented === true` **and** `verifiedOnRealHost === true` — the only dispatchable path |
+| `dispatchable` | `implemented === true` **and** `verifiedOnRealHost === true` **and** `externalDispatchVerified === true` — the only dispatchable path. The three axes are independent evidence: `implemented` = code compiles; `verifiedOnRealHost` = the call was observed succeeding **inside AE** on a real host; `externalDispatchVerified` = an **authorized external dispatch path** (transport + authorization) exists and was exercised. In-AE call success alone never authorizes external dispatch. |
 | `implemented-unverified` | code exists and compiles; no real-host proof |
 | `inventory-only` | structurally attributed; no implementation |
 | `unsupported-or-unknown` | `unsupportedReason` recorded (technical basis + re-evaluation condition, FR-013) |
 
-The committed matrix contains **no per-symbol rows** — symbol-level detail is license-restricted to a local git-ignored path (`inventories/sdk/README.md` §再配布制約). The smaller honest change was therefore chosen: the per-entry contract lives in `packages/native-adapter/src/operations.ts`, seeded only with the 21 calls `experiments/native-sdk/minimal-plugin/src/probe.cpp` actually makes. Widening the registry is CAP047 child-Issue work; the generator was **not** extended to emit per-entry rows it cannot honestly name.
+The committed matrix contains **no per-symbol rows** — symbol-level detail is license-restricted to a local git-ignored path (`inventories/sdk/README.md` §再配布制約). The per-entry contract lives in `packages/native-adapter/src/operations.ts`, seeded with the calls `experiments/native-sdk/minimal-plugin/src/probe.cpp` actually makes (`implemented`), plus inventory-only suite surface registered ahead of implementation by the CAP047 cluster Issues (#63 project/item, #69 PICA/SP). `tests/registry-reconcile.test.ts` mechanically enforces that every `implemented` entry is a real probe.cpp call and that every emitted `OpRecordV` id literal is a registry id.
 
-**Dispatchable count today: 0.** Every registry entry is `implemented-unverified` (NativeProbe builds on macOS arm64; no authorized AE session has loaded it — `experiments/native-sdk/LOAD-PROOF.md` is the gated procedure).
+**Dispatchable count today: 0.** Registry entries are `implemented-unverified` (the NativeProbe call set — builds on macOS arm64, no authorized AE session has loaded it) or `inventory-only` (suite surface registered ahead of implementation). Even a future real-host getter success would only set `verifiedOnRealHost`; `dispatchable` additionally requires `externalDispatchVerified`, which no transport/authorization path currently provides.
 
 ## 2. Messages
 
@@ -51,7 +51,7 @@ Both messages carry `schema: "ae-devtools/native-adapter-handshake/v2"` (v2: `re
 | `hostId` | identity |
 | `protocolVersion` | host's supported adapter↔host protocol |
 | `sdkRelease` | the SDK release the plugin/host **actually** runs |
-| `operations` | per-operation `{state, note}`; an unadvertised operation is unavailable. Unknown ids are malformed; `dispatchable` requires the registry entry to be `implemented && verifiedOnRealHost`; no advertised state may outrank the registry-derived state (downgrades allowed, upgrades malformed) |
+| `operations` | per-operation `{state, note}`; an unadvertised operation is unavailable. Unknown ids are malformed; `dispatchable` requires the registry entry to be `implemented && verifiedOnRealHost && externalDispatchVerified`; no advertised state may outrank the registry-derived state (downgrades allowed, upgrades malformed) |
 | `classes` | OPTIONAL reporting echo of matrix classes. Never consulted for availability; `state: "dispatchable"` on any class is **malformed** — class-level promotion is rejected |
 | `host` | informational only (AE version, OS, arch); never used in compatibility decisions |
 
@@ -78,6 +78,6 @@ The structured result a future adapter collects from NativeProbe is specified in
 ## 6. Non-goals / explicit limitations
 
 - No SDK plug-in dispatch is implemented; kits are fill-in templates and the operation registry is contract-level.
-- No matrix class is dispatchable; no operation is dispatchable today (0 entries).
+- No matrix class is dispatchable; no operation is dispatchable today (0 entries) — and none can become dispatchable on in-AE evidence alone: `externalDispatchVerified` requires an authorized external dispatch path that does not yet exist.
 - No transport is selected; message shapes are transport-agnostic.
 - Real-host execution remains UNVERIFIED; Windows is entirely UNVERIFIED.
