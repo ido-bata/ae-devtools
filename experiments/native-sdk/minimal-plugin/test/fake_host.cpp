@@ -199,6 +199,14 @@ static SPErr FakeAcquireSuite(const char* nameZ, int32 versionL, const void** su
     {
         slot = 4; fail = h->failAcquireRegister; table = &h->regSuite;
     }
+    else if (strcmp(nameZ, kAEGPRenderQueueSuite) == 0)
+    {
+        slot = 5; fail = h->failAcquireRQ; table = &h->rqSuite;
+    }
+    else if (strcmp(nameZ, kAEGPRQItemSuite) == 0)
+    {
+        slot = 6; fail = h->failAcquireRQItem; table = &h->rqItemSuite;
+    }
     else
     {
         return 1; /* unknown suite: acquisition fails */
@@ -222,6 +230,8 @@ static SPErr FakeReleaseSuite(const char* nameZ, int32 versionL)
     else if (strcmp(nameZ, kAEGPItemSuite) == 0) h->releaseCount[2]++;
     else if (strcmp(nameZ, kAEGPMemorySuite) == 0) h->releaseCount[3]++;
     else if (strcmp(nameZ, kAEGPRegisterSuite) == 0) h->releaseCount[4]++;
+    else if (strcmp(nameZ, kAEGPRenderQueueSuite) == 0) h->releaseCount[5]++;
+    else if (strcmp(nameZ, kAEGPRQItemSuite) == 0) h->releaseCount[6]++;
     return 0;
 }
 
@@ -573,6 +583,106 @@ static A_Err FakeGetMemHandleSize(AEGP_MemHandle memH, AEGP_MemSize* sizeP)
     return A_Err_NONE;
 }
 
+/* ---- render queue / rq item suites (read-only getters) ---- */
+
+static A_Err FakeGetRenderQueueState(AEGP_RenderQueueState* stateP)
+{
+    if (g_host->rqStateErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqStateErr;
+    }
+    *stateP = AEGP_RenderQueueState_STOPPED;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetNumRQItems(A_long* numP)
+{
+    if (g_host->rqItemsErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemsErr;
+    }
+    *numP = g_host->numRQItems;
+    return A_Err_NONE;
+}
+
+static AEGP_RQItemRefH NewRQItemHandle(int index)
+{
+    struct _AEGP_RenderQueueItem* p = new struct _AEGP_RenderQueueItem;
+    p->index = index;
+    struct _AEGP_RenderQueueItem** hp = new struct _AEGP_RenderQueueItem*;
+    *hp = p;
+    return (AEGP_RQItemRefH)hp;
+}
+
+static A_Err FakeGetRQItemByIndex(A_long idxL, AEGP_RQItemRefH* rq_item_refPH)
+{
+    *rq_item_refPH = NULL;
+    if (g_host->rqItemByIndexErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemByIndexErr;
+    }
+    if (idxL < 0 || idxL >= g_host->numRQItems)
+    {
+        return A_Err_PARAMETER;
+    }
+    *rq_item_refPH = NewRQItemHandle((int)idxL);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetRenderState(AEGP_RQItemRefH rq_itemH,
+                                AEGP_RenderItemStatusType* statusP)
+{
+    (void)rq_itemH;
+    *statusP = 0; /* QUEUED */
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetStartedTime(AEGP_RQItemRefH rq_itemH, A_Time* render_timePT)
+{
+    (void)rq_itemH;
+    render_timePT->value = 0;
+    render_timePT->scale = 1;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetElapsedTime(AEGP_RQItemRefH rq_itemH, A_Time* render_timePT)
+{
+    (void)rq_itemH;
+    render_timePT->value = 0;
+    render_timePT->scale = 1;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLogType(AEGP_RQItemRefH rq_itemH, AEGP_LogType* logtypeP)
+{
+    (void)rq_itemH;
+    *logtypeP = AEGP_LogType_ERRORS_ONLY;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetNumOutputModulesForRQItem(AEGP_RQItemRefH rq_itemH,
+                                              A_long* num_itemsPL)
+{
+    (void)rq_itemH;
+    *num_itemsPL = 1;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetComment(AEGP_RQItemRefH rq_itemH, AEGP_MemHandle* unicodeH)
+{
+    (void)rq_itemH;
+    FakeNameSpec spec = g_host->MakeNameSpec(FakeHost::U16("fake rq comment"));
+    *unicodeH = NewMemHandleFromSpec(spec);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompFromRQItem(AEGP_RQItemRefH rq_itemH, AEGP_CompH* compPH)
+{
+    (void)rq_itemH;
+    *compPH = NULL; /* fake host has no comp objects */
+    return A_Err_NONE;
+}
+
 /* ------------------------------------------------------------------ */
 /* host construction                                                  */
 /* ------------------------------------------------------------------ */
@@ -589,6 +699,8 @@ void FakeHost::PopulateSuites()
     memset(&itemSuite, 0, sizeof(itemSuite));
     memset(&memSuite, 0, sizeof(memSuite));
     memset(&regSuite, 0, sizeof(regSuite));
+    memset(&rqSuite, 0, sizeof(rqSuite));
+    memset(&rqItemSuite, 0, sizeof(rqItemSuite));
     memset(&basicSuite, 0, sizeof(basicSuite));
 
     /* utility */
@@ -626,6 +738,18 @@ void FakeHost::PopulateSuites()
 
     /* register */
     if (!registerIdleHookMissing) regSuite.AEGP_RegisterIdleHook = FakeRegisterIdleHook;
+
+    /* render queue / rq item — read-only getters only */
+    rqSuite.AEGP_GetRenderQueueState = FakeGetRenderQueueState;
+    rqItemSuite.AEGP_GetNumRQItems = FakeGetNumRQItems;
+    rqItemSuite.AEGP_GetRQItemByIndex = FakeGetRQItemByIndex;
+    rqItemSuite.AEGP_GetRenderState = FakeGetRenderState;
+    rqItemSuite.AEGP_GetStartedTime = FakeGetStartedTime;
+    rqItemSuite.AEGP_GetElapsedTime = FakeGetElapsedTime;
+    rqItemSuite.AEGP_GetLogType = FakeGetLogType;
+    rqItemSuite.AEGP_GetNumOutputModulesForRQItem = FakeGetNumOutputModulesForRQItem;
+    rqItemSuite.AEGP_GetComment = FakeGetComment;
+    rqItemSuite.AEGP_GetCompFromRQItem = FakeGetCompFromRQItem;
 
     /* basic */
     basicSuite.AcquireSuite = FakeAcquireSuite;

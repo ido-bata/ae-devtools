@@ -35,6 +35,10 @@ struct _AEGP_Project
 {
     int index;
 };
+struct _AEGP_RenderQueueItem
+{
+    int index;
+};
 
 struct FakeMemRec
 {
@@ -77,11 +81,18 @@ struct FakeHost
     int projectPathErr = A_Err_NONE;  /* when != NONE, GetProjectPath fails */
     int getProjectByIndexErr = A_Err_NONE; /* when != NONE, GetProjectByIndex fails */
 
+    int numRQItems = 0;          /* items the fake render queue reports */
+    int rqStateErr = A_Err_NONE; /* when != NONE, GetRenderQueueState fails */
+    int rqItemsErr = A_Err_NONE; /* when != NONE, GetNumRQItems fails */
+    int rqItemByIndexErr = A_Err_NONE; /* when != NONE, GetRQItemByIndex fails */
+
     bool failAcquireUtility = false;
     bool failAcquireProj = false;
     bool failAcquireItem = false;
     bool failAcquireMemory = false;
     bool failAcquireRegister = false;
+    bool failAcquireRQ = false;
+    bool failAcquireRQItem = false;
     bool registerWithAegpFails = false;
     bool registerIdleHookFails = false;
     bool registerIdleHookMissing = false; /* entry left NULL in suite */
@@ -110,6 +121,8 @@ struct FakeHost
     AEGP_ItemSuite9 itemSuite;
     AEGP_MemorySuite1 memSuite;
     AEGP_RegisterSuite5 regSuite;
+    AEGP_RenderQueueSuite1 rqSuite;
+    AEGP_RQItemSuite4 rqItemSuite;
     SPBasicSuite basicSuite;
 
     FakeHost();
