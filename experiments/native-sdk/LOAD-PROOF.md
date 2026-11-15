@@ -62,13 +62,26 @@ own UI or Scripting DOM during the session and record what was created.
   (project count/name/dirty/bit-depth, root-folder and top-level item
   names, host version/UI/activation flags). An empty project is the
   minimal case; a project with a few items exercises the item walk.
-- The probe performs its queries once inside the plug-in entry point
-  at load and reports via `AEGP_WriteToDebugLog` (subsystem `ae-a8n`,
-  event `nativeprobe`). No menu command or hook is registered.
+- **Lifecycle (post-restructure):** the PiPL entry point
+  `AEProbePluginEntry` performs registration only — suite acquisition,
+  `AEGP_RegisterWithAEGP` identity registration, and
+  `AEGP_RegisterIdleHook`. All project/item queries run inside the
+  registered **idle hook**, the host-dispatched main-thread context —
+  the probe fires when the project-set fingerprint (count + per-project
+  name/path, capped at 4 projects) changes, on the first dispatch
+  (`probe.reason=initial`), and on recovery from a query-failure
+  window (`probe.reason=recovery`); steady-state ticks stay silent.
+  No menu command is registered.
 - Success signal: AE stays alive, no crash report, and the debug log
   contains the `probe.start` … `probe.end` line sequence with the
   expected keys (`driver.*`, `host.*`, `app.numProjects`,
-  `project[0].*`, `project.items.*`).
+  `project[0].*`, `project.items.*`). If the probe loads before any
+  project is open, the first run legitimately logs
+  `app.numProjects=0`; opening the fixture project changes the
+  fingerprint and produces the full `project[*]` sequence on the next
+  dispatch. If no `probe.*` lines appear at all, idle-hook dispatch
+  itself is the finding (record as FAIL/UNKNOWN — see REVIEW.md
+  "Remaining UNVERIFIED").
 
 ### F-E: CPU-Effect fixture (Checkout)
 
@@ -95,8 +108,8 @@ a broken load.
 | 2 | Launch the authorized AE session | AE process up, version string recorded | AE version/build, pid, OS user | session record |
 | 3 | Sweetie load | AE remains alive ≥ N minutes with plugin installed; **no new crash report** in `~/Library/Logs/DiagnosticReports` for the session window | crash-report absence check + console/log excerpt | `UNVERIFIED→candidate real-host` for *load only* |
 | 4 | Sweetie execution | `DuckSuite1.Quack` is a PICA suite callable by other plug-ins, **not** by ExtendScript — automated invocation needs a caller plugin that does not exist yet. Until then: manual/visual confirmation of the alert sound in the authorized session, or defer execution proof | session log noting who invoked and what was observed | `manual/visual` — honestly labelled, never automated-test |
-| 5 | NativeProbe load | AE remains alive ≥ N minutes with `NativeProbe.plugin` installed; **no new crash report**; entry point ran without returning an error | crash-report absence check + console/log excerpt | `UNVERIFIED→candidate real-host` for *load only* |
-| 6 | NativeProbe execution | Debug log contains `ae-a8n`/`nativeprobe` `probe.start`→`probe.end` sequence with expected keys (`driver.pluginInitVersion`, `driver.implementationVersion`, `host.suppressInteractiveUI`, `host.isActivated`, `app.numProjects`, `project[0].name/isDirty/bitDepth`, `project.rootFolder.name`, `project.items.*`); values cross-checked against the same session's scripting DOM (`app.project.name`, item count) where comparable | debug-log excerpt + scripting transcript + plugin sha256 | real-host for read-only AEGP query path |
+| 5 | NativeProbe load | AE remains alive ≥ N minutes with `NativeProbe.plugin` installed; **no new crash report**; entry point completed registration (suites acquired, identity + idle hook registered) without returning an error | crash-report absence check + console/log excerpt | `UNVERIFIED→candidate real-host` for *load/registration only* |
+| 6 | NativeProbe execution | Debug log contains `ae-a8n`/`nativeprobe` `probe.start`→`probe.end` sequence emitted from the **idle-hook** context with expected keys (`probe.reason`, `driver.pluginInitVersion`, `driver.implementationVersion`, `host.suppressInteractiveUI`, `host.isActivated`, `app.numProjects`, `project[0].name/isDirty/bitDepth/path`, `project.rootFolder.name`, `project.items.*`) and `op <Suite>.<member> err=` records for the calls made; a `app.numProjects=0` first run followed by a full sequence after opening the fixture project is the expected two-phase pattern; values cross-checked against the same session's scripting DOM (`app.project.name`, item count) where comparable | debug-log excerpt + scripting transcript + plugin sha256 | real-host for read-only AEGP query path |
 | 7 | Checkout visibility | Effect appears under Effects & Previews → `Sample Plug-ins` → `Checkout`, or `layer.Effects.addProperty("ADBE Checkout")` succeeds via Scripting DOM | scripting transcript / UI observation | real-host (script path) |
 | 8 | Checkout render | Render `Probe` (Render Queue or `renderFrame`-equivalent in-session) → top half shows the checked-out layer, bottom half the input; no render error, no crash | rendered frame artifact + its sha256, render log | real-host for CPU effect path |
 | 9 | Checkout unload/cleanup | Remove all `.plugin`s, relaunch session, effects/probe absent, no residual state; disposable project deleted | post-cleanup session record | real-host for clean removal |
