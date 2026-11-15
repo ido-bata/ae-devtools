@@ -34,6 +34,20 @@
 /* buffered and only flushed when a probe actually runs, so        */
 /* non-probe ticks emit nothing.                                   */
 /*                                                                 */
+/* FINGERPRINT LIMITS (documented, accepted): the identity is      */
+/* count + name + path of the first MAX_PROJECTS_SCANNED projects. */
+/* A swap beyond index 3, or a swap between two untitled projects  */
+/* sharing name and empty path, is invisible to the trigger — the  */
+/* probe simply does not re-run. AE normally keeps <= 1 project    */
+/* open, so the residual risk is a >4-project edge case. The        */
+/* fingerprint string itself is never logged; only the probe.run    */
+/* data lines (which the contract already marks redact-before-      */
+/* share) carry name/path.                                         */
+/*                                                                 */
+/* STEADY-STATE LOAD: the hook asks the host for at most one       */
+/* dispatch per second via max_sleepPL (1/60 s units); the        */
+/* fingerprint queries are the only recurring SDK traffic.         */
+/*                                                                 */
 /* EVIDENCE: every AEGP/SPBasicSuite call emits one               */
 /*   op <Suite>.<member> err=<A_Err> [k=v ...]                     */
 /* record through AEGP_WriteToDebugLog. Records made outside a     */
@@ -797,7 +811,7 @@ static A_Boolean MemoryEntriesOk(const AEGP_MemorySuite1* m)
 static A_Err ProbeIdleHook(
     AEGP_GlobalRefcon plugin_refconP, /* >> unused */
     AEGP_IdleRefcon refconP,          /* >> unused */
-    A_long* max_sleepPL)              /* <> left untouched */
+    A_long* max_sleepPL)              /* <> throttle hint (1/60 s units) */
 {
     const AEGP_UtilitySuite6* utilP = NULL;
     const AEGP_ProjSuite6* projP = NULL;
@@ -810,7 +824,17 @@ static A_Err ProbeIdleHook(
 
     (void)plugin_refconP;
     (void)refconP;
-    (void)max_sleepPL;
+
+    /* Steady-state load control: the fingerprint queries below are the
+       plug-in's only recurring SDK traffic, and the host may dispatch
+       the idle hook every idle tick. Ask for at most one dispatch per
+       second (units are 1/60 s per the AEGP_IdleHook contract). A host
+       that ignores the hint keeps the old frequency — still correct,
+       just more queries; the hint can never change probe semantics. */
+    if (max_sleepPL)
+    {
+        *max_sleepPL = 60;
+    }
 
     if (!s_basicP)
     {

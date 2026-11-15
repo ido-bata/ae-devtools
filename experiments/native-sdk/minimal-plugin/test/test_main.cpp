@@ -45,8 +45,13 @@ static A_Err CallEntry(FakeHost& h, AEGP_PluginID id = 7)
 static A_Err CallIdle(FakeHost& h)
 {
     A_long max_sleep = 0;
+    A_Err err;
     CHECK(h.idleHook != NULL);
-    return h.idleHook(NULL, NULL, &max_sleep);
+    err = h.idleHook(NULL, NULL, &max_sleep);
+    /* The hook must always leave its steady-state throttle hint:
+       60 ticks of 1/60 s = 1 s between idle dispatches. */
+    CHECK(max_sleep == 60);
+    return err;
 }
 
 static void SuitesBalanced(FakeHost& h)
