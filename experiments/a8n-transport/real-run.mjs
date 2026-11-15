@@ -133,6 +133,9 @@ async function main() {
           : null,
       );
     }
+    // A failed launch may still have left an AE process behind (e.g. AE
+    // started but readiness/ownership failed) — record it, never hide it.
+    evidence.aeProcessesAfterLaunchFailure = await aeProcessSnapshot(processFragment);
     evidence.finishedAt = new Date().toISOString();
     writeFileSync(out, JSON.stringify(evidence, null, 2) + "\n", "utf8");
     console.log(`evidence written: ${out}`);
