@@ -1,8 +1,9 @@
 /**
  * Per-operation registry invariants — the dispatchability SoT.
  *
- * Proves: ids are unique and well-formed, every entry corresponds to a
- * call NativeProbe actually makes, derived states obey the
+ * Proves: ids are unique and well-formed, implemented entries are
+ * exactly the calls NativeProbe makes (enforced mechanically by
+ * registry-reconcile.test.ts), derived states obey the
  * implemented+verifiedOnRealHost ⇒ dispatchable rule, and the honest
  * count of dispatchable operations today is zero.
  */
@@ -23,14 +24,25 @@ describe("DISPATCH_ENTRIES registry", () => {
     expect(() => assertRegistryInvariants()).not.toThrow();
   });
 
-  test("every entry is implemented-unverified: built, never real-host verified", () => {
+  test("implemented entries are implemented-unverified; inventory entries stay inventory-only", () => {
     expect(DISPATCH_ENTRIES.length).toBeGreaterThan(0);
+    let implemented = 0;
+    let inventoryOnly = 0;
     for (const entry of DISPATCH_ENTRIES) {
-      expect(entry.implemented).toBe(true);
       expect(entry.verifiedOnRealHost).toBe(false);
-      expect(operationState(entry)).toBe("implemented-unverified");
       expect(isDispatchableEntry(entry)).toBe(false);
+      if (entry.implemented) {
+        implemented++;
+        expect(operationState(entry)).toBe("implemented-unverified");
+      } else {
+        inventoryOnly++;
+        expect(operationState(entry)).toBe("inventory-only");
+      }
     }
+    // The NativeProbe-implemented slice must stay non-empty.
+    expect(implemented).toBeGreaterThan(0);
+    // Issue #63 added the project/item suite inventory.
+    expect(inventoryOnly).toBeGreaterThan(0);
   });
 
   test("zero dispatchable operations today — fail closed by design", () => {
