@@ -18,8 +18,12 @@
  * `inventories/sdk/README.md`), so the only concrete operation entries
  * that can be named honestly today are the calls the in-repo
  * `experiments/native-sdk/minimal-plugin` NativeProbe actually makes.
- * Widening the registry is CAP047 child-Issue work; each new entry must
- * cite its header/source and carry honest evidence flags.
+ * `tests/registry-reconcile.test.ts` parses `probe.cpp` and fails if
+ * this registry and the plug-in's real call set drift in either
+ * direction (missing call → test failure; registered-but-uncalled →
+ * test failure). Widening the registry is CAP047 child-Issue work;
+ * each new entry must cite its header/source and carry honest
+ * evidence flags.
  *
  * Nothing here launches AE or loads a plug-in. `implemented` means
  * "code exists and compiles on the build host" per the repo's
@@ -91,10 +95,12 @@ function probe(
 /**
  * The committed per-operation registry. Every entry corresponds to a
  * call `probe.cpp` actually makes (or the suite acquisition/release
- * pair it depends on). `implemented: true` reflects the probe's
- * BUILD SUCCEEDED artifact evidence; `verifiedOnRealHost: false`
- * reflects that no authorized AE session has loaded the plug-in yet
- * (`experiments/native-sdk/LOAD-PROOF.md` is the gated procedure).
+ * pair it depends on), verified mechanically by
+ * `tests/registry-reconcile.test.ts`. `implemented: true` reflects
+ * the probe's BUILD SUCCEEDED artifact evidence; `verifiedOnRealHost:
+ * false` reflects that no authorized AE session has loaded the
+ * plug-in yet (`experiments/native-sdk/LOAD-PROOF.md` is the gated
+ * procedure).
  */
 export const DISPATCH_ENTRIES: readonly OperationEntry[] = [
   // SPBasicSuite acquisition/release — the suite-lookup path itself.
@@ -112,14 +118,20 @@ export const DISPATCH_ENTRIES: readonly OperationEntry[] = [
   probe("AEGP_UtilitySuite6", "AEGP_GetSuppressInteractiveUI", PROBE_HEADER, "external-command"),
   probe("AEGP_UtilitySuite6", "AEGP_HostIsActivated", PROBE_HEADER, "external-command"),
 
+  // AEGP_RegisterSuite5 — deferred dispatch registration (idle hook).
+  probe("AEGP_RegisterSuite5", "AEGP_RegisterIdleHook", PROBE_HEADER, "external-command",
+    "Registers ProbeIdleHook for host-dispatched main-thread execution; the probe's only execution context. Host-callback direction: the host invokes the registered function."),
+
   // AEGP_ProjSuite6 — open-project enumeration and metadata.
   probe("AEGP_ProjSuite6", "AEGP_GetNumProjects", PROBE_HEADER, "external-command"),
   probe("AEGP_ProjSuite6", "AEGP_GetProjectByIndex", PROBE_HEADER, "external-command"),
   probe("AEGP_ProjSuite6", "AEGP_GetProjectName", PROBE_HEADER, "external-command"),
   probe("AEGP_ProjSuite6", "AEGP_ProjectIsDirty", PROBE_HEADER, "external-command"),
   probe("AEGP_ProjSuite6", "AEGP_GetProjectBitDepth", PROBE_HEADER, "external-command"),
+  probe("AEGP_ProjSuite6", "AEGP_GetProjectPath", PROBE_HEADER, "external-command",
+    "UTF-16 project path via mem handle; used for the idle-trigger fingerprint and logged as project[i].path. Local paths reach the AE debug log — redact evidence excerpts before sharing."),
   probe("AEGP_ProjSuite6", "AEGP_GetProjectRootFolder", PROBE_HEADER, "external-command",
-    "Returns an item handle to the project root folder; AEGP_GetProjectPath is deliberately not queried."),
+    "Returns an item handle to the project root folder; AEGP_SaveProjectToPath is deliberately not queried."),
 
   // AEGP_ItemSuite9 — top-level project-item iteration (read-only, capped).
   probe("AEGP_ItemSuite9", "AEGP_GetFirstProjItem", PROBE_HEADER, "external-command"),
@@ -128,7 +140,9 @@ export const DISPATCH_ENTRIES: readonly OperationEntry[] = [
     "UTF-16 name returned in an AE-allocated mem handle; disposed via AEGP_FreeMemHandle."),
   probe("AEGP_ItemSuite9", "AEGP_GetItemType", PROBE_HEADER, "external-command"),
 
-  // AEGPMemorySuite1 — mem-handle access for the name strings above.
+  // AEGPMemorySuite1 — mem-handle access for the name/path strings above.
+  probe("AEGPMemorySuite1", "AEGP_GetMemHandleSize", PROBE_HEADER, "external-command",
+    "Bounds UTF-16 reads to the AE-allocated block; never trusts the terminator."),
   probe("AEGPMemorySuite1", "AEGP_LockMemHandle", PROBE_HEADER, "external-command"),
   probe("AEGPMemorySuite1", "AEGP_UnlockMemHandle", PROBE_HEADER, "external-command"),
   probe("AEGPMemorySuite1", "AEGP_FreeMemHandle", PROBE_HEADER, "external-command",
