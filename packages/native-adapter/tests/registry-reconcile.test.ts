@@ -1,19 +1,22 @@
 /**
  * Registry ↔ NativeProbe reconciliation — Issue #19 audit fix.
  *
- * `src/operations.ts` claims every entry is a call `probe.cpp`
- * actually makes. This test makes that claim mechanical instead of
- * editorial: it parses
+ * `src/operations.ts` claims every IMPLEMENTED entry is a call
+ * `probe.cpp` actually makes. This test makes that claim mechanical
+ * instead of editorial: it parses
  * `experiments/native-sdk/minimal-plugin/src/probe.cpp`, extracts
  * every `<receiver>-><member>(` call whose receiver is a known suite
- * pointer, and asserts the resulting `<Suite>.<member>` set is
- * EXACTLY `DISPATCH_ENTRIES` — in both directions:
+ * pointer, and asserts:
  *
- *   - a call added to probe.cpp without a registry entry fails
- *     (missing registration, e.g. AEGP_GetMemHandleSize /
- *     AEGP_RegisterIdleHook were before this test existed);
- *   - a registry entry whose member probe.cpp never calls fails
- *     (false registration).
+ *   - every probe.cpp suite call has a registry entry (missing call →
+ *     test failure; e.g. AEGP_GetMemHandleSize / AEGP_RegisterIdleHook
+ *     were missing before this test existed);
+ *   - every registry entry with `implemented: true` is a call probe.cpp
+ *     makes (registered-but-uncalled → test failure);
+ *   - `implemented: false` (inventory-only) entries are NOT required to
+ *     be probe calls — CAP047 cluster Issues (#63–#69) register suite
+ *     surface ahead of implementation. They must still cite
+ *     suite.member + header, which `assertRegistryInvariants` checks.
  *
  * Scope notes:
  * - Only probe.cpp is scanned. fake_host.* implements suite entries
@@ -92,9 +95,20 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
     expect(missing).toEqual([]);
   });
 
-  test("every registry entry is a call probe.cpp actually makes", () => {
-    const phantom = [...registryIds].filter((id) => !callIds.has(id)).sort();
+  test("every IMPLEMENTED registry entry is a call probe.cpp actually makes", () => {
+    const phantom = [...registryIds]
+      .filter((id) => !callIds.has(id))
+      .filter((id) => DISPATCH_ENTRIES.find((e) => e.id === id)?.implemented === true)
+      .sort();
     expect(phantom).toEqual([]);
+  });
+
+  test("inventory-only entries are never marked implemented", () => {
+    for (const entry of DISPATCH_ENTRIES) {
+      if (!callIds.has(entry.id)) {
+        expect(entry.implemented).toBe(false);
+      }
+    }
   });
 
   test("every OpRecordV literal is a registry id or the overflow sentinel", () => {
@@ -112,22 +126,22 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
     // These were missing/false in the pre-audit registry.
     for (const id of [
       "AEGPMemorySuite1.AEGP_GetMemHandleSize",
-      "AEGPMemorySuite1.AEGP_NewMemHandle", // must NOT be registered: never called
       "AEGP_RegisterSuite5.AEGP_RegisterIdleHook",
       "AEGP_ProjSuite6.AEGP_GetProjectPath",
-      "SPBasicSuite.IsEqual", // must NOT be registered: never called
     ]) {
-      const called = callIds.has(id);
-      const registered = registryIds.has(id);
-      if (id.endsWith("NewMemHandle") || id.endsWith("IsEqual")) {
-        expect({ id, registered }).toEqual({ id, registered: false });
-        expect(called).toBe(false);
-      } else {
-        expect({ id, registered, called }).toEqual({
-          id,
-          registered: true,
-          called: true,
-        });
+      expect({ id, registered: registryIds.has(id), called: callIds.has(id) })
+        .toEqual({ id, registered: true, called: true });
+    }
+    // Members probe.cpp never calls may be registered inventory-only
+    // (CAP047 clusters) but must NEVER be marked implemented.
+    for (const id of [
+      "AEGPMemorySuite1.AEGP_NewMemHandle",
+      "SPBasicSuite.IsEqual",
+    ]) {
+      const entry = DISPATCH_ENTRIES.find((e) => e.id === id);
+      expect(callIds.has(id)).toBe(false);
+      if (entry !== undefined) {
+        expect(entry.implemented).toBe(false);
       }
     }
   });

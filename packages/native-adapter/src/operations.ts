@@ -107,14 +107,42 @@ function probe(
 }
 
 /**
- * The committed per-operation registry. Every entry corresponds to a
- * call `probe.cpp` actually makes (or the suite acquisition/release
- * pair it depends on), verified mechanically by
- * `tests/registry-reconcile.test.ts`. `implemented: true` reflects
- * the probe's BUILD SUCCEEDED artifact evidence; `verifiedOnRealHost:
- * false` reflects that no authorized AE session has loaded the
- * plug-in yet (`experiments/native-sdk/LOAD-PROOF.md` is the gated
- * procedure).
+ * Inventory-only entry: structurally attributed to a suite member in
+ * the licensed headers but NOT implemented by any in-repo code.
+ * Derived state is `inventory-only`; it can never dispatch. Used by
+ * the CAP047 cluster Issues (#63–#69) to register suite surface ahead
+ * of implementation — each entry cites suite.member + header only.
+ */
+function inv(
+  suite: string,
+  member: string,
+  sourceHeader: string,
+  matrixClass: MatrixClass,
+  note: string,
+): OperationEntry {
+  return {
+    id: `${suite}.${member}`,
+    suite,
+    member,
+    sourceHeader,
+    matrixClass,
+    implemented: false,
+    verifiedOnRealHost: false,
+    note,
+  };
+}
+
+/**
+ * The committed per-operation registry. Entries with
+ * `implemented: true` correspond exactly to calls `probe.cpp` actually
+ * makes (or the suite acquisition/release pair it depends on),
+ * verified mechanically by `tests/registry-reconcile.test.ts`;
+ * `implemented: false` entries are inventory-only suite surface
+ * registered ahead of implementation by the CAP047 cluster Issues.
+ * `implemented: true` reflects the probe's BUILD SUCCEEDED artifact
+ * evidence; `verifiedOnRealHost: false` reflects that no authorized AE
+ * session has loaded the plug-in yet
+ * (`experiments/native-sdk/LOAD-PROOF.md` is the gated procedure).
  */
 export const DISPATCH_ENTRIES: readonly OperationEntry[] = [
   // SPBasicSuite acquisition/release — the suite-lookup path itself.
@@ -161,7 +189,88 @@ export const DISPATCH_ENTRIES: readonly OperationEntry[] = [
   probe("AEGPMemorySuite1", "AEGP_UnlockMemHandle", PROBE_HEADER, "external-command"),
   probe("AEGPMemorySuite1", "AEGP_FreeMemHandle", PROBE_HEADER, "external-command",
     "Mandatory disposal of AE-allocated memory; memory hygiene, not mutation."),
+
+  // ------------------------------------------------------------------
+  // Issue #63 — AEGP project & item suite family (AE_GeneralPlug.h).
+  // The 11 members NativeProbe already calls are registered above as
+  // implemented-unverified; the remaining suite members are
+  // inventory-only until an implementation + real-host proof exist.
+  // Mutation candidates carry the FR-07/US3 write-permission caveat.
+  // ------------------------------------------------------------------
+  inv("AEGP_ProjSuite6", "AEGP_SaveProjectToPath", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ProjSuite6", "AEGP_GetProjectTimeDisplay", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ProjSuite6", "AEGP_SetProjectTimeDisplay", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ProjSuite6", "AEGP_SaveProjectAs", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ProjSuite6", "AEGP_NewProject", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ProjSuite6", "AEGP_OpenProjectFromPath", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ProjSuite6", "AEGP_SetProjectBitDepth", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetActiveItem", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_IsItemSelected", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SelectItem", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetTypeName", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SetItemName", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemID", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemFlags", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SetItemUseProxy", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemParentFolder", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SetItemParentFolder", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemDuration", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemCurrentTime", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemDimensions", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemPixelAspectRatio", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_DeleteItem", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_CreateNewFolder", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SetItemCurrentTime", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemComment", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SetItemComment", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemLabel", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_SetItemLabel", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemSuite9", "AEGP_GetItemMRUView", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_GetItemViewPlaybackTime", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_GetItemViewGuidesVisible", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_SetItemViewGuidesVisible", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_GetItemViewGuidesSnap", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_SetItemViewGuidesSnap", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_GetItemViewGuidesLocked", PROBE_HEADER, "external-command",
+    "Read-only query candidate; inventory-only until implemented and real-host verified. Cluster: Issue #63."),
+  inv("AEGP_ItemViewSuite2", "AEGP_SetItemViewGuidesLocked", PROBE_HEADER, "external-command",
+    "Mutation candidate: requires the explicit write-permission model (spec FR-07/US3) before any dispatch path. Cluster: Issue #63."),
 ];
+
 
 const ENTRY_BY_ID = new Map(DISPATCH_ENTRIES.map((e) => [e.id, e]));
 
