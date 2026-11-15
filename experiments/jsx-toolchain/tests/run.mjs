@@ -3,23 +3,32 @@
  * Fake/unit level only; real-host evidence lives in EVIDENCE.md.
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { lintSource, lintOutput, hasErrors } from "../src/es3-lint.mjs";
-import { buildFile, transpileToEs3 } from "../src/build.mjs";
-import { checkFile } from "../src/check.mjs";
+import { buildFile, buildProject, transpileToEs3 } from "../src/build.mjs";
+import { checkFile, checkProject } from "../src/check.mjs";
 import { lookup, parseMappings } from "../src/sourcemap.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = join(HERE, "..", "fixtures");
 const CLI = join(HERE, "..", "src", "cli.mjs");
 let passed = 0;
+const pending = [];
 function t(name, fn) {
-  try { fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
+  try {
+    const r = fn();
+    if (r && typeof r.then === "function") {
+      pending.push(r.then(() => { passed++; console.log(`ok ${name}`); }).catch((e) => {
+        console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1;
+      }));
+    } else {
+      passed++; console.log(`ok ${name}`);
+    }
+  } catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
 }
 
 t("lint flags ES5 builtins in source", () => {
@@ -41,10 +50,30 @@ t("lint does not flag String.indexOf (ES3)", () => {
   assert.equal(hasErrors(d), false);
 });
 
-t("lint flags import/export", () => {
-  const d = lintSource('import x from "y";\nexport default x;', { filename: "x.ts" });
-  assert.ok(d.some((x) => x.code === "es3-module-import"));
-  assert.ok(d.some((x) => x.code === "es3-module-export"));
+t("lint rejects module syntax in single-file mode", () => {
+  const d = lintSource('import x from "./y";\nexport default x;', { filename: "x.ts", allowModules: false });
+  assert.ok(d.some((x) => x.code === "es3-module-syntax"));
+});
+
+t("lint allows relative module syntax in project mode", () => {
+  const d = lintSource('import { x } from "./lib/x";\nexport function f() { return x; }\n', { filename: "m.ts", allowModules: true });
+  assert.equal(d.length, 0, JSON.stringify(d));
+});
+
+t("lint rejects bare module specifiers even in project mode", () => {
+  const d = lintSource('import fs from "fs";\n', { filename: "m.ts", allowModules: true });
+  assert.ok(d.some((x) => x.code === "es3-bare-import"), JSON.stringify(d));
+});
+
+t("AST lint ignores ES3-adjacent words inside strings/comments", () => {
+  const src = '// class arrow => function*\nvar s = "JSON.parse(Object.keys)";\nvar ok = 1;\n';
+  const d = lintSource(src, { filename: "safe.ts", allowModules: false });
+  assert.equal(d.length, 0, JSON.stringify(d));
+});
+
+t("AST lint flags real ES5 syntax (getter)", () => {
+  const d = lintSource('var o = { get x() { return 1; } };\n', { filename: "g.ts", allowModules: false });
+  assert.ok(d.length > 0, "expected a diagnostic");
 });
 
 t("build transpiles ok.ts to ES3 and emits map", () => {
@@ -139,4 +168,80 @@ t("cli map resolves a position end-to-end", () => {
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+t("buildProject bundles multi-file project to ES3 JSX", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const r = await buildProject(join(FIX, "project/main.ts"), { outDir: dir, name: "probe" });
+    assert.equal(r.status, "ok", JSON.stringify(r.diagnostics));
+    assert.equal(r.inputs.length, 3);
+    const jsx = readFileSync(join(dir, "probe.jsx"), "utf8");
+    assert.match(jsx, /hello /);
+    assert.doesNotMatch(jsx, /\bimport\b|\bexport\b/);
+    assert.equal(lintOutput(jsx).length, 0, JSON.stringify(lintOutput(jsx)));
+    for (const f of ["probe.jsx.map", "probe.bundle.js", "probe.bundle.js.map"]) {
+      assert.ok(existsSync(join(dir, f)), `missing ${f}`);
+    }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("buildProject fails closed on unresolvable/bare import", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const f = join(dir, "bad.ts");
+    writeFileSync(f, 'import fs from "fs";\n$.global.x = 1;\n');
+    const r = await buildProject(f, { outDir: dir });
+    // esbuild may fail resolution or the AST lint may catch the bare
+    // specifier — either way the build must fail closed.
+    assert.notEqual(r.status, "ok");
+    assert.ok(r.diagnostics.length > 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("resolvePosition maps JSX line back to original TS file", async () => {
+  const { resolvePosition } = await import("../src/bundle.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const r = await buildProject(join(FIX, "project/main.ts"), { outDir: dir, name: "probe" });
+    assert.equal(r.status, "ok");
+    const jsxMap = JSON.parse(readFileSync(join(dir, "probe.jsx.map"), "utf8"));
+    const bundleMap = JSON.parse(readFileSync(join(dir, "probe.bundle.js.map"), "utf8"));
+    const jsx = readFileSync(join(dir, "probe.jsx"), "utf8");
+    const genLine = jsx.split("\n").findIndex((l) => l.includes("__toolchainProject")) + 1;
+    assert.ok(genLine > 0);
+    const pos = resolvePosition({ jsxMap, bundleMap, line: genLine, column: 10 });
+    assert.ok(pos, "expected two-hop mapped position");
+    assert.match(pos.source, /main\.ts$/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("checkProject typechecks directory with cross-file imports", () => {
+  const r = checkProject(join(FIX, "project"));
+  assert.equal(r.ok, true, JSON.stringify(r.diagnostics));
+  assert.equal(r.mode, "project");
+  assert.ok(r.files >= 3);
+});
+
+t("checkProject catches cross-file type error", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    writeFileSync(join(dir, "a.ts"), 'export function f(): number { return "s"; }\n');
+    writeFileSync(join(dir, "main.ts"), 'import { f } from "./a";\nvar n: number = f();\n');
+    const r = checkProject(dir);
+    assert.equal(r.ok, false);
+    assert.ok(r.diagnostics.some((d) => d.file.includes("a.ts")));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("ae-api.d.ts catches bogus AE member names", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const f = join(dir, "bad.ts");
+    writeFileSync(f, 'var v = app.totallyBogusMemberXYZ;\n');
+    const r = checkFile(f);
+    assert.equal(r.ok, false);
+    assert.ok(r.diagnostics.some((d) => d.severity === "error"));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+await Promise.all(pending);
 console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);

@@ -42,5 +42,25 @@ agent would perform the same edit from the diagnosed source position.
 
 - Proves: TS source → ES3 JSX build → real dispatch → host error →
   sourcemap → TS source position, end to end, on two AE versions.
-- Does not prove: multi-file bundling, full API typings coverage,
-  debugger integration, or anything on Windows.
+- Does not prove: debugger integration, or anything on Windows.
+
+## Post-evidence expansion (automated test only — NOT real-host verified)
+
+After the four real runs above, the toolchain gained (all covered by
+`tests/run.mjs`, none exercised against real AE — the launch/GUI freeze
+is still in effect):
+
+- AST-based ES3 lint replacing the earlier regex lint
+  (`src/es3-ast.mjs`): source lint and a structural output proof.
+- Multi-file project builds (`build-project`): esbuild bundling,
+  two-hop sourcemaps (`resolve` CLI), `check <dir>` cross-file
+  typecheck.
+- Generated AE API typings (`src/ae-api.d.ts` from the scripting
+  inventory; name-level only, members are `any`-typed).
+- Source-positioned diagnostics (file/line/column) across
+  lint/build/check.
+
+The single-file `build`/`lint`/`map`/`check` commands used by
+`real-run.mjs` are unchanged in behavior; the real-host evidence above
+still applies to that path. The project pipeline would need a new
+real-host run (frozen) before it can be claimed verified.

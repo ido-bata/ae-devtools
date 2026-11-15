@@ -1,53 +1,94 @@
 /**
- * check.mjs — typecheck a script against the AE ambient declarations
- * (Issue #52).
+ * check.mjs — typecheck a script or project against the AE ambient
+ * declarations (Issue #52).
  *
- * The ambient surface (`ae-globals.d.ts`) is PARTIAL: it is generated
- * from `inventories/scripting` symbol rows for the most common entry
- * points, with member signatures absent (the inventory records symbols,
- * not signatures — see that inventory's schemaNote). Type errors in user
- * code are real; AE-API typo detection is limited to declared members.
+ * Ambient surface: `ae-api.d.ts` is GENERATED from
+ * `inventories/scripting/generated/symbols.json` (656 symbols — names,
+ * kinds, access; almost no signatures, so members are `any`-typed).
+ * `ae-globals.d.ts` adds the hand-maintained ExtendScript extras ($,
+ * File/Folder-ish helpers). Type errors in user code are real;
+ * AE-API checking is name-level only — a member absent here is not
+ * proof of absence in the real API.
  */
 import ts from "typescript";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { collectSources } from "./bundle.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const AMBIENT_DTS = join(HERE, "ae-globals.d.ts");
+export const AMBIENT_DTS = [join(HERE, "ae-api.d.ts"), join(HERE, "ae-globals.d.ts")];
 
-export function checkFile(inputPath, { ambientPath = AMBIENT_DTS } = {}) {
-  const absIn = resolve(inputPath);
+const CHECK_OPTIONS = {
+  noEmit: true,
+  target: ts.ScriptTarget.ES5,
+  module: ts.ModuleKind.ESNext,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  strict: false, // ExtendScript has no strict-mode guarantees; don't invent them
+  noImplicitAny: false,
+  skipLibCheck: true,
+  allowJs: true,
+  checkJs: false,
+};
+
+function toDiagnostic(d) {
+  const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n");
+  let line = null;
+  let column = null;
+  if (d.file && d.start !== undefined) {
+    const lc = d.file.getLineAndCharacterOfPosition(d.start);
+    line = lc.line + 1;
+    column = lc.character + 1;
+  }
+  return {
+    severity: d.category === ts.DiagnosticCategory.Error ? "error" : "warning",
+    code: `tsc-${d.code}`,
+    line,
+    column,
+    file: d.file ? d.file.fileName : null,
+    message: msg,
+  };
+}
+
+function runProgram(rootNames, { ambient = AMBIENT_DTS } = {}) {
   const program = ts.createProgram({
-    rootNames: [absIn, ambientPath].filter((p) => existsSync(p)),
-    options: {
-      noEmit: true,
-      target: ts.ScriptTarget.ES5,
-      module: ts.ModuleKind.None,
-      strict: false, // ExtendScript has no strict-mode guarantees; don't invent them
-      noImplicitAny: false,
-      skipLibCheck: true,
-    },
+    rootNames: [...rootNames, ...ambient].filter((p) => existsSync(p)),
+    options: CHECK_OPTIONS,
   });
-  const diagnostics = ts.getPreEmitDiagnostics(program);
+  return ts.getPreEmitDiagnostics(program).map(toDiagnostic);
+}
+
+/** Typecheck one file (module resolution still applies to its imports). */
+export function checkFile(inputPath, { ambient = AMBIENT_DTS } = {}) {
+  const absIn = resolve(inputPath);
+  const diagnostics = runProgram([absIn], { ambient });
   return {
     schema: "ae-devtools.jsx-toolchain.check/v1",
+    mode: "file",
     input: absIn,
-    ambient: ambientPath,
-    ok: diagnostics.length === 0,
-    diagnostics: diagnostics.map((d) => {
-      const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n");
-      let line = null;
-      if (d.file && d.start !== undefined) {
-        line = d.file.getLineAndCharacterOfPosition(d.start).line + 1;
-      }
-      return {
-        severity: d.category === ts.DiagnosticCategory.Error ? "error" : "warning",
-        code: `tsc-${d.code}`,
-        line,
-        file: d.file ? d.file.fileName : null,
-        message: msg,
-      };
-    }),
+    ambient,
+    ok: !diagnostics.some((d) => d.severity === "error"),
+    diagnostics,
+  };
+}
+
+/**
+ * Typecheck a whole project: a directory of sources or a single entry
+ * file (imports are resolved by the program). Multi-file is the point —
+ * cross-file type errors are caught here, not per-file.
+ */
+export function checkProject(inputPath, { ambient = AMBIENT_DTS } = {}) {
+  const absIn = resolve(inputPath);
+  const isDir = statSync(absIn).isDirectory();
+  const rootNames = isDir ? collectSources(absIn) : [absIn];
+  const diagnostics = runProgram(rootNames, { ambient });
+  return {
+    schema: "ae-devtools.jsx-toolchain.check/v1",
+    mode: isDir ? "project" : "entry",
+    input: absIn,
+    files: rootNames.length,
+    ambient,
+    ok: !diagnostics.some((d) => d.severity === "error"),
+    diagnostics,
   };
 }
