@@ -49,9 +49,31 @@ const EVAL_METHOD_SOURCE = `function (params) {
   }
 
   var value;
+  var evalError = null;
   try {
     value = eval(source);
-  } catch (evalError) {
+  } catch (firstError) {
+    // Contract: source is normally a PROGRAM whose completion value is
+    // the result. Adapter-generated dispatches (scripting-adapters
+    // buildSource) are FUNCTION BODIES - they end in a top-level
+    // return, which is a parse-time SyntaxError in program position.
+    // Only a SyntaxError is retried, and only as a function body: a
+    // SyntaxError means nothing executed, so the retry cannot double
+    // side effects. Runtime errors (ReferenceError etc.) already ran
+    // partially and are reported, never retried.
+    var isSyntax = false;
+    try { isSyntax = firstError.name === "SyntaxError"; } catch (e0) {}
+    if (isSyntax) {
+      try {
+        value = eval("(function(){" + source + "\\n})()");
+      } catch (secondError) {
+        evalError = secondError;
+      }
+    } else {
+      evalError = firstError;
+    }
+  }
+  if (evalError !== null) {
     var name = "EvalError";
     var message = "unknown eval failure";
     var line = null;
