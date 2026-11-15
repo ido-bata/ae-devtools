@@ -103,6 +103,10 @@ export async function beginRun({ dir = RUNS_DIR, sessionKind, argv = [], exec = 
     sessionKind,
     status: "opening",
     session: null,
+    // Per-request execution records. A GUI recovery may only target a
+    // request whose LATEST event is "timeout" — dispatched-then-resolved
+    // or already-recovered requests are not recoverable.
+    requests: [],
   };
   writeMarker(dir, marker);
   return { runId, markerPath: markerPath(dir, runId), marker };
@@ -124,6 +128,59 @@ export function markSession(dir, runId, session) {
     workdir: session.workdir ?? null,
   };
   writeMarker(dir, marker);
+}
+
+/**
+ * Attach host-process evidence the session opener actually observed:
+ * the AE pid, its start stamp (PID-reuse detection), and the GUI session
+ * (uid/asid) the process was verified to belong to. Recovery authorization
+ * refuses markers that lack this — a self-declared session is not proof.
+ */
+export function noteSessionProcess(dir, runId, evidence = {}) {
+  const marker = readMarker(dir, runId);
+  if (marker === null) return;
+  marker.session = {
+    ...(marker.session ?? {}),
+    process: {
+      aePid: Number.isInteger(evidence.aePid) ? evidence.aePid : null,
+      aePidStartStamp: typeof evidence.aePidStartStamp === "string" ? evidence.aePidStartStamp : null,
+      guiSession: evidence.guiSession && Number.isFinite(evidence.guiSession.uid)
+        ? { uid: evidence.guiSession.uid, asid: evidence.guiSession.asid ?? null }
+        : null,
+      recordedAt: new Date().toISOString(),
+    },
+  };
+  writeMarker(dir, marker);
+}
+
+/**
+ * Append a request lifecycle event. Events: "dispatched", "timeout",
+ * "resolved", "recovery-attempted". The latest event per requestId is the
+ * request's state; only "timeout" is recoverable.
+ */
+export function recordRequestEvent(dir, runId, { requestId, method, event }) {
+  const marker = readMarker(dir, runId);
+  if (marker === null) return false;
+  if (typeof requestId !== "string" || requestId.length === 0) return false;
+  if (!["dispatched", "timeout", "resolved", "recovery-attempted"].includes(event)) return false;
+  marker.requests = Array.isArray(marker.requests) ? marker.requests : [];
+  marker.requests.push({
+    requestId,
+    method: typeof method === "string" ? method : null,
+    event,
+    at: new Date().toISOString(),
+  });
+  writeMarker(dir, marker);
+  return true;
+}
+
+/**
+ * The latest recorded event for a requestId, or null when the request was
+ * never recorded. Used by recovery authorization.
+ */
+export function latestRequestEvent(marker, requestId) {
+  const events = (marker?.requests ?? []).filter((r) => r && r.requestId === requestId);
+  return events.length === 0 ? null : events[events.length - 1];
 }
 
 /**

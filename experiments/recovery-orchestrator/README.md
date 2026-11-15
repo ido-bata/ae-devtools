@@ -9,24 +9,35 @@ lease + dialog classes).
 - `collectCrashEvidence` — copies `.ips` (DiagnosticReports) and Sentry
   `*.envelope` files produced since a cutoff into an evidence dir. Every
   file gets a sha256; `.ips` reports are parsed and **correlated** to the
-  target process: `correlated` (pid or path+version proven) /
-  `candidate` (same app, unproven) / `unrelated`. Copy-only — never
-  deletes or submits. Unrelated crashes are never attributed to the run.
+  target process: `correlated` (pid AND procPath AND app version AND
+  procLaunch all proven) / `candidate` (weaker match — e.g. pid alone,
+  which cannot survive PID reuse) / `unrelated` / `unclassified`.
+  Copy-only — never deletes or submits. Unreadable source dirs and copy
+  failures are recorded and mark the collection **incomplete**, which
+  blocks `clean`/`crash-verified` downstream.
 - `observeScreen` — wraps `MacGuiRecovery.listWindows()` + `capture()`.
   AX-empty + WindowServer-visible surfaces as `axSuspect`; observation
   failure is `unknown`, never "no windows".
 - `runTimeoutRecovery` — pre/post observation around ae-a8n's
   `HostRecovery.attempt()`. The timed-out request is **never resent**;
-  `ownerId` comes from the verified run proof.
-- `verifyHostExit` — records process liveness, WindowServer census and
-  evidence collection as **independent channels**. `clean` requires all
-  of: process gone + session-confirmed census clean + evidence collected
-  + zero correlated reports. `crash-verified` is the crash-side
-  equivalent. Any failed/missing channel → `unknown`, never `clean`.
-- Run proof (`loadRunProof`/`verifyRunProof`) — `recover` cannot reach a
-  GUI mutation on self-declared flags. A proof JSON binds aePid + GUI
-  session + the recorded timed-out request + ownerId; contradictory
-  flags are rejected before any ae-a8n surface loads.
+  `ownerId` is derived from the verified run marker, not caller input.
+- `verifyHostExit` — records process liveness, WindowServer census,
+  session confirmation and evidence collection as **independent
+  channels**. `clean` requires all of: process gone + session-confirmed
+  census clean + evidence collection **complete** + zero correlated
+  reports. `crash-verified` is the crash-side equivalent and likewise
+  requires complete evidence. Any failed/missing/incomplete channel →
+  `unknown`, never `clean`.
+- Run-marker authorization (`loadRunMarker`/`authorizeRecovery`) —
+  `recover` cannot reach a GUI mutation on self-declared flags. It
+  requires a live `ae-devtools.cli.run-guard/v1` marker (written by
+  devtools-cli before session open) with: non-terminal status,
+  `ownership.kind === "owned"`, recorded `session.process` evidence
+  (aePid + start stamp + guiSession uid/asid), the runner pid still
+  alive with a matching start stamp (no PID reuse), the AE pid still
+  alive with a matching start stamp, and the request's **latest**
+  recorded event being `timeout` for the claimed method. Anything less
+  refuses before any ae-a8n surface loads.
 
 ## Verdicts
 
@@ -38,29 +49,36 @@ see `orchestrator.mjs` header for semantics.
 
 ```sh
 node cli.mjs evidence --since <ISO> --out <dir> \
-  [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P] [--run-id ID]
+  [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P] \
+  [--proc-launch "<ps lstart>"] [--run-id ID]
 
 node cli.mjs observe --pid N --session-uid U --session-asid A \
   --ae-a8n-root <built-ae-a8n> [--shot-dir <dir>]          # read-only
 
-node cli.mjs recover --run-proof <proof.json> --request-id R --method M \
-  --ae-a8n-root <built-ae-a8n>                             # GUI mutation
+node cli.mjs recover --run-id <runId> --request-id R --method M \
+  --ae-a8n-root <built-ae-a8n> [--runs-dir <dir>]          # GUI mutation
 
 node cli.mjs verify-exit --pid N --session-uid U --session-asid A \
   --expectation exit|crash --evidence-dir <dir> \
   --ae-a8n-root <built-ae-a8n>
 ```
 
-`recover` authorizes via run proof; the ae-a8n #111 GUI lease still
-serializes the actual mutation on top. `verify-exit` runs the census
-inside the confirmed GUI session (`readGuiSession` + `censusRunnerInSession`);
-an unconfirmed session degrades the census channel to unavailable →
-`unknown`.
+`recover` authorizes via the run marker; the marker's recorded
+uid/asid is then cross-checked against live `lsappinfo` attribution of
+the AE pid before any GUI object is constructed — a marker claim that
+does not match the live session refuses. The ae-a8n #111 GUI lease
+still serializes the actual mutation on top. `verify-exit` runs the
+census inside the confirmed GUI session (`readGuiSession` +
+`censusRunnerInSession`); an unconfirmed session — missing asid,
+asid mismatch, or pid not attributable to that session — degrades the
+census channel to unavailable → `unknown`.
 
 ## Evidence level
 
-**fake only** — `tests/run.mjs` covers orchestration, correlation,
-run-proof authorization and verdict honesty against fakes (27 tests).
-The real-host path is **UNVERIFIED** while macOS GUI testing is frozen;
-it requires a built ae-a8n checkout containing the #109/#111 exports
-(including `censusRunnerInSession`, `readGuiSession`).
+**fake only** — `tests/run.mjs` covers parsing, correlation,
+marker authorization, completeness gating and verdict honesty against
+fakes (33 tests). The real-host path is **UNVERIFIED** while macOS GUI
+testing is frozen; it requires a built ae-a8n checkout containing the
+#109/#111 exports (`censusRunnerInSession`, `readGuiSession`,
+`listAppInstances`) and a devtools-cli run that recorded
+`session.process` evidence via `AfterEffects.recoveryTarget()`.

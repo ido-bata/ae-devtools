@@ -44,7 +44,10 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
+import { GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
+
 export const SCHEMA = "ae-devtools.recovery-orchestrator/v2";
+export { GUARD_SCHEMA };
 
 // ------------------------------------------------------------ evidence
 
@@ -88,13 +91,18 @@ export function parseIpsReport(text) {
 /**
  * Correlate one parsed report to the target process.
  *
- *   correlated — the report's pid IS the target pid (strongest proof), or
- *                procPath + procLaunch + app version all match the target
- *                identity recorded at run start.
- *   candidate  — app/proc name matches but pid or path cannot be proven
- *                (pid may have been reused; the report may belong to a
- *                different run of the same app).
- *   unrelated  — a different application entirely.
+ * Fail-closed rules — a report is `correlated` ONLY when every available
+ * identity signal agrees:
+ *
+ *   - pid matches AND procPath matches AND version matches AND
+ *     procLaunch matches. An unrecorded launch stamp is unproven, not
+ *     neutral — pid reuse under the same binary is exactly what the
+ *     launch time exists to disprove, so `correlated` requires it.
+ *
+ * A bare pid match is NOT enough (pids are reused; the same binary can be
+ * relaunched under the same pid). A name+path+version match without the
+ * pid is a `candidate` — probably the same app, possibly a different run.
+ * Anything else is `unrelated`.
  */
 export function correlateReport(report, target) {
   if (report === null) return { level: "unparseable", reasons: ["report body could not be parsed"] };
@@ -103,31 +111,78 @@ export function correlateReport(report, target) {
   const nameMatch =
     (target.procName && body.procName === target.procName) ||
     (target.appName && (header.appName === target.appName || body.procName === target.appName));
+  const versionMatch =
+    target.appVersion &&
+    (header.appVersion === target.appVersion || header.buildVersion === target.appVersion);
+  const pathMatch = target.procPath && body.procPath === target.procPath;
+  const pidMatch = target.pid !== null && target.pid !== undefined && body.pid === target.pid;
+  const launchMatch =
+    target.procLaunch === undefined || target.procLaunch === null || body.procLaunch === null || body.procLaunch === undefined
+      ? null // either side lacks a launch stamp — cannot prove identity
+      : launchStampsMatch(target.procLaunch, body.procLaunch);
 
-  if (target.pid !== null && target.pid !== undefined && body.pid === target.pid) {
-    reasons.push(`pid ${body.pid} matches the target process`);
+  if (pidMatch && pathMatch && versionMatch && launchMatch === true) {
+    reasons.push("pid, executable path, version and launch time all match the target");
     return { level: "correlated", reasons };
   }
-  if (
-    nameMatch &&
-    target.procPath &&
-    body.procPath === target.procPath &&
-    target.appVersion &&
-    (header.appVersion === target.appVersion || header.buildVersion === target.appVersion)
-  ) {
-    reasons.push("proc name, executable path and version all match the target");
-    return { level: "correlated", reasons };
+  if (pidMatch) {
+    reasons.push(
+      !pathMatch
+        ? "pid matches but executable path is unproven (pid may be reused)"
+        : !versionMatch
+          ? "pid+path match but version is unproven"
+          : launchMatch === false
+            ? "pid+path+version match but launch time differs"
+            : "pid+path+version match but launch time is unrecorded — identity unproven",
+    );
+    return { level: "candidate", reasons };
+  }
+  if (nameMatch && pathMatch && versionMatch) {
+    reasons.push("name+path+version match but pid does not — likely a different run of the same app");
+    return { level: "candidate", reasons };
   }
   if (nameMatch) {
-    reasons.push(
-      body.pid !== null && body.pid !== target.pid
-        ? `same app name but pid ${body.pid} is not the target pid ${target.pid ?? "?"}`
-        : "same app name but pid/path could not be proven",
-    );
+    reasons.push("same app name but pid/path/version could not be proven");
     return { level: "candidate", reasons };
   }
   reasons.push(`app '${header.appName ?? body.procName ?? "?"}' does not match target '${target.procName ?? target.appName ?? "?"}'`);
   return { level: "unrelated", reasons };
+}
+
+/**
+ * Process launch stamps arrive in two formats that never string-match:
+ *   .ips body `procLaunch`: "2026-11-15 10:47:39.0407 +0900"
+ *   `ps -o lstart=`:         "Sun Nov 15 10:47:39 2026"   (local time)
+ * Both are parsed to epoch ms; an unparseable stamp is unproven (null),
+ * never guessed.
+ */
+const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+
+export function launchStampToMs(stamp) {
+  if (typeof stamp !== "string" || stamp.length === 0) return null;
+  const ips = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*([+-])(\d{2})(\d{2})?$/.exec(stamp.trim());
+  if (ips) {
+    const [, y, mo, d, h, mi, s, frac = "", sign, oh, om] = ips;
+    const ms = Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, Number((frac + "000").slice(0, 3)));
+    const off = (sign === "+" ? 1 : -1) * (+oh * 60 + +om) * 60_000;
+    return ms - off;
+  }
+  const ps = /^[A-Z][a-z]{2}\s+([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+(\d{4})$/.exec(stamp.trim());
+  if (ps) {
+    const mo = MONTHS[ps[1].slice(0, 3).toLowerCase()];
+    if (mo === undefined) return null;
+    return new Date(+ps[6], mo, +ps[2], +ps[3], +ps[4], +ps[5]).getTime();
+  }
+  const parsed = Date.parse(stamp);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** Same process launch, allowing for the two formats' precision. */
+function launchStampsMatch(a, b) {
+  const ma = launchStampToMs(a);
+  const mb = launchStampToMs(b);
+  if (ma === null || mb === null) return null; // unproven
+  return Math.abs(ma - mb) <= 2_000;
 }
 
 function sha256File(path) {
@@ -167,12 +222,16 @@ export function collectCrashEvidence({
   }
   mkdirSync(outDir, { recursive: true });
   const entries = [];
+  const unreadableDirs = [];
   const scan = (dir, kind) => {
     let names;
     try {
       names = readdirSync(dir);
-    } catch {
-      return; // unreadable dir is not "no crashes" — noted in the manifest
+    } catch (error) {
+      // An unreadable source dir means the collection is INCOMPLETE —
+      // recorded, never silently treated as "no crashes here".
+      unreadableDirs.push({ dir, kind, error: String(error?.message ?? error) });
+      return;
     }
     for (const name of names) {
       const isIps = IPS_NAME.test(name);
@@ -235,11 +294,21 @@ export function collectCrashEvidence({
   for (const dir of sentryDirs) scan(dir, "sentry");
 
   const byLevel = (level) => entries.filter((e) => e.correlation?.level === level);
+  const copyErrors = entries.filter((e) => e.error !== null).length;
   const manifest = {
     schema: SCHEMA,
     kind: "crash-evidence",
     since: new Date(cutoff).toISOString(),
     collectedAt: now().toISOString(),
+    // Independent completeness state: false whenever any source dir was
+    // unreadable or any file failed to copy. Consumers must not treat an
+    // incomplete collection as proof of absence.
+    complete: unreadableDirs.length === 0 && copyErrors === 0,
+    incompleteReasons: [
+      ...unreadableDirs.map((d) => `unreadable ${d.kind} dir: ${d.dir} (${d.error})`),
+      ...(copyErrors > 0 ? [`${copyErrors} file(s) failed to copy`] : []),
+    ],
+    unreadableDirs,
     target: {
       pid: target.pid ?? null,
       procName: target.procName ?? null,
@@ -256,7 +325,7 @@ export function collectCrashEvidence({
       candidate: byLevel("candidate").length,
       unrelated: byLevel("unrelated").length,
       unclassified: byLevel("unclassified").length + byLevel("unparseable").length,
-      copyErrors: entries.filter((e) => e.error !== null).length,
+      copyErrors,
     },
     correlated: byLevel("correlated"),
     candidates: entries.filter((e) => ["candidate", "unparseable", "unclassified"].includes(e.correlation?.level)),
@@ -326,87 +395,131 @@ export function observeScreen({ gui, screenshotDir, requestId }) {
   };
 }
 
-// ------------------------------------------------------------ run proof
+// ------------------------------------------------------------ run marker auth
 
 /**
- * A run proof is the ownership/authorization record a caller must present
- * before `recover` may touch the GUI. It is produced by whatever launched
- * or adopted the AE session (ae-devtools execute/verify, a session
- * manager) and binds: which process, which GUI session, which requests
- * timed out, and who owns the recovery.
+ * Recovery authorization reuses the devtools-cli run-guard marker
+ * (`ae-devtools.cli.run-guard/v1`) — the same contract `runs`/`reap` use.
+ * There is deliberately NO second, self-declared proof format: a JSON file
+ * the caller writes proves nothing. Authorization requires the marker the
+ * CLI itself wrote, cross-checked against live process state:
  *
- * Shape:
- *   {
- *     schema: "ae-devtools.run-proof/v1",
- *     ownerId: string,
- *     aePid: number,
- *     session: { uid: number, asid: number|null },
- *     issuedAt: string,
- *     requests: [{ requestId, method, timedOut: true }]
- *   }
+ *   - marker exists, schema matches, status is not terminal/closed
+ *   - the OWNING RUNNER is alive with the recorded start stamp (a dead
+ *     runner's residue goes through reap/adopt, not GUI recovery)
+ *   - ownership.kind === "owned" — attached/unknown sessions are never
+ *     mutated
+ *   - session.process evidence was recorded at open time: aePid,
+ *     aePidStartStamp and guiSession {uid, asid}; all three required
+ *   - the AE process is alive with the SAME start stamp (no pid reuse)
+ *   - the request's LATEST recorded event is "timeout" with a matching
+ *     method — dispatched-then-resolved or never-recorded requests are
+ *     not recoverable
  *
- * `verifyRunProof` never trusts self-declared flags: every field the CLI
- * was given must match the proof, and the request being recovered must be
- * a recorded timed-out request — an arbitrary pid + requestId pair cannot
- * reach a GUI mutation.
+ * Until a session producer records session.process evidence, every check
+ * fails closed and `recover` cannot reach the GUI — which is the intended
+ * state while the a8n session path is unverified.
  */
-export const RUN_PROOF_SCHEMA = "ae-devtools.run-proof/v1";
+const TERMINAL_MARKER_STATUSES = new Set([
+  "closed", "corrupt", "open-failed", "interrupted", "error", "close-failed",
+]);
 
-export function loadRunProof(path) {
+/** Read and schema-check a run marker. */
+export function loadRunMarker(file) {
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync(path, "utf-8"));
+    parsed = JSON.parse(readFileSync(file, "utf-8"));
   } catch (error) {
-    return { ok: false, reason: `run proof is not readable JSON: ${String(error?.message ?? error)}` };
+    return { ok: false, reason: `run marker is not readable JSON: ${String(error?.message ?? error)}` };
   }
   if (typeof parsed !== "object" || parsed === null) {
-    return { ok: false, reason: "run proof is not an object" };
+    return { ok: false, reason: "run marker is not an object" };
   }
-  if (parsed.schema !== RUN_PROOF_SCHEMA) {
-    return { ok: false, reason: `run proof schema is '${parsed.schema}', expected '${RUN_PROOF_SCHEMA}'` };
+  if (parsed.schema !== GUARD_SCHEMA) {
+    return { ok: false, reason: `run marker schema is '${parsed.schema}', expected '${GUARD_SCHEMA}'` };
   }
-  if (typeof parsed.ownerId !== "string" || parsed.ownerId.length === 0) {
-    return { ok: false, reason: "run proof has no ownerId" };
+  if (typeof parsed.runId !== "string" || parsed.runId.length === 0) {
+    return { ok: false, reason: "run marker has no runId" };
   }
-  if (!Number.isFinite(parsed.aePid)) {
-    return { ok: false, reason: "run proof has no valid aePid" };
-  }
-  if (typeof parsed.session !== "object" || parsed.session === null ||
-      !Number.isFinite(parsed.session.uid)) {
-    return { ok: false, reason: "run proof has no valid session" };
-  }
-  if (!Array.isArray(parsed.requests)) {
-    return { ok: false, reason: "run proof has no requests array" };
-  }
-  return { ok: true, proof: parsed };
+  return { ok: true, marker: parsed };
 }
 
 /**
- * Check a run proof against what the caller claims. Returns
- * `{ ok: true, proof }` or `{ ok: false, reason }`. Pure — no GUI, no
- * filesystem beyond the already-loaded proof.
+ * Authorize a recovery attempt against a loaded marker.
+ *
+ * `probes` are injected so the whole check is testable without live
+ * processes: `pidAlive(pid)` and `pidStartStamp(pid)` (ps lstart string
+ * or null). Both must be supplied — there is no "skip the liveness check"
+ * path.
  */
-export function verifyRunProof(proof, claim) {
-  if (proof.aePid !== claim.pid) {
-    return { ok: false, reason: `run proof is for aePid ${proof.aePid}, not ${claim.pid}` };
+export function authorizeRecovery({ marker, requestId, method, probes }) {
+  if (TERMINAL_MARKER_STATUSES.has(marker.status)) {
+    return { ok: false, reason: `run ${marker.runId} marker status is '${marker.status}' — nothing live to recover` };
   }
-  if (proof.session.uid !== claim.session.uid ||
-      (proof.session.asid ?? null) !== (claim.session.asid ?? null)) {
-    return { ok: false, reason: "run proof session does not match the claimed GUI session" };
-  }
-  const req = (proof.requests ?? []).find(
-    (r) => r && r.requestId === claim.requestId && r.method === claim.method,
-  );
-  if (!req) {
+  if (marker.session?.ownership?.kind !== "owned") {
     return {
       ok: false,
-      reason: `request '${claim.requestId}' / '${claim.method}' is not a recorded timed-out request in the run proof`,
+      reason: `run ${marker.runId} session ownership is '${marker.session?.ownership?.kind ?? "none"}' — only owned sessions may be mutated`,
     };
   }
-  if (req.timedOut !== true) {
-    return { ok: false, reason: `request '${claim.requestId}' is not marked timedOut in the run proof` };
+  const proc = marker.session?.process;
+  if (!proc || !Number.isInteger(proc.aePid) || !proc.guiSession || !Number.isFinite(proc.guiSession.uid)) {
+    return {
+      ok: false,
+      reason: "run marker carries no session.process evidence (aePid/guiSession) — the session opener did not prove which process and GUI session it owns",
+    };
   }
-  return { ok: true, proof };
+
+  // Runner liveness: the process that owns this run must still be alive
+  // with the same start stamp, or this marker is residue for `reap`, not
+  // a live authorization.
+  if (!probes.pidAlive(marker.pid)) {
+    return { ok: false, reason: `run ${marker.runId} runner pid ${marker.pid} is dead — residue goes through reap/adopt, not GUI recovery` };
+  }
+  if (marker.pidStartStamp) {
+    const now = probes.pidStartStamp(marker.pid);
+    if (now !== null && now !== marker.pidStartStamp) {
+      return { ok: false, reason: `run ${marker.runId} runner pid ${marker.pid} was reused (start stamp changed) — marker is stale` };
+    }
+  }
+
+  // AE process liveness + identity: same pid AND same start stamp, or the
+  // pid was reused by a different process.
+  if (!probes.pidAlive(proc.aePid)) {
+    return { ok: false, reason: `recorded aePid ${proc.aePid} is dead — nothing to recover` };
+  }
+  if (proc.aePidStartStamp) {
+    const now = probes.pidStartStamp(proc.aePid);
+    if (now !== null && now !== proc.aePidStartStamp) {
+      return { ok: false, reason: `aePid ${proc.aePid} was reused (start stamp changed) — recorded process is gone` };
+    }
+  }
+
+  // Request state: the LATEST recorded event must be "timeout" with the
+  // claimed method. Anything else — never dispatched, already resolved,
+  // already recovery-attempted — is not recoverable.
+  const latest = latestRequestEvent(marker, requestId);
+  if (latest === null) {
+    return { ok: false, reason: `request '${requestId}' has no recorded execution in run ${marker.runId}` };
+  }
+  if (latest.method !== null && method !== null && latest.method !== method) {
+    return { ok: false, reason: `request '${requestId}' was recorded as method '${latest.method}', not '${method}'` };
+  }
+  if (latest.event !== "timeout") {
+    return {
+      ok: false,
+      reason: `request '${requestId}' latest event is '${latest.event}' — only a timed-out (UNKNOWN) request is recoverable`,
+    };
+  }
+
+  return {
+    ok: true,
+    runId: marker.runId,
+    ownerId: `run:${marker.runId}`,
+    aePid: proc.aePid,
+    guiSession: { uid: proc.guiSession.uid, asid: proc.guiSession.asid ?? null },
+    request: latest,
+  };
 }
 
 // ------------------------------------------------------------ recovery
@@ -592,13 +705,19 @@ export function verifyHostExit({
       ...(reportsDirs ? { reportsDirs } : {}),
       ...(sentryDirs ? { sentryDirs } : {}),
     });
-    result.channels.evidence.state = "collected";
     result.channels.evidence.correlated = manifest.counts.correlated;
     result.channels.evidence.candidates = manifest.counts.candidate + manifest.counts.unclassified;
-    if (manifest.counts.copyErrors > 0) {
-      result.channels.evidence.detail = `${manifest.counts.copyErrors} file(s) failed to copy`;
-      result.reasons.push(result.channels.evidence.detail);
+    // Completeness is an independent gate: an incomplete collection can
+    // never support clean OR crash-verified — absence of evidence inside
+    // an incomplete scan proves nothing.
+    if (manifest.complete !== true) {
+      result.channels.evidence.state = "incomplete";
+      result.channels.evidence.detail = (manifest.incompleteReasons ?? []).join("; ") || "collection incomplete";
+      result.verdict = "unknown";
+      result.reasons.push(`evidence collection incomplete: ${result.channels.evidence.detail}`);
+      return result;
     }
+    result.channels.evidence.state = "collected";
   } catch (error) {
     result.channels.evidence.state = "failed";
     result.channels.evidence.detail = String(error?.message ?? error);

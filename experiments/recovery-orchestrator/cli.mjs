@@ -10,7 +10,7 @@
  *        [--session-user NAME] [--allow-console]
  *        [--ae-a8n-root <dir>] [--shot-dir <dir>]
  *
- *   node cli.mjs recover --run-proof <proof.json> --request-id R --method M
+ *   node cli.mjs recover --run-id <id> --request-id R --method M
  *        [--timeout-ms N] [--ae-a8n-root <dir>] [--shot-dir <dir>]
  *
  *   node cli.mjs verify-exit --pid N --session-uid U --session-asid A
@@ -22,33 +22,38 @@
  *
  *   observe       — read-only. Needs only a resolvable GUI session. Never
  *                   takes the ae-a8n mutation lease.
- *   recover       — GUI mutation. REQUIRES --run-proof: a JSON record
- *                   binding aePid + GUI session + the timed-out request
- *                   being recovered + ownerId. pid/requestId/method flags
- *                   alone can never reach a press; every claim must match
- *                   the proof. The ae-a8n #111 lease is still required on
- *                   top — proof authorizes, lease serializes.
+ *   recover       — GUI mutation. REQUIRES --run-id naming a LIVE
+ *                   devtools-cli run marker (ae-devtools.cli.run-guard/v1)
+ *                   whose owning runner is alive, whose session is owned,
+ *                   whose recorded process evidence (aePid + start stamp +
+ *                   guiSession uid/asid) still matches the live processes,
+ *                   and whose request's LATEST recorded event is
+ *                   "timeout". Self-declared flags cannot substitute.
+ *                   The ae-a8n #111 lease serializes on top.
  *   verify-exit   — read-only verification. The WindowServer census runs
  *                   INSIDE the confirmed target session via ae-a8n's
- *                   censusRunnerInSession; if uid/asid cannot be confirmed
- *                   the census channel is unavailable → verdict unknown.
+ *                   censusRunnerInSession; uid AND asid must both be
+ *                   confirmed AND the target pid must be attributed to
+ *                   that session via lsappinfo, else UNKNOWN.
  *
  * UNVERIFIED on real host while GUI testing is frozen; the orchestration
  * logic is covered by tests/run.mjs against fakes.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  authorizeRecovery,
   collectCrashEvidence,
-  loadRunProof,
+  loadRunMarker,
   observeScreen,
   runTimeoutRecovery,
   verifyHostExit,
-  verifyRunProof,
 } from "./orchestrator.mjs";
+import { RUNS_DIR } from "../devtools-cli/session-guard.mjs";
 
 const EXP = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -103,16 +108,37 @@ function sessionFromFlags(a8n, flags) {
   };
 }
 
+/** ps lstart stamp for PID-reuse detection; null when unreadable. */
+function pidStartStamp(pid) {
+  try {
+    const out = execFileSync("ps", ["-o", "lstart=", "-p", String(pid)], {
+      encoding: "utf-8", timeout: 5_000, stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return out.length === 0 ? null : out;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Confirm the claimed GUI session against the live system. Returns
- * `{ confirmed: true, session }` or `{ confirmed: false, reason }`.
- * The census is only trusted when this passes — an unverifiable session
- * means the census cannot be proven to be the target's.
+ * Confirm the claimed GUI session AND the target pid's attribution to it.
+ *
+ * Three independent facts must all hold, or the session is unconfirmed
+ * and every downstream channel degrades to UNKNOWN:
+ *   1. `readGuiSession(uid)` resolves a live session with a non-null asid
+ *   2. the claimed asid equals the live asid (both must be known — a
+ *      missing asid on either side is not a match)
+ *   3. `listAppInstances` attributes `pid` to that same uid+asid — the
+ *      process must be a registered app instance OF that session, not
+ *      merely alive somewhere
  */
-function confirmSession(a8n, flags) {
+function confirmSession(a8n, flags, pid) {
   const uid = Number(flags["session-uid"]);
   const asid = flags["session-asid"] === undefined ? null : Number(flags["session-asid"]);
   if (!Number.isFinite(uid)) return { confirmed: false, reason: "--session-uid missing or invalid" };
+  if (asid === null || !Number.isFinite(asid)) {
+    return { confirmed: false, reason: "--session-asid is required — a session without asid cannot be confirmed" };
+  }
   let live;
   try {
     live = a8n.readGuiSession(uid);
@@ -122,8 +148,32 @@ function confirmSession(a8n, flags) {
   if (live === null) {
     return { confirmed: false, reason: `no GUI session found for uid ${uid}` };
   }
-  if (asid !== null && live.asid !== null && live.asid !== asid) {
+  if (live.asid === null) {
+    return { confirmed: false, reason: `uid ${uid} GUI session has no asid — cannot confirm session identity` };
+  }
+  if (live.asid !== asid) {
     return { confirmed: false, reason: `claimed asid ${asid} but uid ${uid} GUI session is asid ${live.asid}` };
+  }
+  // Attribute the target pid to this session via lsappinfo.
+  let instances;
+  try {
+    instances = a8n.listAppInstances();
+  } catch {
+    instances = null;
+  }
+  if (!Array.isArray(instances)) {
+    return { confirmed: false, reason: "lsappinfo attribution unavailable — pid session membership unproven" };
+  }
+  const mine = instances.filter((i) => i && i.pid === pid);
+  if (mine.length === 0) {
+    return { confirmed: false, reason: `pid ${pid} is not a registered app instance — session membership unproven` };
+  }
+  const inSession = mine.some((i) => i.uid === uid && i.asid === asid);
+  if (!inSession) {
+    return {
+      confirmed: false,
+      reason: `pid ${pid} is attributed to uid/asid ${mine[0]?.uid}/${mine[0]?.asid}, not the claimed ${uid}/${asid}`,
+    };
   }
   return { confirmed: true, session: live };
 }
@@ -145,6 +195,7 @@ function targetFromFlags(flags) {
   if (typeof flags["app-name"] === "string") target.appName = flags["app-name"];
   if (typeof flags["app-version"] === "string") target.appVersion = flags["app-version"];
   if (typeof flags["proc-path"] === "string") target.procPath = flags["proc-path"];
+  if (typeof flags["proc-launch"] === "string") target.procLaunch = flags["proc-launch"];
   if (typeof flags["run-id"] === "string") target.runId = flags["run-id"];
   return target;
 }
@@ -163,7 +214,10 @@ async function main() {
       sentryDirs: multi["sentry-dir"],
     });
     emit({ schema: "ae-devtools.recovery-orchestrator.evidence/v1", ...manifest });
-    return manifest.counts.copyErrors > 0 ? 1 : 0;
+    // Incomplete collection (unreadable source dir, copy failure) is a
+    // failed evidence run — exit nonzero so callers cannot mistake a
+    // partial sweep for a complete one.
+    return manifest.complete === false || manifest.counts.copyErrors > 0 ? 1 : 0;
   }
 
   const needsA8n = ["observe", "recover", "verify-exit"].includes(cmd);
@@ -177,46 +231,52 @@ async function main() {
 
   // ---- recover: authorize BEFORE loading any GUI surface ---------------
   if (cmd === "recover") {
-    if (typeof flags["run-proof"] !== "string") {
+    if (typeof flags["run-id"] !== "string") {
       return fail(
-        "RUN_PROOF_REQUIRED",
-        "recover requires --run-proof <file>: a run proof binding aePid + GUI session + the timed-out request. " +
+        "RUN_ID_REQUIRED",
+        "recover requires --run-id <id> naming a live devtools-cli run marker. " +
           "Self-declared --pid/--request-id/--method cannot authorize a GUI mutation.",
       );
     }
-    const loaded = loadRunProof(flags["run-proof"]);
-    if (!loaded.ok) return fail("RUN_PROOF_INVALID", loaded.reason);
     const requestId = typeof flags["request-id"] === "string" ? flags["request-id"] : null;
     const method = typeof flags.method === "string" ? flags.method : null;
     if (!requestId || !method) {
-      return fail("USAGE", "recover requires --request-id and --method matching a timed-out request in the run proof");
+      return fail("USAGE", "recover requires --request-id and --method matching a timed-out request recorded in the run marker");
     }
-    // The claim's session/pid come from the PROOF, not from flags — flags
-    // can only contradict it.
-    const claim = {
-      pid: loaded.proof.aePid,
-      session: loaded.proof.session,
+    const runsDir = typeof flags["runs-dir"] === "string" ? flags["runs-dir"] : RUNS_DIR;
+    const markerFile = join(runsDir, `${flags["run-id"]}.json`);
+    const loaded = loadRunMarker(markerFile);
+    if (!loaded.ok) return fail("RUN_MARKER_INVALID", loaded.reason);
+    const auth = authorizeRecovery({
+      marker: loaded.marker,
       requestId,
       method,
-    };
-    const check = verifyRunProof(loaded.proof, claim);
-    if (!check.ok) return fail("RUN_PROOF_MISMATCH", check.reason);
-    // Contradictory flags are rejected rather than ignored.
-    if (flags.pid !== undefined && Number(flags.pid) !== loaded.proof.aePid) {
-      return fail("RUN_PROOF_MISMATCH", `--pid ${flags.pid} contradicts run proof aePid ${loaded.proof.aePid}`);
-    }
-    if (flags["session-uid"] !== undefined && Number(flags["session-uid"]) !== loaded.proof.session.uid) {
-      return fail("RUN_PROOF_MISMATCH", "--session-uid contradicts the run proof session");
-    }
+      probes: { pidAlive: pidAliveDefault, pidStartStamp },
+    });
+    if (!auth.ok) return fail("RECOVERY_REFUSED", auth.reason, { runId: flags["run-id"] });
 
     const a8n = await loadA8n(typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined);
+    // Cross-check the recorded GUI session against live attribution before
+    // constructing any GUI object: the marker's claim must match what
+    // lsappinfo says about the AE pid right now.
+    const sessionCheck = confirmSession(
+      a8n,
+      {
+        "session-uid": auth.guiSession.uid,
+        "session-asid": auth.guiSession.asid ?? undefined,
+      },
+      auth.aePid,
+    );
+    if (!sessionCheck.confirmed) {
+      return fail("SESSION_UNCONFIRMED", sessionCheck.reason, { runId: auth.runId });
+    }
     const session = {
-      uid: loaded.proof.session.uid,
-      asid: loaded.proof.session.asid ?? null,
-      username: a8n.readUsername(loaded.proof.session.uid),
+      uid: auth.guiSession.uid,
+      asid: auth.guiSession.asid ?? null,
+      username: a8n.readUsername(auth.guiSession.uid),
       kind: "Aqua",
     };
-    const pid = loaded.proof.aePid;
+    const pid = auth.aePid;
     const allowConsole = flags["allow-console"] === true;
     const shotDir = typeof flags["shot-dir"] === "string" ? flags["shot-dir"] : undefined;
     const timeoutMs = Number.isFinite(Number(flags["timeout-ms"])) ? Number(flags["timeout-ms"]) : 30_000;
@@ -226,11 +286,11 @@ async function main() {
       session,
       pid: () => pid,
       screenshotDir: shotDir ?? "/tmp",
-      ownerId: loaded.proof.ownerId,
+      ownerId: auth.ownerId,
     });
     const result = await runTimeoutRecovery({
       recovery, gui, requestId, method, timeoutMs,
-      ownerId: loaded.proof.ownerId,
+      ownerId: auth.ownerId,
       screenshotDir: shotDir,
     });
     emit(result);
@@ -254,7 +314,7 @@ async function main() {
   if (cmd === "verify-exit") {
     // Confirm the GUI session before trusting any census: uid + asid must
     // resolve to a live session, or the census channel is unavailable.
-    const sessionCheck = confirmSession(a8n, flags);
+    const sessionCheck = confirmSession(a8n, flags, pid);
     let census = null;
     if (sessionCheck.confirmed) {
       try {
