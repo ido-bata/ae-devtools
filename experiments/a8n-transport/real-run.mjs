@@ -41,6 +41,10 @@ function arg(flag) {
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
+/** The main AE executable — helpers (crashpad_handler, CEPHtmlEngine,
+ *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it. */
+const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)/;
+
 /**
  * Snapshot `ps` rows whose command line mentions the AE install. With no
  * --install-dir the fragment is the generic bundle directory name, which
@@ -186,12 +190,17 @@ async function main() {
     // result rather than letting a green slice hide a leaked AE.
     const after = await aeProcessSnapshot(processFragment);
     evidence.aeProcessesAfterClose = after;
-    const leftovers = Array.isArray(after) ? after : [];
-    if (evidence.close.quit !== true || leftovers.length > 0) {
+    const rows = Array.isArray(after) ? after : [];
+    // Only the main executable counts as a leaked host: Adobe helper
+    // processes (crashpad, CEPHtmlEngine, dynamiclinkmanager,
+    // TeamProjectsLocalHub) are documented to linger after AE quits.
+    const mainExeLeft = rows.filter((p) => MAIN_EXE.test(p.args ?? ""));
+    evidence.aeHelpersAfterClose = rows.filter((p) => !MAIN_EXE.test(p.args ?? ""));
+    if (evidence.close.quit !== true || mainExeLeft.length > 0) {
       evidence.sessionQuarantined = true;
       evidence.quarantineReason = evidence.close.quit !== true
         ? "close() did not confirm shutdown"
-        : "AE process(es) matching the install survived close()";
+        : `main AE process(es) survived close(): ${mainExeLeft.map((p) => p.pid).join(", ")}`;
     }
     evidence.finishedAt = new Date().toISOString();
     evidence.transportSends = session.transport.sendCount();
