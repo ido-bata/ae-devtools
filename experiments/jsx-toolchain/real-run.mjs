@@ -118,7 +118,10 @@ try {
 
   const run3 = await dispatch(session, badBuild.output, `tc-bad-${Date.now()}`);
   const hostLine = run3.error?.line ?? null;
-  const mapped = hostLine != null ? lookup(badBuild.map, hostLine, 0) : null;
+  // ExtendScript reports a line but no column; column 0 can precede the
+  // first mapping segment, so query past the line end — every segment on
+  // a generated line here maps to the same source line.
+  const mapped = hostLine != null ? lookup(badBuild.map, hostLine, 1e9) : null;
   step("dispatch.runtime-error", {
     ok: run3.outcome === "FAILED",
     outcome: run3.outcome,
