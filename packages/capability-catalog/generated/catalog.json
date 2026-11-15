@@ -6,6 +6,10 @@
   },
   "generatedFrom": [
     {
+      "path": "experiments/scripting-adapters/generated/coverage-claims.json",
+      "sha256": "0f4551a3f9e1ebfc1baf45314c4a0132b88aa0649eaaaf0b960fc6477128d724"
+    },
+    {
       "path": "inventories/scripting/generated/summary.json",
       "sha256": "8739de812e7557cfd1894abc7f3509fbe2f4a2d2ae4e729357d0e74f5d50afcd"
     },
@@ -22189,12 +22193,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemid"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (read.projectSummary)"
           }
         ]
       }
@@ -22269,12 +22277,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemname"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (read.projectSummary)"
           }
         ]
       }
@@ -22349,12 +22361,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemremove"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (item.remove)"
           }
         ]
       }
@@ -22509,12 +22525,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemtypename"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (read.projectSummary)"
           }
         ]
       }
@@ -22549,12 +22569,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/itemcollection/#itemcollectionaddcomp"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (item.addComp)"
           }
         ]
       }
@@ -22589,12 +22613,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/itemcollection/#itemcollectionaddfolder"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (item.addFolder)"
           }
         ]
       }
@@ -23029,12 +23057,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layer/#layerduplicate"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.duplicate)"
           }
         ]
       }
@@ -23549,12 +23581,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layer/#layermovetobeginning"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.reorder)"
           }
         ]
       }
@@ -23589,12 +23625,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layer/#layermovetoend"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.reorder)"
           }
         ]
       }
@@ -23709,12 +23749,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layer/#layerparent"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.setParent)"
           }
         ]
       }
@@ -24309,12 +24353,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layercollection/#layercollectionaddnull"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (comp.addNullLayer)"
           }
         ]
       }
@@ -26789,12 +26837,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectactiveitem"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (read.projectSummary)"
           }
         ]
       }
@@ -26909,12 +26961,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectclose"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (project.close)"
           }
         ]
       }
@@ -28389,12 +28445,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectrenderqueue"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (render.queueComp)"
           }
         ]
       }
@@ -28589,12 +28649,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectsave"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (project.save)"
           }
         ]
       }
@@ -29429,12 +29493,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertycansetexpression"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (anim.setExpression)"
           }
         ]
       }
@@ -29589,12 +29657,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertyexpression"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (anim.setExpression)"
           }
         ]
       }
@@ -29629,12 +29701,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertyexpressionenabled"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (anim.setExpression)"
           }
         ]
       }
@@ -29669,12 +29745,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertyexpressionerror"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (anim.setExpression)"
           }
         ]
       }
@@ -31789,12 +31869,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertysetvalue"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.setTransformPosition, anim.setValue)"
           }
         ]
       }
@@ -31829,12 +31913,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertysetvalueatkey"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (anim.setKeyframe)"
           }
         ]
       }
@@ -31869,12 +31957,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertysetvalueattime"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (anim.setValueAtTime)"
           }
         ]
       }
@@ -31989,12 +32081,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertyvalue"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (layer.setTransformPosition)"
           }
         ]
       }
@@ -32829,12 +32925,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/propertygroup/#propertygroupaddproperty"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (effect.add)"
           }
         ]
       }
@@ -32909,12 +33009,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/propertygroup/#propertygroupcanaddproperty"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (effect.add)"
           }
         ]
       }
@@ -33149,12 +33253,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueue/#renderqueueitems"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (render.queueComp)"
           }
         ]
       }
@@ -33349,12 +33457,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueue/#renderqueuerender"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (render.renderQueued)"
           }
         ]
       }
@@ -39549,12 +39661,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appnewproject"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (project.new)"
           }
         ]
       }
@@ -39629,12 +39745,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appopen"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "experiments/scripting-adapters (project.open)"
           }
         ]
       }

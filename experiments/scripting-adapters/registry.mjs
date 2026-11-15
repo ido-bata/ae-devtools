@@ -114,6 +114,37 @@ function __adp_json(v) {
 `;
 
 
+// Literal for number | finite-number[] args (keyframe values, positions).
+function jsLit(v) {
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) throw new Error("adapter arg must be a finite number");
+    return String(v);
+  }
+  if (Array.isArray(v)) {
+    return "[" + v.map((n) => {
+      if (typeof n !== "number" || !Number.isFinite(n)) throw new Error("adapter arg array must contain finite numbers");
+      return String(n);
+    }).join(",") + "]";
+  }
+  throw new Error("adapter arg must be a number or number array");
+}
+
+function jsPath(path) {
+  if (!Array.isArray(path) || path.length === 0 || path.some((p) => typeof p !== "string" || p.length === 0)) {
+    throw new Error("propertyPath must be a non-empty array of matchName strings");
+  }
+  return "[" + path.map(js).join(",") + "]";
+}
+
+// Shared source tail: resolve comp -> layer -> property by matchName path.
+const PROP_WALK = `
+var comp = __adp_findItem(@COMP@, CompItem);
+var layer = __adp_findLayer(comp, @LAYER@);
+var prop = layer;
+var __path = @PATH@;
+for (var __i = 0; __i < __path.length; __i++) { prop = prop.property(__path[__i]); }
+`;
+
 function js(v) {
   // JSON-encode a JS literal into the ExtendScript source (strings only
   // reach here after arg validation).
@@ -273,7 +304,7 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index });
     issue: "15",
     permission: "execute",
     mutating: true,
-    members: [S("Property", "setValue"), S("PropertyBase", "name")],
+    members: [S("Property", "setValue"), S("Property", "value")],
     args: ["compName", "layerName", "x", "y"],
     validate: (a) => {
       requireArgs(a, ["compName", "layerName", "x", "y"]);
@@ -358,7 +389,7 @@ return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: du
     issue: "15",
     permission: "execute",
     mutating: false,
-    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "id")],
+    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
     args: [],
     source: () => `${PRELUDE}
 var items = __adp_items();
@@ -373,6 +404,141 @@ return __adp_json({
   items: list,
   activeItem: ai === null ? null : { name: ai.name, typeName: String(ai.typeName) }
 });
+`,
+  },
+  // ---- Issue #16: animation / effects / render domains ----
+  {
+    id: "anim.setValue",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "setValue")],
+    args: ["compName", "layerName", "propertyPath", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "value"]);
+      jsLit(a.value); jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.setValue(${jsLit(a.value)});
+return __adp_json({ ok: true, property: "set" });
+`,
+  },
+  {
+    // setValueAtKey takes a 1-based KEY INDEX, not a time — confusing the
+    // two silently writes the wrong keyframe (PR #47 review).
+    id: "anim.setKeyframe",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "setValueAtKey")],
+    args: ["compName", "layerName", "propertyPath", "keyIndex", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "keyIndex", "value"]);
+      if (!Number.isInteger(a.keyIndex) || a.keyIndex < 1) throw new Error("keyIndex must be an integer >= 1");
+      jsLit(a.value); jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.setValueAtKey(${a.keyIndex}, ${jsLit(a.value)});
+return __adp_json({ ok: true, property: "keyframed", keyIndex: ${a.keyIndex} });
+`,
+  },
+  {
+    // Time-based keyframing is a different API: setValueAtTime.
+    id: "anim.setValueAtTime",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "setValueAtTime")],
+    args: ["compName", "layerName", "propertyPath", "time", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "time", "value"]);
+      if (typeof a.time !== "number" || !Number.isFinite(a.time)) throw new Error("time must be a finite number");
+      jsLit(a.value); jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.setValueAtTime(${a.time}, ${jsLit(a.value)});
+return __adp_json({ ok: true, property: "keyframed-at-time", time: ${a.time} });
+`,
+  },
+  {
+    id: "anim.setExpression",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "expression"), S("Property", "expressionEnabled"), S("Property", "canSetExpression"), S("Property", "expressionError")],
+    args: ["compName", "layerName", "propertyPath", "expression"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "expression"]);
+      if (typeof a.expression !== "string" || a.expression.length === 0) throw new Error("expression must be a non-empty string");
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+// canSetExpression is a Boolean attribute (inventory kind=attribute).
+if (prop.canSetExpression === false) {
+  __adp_fail("expression not allowed on this property");
+}
+prop.expression = ${js(a.expression)};
+prop.expressionEnabled = true;
+// Surface host-reported expressionError verbatim — never infer it.
+return __adp_json({ ok: true, property: "expression-set", expressionError: String(prop.expressionError || "") });
+`,
+  },
+  {
+    id: "effect.add",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("PropertyGroup", "addProperty"), S("PropertyGroup", "canAddProperty")],
+    args: ["compName", "layerName", "effectMatchName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName", "effectMatchName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var parade = layer.property("ADBE Effect Parade");
+if (typeof parade.canAddProperty === "function" && !parade.canAddProperty(${js(a.effectMatchName)})) {
+  __adp_fail("effect cannot be added: " + ${js(a.effectMatchName)});
+}
+var fx = parade.addProperty(${js(a.effectMatchName)});
+return __adp_json({ ok: true, effect: String(fx.name), matchName: ${js(a.effectMatchName)} });
+`,
+  },
+  {
+    id: "render.queueComp",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    members: [S("Project", "renderQueue"), S("RenderQueue", "items")],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var item = app.project.renderQueue.items.add(comp);
+return __adp_json({ ok: true, queued: comp.name, index: item.index });
+`,
+  },
+  {
+    id: "render.renderQueued",
+    domain: "animation-effects-render",
+    permission: "execute",
+    mutating: true,
+    // Render contract (Issue #16 / #21): this op starts a REAL render in
+    // AE — it writes output files per each queued item's Output Module
+    // settings, can run far beyond the runner deadline, and a transport
+    // UNKNOWN means render state is unknowable (AE may still be
+    // rendering). execute.mjs therefore requires confirmRender:true in
+    // addition to consent + consentProvider. Stop conditions: deadline
+    // expiry or reply loss → UNKNOWN → quarantined, never retried;
+    // callers must treat UNKNOWN as "render may be in progress" and
+    // observe app.project.renderQueue.rendering before any re-dispatch.
+    // Output destination/ownership verification is host-side and remains
+    // UNVERIFIED until a real render runs on an owned session.
+    requiresConfirm: "render",
+    members: [S("RenderQueue", "render")],
+    args: [],
+    validate: () => {},
+    source: () => `${PRELUDE}
+app.project.renderQueue.render();
+return __adp_json({ ok: true, rendered: true });
 `,
   },
 ];
@@ -407,6 +573,17 @@ export function registryReport() {
     destructive: OPERATIONS.filter((o) => o.destructive === true).length,
     readOnly: OPERATIONS.filter((o) => !o.mutating).length,
     domains: [...new Set(OPERATIONS.map((o) => o.domain))],
+    // Evidence accounting is deliberately separated: implemented ops,
+    // automated tests, and fake-host verification are NOT real-host
+    // verification. realHostVerified stays 0 until an owned AE session
+    // runs the disposable-project conformance suite (Issue #15/#16).
+    evidence: {
+      implemented: OPERATIONS.length,
+      automatedTest: OPERATIONS.length,
+      fakeMockVerified: OPERATIONS.length,
+      realHostVerified: 0,
+      level: "fake/mock only",
+    },
     operations: OPERATIONS.map((o) => ({
       id: o.id,
       domain: o.domain,

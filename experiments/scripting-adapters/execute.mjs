@@ -97,6 +97,10 @@ export async function runOperation(input = {}) {
   // to consent — consent approves the scope, this flag acknowledges the
   // operation class. It is a UX/safety gate, not an approval authenticity
   // mechanism (that remains a #14 non-claim).
+  if (op.requiresConfirm === "render" && input.confirmRender !== true) {
+    return refused("RENDER_CONFIRMATION_REQUIRED",
+      `'${opId}' starts a real render (files, long-running, UNKNOWN-unsafe); pass confirmRender:true only after verifying queue contents and output ownership`, { opId });
+  }
   if (op.destructive === true && input.confirmDestructive !== true) {
     return refused("DESTRUCTIVE_CONFIRMATION_REQUIRED",
       `'${opId}' is destructive; pass confirmDestructive:true after operator confirmation`, { opId });

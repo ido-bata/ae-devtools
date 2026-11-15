@@ -118,10 +118,19 @@ function scriptingRecord(
   };
 }
 
+export type AdapterClaims = {
+  /** catalogId (ae.scripting.Owner.member) -> claiming op ids */
+  claims: Record<string, { ops: string[]; evidence: string }>;
+};
+
 export function importScripting(input: {
   symbols: ScriptingSymbolsFile;
   summary: ScriptingSummaryFile;
   sourcesLock: SourcesLockFile;
+  /** Optional adapter coverage claims (Issue #15/#16). When present,
+   *  claimed members are marked adapter-present + automated-fake —
+   *  never verified-real-host. */
+  adapterClaims?: AdapterClaims;
 }): ImportedSource {
   const lockByKey = new Map(input.sourcesLock.sources.map((s) => [s.key, s]));
   const level = input.summary.evidenceLevel;
@@ -135,6 +144,30 @@ export function importScripting(input: {
     seen.add(record.id);
     return record;
   });
+  // Adapter coverage claims (Issue #15/#16): a registry op claiming a
+  // member upgrades it to adapter-present + automated-fake. This is a
+  // fake-level claim only — verification never becomes verified-real-host
+  // and implementation never becomes "implemented" (that axis is for
+  // catalog-native capabilities).
+  if (input.adapterClaims) {
+    let applied = 0;
+    for (const record of records) {
+      const claim = input.adapterClaims.claims[record.id];
+      if (!claim) continue;
+      record.coverage.implementation = "adapter-present";
+      record.coverage.verification = "automated-fake";
+      record.coverage.evidenceRefs.push({
+        kind: "automated-test",
+        ref: `experiments/scripting-adapters (${claim.ops.join(", ")})`,
+      });
+      applied += 1;
+    }
+    if (applied > 0) {
+      // surface the applied count for provenance honesty
+      (records as unknown as { __adapterClaimsApplied?: number }).__adapterClaimsApplied = applied;
+    }
+  }
+
   records.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
   return {

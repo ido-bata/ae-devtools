@@ -38,8 +38,10 @@ After Effects Scripting API — per the issue, NOT per-symbol MCP tools.
 - Adapter-level `implemented` ≠ verified: all ops are fake-level until
   disposable-project real-host tests run (Issue #15 acceptance —
   BLOCKED on owned AE session).
-- #16 domains (animation/effects/render) reuse this contract; domain
-  defs live in `specs/ae-capability-coverage/domains/`.
+- #16 domains (animation/effects/render) are implemented on the same
+  contract: anim.setValue/setKeyframe/setExpression, effect.add,
+  render.queueComp/render.renderQueued — keyframe/expression/effect/
+  render-queue each exercised as real fake-state mutations.
 
 ## Run
 
