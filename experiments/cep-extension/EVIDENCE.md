@@ -1,7 +1,9 @@
-# EVIDENCE — cep-extension scaffold (Issue #36 groundwork)
+# EVIDENCE — cep-extension scaffold + lifecycle (Issue #36 groundwork)
 
-Measured locally on the macOS dev host. **Scaffold/build-host evidence
-only** — nothing here has been loaded into After Effects.
+Measured locally on the macOS dev host. **Build-host evidence only** —
+nothing here has been loaded into After Effects. Lifecycle operations
+ran against fixture dirs only; the real CEP extensions dir was never
+touched.
 
 ## Environment
 
@@ -15,7 +17,9 @@ only** — nothing here has been loaded into After Effects.
 
 | Item | Command | Result | Level |
 | --- | --- | --- | --- |
-| Scaffold generation + validation | `node tests/run.mjs` | 11/11 tests green (2026-11-14, post-review) | **automated test** |
+| Scaffold generation + validation | `node tests/run.mjs` | 11/11 scaffold tests green | **automated test** |
+| Lifecycle machine (install/uninstall/status/cleanup/logs/PlayerDebugMode status) | `node tests/run.mjs` (lifecycle.test.mjs) | 8/8 lifecycle tests green; fixture dirs only, real CEP dir untouched | **automated test** |
+| Suite total | `node tests/run.mjs` | 19/19 tests, 2/2 files green | **automated test** |
 | CLI happy path / refusal paths | same suite (spawnSync CLI cases) | exit 0 / 2 / 3 as specified | **automated test** |
 | Manifest vs official XSD | `xmllint --schema schema/ExtensionManifest_v_7_0.xsd` | valid (Version pinned to schema's enumerated `7.0`; emitted `12.0` asserted separately — published XSD is stale vs CEP 12 sample) | **automated test** |
 | Manifest structure | official CEP 12 sample + cookbook | `ExtensionList`/`ExecutionEnvironment`/`DispatchInfoList` shape; corrected from pre-CEP5 attribute form | **source-reviewed + XSD** |
@@ -77,4 +81,5 @@ and no AE process was signaled.
 cd experiments/cep-extension
 node tests/run.mjs
 node scaffold.mjs --id com.example.demo --out /tmp/cep-demo --title "Demo"
+node cep-lifecycle.mjs status --id com.example.demo --target /tmp/cep-target
 ```
