@@ -55,7 +55,7 @@ against a fake `SPBasicSuite`/AEGP suite-table host — plain `clang++`,
 no After Effects, no GUI:
 
 ```
-413 checks, 0 failures
+563 checks, 0 failures
 ```
 
 Coverage: init-time suite-acquire failure (utility, register),
@@ -70,7 +70,9 @@ lone-surrogate → U+FFFD, `numProjects` 0/1/2, fingerprint triggers
 (initial, identity-change incl. same-count project switch and
 same-name/different-path, recovery from `GetNumProjects`/name/path
 query failures and from a missing project), silent steady-state
-ticks (no markers, no op records), and `op <Suite>.<member>`
+ticks (no markers, no op records), read-only render-queue slice
+(`AEGP_RenderQueueSuite1`/`AEGP_RQItemSuite4` getters, non-fatal
+acquire failure, per-item op records), and `op <Suite>.<member>`
 record emission for entry and probe calls. Suite acquire/release
 counts balance on every path.
 
