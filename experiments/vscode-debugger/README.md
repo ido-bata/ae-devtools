@@ -107,6 +107,7 @@ on the owned instance) remains a real-session acceptance item.
 
 ## Verification
 
-- `node tests/run.mjs` — 31 contract/unit tests (fixtures for valid
+- `node tests/run.mjs` — 33 contract/unit tests (fixtures for valid
   attach, wrong type, V1 properties, launch request, malformed fields,
-  JSONC preservation/surgical edits, preflight verdicts, CLI exit codes).
+  JSONC preservation/surgical edits, merge/idempotency, preflight
+  verdicts, CLI exit codes).
