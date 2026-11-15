@@ -14,6 +14,8 @@ trusted runner, quarantine).
 | `inspect <opId>` | op schema/metadata; never executes |
 | `execute <opId> [--args json] [--confirm-destructive] [--confirm-render]` | dispatch via canonical path |
 | `verify [--read-op opId]` | post-execution read-back; never infers success from the write |
+| `runs` | list run-guard markers — residue from runs that did not close cleanly (exit 1 when any exist) |
+| `reap <runId> [--confirm]` | recover ONE stale leftover; only when the marker proves `ownership: owned`, the runner pid is dead (PID-reuse checked via start stamp), and exactly one AE process matches the recorded install. Attached/unknown hosts are reported, never quit |
 
 ## Sessions
 
@@ -32,11 +34,21 @@ This is a local policy flag, not authenticated authorization
 ## Evidence
 
 Every execute/verify prints a `ae-devtools.cli.run/v1` record including
-session kind + evidence level; `--out <file>` persists it.
+session kind + evidence level + a `cleanup` block; `--out <file>` persists
+it. Cleanup is part of the contract: output is emitted only after
+`session.close()` settles (bounded by `--close-timeout-ms`, default 20s),
+close failures are reported (exit 3) and keep a run marker under
+`$TMPDIR/ae-devtools-cli-runs/` (`AE_DEVTOOLS_CLI_RUNS_DIR` overrides, for
+tests). SIGINT/SIGTERM run the same cleanup before exiting 130/143.
+`reap` is the external recovery path for a runner that died mid-cleanup;
+it is deliberately narrower than ae-a8n #108's adopt/resume — it can only
+*quit* a proven-owned leftover, never reattach to it.
 
 ## Verification
 
-- `node tests/run.mjs` — 8 fake-level tests.
+- `node tests/run.mjs` — 15 fake-level tests covering success, refusal,
+  close failure, close timeout, SIGTERM, stale-marker reap, ownership
+  refusal, and PID reuse.
 - Real-host: `node cli.mjs execute read.projectSummary --session a8n
   --ae-a8n-root <local-a8n> --consent grant` on an owned macOS session —
-  pending merge of the a8n-transport stack.
+  evidence in `evidence/run-real-2027-readprojectsummary.json`.

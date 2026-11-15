@@ -44,6 +44,13 @@ export function openFakeSession() {
     runner,
     pin: FAKE_PIN,
     app,
-    async close() {},
+    async close() {
+      // Test seams (never set in real use):
+      //   AE_DEVTOOLS_CLI_FAKE_CLOSE=throw → close rejects
+      //   AE_DEVTOOLS_CLI_FAKE_CLOSE=hang  → close never resolves
+      const mode = process.env.AE_DEVTOOLS_CLI_FAKE_CLOSE;
+      if (mode === "throw") throw new Error("injected fake close failure");
+      if (mode === "hang") await new Promise(() => {});
+    },
   };
 }
