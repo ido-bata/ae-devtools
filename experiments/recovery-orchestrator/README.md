@@ -7,40 +7,60 @@ lease + dialog classes).
 ## What it does
 
 - `collectCrashEvidence` — copies `.ips` (DiagnosticReports) and Sentry
-  `*.envelope` files produced since a cutoff into an evidence dir with a
-  manifest. Copy-only; never deletes or submits anything.
+  `*.envelope` files produced since a cutoff into an evidence dir. Every
+  file gets a sha256; `.ips` reports are parsed and **correlated** to the
+  target process: `correlated` (pid or path+version proven) /
+  `candidate` (same app, unproven) / `unrelated`. Copy-only — never
+  deletes or submits. Unrelated crashes are never attributed to the run.
 - `observeScreen` — wraps `MacGuiRecovery.listWindows()` + `capture()`.
   AX-empty + WindowServer-visible surfaces as `axSuspect`; observation
   failure is `unknown`, never "no windows".
 - `runTimeoutRecovery` — pre/post observation around ae-a8n's
-  `HostRecovery.attempt()`. The timed-out request is **never resent**.
-- `verifyHostExit` — after an exit/crash, requires pid-gone AND
-  WindowServer-census agreement AND evidence collection before `clean`.
-  Census unavailable → `unknown`, never `clean`.
+  `HostRecovery.attempt()`. The timed-out request is **never resent**;
+  `ownerId` comes from the verified run proof.
+- `verifyHostExit` — records process liveness, WindowServer census and
+  evidence collection as **independent channels**. `clean` requires all
+  of: process gone + session-confirmed census clean + evidence collected
+  + zero correlated reports. `crash-verified` is the crash-side
+  equivalent. Any failed/missing channel → `unknown`, never `clean`.
+- Run proof (`loadRunProof`/`verifyRunProof`) — `recover` cannot reach a
+  GUI mutation on self-declared flags. A proof JSON binds aePid + GUI
+  session + the recorded timed-out request + ownerId; contradictory
+  flags are rejected before any ae-a8n surface loads.
 
 ## Verdicts
 
 `await-original` | `quarantined` | `refused` | `residue` | `clean` |
-`unknown` — see `orchestrator.mjs` header for semantics.
+`crash-verified` | `crash-unconfirmed` | `crash-suspect` | `unknown` —
+see `orchestrator.mjs` header for semantics.
 
 ## Usage
 
 ```sh
-node cli.mjs evidence --since <ISO> --out <dir>
+node cli.mjs evidence --since <ISO> --out <dir> \
+  [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P] [--run-id ID]
+
 node cli.mjs observe --pid N --session-uid U --session-asid A \
-  --ae-a8n-root <built-ao-a8n-checkout> [--shot-dir <dir>]
-node cli.mjs recover --pid N --session-uid U --session-asid A \
-  --request-id R --method M --ae-a8n-root <dir>
+  --ae-a8n-root <built-ae-a8n> [--shot-dir <dir>]          # read-only
+
+node cli.mjs recover --run-proof <proof.json> --request-id R --method M \
+  --ae-a8n-root <built-ae-a8n>                             # GUI mutation
+
 node cli.mjs verify-exit --pid N --session-uid U --session-asid A \
-  --ae-a8n-root <dir> [--evidence-dir <dir>]
+  --expectation exit|crash --evidence-dir <dir> \
+  --ae-a8n-root <built-ae-a8n>
 ```
 
-`observe` is read-only. `recover` may press a measured dialog button and
-requires the ae-a8n GUI mutation lease — a held lease refuses the press.
+`recover` authorizes via run proof; the ae-a8n #111 GUI lease still
+serializes the actual mutation on top. `verify-exit` runs the census
+inside the confirmed GUI session (`readGuiSession` + `censusRunnerInSession`);
+an unconfirmed session degrades the census channel to unavailable →
+`unknown`.
 
 ## Evidence level
 
-**fake only** — `tests/run.mjs` covers the orchestration against injected
-fakes. The real-host path (cli.mjs + ae-a8n exports) is **UNVERIFIED**
-while macOS GUI testing is frozen; it requires a built ae-a8n checkout
-containing the #109/#111 exports (not yet in a published package).
+**fake only** — `tests/run.mjs` covers orchestration, correlation,
+run-proof authorization and verdict honesty against fakes (27 tests).
+The real-host path is **UNVERIFIED** while macOS GUI testing is frozen;
+it requires a built ae-a8n checkout containing the #109/#111 exports
+(including `censusRunnerInSession`, `readGuiSession`).
