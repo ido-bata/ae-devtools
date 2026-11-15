@@ -1,0 +1,32 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "command": "execute",
+  "opId": "read.projectSummary",
+  "session": {
+    "kind": "a8n",
+    "evidenceLevel": "verified on real host (macOS)",
+    "aeVersion": "27.0x78",
+    "ownership": "owned",
+    "aeA8nHead": "be78ca659b3937c09841e8b236a91edf961e3fad"
+  },
+  "at": "2026-11-15T02:09:12.984Z",
+  "result": {
+    "requestId": "req-be4f89c3f4fb3002",
+    "operationId": "read.projectSummary",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "count": 0,
+      "items": [],
+      "activeItem": null
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.projectSummary",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED"
+}
