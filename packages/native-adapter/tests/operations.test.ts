@@ -36,7 +36,11 @@ describe("DISPATCH_ENTRIES registry", () => {
         expect(operationState(entry)).toBe("implemented-unverified");
       } else {
         inventoryOnly++;
-        expect(operationState(entry)).toBe("inventory-only");
+        // Non-implemented entries are either inventory-only or carry an
+        // explicit FR-013 disposition (unsupported-or-unknown).
+        expect(["inventory-only", "unsupported-or-unknown"]).toContain(
+          operationState(entry),
+        );
       }
     }
     // The NativeProbe-implemented slice must stay non-empty.
