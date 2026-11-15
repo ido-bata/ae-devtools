@@ -105,3 +105,26 @@ test("collectLogs lists CEPHtmlEngine logs with sizes; empty dir ok", async () =
   const empty = await collectLogs({ logDir: join(dir, "nope") });
   assert.deepEqual(empty.logs, []);
 });
+
+test("playerDebugModeStatus reports set/unset per CSXS domain without writing", async () => {
+  const { playerDebugModeStatus } = await import("../lifecycle.mjs");
+  const calls = [];
+  const run = async (args) => {
+    calls.push(args);
+    if (args[1] === "com.adobe.CSXS.11") return "1\n";
+    throw new Error("does not exist");
+  };
+  const r = await playerDebugModeStatus({ platform: "darwin", run });
+  assert.equal(r.supported, true);
+  assert.deepEqual(r.keys[0], { domain: "com.adobe.CSXS.11", PlayerDebugMode: "1", status: "set" });
+  assert.equal(r.keys[1].status, "unset-or-unreadable");
+  // read-only: only `defaults read` was invoked
+  assert.ok(calls.every((a) => a[0] === "read"));
+});
+
+test("playerDebugModeStatus is honest off-darwin", async () => {
+  const { playerDebugModeStatus } = await import("../lifecycle.mjs");
+  const r = await playerDebugModeStatus({ platform: "linux" });
+  assert.equal(r.supported, false);
+  assert.match(r.note, /UNVERIFIED/);
+});

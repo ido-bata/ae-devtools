@@ -200,3 +200,34 @@ export async function collectLogs({ logDir = null, home = process.env.HOME } = {
   }
   return { dir, logs: logs.sort((a, b) => a.name.localeCompare(b.name)) };
 }
+
+/**
+ * Read-only PlayerDebugMode status (CAP058 mechanization).
+ *
+ * CEP debug-loading of unsigned extensions requires
+ * `defaults write com.adobe.CSXS.<n> PlayerDebugMode 1` on macOS —
+ * this reports the CURRENT values only; it never writes. The load
+ * proof (LOAD-PROOF.md) decides whether setting them is authorized.
+ * Non-darwin / unreadable hosts report `unknown`, never a guess.
+ */
+export async function playerDebugModeStatus({ platform = process.platform, run = null } = {}) {
+  if (platform !== "darwin") {
+    return { platform, supported: false, keys: [], note: "PlayerDebugMode check is macOS-only here; Windows registry path is UNVERIFIED" };
+  }
+  const exec = run ?? (async (args) => {
+    const { execFile } = await import("node:child_process");
+    return new Promise((res, rej) =>
+      execFile("defaults", args, { encoding: "utf8" }, (e, so) => (e ? rej(e) : res(so))));
+  });
+  const keys = [];
+  for (const n of [11, 12]) {
+    const domain = `com.adobe.CSXS.${n}`;
+    try {
+      const out = await exec(["read", domain, "PlayerDebugMode"]);
+      keys.push({ domain, PlayerDebugMode: out.trim(), status: "set" });
+    } catch {
+      keys.push({ domain, PlayerDebugMode: null, status: "unset-or-unreadable" });
+    }
+  }
+  return { platform, supported: true, keys };
+}

@@ -9,7 +9,7 @@
  *   node cep-lifecycle.mjs cleanup [--target <dir>]
  *   node cep-lifecycle.mjs logs [--log-dir <dir>]
  */
-import { install, uninstall, status, cleanup, collectLogs } from "./lifecycle.mjs";
+import { install, uninstall, status, cleanup, collectLogs, playerDebugModeStatus } from "./lifecycle.mjs";
 
 const [cmd, ...rest] = process.argv.slice(2);
 const args = {};
@@ -24,7 +24,8 @@ try {
   else if (cmd === "status") { need("id"); r = await status({ extensionId: args.id, sourceDir: args.source, targetDir: args.target }); }
   else if (cmd === "cleanup") r = await cleanup({ targetDir: args.target });
   else if (cmd === "logs") r = await collectLogs({ logDir: args["log-dir"] });
-  else { console.error("usage: install|uninstall|status|cleanup|logs"); process.exit(2); }
+  else if (cmd === "playerdebugmode") r = await playerDebugModeStatus();
+  else { console.error("usage: install|uninstall|status|cleanup|logs|playerdebugmode"); process.exit(2); }
   console.log(JSON.stringify(r, null, 2));
 } catch (err) {
   console.error(`cep-lifecycle: ${err.message}`);
