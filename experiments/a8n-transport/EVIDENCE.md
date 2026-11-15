@@ -72,8 +72,32 @@ on real AE 27.0.0** — evidence `run-105-103-a.json`.
 This is the first **verified on real host** run of the connect → execute →
 error → fix → rerun → verify loop. It also re-verifies the ae-a8n#103
 extension fix end-to-end (real `aeDevtools.trustedEval` dispatch through
-the generated host script). One run only — the ≥2-consecutive-per-version
-gate and AE 2026 coverage are still open.
+the generated host script).
+
+## Attempt 4 — acceptance gate, local ae-a8n be78ca6 (105+103), hardened runner
+
+Four consecutive real runs, all exit 0, all `assertionViolations: []`:
+
+| evidence | AE | version | ownership | sends | close | main-exe leftover |
+| --- | --- | --- | --- | --- | --- | --- |
+| run-gate-2027-a/b | 2027 | 27.0x78 | owned | 6 | quit:true | 0 |
+| run-gate-2026-a/b | 2026 | 26.5.3x9 | owned | 6 | quit:true | 0 |
+
+`aeA8nHead` = `be78ca6` (branch `verify-105-103` = #105 LaunchServices fix +
+#103 extension fix). Post-close `ps` shows only Adobe helper processes
+(crashpad_handler, dynamiclinkmanager, TeamProjectsLocalHub, CEPHtmlEngine
+on 2026) — recorded separately as `aeHelpersAfterClose`; the main
+`Contents/MacOS/After Effects` executable is gone in every run.
+
+**Failure path** — `run-failpath-attached-2027.json`: AE 2027 pre-running →
+launch resolves `attached` (pid recorded) → slice refuses before any
+dispatch, exit 1. Evidence preserves `launchError`, `sessionRoot`, the
+session `trace`, and before/after process lists showing the pre-existing
+AE untouched (correctly not quit — not owned).
+
+Note: an earlier instrumentation bug quarantined runs on *helper*
+processes alone; fixed by matching only `Contents/MacOS/After Effects`.
+The flawed evidence files were discarded before rerun.
 
 ## Acceptance-hardening changes (this branch, fake-tested)
 
@@ -88,26 +112,28 @@ gate and AE 2026 coverage are still open.
 - `scenario.mjs`: `assertSliceOutcomes(steps)` — every step's outcome class,
   per-step send counts, counter state transition `"1"→"2"`, and flat send
   counts on both consent gates.
-- `real-run.mjs`: launch failure still writes evidence (sessionRoot +
-  trace snippet via `error.sliceSessionRoot`); slice assertion violations
-  exit nonzero; close failure or surviving AE processes →
-  `sessionQuarantined` + exit nonzero; `aeA8nHead` pins the local build SHA.
+- `real-run.mjs`: launch/ownership failures still write evidence
+  (sessionRoot + trace via `error.sliceSessionRoot`/`sliceTracePath`);
+  slice assertion violations exit nonzero; close failure or a surviving
+  **main** AE executable → `sessionQuarantined` + exit nonzero (Adobe
+  helpers recorded separately, not quarantined); `aeA8nHead` pins the
+  local build SHA; process snapshots before launch and after close.
 - `session.mjs`: `sessionRoot` under workdir (trace survives for evidence),
-  `ae.tracePath` recorded, `git rev-parse HEAD` captured for `--ae-a8n-root`.
+  `ae.tracePath` recorded, `git rev-parse HEAD` captured for
+  `--ae-a8n-root`, ownership-refusal errors carry the same evidence context.
 
 ## What IS proven on a real host so far
 
 - ExtendScript `this` semantics divergence (probe transcripts above).
 - ae-a8n correctly refuses owned-session operations when process
   attribution is ambiguous — no unsafe dispatch occurred.
-- Full connect→exec→error→fix→verify loop on AE 27.0.0 via local
-  ae-a8n#105+#103 build (attempt 3) — **one** run; repeat runs, AE 2026,
-  and the deliberate-failure path are still open.
+- Full connect→exec→error→fix→verify loop on **both** AE 27.0.0 and
+  AE 26.5.3, two consecutive green runs each, via local
+  ae-a8n#105+#103 build (attempts 3–4) — **verified on real host**.
+- Attached-session refusal + evidence preservation on real AE.
 
 ## Not yet attempted
 
-- Repeat consecutive real runs and AE 2026 coverage (gate: ≥2 consecutive
-  successes per version).
 - npm-published ae-a8n verification — separate gate after actual publish.
 - GUI observation, modal-dialog recovery, crash/log collection,
-  session rebuild — no implementation exists yet.
+  session rebuild — tracked as ae-a8n #107/#108/#109.
