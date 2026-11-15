@@ -51,6 +51,16 @@ The `PF_Cmd` enum declares "The order of this enumeration must not be altered!" 
 - **13 unattributed-callable**: 2 stay unknown (Adobe `Internal` typedefs), 11 reattribute — 5 to `host-callback` (PF/Effect/IO/PR/Hook callback typedefs → #66/#67/#65), 6 to `external-command` (SPBasicFuncStruct function types → covered by #69 suite-slot entries).
 - **534 pure-data-type**: aggregate rationale above; no individual review required by construction.
 
+## "調査済み" と "未分類・unsupported" の区別
+
+Three different states must not be conflated:
+
+1. **Aggregate-classified** — all 552 rows carry `class: unsupported-or-unknown` with rule `unknown:*` and `evidence: none` in the extractor output. That is the *committed classification*: structurally unattributable under the current rule set.
+2. **Individually investigated** — the 18 `unattributed-callable` + `reserved-selector` rows above were re-read in header context. "Investigated" records a *finding and disposition*; it does **not** change the committed class. Reattribution lands only when the follow-up Issue implements the operation entry or extends the extractor rules — until then these symbols remain `unsupported-or-unknown` in the aggregate.
+3. **Aggregate-rationale covered** — the 534 `pure-data-type` rows are classified by construction (no call direction exists to attribute); they are "covered" by the aggregate rationale, not individually investigated.
+
+Cross-check against extractor rule families: every unknown row's rule is `unknown:pure-data-type | unknown:unattributed-callable | unknown:reserved-selector` — i.e. the extractor emitted no directional evidence (`evidence: none`) for any of them. The reattribution targets above (`host-callback`, `external-command`) are the classes the *direction* implies; they are claims about call direction from header context, pending the follow-up Issues named per row.
+
 ## Re-evaluation conditions (shared)
 
 - New SDK release changes the header surface → re-run extraction + this triage.
