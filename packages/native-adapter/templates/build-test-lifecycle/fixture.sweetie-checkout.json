@@ -1,6 +1,6 @@
 {
   "fixtureId": "native-sdk-build-probe-sweetie-checkout",
-  "family": "build-test-lifecycle",
+  "matrixClass": "build-test-lifecycle",
   "sdkRelease": { "identifier": "26.5", "distribution": "macOS" },
   "matrixState": "build-probe-only",
   "description": "Compile-only probe of the two AE SDK 26.5 macOS samples that experiments/native-sdk already builds. This fixture exercises the BUILD path only; plugin load and execution inside After Effects are UNVERIFIED and out of scope until LOAD-PROOF.md is executed on an owned AE session.",

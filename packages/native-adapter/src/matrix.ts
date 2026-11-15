@@ -1,14 +1,21 @@
 /**
- * Coverage-matrix reader — CAP046 (Issue #19).
+ * Coverage-matrix reader — CAP045/CAP048 groundwork, redesigned for
+ * Issue #19 (CAP046 follow-up).
  *
  * `inventories/sdk/generated/aggregate.coverage-matrix.json` is the
  * canonical record of what the SDK inventory can honestly claim per
- * symbol class. This module is the *only* place the adapter package
- * reads it; templates and negotiation availability are derived from it
- * so "implemented" and "inventory-only" can never be conflated.
+ * symbol **class**. This module is the *only* place the adapter
+ * package reads it.
  *
- * Nothing here launches AE, loads a plug-in, or asserts real-host
- * behaviour. The matrix itself records `verification: "not-run"`.
+ * IMPORTANT — classes are classification/reporting metadata ONLY.
+ * The five matrix classes (`build-test-lifecycle`, `external-command`,
+ * `host-callback`, `in-host-plugin-command`, `unsupported-or-unknown`)
+ * describe how the extractor attributed symbols; they are NOT
+ * negotiable capability families and can NEVER be dispatched. All
+ * dispatchability lives at the per-operation level in
+ * `src/operations.ts`. Nothing here launches AE, loads a plug-in, or
+ * asserts real-host behaviour. The matrix itself records
+ * `verification: "not-run"`.
  */
 
 import { readFileSync } from "node:fs";
@@ -64,91 +71,34 @@ export function loadCoverageMatrix(path: string): CoverageMatrix {
 }
 
 /**
- * The suite families an adapter may negotiate for. These are exactly
- * the extractor classes projected by the coverage matrix — the matrix
- * is the denominator, so a family outside this list is unknown, not
- * absent-but-supported.
+ * The coverage-matrix classes. These are the extractor's reporting
+ * buckets — exactly the classes projected by
+ * `inventories/sdk/scripts/coverage-matrix.mjs`. They exist so reports
+ * and kits can say *where* a symbol was attributed; they carry no
+ * dispatch semantics. A class name is never a valid `operation` in a
+ * negotiation message.
  */
-export const SUITE_FAMILIES = [
+export const MATRIX_CLASSES = [
   "build-test-lifecycle",
   "external-command",
   "host-callback",
   "in-host-plugin-command",
   "unsupported-or-unknown",
 ] as const;
-export type SuiteFamily = (typeof SUITE_FAMILIES)[number];
+export type MatrixClass = (typeof MATRIX_CLASSES)[number];
 
-export function isSuiteFamily(value: string): value is SuiteFamily {
-  return (SUITE_FAMILIES as readonly string[]).includes(value);
+export function isMatrixClass(value: string): value is MatrixClass {
+  return (MATRIX_CLASSES as readonly string[]).includes(value);
 }
 
 /**
- * Availability states a host may advertise during negotiation.
- *
- * `dispatchable` is the only state negotiation accepts by default and
- * may only be claimed for a matrix row with `implemented === true` AND
- * `verifiedOnRealHost === true`. No row satisfies that today, so an
- * honest host built from the current matrix never emits it — every
- * required-family negotiation refuses. That is the intended
- * fail-closed posture, not a bug.
+ * Reporting-only view of one class row. Returns the row's recorded
+ * state for display; callers must not treat the result as a
+ * negotiable availability. `null` when the matrix has no row.
  */
-export const FAMILY_STATES = [
-  "dispatchable",
-  "build-probe-only",
-  "inventory-only",
-  "unsupported-or-unknown",
-] as const;
-export type FamilyState = (typeof FAMILY_STATES)[number];
-
-const MATRIX_STATES: ReadonlySet<string> = new Set(FAMILY_STATES);
-
-/**
- * Derive the negotiable availability of one suite family from its
- * matrix row. Conservative on every axis:
- * - unknown family            → `unsupported-or-unknown`
- * - missing row               → `unsupported-or-unknown`
- * - unrecognised matrix state → `unsupported-or-unknown`
- * - implemented + real-host   → `dispatchable`
- * - otherwise                 → the matrix state verbatim
- */
-export function familyAvailability(
+export function matrixClassRow(
   matrix: CoverageMatrix,
-  family: string,
-): { state: FamilyState; row: MatrixClassRow | null } {
-  const row = isSuiteFamily(family) ? (matrix.classes[family] ?? null) : null;
-  if (row === null) return { state: "unsupported-or-unknown", row: null };
-  if (row.implemented === true && row.verifiedOnRealHost === true) {
-    return { state: "dispatchable", row };
-  }
-  if (MATRIX_STATES.has(row.state) && row.state !== "dispatchable") {
-    return { state: row.state as FamilyState, row };
-  }
-  return { state: "unsupported-or-unknown", row };
-}
-
-export type AdvertisedFamily = {
-  state: FamilyState;
-  symbols: number;
-  note: string;
-};
-
-/**
- * Build the per-family advertisement a native host/plugin would send
- * during negotiation, derived entirely from the coverage matrix. The
- * matrix release becomes the advertised SDK release so the negotiated
- * `sdkRelease` can never drift from the inventory it describes.
- */
-export function advertiseFamiliesFromMatrix(
-  matrix: CoverageMatrix,
-): Record<SuiteFamily, AdvertisedFamily> {
-  const out = {} as Record<SuiteFamily, AdvertisedFamily>;
-  for (const family of SUITE_FAMILIES) {
-    const { state, row } = familyAvailability(matrix, family);
-    out[family] = {
-      state,
-      symbols: row?.symbols ?? 0,
-      note: row?.note ?? "no coverage-matrix row; treated as unsupported-or-unknown",
-    };
-  }
-  return out;
+  cls: string,
+): MatrixClassRow | null {
+  return isMatrixClass(cls) ? (matrix.classes[cls] ?? null) : null;
 }

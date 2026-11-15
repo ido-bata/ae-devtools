@@ -1,21 +1,38 @@
 # Contract — native SDK adapter negotiation and kits
 
-- Status: **Proposed for CAP046** by [#19](https://github.com/ido-bata/ae-devtools/issues/19). Machine-readable shapes live in `packages/native-adapter/src/negotiate.ts` and `src/matrix.ts`; generated templates live in `packages/native-adapter/templates/`.
-- Parent [#6](https://github.com/ido-bata/ae-devtools/issues/6); [spec](../spec.md) (FR-06, FR-09, FR-13); [capability-catalog contract](capability-catalog.md).
+- Status: **Proposed for CAP046** by [#19](https://github.com/ido-bata/ae-devtools/issues/19), **revised** so dispatchability is per concrete operation, never per coverage-matrix class. Machine-readable shapes live in `packages/native-adapter/src/negotiate.ts`, `src/matrix.ts` and `src/operations.ts`; generated templates live in `packages/native-adapter/templates/`.
+- Parent [#6](https://github.com/ido-bata/ae-devtools/issues/6); [spec](../spec.md) (FR-06, FR-09, FR-13); [capability-catalog contract](capability-catalog.md); [NativeProbe result contract](native-probe-result.md).
 - Ownership: ADR-0005 D2 assigns the version-negotiation *contract surface* to ae-devtools (©) and runtime handshake execution to ae-a8n (© runtime). This contract is the devtools-owned surface only; it does not pick a transport and does not authorize dispatch.
 
 ## 1. Scope
 
 Two artefacts:
 
-1. **Negotiation** between an external devtools adapter and a native SDK plugin/host: protocol version, SDK release, suite-family availability. Fail-closed on every mismatch or unknown.
-2. **Adapter kits**: per coverage-matrix class, fill-in templates for the adapter command envelope, a fixture, and a build-test path — each carrying the class's matrix status verbatim.
+1. **Negotiation** between an external devtools adapter and a native SDK plugin/host: protocol version, SDK release, and *per-operation* availability. Fail-closed on every mismatch, unknown, or evidence-free claim.
+2. **Adapter kits**: per coverage-matrix **class**, fill-in templates for the adapter command envelope, a fixture, and a build-test path — each carrying the class's matrix status verbatim **as reporting metadata**.
 
-This is not the capability-catalog handshake. That contract negotiates catalog capability IDs (`ae-devtools.capability-handshake/v1`); this one negotiates the plug-in boundary (`ae-devtools/native-adapter-handshake/v1`). A compatible result on either is never dispatch authorization — `assertDispatchAllowed` in the catalog package remains the per-capability gate.
+This is not the capability-catalog handshake. That contract negotiates catalog capability IDs (`ae-devtools.capability-handshake/v1`); this one negotiates the plug-in boundary (`ae-devtools/native-adapter-handshake/v2`). A compatible result on either is never dispatch authorization — `assertDispatchAllowed` in the catalog package remains the per-capability gate.
+
+### 1.1 Class vs operation — the central distinction
+
+The coverage matrix's five classes (`build-test-lifecycle`, `external-command`, `host-callback`, `in-host-plugin-command`, `unsupported-or-unknown`) are **extractor reporting buckets**. They say where a symbol was attributed; they are not capabilities and are **never dispatchable**.
+
+Dispatchability is defined per concrete **operation entry** (`src/operations.ts`):
+
+| Entry state | Derivation |
+| --- | --- |
+| `dispatchable` | `implemented === true` **and** `verifiedOnRealHost === true` — the only dispatchable path |
+| `implemented-unverified` | code exists and compiles; no real-host proof |
+| `inventory-only` | structurally attributed; no implementation |
+| `unsupported-or-unknown` | `unsupportedReason` recorded (technical basis + re-evaluation condition, FR-013) |
+
+The committed matrix contains **no per-symbol rows** — symbol-level detail is license-restricted to a local git-ignored path (`inventories/sdk/README.md` §再配布制約). The smaller honest change was therefore chosen: the per-entry contract lives in `packages/native-adapter/src/operations.ts`, seeded only with the 21 calls `experiments/native-sdk/minimal-plugin/src/probe.cpp` actually makes. Widening the registry is CAP047 child-Issue work; the generator was **not** extended to emit per-entry rows it cannot honestly name.
+
+**Dispatchable count today: 0.** Every registry entry is `implemented-unverified` (NativeProbe builds on macOS arm64; no authorized AE session has loaded it — `experiments/native-sdk/LOAD-PROOF.md` is the gated procedure).
 
 ## 2. Messages
 
-Both messages carry `schema: "ae-devtools/native-adapter-handshake/v1"`.
+Both messages carry `schema: "ae-devtools/native-adapter-handshake/v2"` (v2: `requiredFamilies`/`families` replaced by `requiredOperations`/`operations`; v1 messages are malformed under v2).
 
 ### AdapterHello (client → host)
 
@@ -24,8 +41,8 @@ Both messages carry `schema: "ae-devtools/native-adapter-handshake/v1"`.
 | `adapterId`, `adapterVersion` | identity; version is informational, not compatibility math |
 | `protocolVersion {major, minor}` | client speaks this adapter↔host protocol |
 | `sdkRelease {identifier, distribution}` | exact SDK release the adapter targets (e.g. `26.5` / `macos`) |
-| `requiredFamilies` | suite families the adapter intends to use; each must be a known coverage-matrix class |
-| `acceptableStates` | optional; defaults to `["dispatchable"]`. Widening (e.g. accepting `build-probe-only` for a compile probe) is an explicit client decision |
+| `requiredOperations` | concrete operation ids (`"<Suite>.<member>"`); each must exist in the committed registry. Matrix class names are **not** valid operation ids |
+| `acceptableStates` | optional; defaults to `["dispatchable"]`. Widening (e.g. accepting `implemented-unverified` for inspection) is an explicit client decision |
 
 ### HostHello (host → client)
 
@@ -34,43 +51,33 @@ Both messages carry `schema: "ae-devtools/native-adapter-handshake/v1"`.
 | `hostId` | identity |
 | `protocolVersion` | host's supported adapter↔host protocol |
 | `sdkRelease` | the SDK release the plugin/host **actually** runs |
-| `families` | per-family `{state, note}`; an unadvertised family is unavailable, not absent-but-supported |
+| `operations` | per-operation `{state, note}`; an unadvertised operation is unavailable. Unknown ids are malformed; `dispatchable` requires the registry entry to be `implemented && verifiedOnRealHost`; no advertised state may outrank the registry-derived state (downgrades allowed, upgrades malformed) |
+| `classes` | OPTIONAL reporting echo of matrix classes. Never consulted for availability; `state: "dispatchable"` on any class is **malformed** — class-level promotion is rejected |
 | `host` | informational only (AE version, OS, arch); never used in compatibility decisions |
 
 ## 3. Negotiation rules (fail closed, in order)
 
-1. `malformed-message` — either side fails shape/schema validation. Unknown family names or states are malformed, never ignored.
+1. `malformed-message` — either side fails shape/schema validation. Unknown operation ids, unknown states, evidence-free `dispatchable` claims, stronger-than-registry states, and class-level `dispatchable` claims are all malformed, never ignored.
 2. `incompatible-protocol-version` — protocol major differs.
 3. `unsupported-minor-version` — client minor is newer than host minor.
 4. `sdk-release-mismatch` — identifier **and** distribution must match exactly; no compatible-range inference.
-5. `unknown-suite-family` — a required family is not a coverage-matrix class.
-6. `suite-family-unavailable` — the host does not advertise the family, or advertises a state below the client's `acceptableStates`.
+5. `operation-unavailable` — the host does not advertise the operation, or advertises a state below the client's `acceptableStates`.
 
-Result `compatible` returns the granted per-family states. It asserts version/availability alignment only.
+Result `compatible` returns the granted per-operation states. It asserts version/availability alignment only.
 
-## 4. Family states and matrix derivation
+## 4. Evidence and derivation
 
-States: `dispatchable` | `build-probe-only` | `inventory-only` | `unsupported-or-unknown`.
+- `hostHelloFromMatrix()` builds the advertisement from the coverage matrix (release identity + reporting `classes` echo) **and** the committed operation registry (per-operation states). It can never claim more than the registry supports.
+- A host may advertise a *weaker* state than the registry derives (e.g. not yet wired up); it may never advertise a stronger one.
+- Kits (`packages/native-adapter/templates/<class>/kit.md`) are generated (`bun run render`) and drift-checked (`bun run verify`); each carries the class's matrix status verbatim plus an explicit "reporting metadata only, never dispatchable" banner.
 
-- `dispatchable` may be claimed **only** for a coverage-matrix row with `implemented === true` AND `verifiedOnRealHost === true`. No row satisfies this today, so an honest host advertises nothing dispatchable and every required-family negotiation refuses.
-- `hostHelloFromMatrix()` derives the entire advertisement from `inventories/sdk/generated/aggregate.coverage-matrix.json`; the advertised `sdkRelease` is the matrix release, so negotiation can never drift from the inventory it describes.
-- Unknown/missing matrix rows and unrecognised states map to `unsupported-or-unknown` — conservative on every axis.
+## 5. NativeProbe result contract
 
-## 5. Adapter kits
-
-`packages/native-adapter/templates/<class>/kit.md` is generated (`bun run render`) and drift-checked (`bun run verify`). Each kit records the class's `state`, `implemented`, `verifiedOnRealHost`, symbol count, SDK release and evidence level verbatim, then provides:
-
-- **Adapter command envelope** — `commandId`/`family`/`operation`/`params`/`deadlineMs`; result states exactly `not-sent | refused | completed | failed | unknown`; unknown-after-dispatch is never retried.
-- **Fixture template** — preconditions, ordered steps, expected result state and evidence level.
-- **Build-test template** — build against the negotiated `sdkRelease`, load proof per `experiments/native-sdk/LOAD-PROOF.md` (owned session only), honest evidence-level recording.
-
-For `unsupported-or-unknown` the kit instead carries a **refusal/waiver record** (spec FR-013): decision, technical rationale, reevaluation condition, and a required follow-up issue before exclusion from supported coverage.
-
-`build-test-lifecycle` additionally ships a concrete authored fixture, `fixture.sweetie-checkout.json`, exercising the compile-only probe already evidenced by `experiments/native-sdk` (Sweetie/Checkout, macOS arm64). It explicitly does not claim load, execution, Windows, or real-host evidence.
+The structured result a future adapter collects from NativeProbe is specified in [native-probe-result.md](native-probe-result.md) (`ae-devtools/native-probe-result/v1`, implemented as `src/probe-result.ts`). It is **UNVERIFIED**: it describes what the adapter *would* collect, aligned to `probe.cpp`'s debug-log emissions. It does not mean native dispatch is implemented.
 
 ## 6. Non-goals / explicit limitations
 
-- No SDK plug-in dispatch is implemented; kits are fill-in templates.
-- Inventory-only families are not callable; negotiation refuses them under default `acceptableStates`.
+- No SDK plug-in dispatch is implemented; kits are fill-in templates and the operation registry is contract-level.
+- No matrix class is dispatchable; no operation is dispatchable today (0 entries).
 - No transport is selected; message shapes are transport-agnostic.
 - Real-host execution remains UNVERIFIED; Windows is entirely UNVERIFIED.

@@ -1,25 +1,33 @@
-# Native adapter kit — `in-host-plugin-command`
+# Native adapter kit — `in-host-plugin-command` (coverage-matrix class)
 
 <!-- GENERATED FILE — do not edit. Regenerate: cd packages/native-adapter && bun run render -->
 
-> **Coverage-matrix status: `inventory-only`** — implemented=`false`, verifiedOnRealHost=`false`, symbols=131.
+> **Coverage-matrix class: `in-host-plugin-command` — reporting metadata only, never dispatchable.** State=`inventory-only`, implemented=`false`, verifiedOnRealHost=`false`, symbols=131.
 > Source: `inventories/sdk/generated/aggregate.coverage-matrix.json` (schema `ae-devtools/sdk-coverage-matrix/1`, SDK release 26.5 macOS).
 > Evidence level — inventory: `source-reviewed`, verification: `not-run`, realHost: `not-run`.
 > In-plugin command surface enumerated. Not reachable from devtools yet.
 
+> This kit documents a **reporting class**, not a capability. No
+> matrix class is dispatchable; only per-operation entries in
+> `src/operations.ts` can be negotiated, and only with
+> `implemented && verifiedOnRealHost` evidence.
+
 ## What this status permits
 
-Symbols in this family are **structurally attributed from headers only**. No adapter exists and no real-host dispatch evidence exists. The command/fixture templates below are contract shapes for a *future* adapter: filling them in does not make this family callable, and negotiation will refuse it unless the client explicitly widens `acceptableStates` for non-dispatch use (e.g. inspection).
+Symbols in this class are **structurally attributed from headers only**. No adapter exists and no real-host dispatch evidence exists. The command/fixture templates below are contract shapes for *future per-operation entries*: a class row can never be dispatched — only concrete operation ids in `src/operations.ts` can, and only when the registry marks them `implemented && verifiedOnRealHost`.
 
 ## 1. Adapter command
 
 ### Adapter command envelope (template)
 
+Dispatch is per **operation id** (`"<Suite>.<member>"`), never per
+matrix class. Operation ids come from the committed registry in
+`src/operations.ts`; a class name here is malformed.
+
 ```json
 {
   "commandId": "<uuid, unique per dispatch>",
-  "family": "in-host-plugin-command",
-  "operation": "<suite-or-selector name from the inventory; never an invented remote name>",
+  "operation": "<operation id from src/operations.ts; never an invented remote name>",
   "params": {},
   "deadlineMs": 30000
 }
@@ -28,9 +36,9 @@ Symbols in this family are **structurally attributed from headers only**. No ada
 Result states are exactly: `not-sent`, `refused`, `completed`, `failed`, `unknown`.
 A timeout after possible dispatch is `unknown` and is never retried.
 Negotiation precondition: `negotiate()` in `src/negotiate.ts` must return
-`compatible` for this family at an acceptable state before any command is
-sent. A compatible negotiation is not dispatch authorization — the
-capability-catalog per-capability gate still applies.
+`compatible` for this **operation** at an acceptable state before any
+command is sent. A compatible negotiation is not dispatch authorization —
+the capability-catalog per-capability gate still applies.
 
 ## 2. Fixture
 
@@ -39,10 +47,11 @@ capability-catalog per-capability gate still applies.
 ```json
 {
   "fixtureId": "<stable id>",
-  "family": "in-host-plugin-command",
+  "matrixClass": "in-host-plugin-command",
+  "operations": ["<operation ids under test>"],
   "sdkRelease": { "identifier": "<e.g. 26.5>", "distribution": "<e.g. macOS>" },
   "matrixState": "inventory-only",
-  "preconditions": ["<owned or explicitly-attached AE session>", "<negotiation compatible>"],
+  "preconditions": ["<owned or explicitly-attached AE session>", "<negotiation compatible for each operation>"],
   "steps": ["<ordered adapter commands>"],
   "expected": { "resultState": "<one of the result states>", "evidence": "<artifact paths>" },
   "evidenceLevel": "unverified"
@@ -65,6 +74,6 @@ that has never executed stays `unverified`.
 4. **Record**: update evidence level honestly — compile success is
    `build-probe-only`, never load/execution evidence.
 
-There is no build/load path for this family yet; the load-proof
+There is no build/load path for this class yet; the load-proof
 procedure in `experiments/native-sdk/LOAD-PROOF.md` is the template to
-follow once an adapter exists.
+follow once per-operation adapters exist.
