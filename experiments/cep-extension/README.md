@@ -1,0 +1,152 @@
+# cep-extension — CEP/UXP extension development lifecycle groundwork (Issue #36, CAP057–CAP060)
+
+> Status: **scaffold generator + lifecycle CLI + gated procedure.** This
+> directory generates CEP extension project skeletons, mechanizes the
+> machine-level install/uninstall/status/log operations around them, and
+> records what a real-AE
+> load proof requires. It is **not** a transport, not a shipped feature,
+> and not evidence that any panel loads. Panel load/reload/unload inside
+> After Effects (CAP059) requires an explicitly owned AE session and
+> stays **UNVERIFIED** until LOAD-PROOF.md is executed with recorded
+> evidence. UXP (CAP060) is tracked as BLOCKED/UNVERIFIED — see §UXP.
+
+## What this is
+
+| CAP | Requirement | State |
+| --- | --- | --- |
+| CAP057 | CEP scaffold generation (manifest/CSXS/host range/debug-load config) | **implemented, automated-test level** — `scaffold.mjs` + `tests/` |
+| CAP058 | Build/install/reload/unload/cleanup mechanization per OS | **partially mechanized** — `cep-lifecycle.mjs` (install/uninstall/status/cleanup/logs, `PlayerDebugMode` status check); real CEP load/reload stays **UNVERIFIED** — `LOAD-PROOF.md` |
+| CAP059 | Real-host panel load → `evalScript` round trip → reload → unload | **UNVERIFIED** — gated on owned AE session |
+| CAP060 | UXP plugin development lifecycle | **BLOCKED/UNVERIFIED** — see below |
+
+## Scaffold usage
+
+```sh
+node scaffold.mjs --id com.example.my-panel --title "My Panel" \
+    --version 0.1.0 --host "[25.0,99.0]" --csxs 12.0 --out ./my-panel
+```
+
+Output tree:
+
+```
+<out>/CSXS/manifest.xml          # official CEP 5.0+/12 shape: ExtensionList +
+                                #   ExecutionEnvironment(HostList/LocaleList/
+                                #   RequiredRuntimeList) + DispatchInfoList
+<out>/index.html                 # panel shell, CSP, wires js/main.js
+<out>/CSInterface.js             # official Adobe-CEP CEP_12.x file, bundled
+                                #   (the host does NOT provide it)
+<out>/js/main.js                 # ES5 panel logic: api version, app.version
+                                #   (attribute, not a call), error probe
+<out>/js/csinterface-wrapper.js  # copied verbatim from templates/
+```
+
+The scaffold refuses to overwrite a non-empty `--out` without `--force`
+(exit 3), validates the extension id (reverse-DNS shape, no path
+separators), semver-ish version, CSXS dotted version and host version
+range, and escapes all substituted values. `--force` regenerates the
+scaffold's own outputs only — unrelated files in the directory are the
+caller's responsibility.
+
+## Lifecycle CLI — what is mechanized vs what stays UNVERIFIED
+
+`cep-lifecycle.mjs` (Node >= 22, zero deps) automates the **machine-level**
+file operations around a scaffolded extension. It never launches,
+signals, or configures After Effects:
+
+```sh
+node cep-lifecycle.mjs install --source <ext-dir> [--id <id>] [--target <dir>]
+node cep-lifecycle.mjs uninstall --id <id> [--target <dir>]
+node cep-lifecycle.mjs status --id <id> [--source <dir>] [--target <dir>]
+node cep-lifecycle.mjs cleanup [--target <dir>]
+node cep-lifecycle.mjs logs [--log-dir <dir>]
+node cep-lifecycle.mjs playerdebugmode
+```
+
+Mechanized (automated-test level, `tests/lifecycle.test.mjs`):
+
+- platform CEP extensions dirs (`darwin`/`win32` paths; other platforms
+  refused) and the CEPHtmlEngine log dir
+- `install` — copies the extension into the CEP extensions dir via
+  tmp-dir + rename (rollback on failure), writes an ownership marker
+  `.ae-devtools-owned.json`, verifies the manifest `Id` matches;
+  refuses foreign dirs, idempotent on identical content, replaces
+  drifted owned content
+- `uninstall` / `cleanup` — remove only dirs carrying our ownership
+  marker; absent is idempotent; foreign content is never touched
+- `status` — installed/present/drift report against a source dir
+- `logs` — lists `CEPHtmlEngine` panel logs with sizes
+- `playerdebugmode` — **read-only** report of the `PlayerDebugMode`
+  defaults for the CSXS domains; writes nothing, reports `unknown`
+  (never a guess) off-darwin
+
+Still **REAL-HOST-UNVERIFIED** (requires the LOAD-PROOF.md authorization
+gate and an owned AE session):
+
+- actual CEP panel load inside After Effects, extension host behavior,
+  panel reload semantics, unload behavior, `CSInterface.evalScript`
+  round trip on a real host
+- whether AE 2026/2027 honors the documented extensions path unchanged
+  (path itself was observed on this host — see EVIDENCE.md — but our
+  extension was never loaded)
+- Windows: dirs are modeled but nothing was exercised on a Windows host
+
+## Evidence level
+
+- Scaffold generation and validation: **automated test** (`node tests/run.mjs`, zero deps; 11 scaffold tests).
+- Lifecycle install/uninstall/status/cleanup/logs/`PlayerDebugMode` check: **automated test** (8 lifecycle tests, fixture dirs only — no real CEP dir touched unless `--target` is passed explicitly).
+- Manifest correctness: **XSD-validated** — `tests/scaffold.test.mjs` validates generated output against the vendored official `schema/ExtensionManifest_v_7_0.xsd` (Adobe states the schema is unchanged CEP 7→12) via `xmllint`. Note: the published XSD enumerates manifest `Version` as `7.0` only while the official CEP 12 sample ships `Version="12.0"`; the test pins the emitted copy to `7.0` for schema validation and asserts `12.0` separately — the schema is stale relative to Adobe's own sample.
+- `CSInterface.js`: **bundled** — the official CEP 12 cookbook requires including it in the extension ("include these JavaScript files in your HTML extension"); the earlier host-provided assumption was wrong and is corrected.
+- Panel load in AE: **UNVERIFIED** — see `LOAD-PROOF.md`.
+- Windows: **UNVERIFIED** — no Windows host; agents never touch Windows (Issue #21).
+
+## Install / debug-load background (from repo research, to be re-verified at proof time)
+
+- Unsigned development panels require `PlayerDebugMode=1` per CSXS version
+  (`docs/architecture/research/02-cep-deep-dive.md` §Signing model,
+  `05-security.md`). Exact key for the target AE/CEP version is a
+  load-proof checklist item, not an assumption.
+- Extension folder: `%APPDATA%\Adobe\CEP\extensions\` (Windows) /
+  `~/Library/Application Support/Adobe/CEP/extensions/` (macOS)
+  (`docs/troubleshooting.md`). Whether AE 2026/2027 honors this path
+  unchanged is unverified.
+- `CSInterface.js` is **bundled** at the extension root (official CEP_12.x
+  file). Whether a given AE/CEP runtime additionally resolves a host copy
+  is irrelevant to correctness — bundling is the documented requirement.
+
+## UXP status (CAP060)
+
+Re-investigated 2026-11-14 against current Adobe public sources:
+
+- **Public beta is live.** Adobe opened AE UXP private beta 2026-10-05
+  (AE beta 27.0.0.63) and announced public beta "by mid-November 2026";
+  `developer.adobe.com/after-effects/uxp/` now serves public docs
+  (quickstart, After Effects API reference, UXP API reference) "throughout
+  the beta".
+- **Still beta.** Per our acceptance rule (released build with documented
+  plugin loading + remote IPC), every UXP lifecycle row stays
+  **BLOCKED/UNVERIFIED**: beta DOM stability, packaging/signing path, and
+  remote-IPC surface are not GA-contract. Hybrid (Node-capable) plugins
+  are "on the roadmap for GA" per Adobe staff — not available in beta.
+- **CEP transition context (Adobe blog, 2026-09):** AE public beta UXP
+  Nov 2026; new CEP submissions stop ~2027; CEP removed from new AE
+  versions Dec 2029; **ExtendScript is explicitly not affected**. This
+  raises the long-term value of the CEP dev-loop work here but does not
+  change today's evidence level.
+
+Re-evaluation trigger: AE UXP GA (or a documented stable beta contract)
+with plugin load + IPC evidence on an owned host.
+
+## Layout
+
+```
+cep-extension/
+├── README.md                  # this file
+├── EVIDENCE.md                # evidence ledger
+├── LOAD-PROOF.md              # gated real-AE load procedure + fixtures
+├── scaffold.mjs               # generator CLI (Node >= 22, zero deps)
+├── cep-lifecycle.mjs          # lifecycle CLI (install/uninstall/status/cleanup/logs/playerdebugmode)
+├── lifecycle.mjs              # lifecycle machine (ownership marker, tmp+rename, foreign-dir refusal)
+├── schema/                    # vendored official ExtensionManifest_v_7_0.xsd
+├── templates/                 # manifest/html/js templates + CSInterface.js + wrapper
+└── tests/                     # node:test suite (fake-level only)
+```

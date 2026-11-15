@@ -1,0 +1,4 @@
+# Generated scaffold output is not committed.
+out/
+build/
+node_modules/
