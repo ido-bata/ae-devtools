@@ -135,3 +135,97 @@ test("valueText fallback used when resultJson absent", async () => {
   assert.equal(reply.ok, true);
   assert.equal(reply.result, "42");
 });
+
+// --- cause-chain classification (real ae-a8n wraps errors in AfterEffectsError) ---
+
+function wrappedError(name, message, causeName, extra = {}) {
+  const inner = namedError(causeName, `${causeName} detail`);
+  Object.assign(inner, extra);
+  const outer = new Error(`${name}: ${message}`);
+  outer.name = name;
+  outer.cause = inner;
+  return outer;
+}
+
+test("TimeoutError inside an AfterEffectsError cause chain returns null (UNKNOWN)", async () => {
+  const ae = createFakeAe({
+    fail: () => wrappedError("AfterEffectsError", "op failed", "TimeoutError"),
+  });
+  const t = createA8nTransport({ ae });
+  assert.equal(await t.send(envelope()), null);
+});
+
+test("ScriptNotSentError inside a cause chain maps to refusal", async () => {
+  const ae = createFakeAe({
+    fail: () => wrappedError("AfterEffectsError", "op was not sent", "ScriptNotSentError"),
+  });
+  const t = createA8nTransport({ ae });
+  const reply = codec.parse(await t.send(envelope()));
+  assert.equal(reply.refusal.code, "ScriptNotSentError");
+});
+
+test("MacSessionError inside a cause chain maps to refusal (pre-send)", async () => {
+  const ae = createFakeAe({
+    fail: () => wrappedError("AfterEffectsError", "no session", "MacSessionError"),
+  });
+  const t = createA8nTransport({ ae });
+  const reply = codec.parse(await t.send(envelope()));
+  assert.equal(reply.refusal.code, "MacSessionError");
+});
+
+test("ScriptInvocationError returns null (UNKNOWN — delivery unconfirmed)", async () => {
+  const ae = createFakeAe({
+    fail: () => wrappedError("AfterEffectsError", "osascript failed", "ScriptInvocationError"),
+  });
+  const t = createA8nTransport({ ae });
+  assert.equal(await t.send(envelope()), null);
+});
+
+test("ScriptInvocationError with -1743 maps to refusal (event denied, proved non-dispatch)", async () => {
+  const inner = namedError("ScriptInvocationError", "osascript exited 1: -1743 event not permitted");
+  inner.stderr = "execution error: Not authorized to send Apple events to After Effects. (-1743)";
+  const outer = new Error("wrapped");
+  outer.name = "AfterEffectsError";
+  outer.cause = inner;
+  const ae = createFakeAe({ fail: () => outer });
+  const t = createA8nTransport({ ae });
+  const reply = codec.parse(await t.send(envelope()));
+  assert.equal(reply.refusal.code, "ScriptNotSentError");
+});
+
+test("host-reported failure inside a cause chain maps to FAILED with the AE error name", async () => {
+  const hostError = namedError("ReferenceError", "x is undefined");
+  hostError.line = 3;
+  hostError.aeError = -2700;
+  hostError.kind = "runtime";
+  const outer = new Error("extension.call failed in After Effects");
+  outer.name = "AfterEffectsError";
+  outer.cause = hostError;
+  const ae = createFakeAe({ fail: () => outer });
+  const t = createA8nTransport({ ae });
+  const reply = codec.parse(await t.send(envelope()));
+  assert.equal(reply.error.aeError.name, "ReferenceError");
+  assert.equal(reply.error.aeError.line, 3);
+});
+
+test("host result echoing a different requestId returns null (unattributable)", async () => {
+  const ae = {
+    info: () => ({ version: PIN_VERSION }),
+    async call(name, params) {
+      return { requestId: "req-other", ok: true, resultJson: '"pwned"' };
+    },
+  };
+  const t = createA8nTransport({ ae });
+  assert.equal(await t.send(envelope()), null);
+});
+
+test("host result missing requestId returns null (unattributable)", async () => {
+  const ae = {
+    info: () => ({ version: PIN_VERSION }),
+    async call() {
+      return { ok: true, resultJson: '"x"' };
+    },
+  };
+  const t = createA8nTransport({ ae });
+  assert.equal(await t.send(envelope()), null);
+});

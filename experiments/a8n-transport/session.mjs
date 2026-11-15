@@ -39,6 +39,16 @@ const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXTENSION_MODULE = join(HERE, "extension.mjs");
 
+/** git HEAD of a local ae-a8n checkout, or null when unavailable. */
+async function gitHead(root) {
+  try {
+    const { stdout } = await execFileAsync("git", ["-C", root, "rev-parse", "HEAD"], { timeout: 5_000 });
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolve the ae-a8n API + CLI. Default: the pinned npm dependency.
  * `aeA8nRoot` points at a local checkout's `dist/` build instead — used to
@@ -54,17 +64,23 @@ async function loadAeA8n(aeA8nRoot) {
       AfterEffects: mod.AfterEffects,
       cliPath: join(aeA8nRoot, "dist", "cli.js"),
       source: `local:${aeA8nRoot}`,
+      head: await gitHead(aeA8nRoot),
     };
   }
   const { createRequire } = await import("node:module");
   const require = createRequire(import.meta.url);
   const { AfterEffects } = await import("@ido-bata/ae-a8n");
   const entry = require.resolve("@ido-bata/ae-a8n");
+  let version = null;
+  try {
+    version = require(join(dirname(entry), "..", "package.json")).version ?? null;
+  } catch { /* version stays null */ }
   return {
     AfterEffects,
     // dist/index.js and dist/cli.js are siblings.
     cliPath: join(dirname(entry), "cli.js"),
     source: "npm:@ido-bata/ae-a8n",
+    head: version,
   };
 }
 
@@ -78,8 +94,13 @@ async function loadAeA8n(aeA8nRoot) {
  *   workdir        — scratch dir for the generated host script (default: tmp)
  */
 export async function openSliceSession(options = {}) {
-  const { AfterEffects, cliPath, source: aeA8nSource } = await loadAeA8n(options.aeA8nRoot);
+  const { AfterEffects, cliPath, source: aeA8nSource, head: aeA8nHead } =
+    await loadAeA8n(options.aeA8nRoot);
   const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-transport-"));
+  // sessionRoot keeps ae-a8n's trace.jsonl + result files inside workdir so
+  // launch-failure evidence survives instead of landing in an anonymous
+  // mkdtemp the caller never learns about.
+  const sessionRoot = join(workdir, "a8n-session");
   const hostScriptPath = join(workdir, "a8n-host-ext.js");
   await execFileAsync(process.execPath, [
     cliPath, "extension", "build",
@@ -87,10 +108,22 @@ export async function openSliceSession(options = {}) {
     "--out", hostScriptPath,
   ], { timeout: 30_000 });
 
-  const ae = await AfterEffects.launch({
-    ...(options.installDir !== undefined ? { installDir: options.installDir } : {}),
-    hostScript: hostScriptPath,
-  });
+  let ae;
+  try {
+    ae = await AfterEffects.launch({
+      ...(options.installDir !== undefined ? { installDir: options.installDir } : {}),
+      hostScript: hostScriptPath,
+      sessionRoot,
+    });
+  } catch (error) {
+    // Preserve where the failed session's artifacts live so real-run can
+    // copy the trace into the evidence file.
+    if (error !== null && typeof error === "object") {
+      error.sliceWorkdir = workdir;
+      error.sliceSessionRoot = sessionRoot;
+    }
+    throw error;
+  }
 
   const info = ae.info();
   const ownership = ae.ownership();
@@ -123,5 +156,8 @@ export async function openSliceSession(options = {}) {
     }
   }
 
-  return { ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource };
+  return {
+    ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource,
+    aeA8nHead, tracePath: ae.tracePath, sessionRoot,
+  };
 }

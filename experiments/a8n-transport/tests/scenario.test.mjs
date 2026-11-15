@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 
 import { createJsxRunner } from "../../trusted-execution/runner.mjs";
 import { createA8nTransport } from "../transport.mjs";
-import { runVerticalSlice } from "../scenario.mjs";
+import { assertSliceOutcomes, runVerticalSlice } from "../scenario.mjs";
 import { createFakeAe } from "./fake-ae.mjs";
 
 const PIN = { sessionId: "sess-fake", aeVersion: "99.9.9-fake", dispatchId: "disp-fake" };
@@ -80,4 +80,28 @@ test("slice requires a sessionId pin", async () => {
     () => runVerticalSlice({ runner, pin: { aeVersion: "x" } }),
     /sessionId/,
   );
+});
+
+test("assertSliceOutcomes passes on a healthy slice and flags violations", async () => {
+  const ae = createFakeAe();
+  const transport = createA8nTransport({ ae });
+  const runner = createJsxRunner({ transport, deadlineMs: 5_000 });
+  const { steps } = await runVerticalSlice({
+    runner,
+    pin: PIN,
+    sendCount: transport.sendCount,
+  });
+  assert.deepEqual(assertSliceOutcomes(steps), []);
+
+  // A slice where the error step "succeeded" must be flagged.
+  const tampered = steps.map((s) =>
+    s.label === "error.capture" ? { ...s, outcome: "COMPLETED", result: "oops" } : s);
+  const violations = assertSliceOutcomes(tampered);
+  assert.ok(violations.some((v) => v.startsWith("error.capture:")),
+    `expected error.capture violation, got ${JSON.stringify(violations)}`);
+
+  // A counter that did not advance must be flagged (state not shared).
+  const stale = steps.map((s) =>
+    s.label === "verify.counter.2" ? { ...s, result: "1" } : s);
+  assert.ok(assertSliceOutcomes(stale).some((v) => v.startsWith("verify.counter.2:")));
 });

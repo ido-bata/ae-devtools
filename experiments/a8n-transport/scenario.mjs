@@ -132,3 +132,97 @@ export async function runVerticalSlice({ runner, pin, sendCount, policy } = {}) 
 
   return { steps, pin };
 }
+
+/**
+ * assertSliceOutcomes — verifies that a recorded slice actually proved the
+ * dev loop, not merely ran. Returns a list of human-readable violations
+ * (empty = pass). Value-agnostic: works for the fake host (version
+ * "99.9.9-fake") and real AE alike — it asserts outcome classes and state
+ * transitions, never host-specific literals.
+ *
+ * Contract asserted:
+ *   connect.state / project.state / fix.rerun / verify.counter.{1,2}
+ *     -> COMPLETED, each consuming exactly one transport send
+ *   verify.counter results -> "1" then "2" (shared live session state)
+ *   error.capture           -> FAILED with a host-reported error name
+ *   consent.tampered        -> BLOCKED, sends flat (refused pre-send)
+ *   consent.denied          -> REFUSED-BEFORE-SEND, sends flat
+ */
+export function assertSliceOutcomes(steps) {
+  const violations = [];
+  const byLabel = new Map();
+  for (const step of Array.isArray(steps) ? steps : []) {
+    if (step && typeof step.label === "string" && !byLabel.has(step.label)) {
+      byLabel.set(step.label, step);
+    }
+  }
+  const step = (label) => byLabel.get(label);
+  const check = (label, ok, detail) => {
+    if (!ok) violations.push(`${label}: ${detail}`);
+  };
+  const sentOnce = (label) => {
+    const s = step(label);
+    check(label, s !== undefined, "step missing");
+    if (s === undefined) return;
+    if (typeof s.sendsBefore === "number" && typeof s.sendsAfter === "number") {
+      check(label, s.sendsAfter === s.sendsBefore + 1,
+        `expected exactly one transport send, saw ${s.sendsBefore} -> ${s.sendsAfter}`);
+    }
+  };
+
+  for (const label of ["connect.state", "project.state", "fix.rerun",
+    "verify.counter.1", "verify.counter.2"]) {
+    const s = step(label);
+    check(label, s !== undefined, "step missing");
+    if (s === undefined) continue;
+    check(label, s.outcome === "COMPLETED", `expected COMPLETED, got ${s.outcome}`);
+    sentOnce(label);
+  }
+
+  const connect = step("connect.state");
+  if (connect) {
+    check("connect.state", typeof connect.result === "string" && connect.result.length > 0,
+      "expected a non-empty version string result");
+  }
+  const project = step("project.state");
+  if (project) {
+    check("project.state", /^-?\d+$/.test(String(project.result ?? "")),
+      `expected a numeric numItems result, got ${JSON.stringify(project.result)}`);
+  }
+
+  const errored = step("error.capture");
+  if (errored) {
+    check("error.capture", errored.outcome === "FAILED",
+      `expected FAILED, got ${errored.outcome}`);
+    check("error.capture", typeof errored.error?.name === "string" && errored.error.name.length > 0,
+      "expected a host-reported error name");
+    sentOnce("error.capture");
+  }
+
+  const c1 = step("verify.counter.1");
+  const c2 = step("verify.counter.2");
+  if (c1) check("verify.counter.1", c1.result === "1", `expected counter "1", got ${JSON.stringify(c1.result)}`);
+  if (c2) check("verify.counter.2", c2.result === "2", `expected counter "2", got ${JSON.stringify(c2.result)}`);
+
+  const tampered = step("consent.tampered");
+  if (tampered) {
+    check("consent.tampered", tampered.outcome === "BLOCKED",
+      `expected BLOCKED (consent scope refused pre-send), got ${tampered.outcome}`);
+    if (typeof tampered.sendsBefore === "number" && typeof tampered.sendsAfter === "number") {
+      check("consent.tampered", tampered.sendsAfter === tampered.sendsBefore,
+        `expected no transport send, saw ${tampered.sendsBefore} -> ${tampered.sendsAfter}`);
+    }
+  }
+
+  const denied = step("consent.denied");
+  if (denied) {
+    check("consent.denied", denied.outcome === "REFUSED-BEFORE-SEND",
+      `expected REFUSED-BEFORE-SEND, got ${denied.outcome}`);
+    if (typeof denied.sendsBefore === "number" && typeof denied.sendsAfter === "number") {
+      check("consent.denied", denied.sendsAfter === denied.sendsBefore,
+        `expected no transport send, saw ${denied.sendsBefore} -> ${denied.sendsAfter}`);
+    }
+  }
+
+  return violations;
+}
