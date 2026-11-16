@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createServer, SERVER_NAME } from "../server.mjs";
-import { loadTrustedCodec, createJsxRunner } from "../../trusted-execution/runner.mjs";
+import { loadTrustedCodec, createJsxRunner } from "../../../packages/ae-devtools-cli/trusted-execution/runner.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = join(HERE, "..", "server.mjs");

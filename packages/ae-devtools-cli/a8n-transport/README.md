@@ -1,7 +1,7 @@
 # a8n-transport — real-host JSX dispatch slice (Issue #49)
 
 First real-host vertical slice for the trusted-execution pipeline: the
-`createJsxRunner()` pipeline from `experiments/trusted-execution` (branch 14)
+`createJsxRunner()` pipeline from `packages/ae-devtools-cli/trusted-execution` (branch 14)
 drives **arbitrary ExtendScript** against an **owned** After Effects session
 launched through `@ido-bata/ae-a8n`, with consent gating, outcome
 classification and UNKNOWN-never-resend semantics unchanged.

@@ -25,7 +25,7 @@
  * the session/registry it came from. The default `--session fake` host
  * is FAKE/MOCK level — it proves wiring only, never After Effects
  * behavior. Real-host evidence requires `--session a8n` on an owned AE
- * session via experiments/a8n-transport.
+ * session via packages/ae-devtools-cli/a8n-transport.
  */
 import { createInterface } from "node:readline";
 import { dirname, resolve } from "node:path";

@@ -20,7 +20,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const symbolsPath = resolve(process.argv[2] ?? join(HERE, "..", "..", "..", "inventories", "scripting", "generated", "symbols.json"));
+const symbolsPath = resolve(process.argv[2] ?? join(HERE, "..", "..", "..", "..", "inventories", "scripting", "generated", "symbols.json"));
 const outPath = resolve(process.argv[3] ?? join(HERE, "ae-api.d.ts"));
 
 const data = JSON.parse(readFileSync(symbolsPath, "utf8"));
@@ -43,7 +43,7 @@ const baseOf = new Map((data.classes ?? []).map((c) => [c.name, c.baseClass]));
 const lines = [];
 lines.push("/**");
 lines.push(" * ae-api.d.ts — GENERATED from inventories/scripting/generated/symbols.json.");
-lines.push(" * Regenerate: node experiments/jsx-toolchain/src/gen-ae-types.mjs");
+lines.push(" * Regenerate: node packages/ae-devtools-cli/jsx-toolchain/src/gen-ae-types.mjs");
 lines.push(" *");
 lines.push(" * HONEST SCOPE: the inventory records symbol NAMES, kinds and access");
 lines.push(" * but almost no signatures. Every member is `any`-typed; methods take");

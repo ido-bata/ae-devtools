@@ -9,7 +9,7 @@
  * Dispatch, consent gating, reply-identity checks, outcome
  * classification, deadline handling and UNKNOWN quarantine are ALL
  * delegated to the canonical trusted-execution runner
- * (experiments/trusted-execution/runner.mjs, PR #42). This module adds
+ * (packages/ae-devtools-cli/trusted-execution/runner.mjs, PR #42). This module adds
  * only the loop policy — and the loop policy now carries three safety
  * contracts added in the PR #45 re-review:
  *
@@ -45,7 +45,7 @@
  * but are produced here without importing that branch so this
  * experiment stands alone.
  */
-import { createJsxRunner } from "../trusted-execution/runner.mjs";
+import { createJsxRunner } from "../../packages/ae-devtools-cli/trusted-execution/runner.mjs";
 
 /* Fake-session defaults pin the consent scope's target identity. A
  * real deployment supplies the actual AE session pin via `session`. */

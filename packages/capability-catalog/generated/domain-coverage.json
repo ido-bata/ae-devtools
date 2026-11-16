@@ -2,10 +2,6 @@
   "schema": "ae-devtools.domain-coverage-report/v1",
   "generatedFrom": [
     {
-      "path": "experiments/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "0f4551a3f9e1ebfc1baf45314c4a0132b88aa0649eaaaf0b960fc6477128d724"
-    },
-    {
       "path": "inventories/scripting/generated/summary.json",
       "sha256": "8739de812e7557cfd1894abc7f3509fbe2f4a2d2ae4e729357d0e74f5d50afcd"
     },
@@ -36,6 +32,10 @@
     {
       "path": "inventories/tools/snapshot/tools.json",
       "sha256": "68a34ea225f5b3c9ad80e2eb2346bf562af49e93c5042ecbf650e97bac0dc45e"
+    },
+    {
+      "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
+      "sha256": "0e339352a4071ebb7e838124900dd18c78bda967434c344ea42541f5357d5e59"
     },
     {
       "path": "specs/ae-capability-coverage/domains/animation-effects-render.json",

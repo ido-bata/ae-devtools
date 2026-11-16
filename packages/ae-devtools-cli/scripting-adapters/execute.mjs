@@ -8,7 +8,7 @@
  *   runOperation({ opId, args, runner, pin, projectIdentity,
  *                  consentProvider, ... })
  *
- * Guarantees delegated to experiments/trusted-execution/runner.mjs
+ * Guarantees delegated to packages/ae-devtools-cli/trusted-execution/runner.mjs
  * (PR #42): consent bound to the exact executed {source, dispatchArgs},
  * permission fixed to "execute", single-use requestIds, reply identity
  * echo, deadline, UNKNOWN quarantine — all per-runner-instance only.

@@ -93,26 +93,37 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/read-only-probe/tests/run.mjs
 
-  trusted-execution:
-    name: trusted-execution (node:test, codec fake-level)
+  ae-devtools-cli:
+    name: ae-devtools-cli (packaged suites + consumer smoke, fake-level)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Detect suite
+      - name: Detect package
         id: detect
         run: |
-          if [ -f experiments/trusted-execution/tests/run.mjs ]; then
+          if [ -f packages/ae-devtools-cli/package.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "experiments/trusted-execution not on this head; skipping"
+            echo "packages/ae-devtools-cli not on this head; skipping"
           fi
       - if: steps.detect.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
       - if: steps.detect.outputs.present == 'true'
-        run: node experiments/trusted-execution/tests/run.mjs
+        working-directory: packages/ae-devtools-cli
+        run: npm ci
+      - if: steps.detect.outputs.present == 'true'
+        run: |
+          set -e
+          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport jsx-toolchain; do
+            echo "=== $d ==="
+            node "packages/ae-devtools-cli/$d/tests/run.mjs"
+          done
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/ae-devtools-cli
+        run: npm run smoke:consumer
 
   cep-extension:
     name: cep-extension (node:test, scaffold fake-level)
@@ -180,86 +191,6 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/agent-loop/tests/run.mjs
 
-  scripting-adapters:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/scripting-adapters/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "scripting-adapters not on this head; skipping"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/scripting-adapters/tests/run.mjs
-
-  dev-loop:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/dev-loop/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/dev-loop/tests/run.mjs
-
-  devtools-cli:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/devtools-cli/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/devtools-cli/tests/run.mjs
-  jsx-toolchain:
-    name: jsx-toolchain (unit, fake-level)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/jsx-toolchain/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "experiments/jsx-toolchain not on this head; skipping"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - if: steps.detect.outputs.present == 'true'
-        working-directory: experiments/jsx-toolchain
-        run: npm ci
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/jsx-toolchain/tests/run.mjs
   cep-panel-contract:
     runs-on: ubuntu-latest
     steps:
@@ -306,27 +237,6 @@ jobs:
         run: npm ci
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/vscode-debugger/tests/run.mjs
-
-  a8n-transport:
-    name: a8n-transport (node:test, fake AE + codec fake-level)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/a8n-transport/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "experiments/a8n-transport not on this head; skipping"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/a8n-transport/tests/run.mjs
 
   mcp-server:
     name: mcp-server (node:test, fake-level)

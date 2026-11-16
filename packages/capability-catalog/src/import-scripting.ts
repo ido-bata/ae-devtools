@@ -158,7 +158,7 @@ export function importScripting(input: {
       record.coverage.verification = "automated-fake";
       record.coverage.evidenceRefs.push({
         kind: "automated-test",
-        ref: `experiments/scripting-adapters (${claim.ops.join(", ")})`,
+        ref: `packages/ae-devtools-cli/scripting-adapters (${claim.ops.join(", ")})`,
       });
       applied += 1;
     }

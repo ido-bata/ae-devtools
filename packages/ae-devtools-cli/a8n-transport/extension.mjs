@@ -4,7 +4,7 @@
  * Declares exactly one method, `aeDevtools.trustedEval`, whose body evaluates
  * caller-supplied ExtendScript source inside the AE host and returns a
  * structured result. This is the experiment seam that lets the
- * trusted-execution runner (experiments/trusted-execution) reach a REAL AE
+ * trusted-execution runner (packages/ae-devtools-cli/trusted-execution) reach a REAL AE
  * session through ae-a8n's owned-session `ae.call` path.
  *
  * Boundary (Issue #49, explicit non-claims):

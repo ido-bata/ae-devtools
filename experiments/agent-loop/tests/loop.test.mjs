@@ -10,9 +10,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFakeHost, createFakeApp } from "../fake-host.mjs";
-import { loadTrustedCodec } from "../../trusted-execution/runner.mjs";
+import { loadTrustedCodec } from "../../../packages/ae-devtools-cli/trusted-execution/runner.mjs";
 import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION } from "../loop.mjs";
-import { consentScopeFor } from "../../trusted-execution/permissions.mjs";
+import { consentScopeFor } from "../../../packages/ae-devtools-cli/trusted-execution/permissions.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => readFileSync(join(here, "..", "fixtures", name), "utf8");

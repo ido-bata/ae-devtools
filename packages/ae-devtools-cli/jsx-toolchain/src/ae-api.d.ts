@@ -1,6 +1,6 @@
 /**
  * ae-api.d.ts — GENERATED from inventories/scripting/generated/symbols.json.
- * Regenerate: node experiments/jsx-toolchain/src/gen-ae-types.mjs
+ * Regenerate: node packages/ae-devtools-cli/jsx-toolchain/src/gen-ae-types.mjs
  *
  * HONEST SCOPE: the inventory records symbol NAMES, kinds and access
  * but almost no signatures. Every member is `any`-typed; methods take

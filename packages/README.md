@@ -1,12 +1,11 @@
 # packages/
 
-将来的な monorepo 化のために用意されたディレクトリ。
+npm パッケージとして配布・消費されるコードを置く領域。
 
-現時点では中身はほぼ空。
-この領域の構造はビジョン段階を超えて決定されておらず、
-最初の実装フェーズに入った段階で
-`vscode-extension`, `mcp-server`, `core`, `shared` のような
-候補パッケージが検討される可能性があるが、
-命名・責務分割・ビルド構成はまだ未確定。
+| package | 内容 |
+| --- | --- |
+| `@ae-devtools/capability-catalog` | capability ID grammar / manifest / coverage・drift gate / handshake（Issue #11） |
+| `@ae-devtools/native-adapter` | native SDK adapter negotiation contract + coverage-derived kits（Issue #19） |
+| `@ae-devtools/cli` | 開発者向け CLI + JSX toolchain（`ae-devtools`, `jsx-toolchain` bins。Issue #92） |
 
-詳細はリポジトリルートの `docs/vision.md` を参照。
+`experiments/` は研究・probe 用の領域であり、配布物は `packages/` に置く。

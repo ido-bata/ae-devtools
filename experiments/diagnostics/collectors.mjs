@@ -65,7 +65,7 @@ export function collectorStatus(kind) {
  * Normalize a trusted-codec `aeError` wrapper into a script-exception
  * (or caller-chosen kind) diagnostics record.
  *
- * aeError shape (experiments/trusted-execution/codec):
+ * aeError shape (packages/ae-devtools-cli/trusted-execution/codec):
  *   { "aeError": { name, message, line?, file? } }
  *
  * Position fields are copied only when the host actually reported them;

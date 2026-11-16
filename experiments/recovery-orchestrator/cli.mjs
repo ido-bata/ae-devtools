@@ -58,7 +58,7 @@ import {
   runTimeoutRecovery,
   verifyHostExit,
 } from "./orchestrator.mjs";
-import { RUNS_DIR } from "../devtools-cli/session-guard.mjs";
+import { RUNS_DIR } from "../../packages/ae-devtools-cli/devtools-cli/session-guard.mjs";
 
 const EXP = dirname(dirname(fileURLToPath(import.meta.url)));
 

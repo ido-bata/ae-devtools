@@ -2,7 +2,7 @@
 /**
  * cli.mjs — ae-devtools developer CLI (Issue #54).
  *
- * Thin wrapper over the dev-loop core (experiments/dev-loop/devloop.mjs).
+ * Thin wrapper over the dev-loop core (packages/ae-devtools-cli/dev-loop/devloop.mjs).
  * This file adds NO permission path: execute/verify delegate to
  * runOperation(), which is the only dispatch path (consent scope, gates,
  * trusted runner, quarantine).
@@ -95,7 +95,7 @@ async function openSession(flags) {
   if (kind === "a8n") {
     const tdir = join(EXP, "a8n-transport", "session.mjs");
     if (!existsSync(tdir)) {
-      const e = new Error("a8n session requires experiments/a8n-transport (Issue #49) — not present on this branch");
+      const e = new Error("a8n session requires packages/ae-devtools-cli/a8n-transport (Issue #49) — not present on this branch");
       e.code = "A8N_TRANSPORT_MISSING";
       throw e;
     }

@@ -1,0 +1,42 @@
+{
+  "name": "@ae-devtools/cli",
+  "version": "0.2.0",
+  "description": "ae-devtools developer CLI: JSX/TypeScript build, lint, typecheck, sourcemaps plus discover/inspect/execute/verify over the canonical trusted-execution path (Issue #92).",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ido-bata/ae-devtools.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "bin": {
+    "ae-devtools": "./devtools-cli/cli.mjs",
+    "jsx-toolchain": "./jsx-toolchain/src/cli.mjs"
+  },
+  "files": [
+    "devtools-cli",
+    "dev-loop",
+    "trusted-execution",
+    "scripting-adapters",
+    "a8n-transport",
+    "jsx-toolchain/src",
+    "jsx-toolchain/fixtures",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node jsx-toolchain/tests/run.mjs",
+    "smoke:consumer": "node scripts/consumer-smoke.mjs"
+  },
+  "dependencies": {
+    "@ido-bata/ae-a8n": "0.1.0-alpha.2",
+    "acorn": "^8.19.0",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  }
+}

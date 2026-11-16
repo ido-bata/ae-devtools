@@ -45,3 +45,13 @@ After Effects の **スクリプト／エクステンション開発そのもの
 - 製品名／ブランド名
 
 詳細は [docs/vision.md](./docs/vision.md) を参照。
+
+## 現在利用可能なもの
+
+`packages/ae-devtools-cli`（`@ae-devtools/cli`）— 外部プロジェクトから
+`npm install` で利用できる開発者向け CLI + JSX toolchain。
+
+- `ae-devtools` — `doctor` / `discover` / `inspect` / `execute` / `verify`（fake session は AE 不要、real session は `@ido-bata/ae-a8n` 経由）
+- `jsx-toolchain` — TypeScript → ExtendScript ES3 JSX の `build` / `build-project` / `check` / `lint` / `resolve`（ソースマップ）
+
+使い方と evidence level の意味は [`packages/ae-devtools-cli/README.md`](./packages/ae-devtools-cli/README.md) を参照。
