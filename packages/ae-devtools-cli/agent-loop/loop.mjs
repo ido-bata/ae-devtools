@@ -43,9 +43,9 @@
  * Diagnostic records intentionally mirror the
  * packages/ae-devtools-cli/diagnostics schema (Issue #37, PR #41)
  * field names — kind/severity/location — but are produced here
- * without importing that module so this experiment stands alone.
+ * without importing that module so this module stands alone.
  */
-import { createJsxRunner } from "../../packages/ae-devtools-cli/trusted-execution/runner.mjs";
+import { createJsxRunner } from "../trusted-execution/runner.mjs";
 
 /* Fake-session defaults pin the consent scope's target identity. A
  * real deployment supplies the actual AE session pin via `session`. */

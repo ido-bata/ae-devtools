@@ -68,6 +68,58 @@ client（Claude Desktop 等）の設定例:
 が無い呼び出しは session を開く前に refuse される。default の fake session
 の結果は fake/mock evidence であり real-host 検証ではない。
 
+## Coding agent からの dev loop 利用（agent-loop library）
+
+`agent-loop/` は bin を持たない library module。`fixer`（診断を受けて
+修正 source を返す関数）と `consentProvider` / `stateReset` は呼び出し側の
+agent / deployment が注入する設計であり、package 側に既定の修正ロジックは
+存在しない。install 済み package から:
+
+```js
+import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION }
+  from "@ae-devtools/cli/agent-loop";
+import { createFakeHost, createFakeApp }
+  from "@ae-devtools/cli/agent-loop/fake-host";
+import { loadTrustedCodec } from "@ae-devtools/cli/trusted-execution/runner.mjs";
+import { consentScopeFor } from "@ae-devtools/cli/trusted-execution/permissions.mjs";
+```
+
+最小の fake-level 利用例（`fixtures/clean.jsx` は package 同梱）:
+
+```js
+const codec = loadTrustedCodec();
+const host = createFakeHost({ app: createFakeApp() });
+const transport = { send: async (text) => host.send(text, codec) };
+const consentProvider = async (source) => ({
+  consent: { scope: consentScopeFor({
+    pin: FAKE_SESSION.pin, operationId: FAKE_SESSION.operationId,
+    args: { source, dispatchArgs: null },
+    projectIdentity: FAKE_SESSION.projectIdentity }) },
+  trustedScriptOptIn: true,
+  scriptProvenance: "my-agent",
+});
+const report = await runDevLoop({ source, transport, fixer, consentProvider });
+// report.outcome: COMPLETED | FAILED | BLOCKED | REFUSED | UNKNOWN
+```
+
+loop の契約（詳細は `agent-loop/README.md`）:
+
+- dispatch は attempt ごとに 1 回。silent retry なし、fix budget は
+  `maxFixes`（default 3）で bounded。
+- consent は loop が発行しない。`consentProvider` 未注入なら send 前に
+  `BLOCKED`。
+- FAILED で `mayHaveMutated` または state fingerprint 変化があれば、
+  rerun 前に `stateReset` の fingerprint 検証、または明示
+  `allowDirtyRerun: true` が必須。検証不能なら `resetIncomplete` で停止。
+- `regressionCheck` は `assumeIdempotent: true` の場合のみ再 dispatch。
+  `stateFingerprint` を渡せば mutation を実測できる。
+- `UNKNOWN`（reply-identity 不一致等）は quarantine され loop は停止。
+
+**Evidence: fake/mock only。** fake host は Node `vm` sandbox であり
+real AE / ExtendScript semantics / real-host regression は未検証。
+consumer smoke（`npm run smoke:consumer`）が install 済み tarball からの
+import と clean fixture の 1 dispatch 完了を検証する。
+
 ## Verified adoption smoke (2026-11-16)
 
 `rebuildup/Aulymo_v04` に対して tarball install 後に read-only で実行:

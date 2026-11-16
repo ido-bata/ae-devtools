@@ -23,6 +23,11 @@
     "ae-devtools-cep": "./cep-extension/devkit.mjs",
     "ae-devtools-cep-lifecycle": "./cep-extension/cep-lifecycle.mjs"
   },
+  "exports": {
+    "./agent-loop": "./agent-loop/loop.mjs",
+    "./agent-loop/fake-host": "./agent-loop/fake-host.mjs",
+    "./*": "./*"
+  },
   "files": [
     "devtools-cli",
     "dev-loop",
@@ -33,12 +38,13 @@
     "recovery-orchestrator",
     "diagnostics",
     "cep-extension",
+    "agent-loop",
     "jsx-toolchain/src",
     "jsx-toolchain/fixtures",
     "README.md"
   ],
   "scripts": {
-    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node recovery-orchestrator/tests/run.mjs && node diagnostics/tests/run.mjs && node jsx-toolchain/tests/run.mjs && node cep-extension/tests/run.mjs",
+    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node recovery-orchestrator/tests/run.mjs && node diagnostics/tests/run.mjs && node jsx-toolchain/tests/run.mjs && node cep-extension/tests/run.mjs && node agent-loop/tests/run.mjs",
     "smoke:consumer": "node scripts/consumer-smoke.mjs"
   },
   "dependencies": {

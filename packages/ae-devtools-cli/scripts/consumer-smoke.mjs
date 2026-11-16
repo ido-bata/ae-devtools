@@ -20,6 +20,10 @@
  * proving the packaged cep-extension/ devkit works from a consumer
  * install (Issue #115) — static/fake-level only, `loadProof` stays
  * "NOT RUN"; real CEP panel load is out of scope.
+ * The agent-loop check imports the packaged `@ae-devtools/cli/agent-loop`
+ * library from the installed tarball and runs one dev loop against the
+ * packaged fake host + fixture (Issue #117) — fake/mock level only;
+ * fixer/consent/stateReset are injected stand-ins, no real AE.
  * No After Effects required; evidence stays fake-level.
  */
 import { execFileSync, spawn } from "node:child_process";
@@ -318,6 +322,55 @@ try {
     const out = run(join(BIN, "ae-devtools-cep-lifecycle"), ["playerdebugmode"]);
     const json = JSON.parse(out);
     assertNode.ok(json && typeof json === "object", "unexpected playerdebugmode output");
+  });
+
+  // 13. agent-loop library (Issue #117): import the packaged module
+  //     from the consumer install and run one dev loop on the packaged
+  //     clean fixture through the packaged fake host. The consent
+  //     provider is a stand-in (the loop never mints consent itself);
+  //     no fixer is needed because the fixture completes first try.
+  //     Fake/mock level only — NOT real AE.
+  await checkAsync("agent-loop dev loop completes via packaged library import", async () => {
+    writeFileSync(join(consumer, "agent-loop-smoke.mjs"), [
+      'import { readFileSync } from "node:fs";',
+      'import { join } from "node:path";',
+      'import { runDevLoop, FAKE_SESSION } from "@ae-devtools/cli/agent-loop";',
+      'import { createFakeHost, createFakeApp } from "@ae-devtools/cli/agent-loop/fake-host";',
+      'import { loadTrustedCodec } from "@ae-devtools/cli/trusted-execution/runner.mjs";',
+      'import { consentScopeFor } from "@ae-devtools/cli/trusted-execution/permissions.mjs";',
+      "",
+      "const codec = loadTrustedCodec();",
+      "const host = createFakeHost({ app: createFakeApp() });",
+      "const transport = { send: async (text) => host.send(text, codec) };",
+      "const consentProvider = async (source) => ({",
+      "  consent: {",
+      "    scope: consentScopeFor({",
+      "      pin: FAKE_SESSION.pin,",
+      "      operationId: FAKE_SESSION.operationId,",
+      "      args: { source, dispatchArgs: null },",
+      "      projectIdentity: FAKE_SESSION.projectIdentity,",
+      "    }),",
+      "  },",
+      '  trustedScriptOptIn: true,',
+      '  scriptProvenance: "consumer-smoke",',
+      "});",
+      "const source = readFileSync(",
+      '  join(process.cwd(), "node_modules", "@ae-devtools", "cli", "agent-loop", "fixtures", "clean.jsx"),',
+      '  "utf8",',
+      ");",
+      "const report = await runDevLoop({ source, transport, consentProvider });",
+      "console.log(JSON.stringify({",
+      "  outcome: report.outcome,",
+      "  iterations: report.iterations.length,",
+      "  result: report.iterations[0] && report.iterations[0].result,",
+      "}));",
+      "",
+    ].join("\n"));
+    const out = run(process.execPath, ["agent-loop-smoke.mjs"], { cwd: consumer });
+    const json = JSON.parse(out);
+    assertNode.equal(json.outcome, "COMPLETED", "agent-loop outcome not COMPLETED: " + out);
+    assertNode.equal(json.iterations, 1, "expected a single dispatch for the clean fixture");
+    assertNode.equal(json.result, "final", "unexpected fake-host result: " + out);
   });
 } finally {
   const failed = results.filter((r) => !r.ok);
