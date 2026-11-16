@@ -125,6 +125,45 @@ export type ProbeProject = {
 };
 
 /**
+ * One `rq[i]` render-queue item block (Issue #64 read slice). All
+ * fields are OBSERVED from `rq[i].*` lines; `getFailed` records the
+ * `rq[i]: get failed` diagnostic for an item whose by-index lookup
+ * failed (no per-field lines follow it).
+ */
+export type ProbeRenderQueueItem = {
+  index: number;
+  /** `AEGP_GetRQItemByIndex` failed for this index. */
+  getFailed?: boolean;
+  renderState?: number;
+  /** `A_Time` value/scale pair from `rq[i].started=v/s`. */
+  started?: { value: number; scale: number };
+  elapsed?: { value: number; scale: number };
+  logType?: number;
+  numOutputModules?: number;
+  /** UTF-8 comment from `rq[i].comment: <utf8>`. */
+  comment?: string;
+  /**
+   * Observed comment-read status when the value line was not a plain
+   * string — same normalized tokens as `ProbeProject.pathStatus`.
+   */
+  commentStatus?: string;
+};
+
+/**
+ * Render-queue observation (Issue #64). OBSERVED from `renderQueue.*`
+ * and `rq[i].*` lines inside a probe-run. Absent entirely when the
+ * probe logged `probe.error: AEGP Render Queue suite unavailable`.
+ */
+export type ProbeRenderQueue = {
+  /** `renderQueue.state=N` — AEGP_RenderQueueState. */
+  state?: number;
+  /** `renderQueue.numItems=N` — total queue length. */
+  numItems?: number;
+  /** Per-item blocks in log order (probe caps at MAX_RQ_ITEMS_SCANNED=16). */
+  items: ProbeRenderQueueItem[];
+};
+
+/**
  * Collector-computed completeness — the promotion-relevant summary.
  * Every flag is DERIVED from observed lines; none is itself evidence.
  */
@@ -181,6 +220,10 @@ export type ProbeResult = {
   diagnostics?: string[];
   /** OBSERVED — `app.numProjects` + `project[i].*` lines. */
   projects: ProbeProject[];
+  /** OBSERVED — `app.numProjects=N` verbatim count (may exceed projects[] length: MAX_PROJECTS_SCANNED=4). */
+  projectCount?: number;
+  /** OBSERVED — `renderQueue.*` / `rq[i].*` lines (Issue #64 slice). */
+  renderQueue?: ProbeRenderQueue;
   /** DERIVED — see contract doc for per-kind rules. */
   outcome: "completed" | "failed" | "partial";
   /** DERIVED — first observed failure in log order. */
@@ -210,6 +253,8 @@ export const PROVENANCE_OBSERVED = [
   "calls",
   "diagnostics",
   "projects",
+  "projectCount",
+  "renderQueue",
 ] as const;
 export const PROVENANCE_DERIVED = [
   "execution.ordinal",
@@ -292,6 +337,8 @@ export function validateProbeResult(value: unknown): string[] {
       ["calls", Array.isArray(value.calls) && value.calls.length > 0],
       ["diagnostics", Array.isArray(value.diagnostics) && value.diagnostics.length > 0],
       ["projects", Array.isArray(value.projects) && value.projects.length > 0],
+      ["projectCount", typeof value.projectCount === "number"],
+      ["renderQueue", isRecord(value.renderQueue)],
       ["execution.ordinal", isRecord(value.execution)],
       ["execution.bounded", isRecord(value.execution)],
       ["outcome", typeof value.outcome === "string"],
@@ -369,6 +416,36 @@ export function validateProbeResult(value: unknown): string[] {
 
   if (value.diagnostics !== undefined && !isStringArray(value.diagnostics)) {
     errors.push("diagnostics must be a string array when present");
+  }
+
+  if (value.projectCount !== undefined &&
+      (typeof value.projectCount !== "number" || value.projectCount < 0)) {
+    errors.push("projectCount must be a non-negative number when present");
+  }
+  if (value.renderQueue !== undefined) {
+    const rq = value.renderQueue;
+    if (!isRecord(rq) ||
+        (rq.state !== undefined && typeof rq.state !== "number") ||
+        (rq.numItems !== undefined && typeof rq.numItems !== "number") ||
+        !Array.isArray(rq.items)) {
+      errors.push("renderQueue must be {state?, numItems?, items: []} when present");
+    } else {
+      for (const [i, it] of rq.items.entries()) {
+        if (!isRecord(it) || typeof it.index !== "number" ||
+            (it.getFailed !== undefined && typeof it.getFailed !== "boolean") ||
+            (it.renderState !== undefined && typeof it.renderState !== "number") ||
+            (it.started !== undefined && (!isRecord(it.started) ||
+              typeof it.started.value !== "number" || typeof it.started.scale !== "number")) ||
+            (it.elapsed !== undefined && (!isRecord(it.elapsed) ||
+              typeof it.elapsed.value !== "number" || typeof it.elapsed.scale !== "number")) ||
+            (it.logType !== undefined && typeof it.logType !== "number") ||
+            (it.numOutputModules !== undefined && typeof it.numOutputModules !== "number") ||
+            (it.comment !== undefined && !isString(it.comment)) ||
+            (it.commentStatus !== undefined && !isString(it.commentStatus))) {
+          errors.push(`renderQueue.items[${i}] is malformed`);
+        }
+      }
+    }
   }
 
   if (!Array.isArray(value.projects)) {

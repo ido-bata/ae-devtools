@@ -50,7 +50,7 @@ The debug log is a stream; the collector attributes contiguous segments and assi
 | `kind` | Content | Boundaries |
 | --- | --- | --- |
 | `registration` | entry-phase flush: `AcquireSuite`×2, `RegisterWithAEGP`, `RegisterIdleHook`, `ReleaseSuite` op records. No `probe.*` markers exist. | collector attribution of the entry flush |
-| `probe-run` | `probe.start`, `probe.reason`, flushed trigger-phase op records, environment `op` records + `driver.*`/`host.*` lines, `app.numProjects`, `project[i].*` data, `probe.end`, then the 4 trailing `ReleaseSuite` op records (item, memory, proj, utility — emitted after `probe.end` by design). | `probe.start`…`probe.end` + trailing releases |
+| `probe-run` | `probe.start`, `probe.reason`, flushed trigger-phase op records, environment `op` records + `driver.*`/`host.*` lines, `app.numProjects`, `project[i].*` data, `probe.end`, then the trailing `ReleaseSuite` op records (emitted after `probe.end` by design, one per acquired suite). | `probe.start`…`probe.end` + trailing releases |
 | `tick` | diagnostics-only: `probe.error:`/`probe.aborted:` lines from an idle dispatch that never reached `probe.start`; its buffered op records were discarded and are **not** call evidence. A stage-1 suite-acquire failure emits **no** line at all (fail-closed with silent discard) — absence of a tick segment is itself the evidence that the tick produced nothing observable. | diagnostic lines only |
 
 `execution.bounded` (derived) is true when the segment's observable boundaries are present: probe-run ⇒ start+end pair; registration ⇒ ≥1 op record; tick ⇒ ≥1 diagnostic line.
