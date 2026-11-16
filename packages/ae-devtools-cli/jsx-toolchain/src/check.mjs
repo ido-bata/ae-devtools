@@ -6,7 +6,10 @@
  * `inventories/scripting/generated/symbols.json` (656 symbols — names,
  * kinds, access; almost no signatures, so members are `any`-typed).
  * `ae-globals.d.ts` adds the hand-maintained ExtendScript extras ($,
- * File/Folder-ish helpers). Type errors in user code are real;
+ * File/Folder, PREFType); `scriptui.d.ts` adds the ScriptUI classes.
+ * `lib` is pinned to ES5 — ExtendScript has no DOM, and the default DOM
+ * lib's File/Window/Event collide with the real host globals (Issue #97).
+ * Type errors in user code are real;
  * AE-API checking is name-level only — a member absent here is not
  * proof of absence in the real API.
  */
@@ -17,13 +20,23 @@ import { fileURLToPath } from "node:url";
 import { collectSources } from "./bundle.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const AMBIENT_DTS = [join(HERE, "ae-api.d.ts"), join(HERE, "ae-globals.d.ts")];
+export const AMBIENT_DTS = [
+  join(HERE, "ae-api.d.ts"),
+  join(HERE, "ae-globals.d.ts"),
+  join(HERE, "scriptui.d.ts"),
+];
 
 const CHECK_OPTIONS = {
   noEmit: true,
   target: ts.ScriptTarget.ES5,
   module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
+  // ExtendScript has no DOM. The default lib (DOM + ES5) declares
+  // unrelated `File`/`Window`/`Event` globals that collide with the
+  // ExtendScript host objects and ScriptUI classes in our ambient
+  // declarations and produced false diagnostics (Issue #97). ES5-only
+  // keeps standard JS builtins typed.
+  lib: ["lib.es5.d.ts"],
   strict: false, // ExtendScript has no strict-mode guarantees; don't invent them
   noImplicitAny: false,
   skipLibCheck: true,
