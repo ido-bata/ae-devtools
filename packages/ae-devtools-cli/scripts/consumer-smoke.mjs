@@ -15,6 +15,11 @@
  * and then `ae-devtools diagnose` on the stored evidence, proving the
  * packaged diagnostics/ module resolves sourcemaps in a consumer
  * install (Issue #113) — it must NOT degrade to "unavailable".
+ * The CEP check scaffolds a panel into a temp dir through the installed
+ * `ae-devtools-cep` bin and runs `ae-devtools-cep validate` on it,
+ * proving the packaged cep-extension/ devkit works from a consumer
+ * install (Issue #115) — static/fake-level only, `loadProof` stays
+ * "NOT RUN"; real CEP panel load is out of scope.
  * No After Effects required; evidence stays fake-level.
  */
 import { execFileSync, spawn } from "node:child_process";
@@ -80,6 +85,8 @@ try {
     assert(existsSync(join(consumer, "node_modules", ".bin", "jsx-toolchain")), "jsx-toolchain bin missing");
     assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-mcp")), "ae-devtools-mcp bin missing");
     assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-recover")), "ae-devtools-recover bin missing");
+    assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-cep")), "ae-devtools-cep bin missing");
+    assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-cep-lifecycle")), "ae-devtools-cep-lifecycle bin missing");
   });
 
   const BIN = join(consumer, "node_modules", ".bin");
@@ -280,6 +287,37 @@ try {
     assertNode.equal(json.complete, true, "evidence collection reported incomplete");
     assertNode.ok(json.counts && typeof json.counts.total === "number", "counts missing");
     assert(existsSync(join(outDir, "manifest.json")), "manifest.json missing");
+  });
+
+  // 12. ae-devtools-cep: scaffold a panel into a temp dir through the
+  //     installed bin, then `validate` it. Local-only round trip — the
+  //     report must stay honest (loadProof "NOT RUN"); nothing touches
+  //     AE or the real CEP dirs. `ae-devtools-cep-lifecycle` is also
+  //     exercised read-only via `playerdebugmode` (reports status,
+  //     writes nothing).
+  check("ae-devtools-cep scaffold + validate round trip", () => {
+    const panelDir = join(work, "smoke-panel");
+    run(join(BIN, "ae-devtools-cep"), [
+      "scaffold",
+      "--id", "com.example.consumer-smoke",
+      "--title", "Consumer Smoke",
+      "--version", "0.1.0",
+      "--host", "[25.0,99.0]",
+      "--csxs", "12.0",
+      "--out", panelDir,
+    ]);
+    for (const rel of ["CSXS/manifest.xml", "index.html", "CSInterface.js", "js/main.js", "jsx/host.jsx"]) {
+      assert(existsSync(join(panelDir, rel)), `scaffold output missing: ${rel}`);
+    }
+    const report = JSON.parse(run(join(BIN, "ae-devtools-cep"), ["validate", panelDir]));
+    assertNode.equal(report.ok, true, "validate reported failures: " + JSON.stringify(report.checks).slice(0, 300));
+    assertNode.equal(report.loadProof, "NOT RUN", "loadProof must stay NOT RUN");
+  });
+
+  check("ae-devtools-cep-lifecycle playerdebugmode is read-only JSON", () => {
+    const out = run(join(BIN, "ae-devtools-cep-lifecycle"), ["playerdebugmode"]);
+    const json = JSON.parse(out);
+    assertNode.ok(json && typeof json === "object", "unexpected playerdebugmode output");
   });
 } finally {
   const failed = results.filter((r) => !r.ok);

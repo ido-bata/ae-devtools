@@ -26,7 +26,8 @@
   Do NOT reintroduce the pre-CEP5 shape (HostList/RequiredRuntimeList
   as attributes inside Extension/DispatchInfo): it does not validate
   against the official XSD. Same defect class fixed in PR #40 for
-  experiments/cep-extension/.
+  packages/ae-devtools-cli/cep-extension/ (moved from
+  experiments/cep-extension/ in #115).
 -->
 <ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    ExtensionBundleId="ae-devtools-bridge"

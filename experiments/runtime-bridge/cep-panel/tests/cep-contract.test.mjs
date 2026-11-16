@@ -1,6 +1,7 @@
 /*
  * cep-panel contract tests — shared CEP contract checks with
- * experiments/cep-extension (Issue #36/#43). Validates the STATIC
+ * packages/ae-devtools-cli/cep-extension (Issue #36/#43, moved in
+ * #115). Validates the STATIC
  * bundle under experiments/runtime-bridge/cep-panel/:
  *
  *   - CSXS/manifest.xml against the vendored official XSD
@@ -57,7 +58,7 @@ test("manifest validates against the vendored official XSD", async (t) => {
   // Published XSD enumerates Version="7.0" only while the official CEP 12
   // sample ships "12.0" (stale schema). Validate structure on a pinned
   // copy and assert the emitted value separately — same approach as
-  // experiments/cep-extension/tests/scaffold.test.mjs.
+  // packages/ae-devtools-cli/cep-extension/tests/scaffold.test.mjs.
   assert.match(m, /Version="12\.0"/);
   const pinned = m.replace(
     /<ExtensionManifest([^>]*?) Version="12\.0"/,

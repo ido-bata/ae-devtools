@@ -80,7 +80,7 @@ and no AE process was signaled.
 ## Reproduce
 
 ```sh
-cd experiments/cep-extension
+cd packages/ae-devtools-cli/cep-extension
 node tests/run.mjs
 node scaffold.mjs --id com.example.demo --out /tmp/cep-demo --title "Demo"
 node cep-lifecycle.mjs status --id com.example.demo --target /tmp/cep-target

@@ -16,7 +16,7 @@ npm install @ae-devtools/cli        # npm publish 後
 npm install ./ae-devtools-cli-0.2.0.tgz
 ```
 
-Provides four bins:
+Provides six bins:
 
 - `ae-devtools` — developer CLI (`doctor`, `discover`, `inspect`,
   `execute`, `verify`, `runs`, `reap`, `diagnose`)
@@ -25,6 +25,9 @@ Provides four bins:
   (`ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify`)
 - `ae-devtools-recover` — crash/modal recovery orchestration
   (`evidence` / `observe` / `recover` / `verify-exit`)
+- `ae-devtools-cep` — CEP extension devkit (`scaffold` / `validate`)
+- `ae-devtools-cep-lifecycle` — CEP panel install/uninstall/status/
+  cleanup/logs/`playerdebugmode` (machine-level only; never launches AE)
 
 ## MCP server
 
@@ -92,6 +95,26 @@ AE / GUI 不要で consumer 環境でも動く。
 
 詳細は `recovery-orchestrator/README.md`。
 
+## CEP extension devkit (`ae-devtools-cep`)
+
+```sh
+ae-devtools-cep scaffold --id com.example.my-panel --out ./my-panel \
+  [--title "My Panel"] [--version 0.1.0] [--host "[25.0,99.0]"] [--csxs 12.0] [--force]
+ae-devtools-cep validate ./my-panel   # JSON report; loadProof は常に "NOT RUN"
+```
+
+CEP/UXP panel プロジェクトの scaffold 生成と静的 validate
+（manifest well-formedness / 必須要素 / panel 参照 / CSInterface.js
+同梱 / host `.jsx` の ES3 subset lint）。Node >= 22、追加依存なし、
+AE 不要。
+
+`ae-devtools-cep-lifecycle` は scaffold 生成物の OS CEP ディレクトリ
+への install/uninstall/status/cleanup/log 収集と `PlayerDebugMode`
+読み取りを行う（`--target`/`--log-dir` で退避可能）。**実機での panel
+load / reload / unload（CAP059）と UXP（CAP060）は UNVERIFIED /
+BLOCKED** — gated 手順は `cep-extension/LOAD-PROOF.md`、詳細と
+証拠水準は `cep-extension/README.md` を参照。
+
 ## JSX toolchain
 
 ```sh
@@ -116,6 +139,7 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `recovery-orchestrator/` | crash/modal recovery orchestration (`ae-devtools-recover` bin) |
 | `diagnostics/` | `ae-devtools.diagnostics/v1` record schema, collector registry, JSX→TS sourcemap resolution (consumed by `ae-devtools diagnose`) |
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
+| `cep-extension/` | CEP extension scaffold + validate devkit (`ae-devtools-cep`, `ae-devtools-cep-lifecycle` bins) |
 
 ## Verification
 
@@ -129,5 +153,6 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 
 - Module READMEs: `devtools-cli/README.md`, `jsx-toolchain/README.md`,
   `a8n-transport/README.md`, `trusted-execution/README.md`,
-  `mcp-server/README.md`, `recovery-orchestrator/README.md`
+  `mcp-server/README.md`, `recovery-orchestrator/README.md`,
+  `cep-extension/README.md`
 - Canonical governance: repo ルートの `AGENTS.md`, `docs/`

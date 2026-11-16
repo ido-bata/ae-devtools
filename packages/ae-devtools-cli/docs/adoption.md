@@ -23,7 +23,7 @@ npm install ./ae-devtools/packages/ae-devtools-cli
 ```
 
 提供される bin: `ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`,
-`ae-devtools-recover`。
+`ae-devtools-recover`, `ae-devtools-cep`, `ae-devtools-cep-lifecycle`。
 
 ## What you get
 
@@ -42,6 +42,9 @@ npm install ./ae-devtools/packages/ae-devtools-cli
 | `ae-devtools-mcp`（MCP stdio server） | `ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify` を MCP tool として公開 | fake session は不要 |
 | `ae-devtools-recover evidence --since <ISO> --out <dir>` | crash evidence（`.ips` / Sentry envelope）収集 + 相関付け | 不要（read-only） |
 | `ae-devtools-recover observe/recover/verify-exit` | GUI 観測・timeout recovery・exit 検証 | 必要 + ae-a8n #109/#111 build |
+| `ae-devtools-cep scaffold <args>` | CEP extension プロジェクト scaffold 生成 | 不要 |
+| `ae-devtools-cep validate <dir>` | CEP extension dir の静的 validate（JSON report） | 不要（`loadProof` は常に `NOT RUN`） |
+| `ae-devtools-cep-lifecycle install/uninstall/status/cleanup/logs/playerdebugmode` | OS CEP ディレクトリへの panel 配置・除去・状態・ログ・`PlayerDebugMode` 読み取り | 不要（AE は起動しない。実機 load は別途 LOAD-PROOF 手順） |
 
 ## MCP client からの利用
 
@@ -109,3 +112,10 @@ tarball install して実行:
   `--ae-a8n-root` で指す必要がある。公開版 `@ido-bata/ae-a8n` には
   未搭載であり、実機 GUI 経路は未検証（fake-level のみ）。
   `evidence` サブコマンドは AE / GUI 不要で動作する。
+- `ae-devtools-cep` の scaffold / validate は static / fake-level の
+  証拠のみ。実機 CEP panel load → `evalScript` round trip → reload →
+  unload（CAP059）は **UNVERIFIED** で、owned AE session での
+  `cep-extension/LOAD-PROOF.md` 手順が前提。UXP（CAP060）は
+  **BLOCKED/UNVERIFIED**。`ae-devtools-cep-lifecycle` は OS の CEP
+  ディレクトリを既定対象とする machine-level 操作であり、AE 本体は
+  起動・設定しない。`--target` / `--log-dir` で退避先を変えられる。
