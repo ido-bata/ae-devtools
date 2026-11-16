@@ -14,6 +14,24 @@ permissions:
   contents: read
 
 jobs:
+  github-config:
+    name: github-config (issue templates + workflow YAML parse)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse GitHub config YAML
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in .github/ISSUE_TEMPLATE/*.yml .github/ISSUE_TEMPLATE/*.yaml .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$f" ] || continue
+            if ! ruby -ryaml -e "YAML.load_file('$f')" 2>/dev/null; then
+              echo "::error file=$f::invalid YAML"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
   capability-catalog:
     name: capability-catalog (bun test / typecheck / verify)
     runs-on: ubuntu-latest
