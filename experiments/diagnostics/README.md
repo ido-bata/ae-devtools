@@ -13,7 +13,7 @@
 | CAP061 | Diagnostics record schema | **implemented, automated-test level** — `schema.mjs` |
 | CAP062 | Script exception / expression error / render failure host collection | **partially** — `fromAeError` normalizer done (fake); expression-error and render-failure collectors `pending-real-host` |
 | CAP063 | Panel logs / native crash / plugin load failure collection | **pending-real-host** — sources unverified until #36/#17/#18 real-host runs; registry records why |
-| CAP064 | Diagnostics → source-position mapping | **schema-level** — `source` block with `hostReported` flag; generated-JSX/panel/plugin-binary mapping pending consumers (#15/#16/#36) |
+| CAP064 | Diagnostics → source-position mapping | **partially implemented, automated-test level** — `source-map.mjs` resolves JSX `{line,column}` → original TS via jsx-toolchain sourcemaps (single-file one-hop, project two-hop); panel/plugin-binary mapping still pending consumers |
 
 ## Record model (`schema.mjs`)
 
@@ -41,6 +41,51 @@ today without AE:
 Everything else is honestly marked pending; no collector claims a source
 it cannot reach.
 
+## Source-position mapping (`source-map.mjs`, CAP064)
+
+Resolves a diagnostics record's `source` block — an ExtendScript
+`{line, column?}` position inside a generated `.jsx` artifact — back to
+the original TypeScript `{file, line, column, excerpt}` using the
+Source Map v3 files emitted by `experiments/jsx-toolchain`:
+
+- single-file `build` → `<name>.jsx.map` (one hop, jsx → TS)
+- project `build-project` → `<name>.jsx.map` + `<name>.bundle.js.map`
+  (two hops: jsx → bundle → original TS, mirroring `resolvePosition`)
+
+The VLQ consumer is **imported** from
+`../jsx-toolchain/src/sourcemap.mjs` (`lookup`/`parseMappings`), not
+copied. `jsx-toolchain/src/bundle.mjs` cannot be imported here because
+it pulls in esbuild/typescript, which this CI job does not install.
+
+Result statuses are honest: `mapped` / `unmapped` / `no-map` /
+`no-position` / `invalid-map` / `ambiguous`. Nothing is guessed —
+`excerpt` comes only from the map's own `sourcesContent`.
+
+Column convention: `source.column` on a record (and `--col` on the
+CLI) is **1-based** per the schema's positive-integer rule; generated
+map columns are 0-based and converted internally. ExtendScript host
+errors normally carry a line and no column — a line-only query resolves
+to the **first mapped segment on that generated line** (a real mapping,
+recorded in `hops`), never an interpolated guess.
+
+### CLI
+
+```sh
+node source-map.mjs <record.json> [--jsx p] [--map-dir d] [--jsx-map p] [--bundle-map p]
+node source-map.mjs --jsx file.jsx --line N [--col N] [--jsx-map p] [--bundle-map p]
+```
+
+Prints the result JSON; exit 0 when `mapped`, 1 otherwise, 2 on
+usage/IO errors.
+
+### Test fixtures
+
+`tests/fixtures/{single,project}/` are committed build outputs produced
+by jsx-toolchain's own `buildFile`/`buildProject` against
+`experiments/jsx-toolchain/fixtures/` sources (regeneration recipe in
+the test file header). Tests deliberately do not invoke tsc/esbuild so
+the diagnostics CI job stays dependency-free.
+
 ## Evidence level
 
 All tests are **automated test / fake-level**: records are built and
@@ -56,5 +101,8 @@ diagnostics/
 ├── EVIDENCE.md          # evidence ledger
 ├── schema.mjs           # record schema + validation
 ├── collectors.mjs       # collector status registry + normalizers
+├── source-map.mjs       # diagnostics source → TS position via jsx-toolchain maps
 └── tests/               # node:test suite (fake-level only)
+    ├── fixtures/        # committed jsx-toolchain build outputs (jsx + maps)
+    └── source-map.test.mjs
 ```

@@ -25,6 +25,7 @@ contacted.
 | `plugin-load-failure` collection | — | needs #17/#18 real load attempt | **pending-real-host** |
 | `render-failure` collection | — | needs #16 render-queue adapter | **pending-real-host** |
 | Source-position mapping to generated assets | — | schema supports it; consumers pending | **implemented (schema) / consumers pending** |
+| JSX→TS sourcemap resolution (`source-map.mjs`) | `node tests/run.mjs` | 22 tests green: single-file one-hop, project two-hop, unmapped/no-map/no-position/invalid-map/ambiguous, CLI | **automated test** (fixtures are committed jsx-toolchain build outputs; no AE, no real host error) |
 | Windows | — | no Windows host | **UNVERIFIED** |
 
 ## Blockers recorded
