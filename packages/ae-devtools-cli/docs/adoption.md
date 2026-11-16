@@ -11,8 +11,15 @@ npm publish 前の現時点では tarball または git 依存で導入する。
 # tarball（ae-devtools repo で `npm pack packages/ae-devtools-cli`）
 npm install ./ae-devtools-cli-<version>.tgz
 
-# または git（release branch を pin）
-npm install github:ido-bata/ae-devtools#release-0-2-0
+# または git: npm / bun は git repo 内の subdirectory を直接
+# install できない（repo root に package.json がなく、git URL に
+# path を含める記法も未サポート）。clone して package dir を
+# file: 依存として install する
+#   `npm install github:ido-bata/ae-devtools#release-0-2-0` は
+#   repo root を解決しに行き package.json 不在で失敗する
+git clone --depth 1 --branch release-0-2-0 \
+  https://github.com/ido-bata/ae-devtools.git
+npm install ./ae-devtools/packages/ae-devtools-cli
 ```
 
 提供される bin: `ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`。
@@ -64,6 +71,25 @@ client（Claude Desktop 等）の設定例:
 - `jsx-toolchain check src/api.ts` / `lint src/main.ts`: diagnostics 0
 - `jsx-toolchain check src`（全体）: ScriptUI/host ambient 型の未整備で
   412 diagnostics → Issue #97 で対応中
+
+`rebuildup/vidc-wAI`（release-0-1-0 head、clone は read-only、tracked
+source への変更なし）に対して、repo 内 scratch dir `ae-smoke/` へ
+tarball install して実行:
+
+- `doctor`: AE 2026/2027 検出、`@ido-bata/ae-a8n` 解決 OK
+- `discover`: 20 ops、evidence level は fake/mock only と正直に表示
+- `execute read.projectSummary --session fake --consent grant`:
+  COMPLETED（fake/mock evidence）
+- `jsx-toolchain check scripts/node`（唯一の TS source、Node 側
+  script 3 file）: 9 diagnostics。すべて top-level await と
+  `Promise.withResolvers` が ES5 lib 前提の check options で error。
+  vidc-wAI の現行 TS は ExtendScript ではなく Node ツール用であり、
+  AE 側の置き場（`scripts/ae/`、`plugins/after-effects/`）は現時点で
+  README のみで check 対象の AE source が存在しない
+- `jsx-toolchain lint`: ae-smoke.ts 5 / mcp-probe.ts 18 /
+  frame-time.ts 2 diagnostics。bare module import・`JSON`/`Promise`/
+  ES5 prototype method 等、Node script を ES3 host 前提で検査した
+  ことによる想定内の指摘であり、adoption blocker ではない
 
 ## Boundaries
 
