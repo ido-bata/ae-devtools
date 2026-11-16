@@ -3,3 +3,6 @@ experiments/read-only-probe/.tmp-test-chan/
 
 # package manager dependencies
 node_modules/
+
+# pinned third-party reference clones for inventories/tools verify
+.reference/
