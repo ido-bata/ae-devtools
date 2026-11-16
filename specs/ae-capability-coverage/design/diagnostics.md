@@ -3,7 +3,7 @@
 - Status: **Proposed design note**, not an accepted contract. Record
   schema versioning follows the catalog contract §7 compatibility rules
   once promoted; the reference implementation lives at
-  `packages/ae-devtools-cli/diagnostics/` (packaged in `@ae-devtools/cli`,
+  `packages/ae-devtools-cli/diagnostics/` (packaged in `@ido-bata/ae-devtools-cli`,
   Issue #113) at fake/mock level.
 - Parent spec: [spec.md](../spec.md) FR-16, US9; plan: [plan.md](../plan.md);
   consumers: [#20](https://github.com/ido-bata/ae-devtools/issues/20)

@@ -51,14 +51,14 @@ caller's responsibility.
 
 ## Using from an external project
 
-This directory ships inside the `@ae-devtools/cli` npm package
+This directory ships inside the `@ido-bata/ae-devtools-cli` npm package
 (`packages/ae-devtools-cli/cep-extension/`, Issue #115) and is
 self-contained: **Node >= 22, zero dependencies of its own, no
 network, no AE**.
 
 ### Option A — installed bins (recommended)
 
-After `npm install @ae-devtools/cli` (or the tarball), two bins are
+After `npm install @ido-bata/ae-devtools-cli` (or the tarball), two bins are
 available:
 
 ```sh

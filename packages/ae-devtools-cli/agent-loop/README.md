@@ -2,7 +2,7 @@
 
 Minimal vertical slice of the "run JSX → diagnose → fix → rerun →
 regression" development loop, at **fake/mock level only**. Ships inside
-the `@ae-devtools/cli` tarball so external coding agents / consumers
+the `@ido-bata/ae-devtools-cli` tarball so external coding agents / consumers
 can drive the loop from an installed package.
 
 ## Library surface
@@ -13,12 +13,12 @@ default CLI. Import from the installed package:
 
 ```js
 import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION }
-  from "@ae-devtools/cli/agent-loop";
+  from "@ido-bata/ae-devtools-cli/agent-loop";
 import { createFakeHost, createFakeApp }
-  from "@ae-devtools/cli/agent-loop/fake-host";
+  from "@ido-bata/ae-devtools-cli/agent-loop/fake-host";
 ```
 
-Deep imports such as `@ae-devtools/cli/agent-loop/loop.mjs` also work
+Deep imports such as `@ido-bata/ae-devtools-cli/agent-loop/loop.mjs` also work
 (the package `exports` map keeps `"./*"` passthrough for the other
 modules).
 

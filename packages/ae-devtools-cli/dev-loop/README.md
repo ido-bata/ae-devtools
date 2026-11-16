@@ -1,6 +1,6 @@
 # dev-loop
 
-Developer-loop core for `@ae-devtools/cli` (Issue #20): the thin
+Developer-loop core for `@ido-bata/ae-devtools-cli` (Issue #20): the thin
 orchestration layer that VSCode commands and MCP tools wrap. It adds **no
 permission path** — `execute`/`verify` delegate to
 `scripting-adapters/execute.mjs` `runOperation()`, the only dispatch path

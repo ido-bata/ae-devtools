@@ -4,7 +4,7 @@
 > directory defines the single diagnostics model every failure source
 > feeds (spec FR-16) and registers honest per-source collection status.
 > It is not a transport, not a UI surface, and not real-host evidence.
-> Packaged inside `@ae-devtools/cli` (Issue #113) and consumed by
+> Packaged inside `@ido-bata/ae-devtools-cli` (Issue #113) and consumed by
 > `ae-devtools diagnose` / failure-evidence diagnostics blocks.
 > Design note: `../../../specs/ae-capability-coverage/design/diagnostics.md`.
 
