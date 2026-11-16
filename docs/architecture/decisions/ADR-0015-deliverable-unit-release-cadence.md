@@ -80,6 +80,16 @@ honestly branch from `main`.
   E2E, full CI, or distribution builds per change; they run the
   verification level appropriate to their surface (AGENTS.md §12).
   Unverified scope is reported honestly at the release gate.
+- A deliverable whose evidence level is below `verified on real host`
+  **may still be frozen and released** provided every capability claim
+  is labeled at its actual evidence level (fake/mock, automated test,
+  consumer smoke) and unverified scope is recorded as unverified in the
+  release PR. Real-host verification that was not performed is recorded
+  as **not run**, never implied. This does not relax per-capability
+  `verifiedOnRealHost` promotion (spec FR-05/FR-12) — that remains a
+  separate axis from the release gate. Where no Windows host is
+  available, Windows verification is recorded as unavailable rather
+  than blocking the release.
 
 ### 4. Branching while a release PR is pending
 
