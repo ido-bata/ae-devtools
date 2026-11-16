@@ -29,12 +29,13 @@
     "a8n-transport",
     "mcp-server",
     "recovery-orchestrator",
+    "diagnostics",
     "jsx-toolchain/src",
     "jsx-toolchain/fixtures",
     "README.md"
   ],
   "scripts": {
-    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node recovery-orchestrator/tests/run.mjs && node jsx-toolchain/tests/run.mjs",
+    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node recovery-orchestrator/tests/run.mjs && node diagnostics/tests/run.mjs && node jsx-toolchain/tests/run.mjs",
     "smoke:consumer": "node scripts/consumer-smoke.mjs"
   },
   "dependencies": {

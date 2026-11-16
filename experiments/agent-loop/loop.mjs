@@ -40,10 +40,10 @@
  * host-side re-validation, catalog-gate integration remain unproven
  * per runner.mjs non-claims).
  *
- * Diagnostic records intentionally mirror the experiments/diagnostics
- * schema (Issue #37, PR #41) field names — kind/severity/location —
- * but are produced here without importing that branch so this
- * experiment stands alone.
+ * Diagnostic records intentionally mirror the
+ * packages/ae-devtools-cli/diagnostics schema (Issue #37, PR #41)
+ * field names — kind/severity/location — but are produced here
+ * without importing that module so this experiment stands alone.
  */
 import { createJsxRunner } from "../../packages/ae-devtools-cli/trusted-execution/runner.mjs";
 

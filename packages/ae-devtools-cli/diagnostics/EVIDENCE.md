@@ -42,6 +42,6 @@ contacted.
 ## Reproduce
 
 ```sh
-cd experiments/diagnostics
+cd packages/ae-devtools-cli/diagnostics
 node tests/run.mjs
 ```

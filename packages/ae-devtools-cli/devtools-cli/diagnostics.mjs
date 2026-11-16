@@ -5,9 +5,9 @@
  * Two jobs, both additive over the existing evidence contract:
  *
  *   buildFailureDiagnostics() — turn a failed execute/verify result into
- *     `ae-devtools.diagnostics/v1` record(s) via experiments/diagnostics
- *     collectors, then resolve each record's generated JSX position back
- *     to TypeScript through experiments/diagnostics/source-map.mjs
+ *     `ae-devtools.diagnostics/v1` record(s) via the packaged
+ *     diagnostics/ collectors, then resolve each record's generated JSX
+ *     position back to TypeScript through diagnostics/source-map.mjs
  *     (sourcemap resolution itself is Issue #95 / #37 CAP064).
  *
  *   runDiagnose() — read a stored record back: a bare diagnostics record,
@@ -16,9 +16,8 @@
  *     written). Re-runs sourcemap resolution and reports honest statuses.
  *
  * Boundary notes:
- *   - experiments/diagnostics is NOT part of the published
- *     @ae-devtools/cli tarball, so it is reached only through guarded
- *     dynamic imports. A consumer install without the repo checkout
+ *   - diagnostics/ ships inside the @ae-devtools/cli tarball and is
+ *     reached through guarded dynamic imports. A damaged/partial install
  *     degrades to an honest "unavailable" note — never a crash, never a
  *     fabricated position.
  *   - No dispatch happens here: diagnose only reads files. It adds no
@@ -31,8 +30,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { RUNS_DIR } from "./session-guard.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// packages/ae-devtools-cli/devtools-cli → repo root → experiments/diagnostics
-const DIAG_DIR = join(HERE, "..", "..", "..", "experiments", "diagnostics");
+// packages/ae-devtools-cli/devtools-cli → packaged diagnostics/
+const DIAG_DIR = join(HERE, "..", "diagnostics");
 
 export const DIAGNOSTICS_BLOCK_SCHEMA = "ae-devtools.cli.diagnostics/v1";
 export const DIAGNOSE_SCHEMA = "ae-devtools.cli.diagnose/v1";
@@ -43,7 +42,7 @@ let libsPromise = null;
 /**
  * Load the diagnostics schema/collectors/source-map modules. Returns
  * { schema, collectors, sourceMap } or { error } — callers must handle
- * the error path; this never throws for a missing checkout.
+ * the error path; this never throws for a missing packaged directory.
  */
 export function loadDiagnosticsLibs() {
   if (libsPromise === null) {
@@ -150,7 +149,7 @@ export async function buildFailureDiagnostics({ result, outcome, session, reques
   const libs = await loadDiagnosticsLibs();
   if (libs.error) {
     block.status = "unavailable";
-    block.reason = `experiments/diagnostics not loadable: ${libs.error}`;
+    block.reason = `packaged diagnostics not loadable: ${libs.error}`;
     return block;
   }
   try {
@@ -250,7 +249,7 @@ export async function runDiagnose(input, flags = {}, { dir = RUNS_DIR } = {}) {
   const libs = await loadDiagnosticsLibs();
   if (libs.error) {
     payload.libs = { status: "unavailable", reason: libs.error };
-    payload.notes.push("experiments/diagnostics is not loadable from this install; sourcemap resolution unavailable");
+    payload.notes.push("packaged diagnostics/ is not loadable from this install; sourcemap resolution unavailable");
     return { code: 2, payload };
   }
   payload.libs = { status: "ok", recordVersion: DIAGNOSTICS_RECORD_VERSION };
