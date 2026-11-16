@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,10 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "cli.mjs");
 const RUNS_DIR = join(tmpdir(), "ae-devtools-cli-test-runs");
+// diagnostics fixtures (committed sourcemap artifacts, Issue #37/#95):
+// runtime-error.jsx line 3 maps back to runtime-error.ts line 3.
+const REPO_ROOT = join(HERE, "..", "..", "..", "..");
+const DIAG_FIXTURE_JSX = join(REPO_ROOT, "experiments", "diagnostics", "tests", "fixtures", "single", "runtime-error.jsx");
 let passed = 0;
 
 function run(args, env = {}) {
@@ -366,6 +370,128 @@ await at("guard: single AE candidate that is NOT the attested pid is never quit"
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---- failure diagnostics + diagnose (Issue #103, fake level only) ----
+
+t("completed execute carries no diagnostics block (additive contract)", () => {
+  const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"]).body;
+  assert.equal(r.outcome, "COMPLETED");
+  assert.equal(r.diagnostics, undefined);
+});
+
+t("host failure evidence carries diagnostics record + mapped sourcemap resolution", () => {
+  freshRunsDir();
+  const out = join(mkdtempSync(join(tmpdir(), "diag-out-")), "evidence.json");
+  const hostError = JSON.stringify({
+    name: "ReferenceError",
+    message: "injected host failure",
+    line: 3,
+    file: DIAG_FIXTURE_JSX,
+  });
+  const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant",
+    "--out", out], { AE_DEVTOOLS_CLI_FAKE_HOST_ERROR: hostError });
+  assert.equal(r.body.diagnostics?.schema, "ae-devtools.cli.diagnostics/v1");
+  assert.equal(r.body.diagnostics.status, "ok");
+  const rec = r.body.diagnostics.records[0];
+  assert.equal(rec.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(rec.kind, "script-exception");
+  assert.equal(rec.severity, "error");
+  assert.equal(rec.source.assetKind, "jsx-script");
+  assert.equal(rec.source.line, 3);
+  assert.equal(rec.source.hostReported, true);
+  assert.equal(rec.evidence, "fake");
+  const res = r.body.diagnostics.resolutions[0];
+  assert.equal(res.status, "mapped");
+  assert.equal(res.original.file, "runtime-error.ts");
+  assert.equal(res.original.line, 3);
+  // The --out file holds the same evidence for `diagnose`.
+  const saved = JSON.parse(readFileSync(out, "utf8"));
+  assert.equal(saved.diagnostics.records.length, 1);
+});
+
+t("host failure without a resolvable position records honest no-map/no-position", () => {
+  const hostError = JSON.stringify({ name: "Error", message: "positionless failure" });
+  const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"],
+    { AE_DEVTOOLS_CLI_FAKE_HOST_ERROR: hostError });
+  const res = r.body.diagnostics?.resolutions?.[0];
+  assert.ok(res, "diagnostics.resolutions missing");
+  // No line on the record → the resolver refuses to invent a position.
+  assert.equal(res.status, "no-position");
+});
+
+t("adapter-level refusal produces a transport-outcome diagnostics record", () => {
+  const r = run(["execute", "project.new", "--session", "fake", "--consent", "grant"]).body;
+  assert.equal(r.outcome, "refused"); // destructive confirm missing
+  const rec = r.diagnostics?.records?.[0];
+  assert.equal(rec?.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(rec?.kind, "transport-outcome");
+});
+
+t("diagnose resolves a stored --out evidence file through sourcemaps", () => {
+  const dir = mkdtempSync(join(tmpdir(), "diag-evidence-"));
+  const out = join(dir, "evidence.json");
+  const hostError = JSON.stringify({
+    name: "Error", message: "diag target", line: 3, file: DIAG_FIXTURE_JSX,
+  });
+  run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant",
+    "--out", out], { AE_DEVTOOLS_CLI_FAKE_HOST_ERROR: hostError });
+  const d = run(["diagnose", out]).body;
+  assert.equal(d.schema, "ae-devtools.cli.diagnose/v1");
+  assert.equal(d.recordCount, 1);
+  assert.equal(d.results[0].recordValid, true);
+  assert.equal(d.results[0].resolution.status, "mapped");
+  assert.equal(d.results[0].resolution.original.file, "runtime-error.ts");
+  rmSync(dir, { recursive: true, force: true });
+});
+
+t("diagnose accepts a bare diagnostics record and a surviving run marker", () => {
+  const dir = mkdtempSync(join(tmpdir(), "diag-record-"));
+  try {
+    // bare ae-devtools.diagnostics/v1 record
+    const recPath = join(dir, "record.json");
+    writeFileSync(recPath, JSON.stringify({
+      recordVersion: "ae-devtools.diagnostics/v1",
+      kind: "script-exception",
+      severity: "error",
+      message: "bare record",
+      collector: "test",
+      occurredAt: new Date().toISOString(),
+      source: { assetKind: "jsx-script", path: DIAG_FIXTURE_JSX, line: 3 },
+    }));
+    const d1 = run(["diagnose", recPath]).body;
+    assert.equal(d1.recordCount, 1);
+    assert.equal(d1.results[0].resolution.status, "mapped");
+
+    // surviving marker (close-failed) linked to its --out evidence
+    freshRunsDir();
+    const out = join(dir, "run-evidence.json");
+    const hostError = JSON.stringify({
+      name: "Error", message: "marker run", line: 3, file: DIAG_FIXTURE_JSX,
+    });
+    const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant",
+      "--out", out], {
+      AE_DEVTOOLS_CLI_FAKE_HOST_ERROR: hostError,
+      AE_DEVTOOLS_CLI_FAKE_CLOSE: "throw",
+    });
+    assert.equal(r.code, 3);
+    const marker = run(["runs"]).body.runs[0];
+    assert.ok(marker, "expected a surviving run marker");
+    const d2 = run(["diagnose", marker.runId]).body;
+    assert.equal(d2.target.via, "run-marker");
+    assert.equal(d2.recordCount, 1);
+    assert.equal(d2.results[0].resolution.status, "mapped");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("diagnose reports usage/IO errors honestly", () => {
+  const missing = run(["diagnose", "/nonexistent/nope.json"]);
+  assert.equal(missing.code, 2);
+  assert.equal(missing.body.schema, "ae-devtools.cli.diagnose/v1");
+  const noArg = run(["diagnose"]);
+  assert.equal(noArg.code, 2);
 });
 
 console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);

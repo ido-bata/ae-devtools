@@ -176,6 +176,22 @@ export function noteSessionProcess(dir, runId, evidence = {}) {
 }
 
 /**
+ * Link a surviving run marker to the evidence file written for the run
+ * (--out). Only markers that outlive cleanup (close-failed/interrupted/
+ * error) can carry this — a cleanly closed run removes its marker, so
+ * there is nothing to link. `ae-devtools diagnose <runId>` follows this
+ * pointer to re-resolve stored diagnostics (Issue #103).
+ */
+export function attachEvidence(dir, runId, { file } = {}) {
+  const marker = readMarker(dir, runId);
+  if (marker === null) return false;
+  marker.evidenceFile = typeof file === "string" ? file : null;
+  marker.evidenceRecordedAt = new Date().toISOString();
+  writeMarker(dir, marker);
+  return true;
+}
+
+/**
  * Append a request lifecycle event. Events: "dispatched", "timeout",
  * "resolved", "recovery-attempted". The latest event per requestId is the
  * request's state; only "timeout" is recoverable.

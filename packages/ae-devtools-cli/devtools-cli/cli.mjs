@@ -18,6 +18,16 @@
  *   node cli.mjs verify [--read-op <opId>] [same session flags]
  *   node cli.mjs runs            — list run-guard markers (residue detection)
  *   node cli.mjs reap <runId> [--confirm] — recover a stale owned leftover
+ *   node cli.mjs diagnose <record.json|marker|runId>
+ *                 [--map-dir d] [--jsx p] [--jsx-map p] [--bundle-map p]
+ *
+ * Failure diagnostics (Issue #103): a failed/refused execute or verify
+ * adds an additive `diagnostics` block to the evidence record —
+ * ae-devtools.diagnostics/v1 record(s) plus sourcemap resolution via
+ * experiments/diagnostics. `diagnose` re-reads a stored record
+ * (--out evidence file, bare diagnostics record, or surviving run
+ * marker) and reports fresh resolution. Both are read-only; neither
+ * adds a dispatch path.
  *
  * Sessions:
  *   fake — codec-faithful vm host (FAKE/MOCK evidence only)
@@ -45,12 +55,13 @@
  */
 import { existsSync, writeFileSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openFakeSession } from "./fake-session.mjs";
-import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
+import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
+import { buildFailureDiagnostics, isFailureResult, runDiagnose } from "./diagnostics.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
@@ -279,6 +290,18 @@ async function main() {
       emit({ schema: "ae-devtools.cli.reap/v1", ...verdict });
       return verdict.verdict === "REAPED" || verdict.verdict === "CLEAN" ? 0 : 1;
     }
+    case "diagnose": {
+      const target = rest[0];
+      if (!target) {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: "usage: diagnose <record.json|marker|runId> [--map-dir d] [--jsx p] [--jsx-map p] [--bundle-map p]" });
+        return 2;
+      }
+      // Read-only: resolves stored diagnostics records through sourcemaps.
+      // No session is opened and nothing is dispatched.
+      const { code, payload } = await runDiagnose(target, flags, { dir: RUNS_DIR });
+      emit(payload);
+      return code;
+    }
     case "discover": {
       emit({ schema: DEVLOOP_SCHEMA, evidenceLevel: "registry metadata — no dispatch", ...discover({ domain: flags.domain ?? null }) });
       return 0;
@@ -369,6 +392,20 @@ async function main() {
           : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary" });
         evidence.result = result;
         evidence.outcome = result.outcome ?? result.status ?? null;
+        // Additive failure diagnostics (Issue #103): a unified
+        // ae-devtools.diagnostics/v1 record plus sourcemap resolution.
+        // Completed runs carry no block; failures always do — an
+        // "unavailable" status is recorded honestly when the diagnostics
+        // checkout cannot be loaded (e.g. installed package).
+        if (isFailureResult(result, evidence.outcome)) {
+          evidence.diagnostics = await buildFailureDiagnostics({
+            result,
+            outcome: evidence.outcome,
+            session: state.session,
+            requestId,
+            mapDir: typeof flags["map-dir"] === "string" ? flags["map-dir"] : undefined,
+          });
+        }
         // UNKNOWN means the request may still be in flight behind a modal —
         // exactly the state GUI recovery exists for. Anything else is a
         // settled request and is not recoverable.
@@ -409,8 +446,13 @@ async function main() {
         };
       }
       if (typeof flags.out === "string" && payload) {
-        try { writeFileSync(flags.out, JSON.stringify(payload, null, 2)); }
-        catch (e) {
+        try {
+          writeFileSync(flags.out, JSON.stringify(payload, null, 2));
+          // Link surviving residue markers to the evidence file so
+          // `diagnose <runId>` can find the stored records. Cleanly
+          // closed runs have no marker — attachEvidence no-ops there.
+          attachEvidence(RUNS_DIR, guard.runId, { file: resolve(flags.out) });
+        } catch (e) {
           process.stderr.write(`warning: could not write --out ${flags.out}: ${e.message}\n`);
         }
       }
@@ -426,7 +468,7 @@ async function main() {
       return code;
     }
     default:
-      process.stderr.write("usage: cli.mjs <doctor|discover|inspect|execute|verify|runs|reap> ...\n");
+      process.stderr.write("usage: cli.mjs <doctor|discover|inspect|execute|verify|runs|reap|diagnose> ...\n");
       return 2;
   }
 }
