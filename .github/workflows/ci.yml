@@ -114,41 +114,21 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         working-directory: packages/ae-devtools-cli
         run: npm ci
+      # xmllint is required for the cep-extension XSD contract test —
+      # without it that test would silently skip and the contract
+      # would be unverified.
+      - if: steps.detect.outputs.present == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
       - if: steps.detect.outputs.present == 'true'
         run: |
           set -e
-          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain; do
+          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension; do
             echo "=== $d ==="
             node "packages/ae-devtools-cli/$d/tests/run.mjs"
           done
       - if: steps.detect.outputs.present == 'true'
         working-directory: packages/ae-devtools-cli
         run: npm run smoke:consumer
-
-  cep-extension:
-    name: cep-extension (node:test, scaffold fake-level)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/cep-extension/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "experiments/cep-extension not on this head; skipping"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      # xmllint is required for the XSD contract test — without it the
-      # test would silently skip and the contract would be unverified.
-      - if: steps.detect.outputs.present == 'true'
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/cep-extension/tests/run.mjs
 
   agent-loop:
     runs-on: ubuntu-latest

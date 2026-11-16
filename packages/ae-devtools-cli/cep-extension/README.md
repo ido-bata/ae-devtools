@@ -51,35 +51,54 @@ caller's responsibility.
 
 ## Using from an external project
 
-The whole `cep-extension/` directory is self-contained: **Node >= 22,
-zero dependencies, no network, no AE**. An external project can either
-invoke it in place or vendor the directory.
+This directory ships inside the `@ae-devtools/cli` npm package
+(`packages/ae-devtools-cli/cep-extension/`, Issue #115) and is
+self-contained: **Node >= 22, zero dependencies of its own, no
+network, no AE**.
 
-### Option A — run in place (no copying)
+### Option A — installed bins (recommended)
+
+After `npm install @ae-devtools/cli` (or the tarball), two bins are
+available:
 
 ```sh
 # scaffold a new panel project in the current directory
-node /path/to/ae-devtools/experiments/cep-extension/devkit.mjs scaffold \
+ae-devtools-cep scaffold \
     --id com.example.my-panel --title "My Panel" \
     --version 0.1.0 --host "[25.0,99.0]" --csxs 12.0 \
     --out ./my-panel
 
 # static validation of any extension dir (fresh scaffold or your own)
-node /path/to/ae-devtools/experiments/cep-extension/devkit.mjs validate ./my-panel
+ae-devtools-cep validate ./my-panel
 ```
 
-`devkit.mjs scaffold` forwards all arguments to `scaffold.mjs` unchanged;
-`devkit.mjs validate` prints a JSON report and exits 0 when no check
-fails, 1 on failures, 2 on usage/io errors.
+`ae-devtools-cep scaffold` forwards all arguments to `scaffold.mjs`
+unchanged; `ae-devtools-cep validate` prints a JSON report and exits 0
+when no check fails, 1 on failures, 2 on usage/io errors.
 
-### Option B — vendor the directory
+A second bin, `ae-devtools-cep-lifecycle`, exposes the machine-level
+lifecycle CLI (`install` / `uninstall` / `status` / `cleanup` / `logs` /
+`playerdebugmode`). It operates on the OS CEP extension/log directories
+by default (pass `--target`/`--log-dir` to redirect); it never launches
+or configures After Effects. See "Lifecycle CLI" below for what is
+mechanized vs UNVERIFIED.
 
-Copy `experiments/cep-extension/` into your project (e.g.
-`tools/cep-extension/`). `scaffold.mjs` resolves its templates relative
-to its own location, so the copy works standalone:
+### Option B — run in place (repo checkout)
 
 ```sh
-cp -R /path/to/ae-devtools/experiments/cep-extension tools/cep-extension
+node packages/ae-devtools-cli/cep-extension/devkit.mjs scaffold \
+    --id com.example.my-panel --out ./my-panel
+node packages/ae-devtools-cli/cep-extension/devkit.mjs validate ./my-panel
+```
+
+### Option C — vendor the directory
+
+Copy `cep-extension/` into your project (e.g. `tools/cep-extension/`).
+`scaffold.mjs` resolves its templates relative to its own location, so
+the copy works standalone:
+
+```sh
+cp -R /path/to/ae-devtools/packages/ae-devtools-cli/cep-extension tools/cep-extension
 node tools/cep-extension/devkit.mjs scaffold --id com.example.my-panel --out ./my-panel
 node tools/cep-extension/devkit.mjs validate ./my-panel
 ```
@@ -91,8 +110,8 @@ CEP 5+/12 manifest elements, that every local `<script src>`/`<link
 href>` in `index.html` resolves inside the extension dir, that a
 referenced `CSInterface.js` is bundled (the host does NOT provide it),
 and that every `*.jsx` host script stays inside a documented ES3
-*subset* (heuristic — for a real ES3 grammar proof use
-`packages/ae-devtools-cli/jsx-toolchain` `lintOutput` when its deps are installed).
+*subset* (heuristic — for a real ES3 grammar proof use the sibling
+`jsx-toolchain` package's `lintOutput` when its deps are installed).
 It also reports `.debuggable` marker presence informationally and
 always reports `loadProof: "NOT RUN"`.
 

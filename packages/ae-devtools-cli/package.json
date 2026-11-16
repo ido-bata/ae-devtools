@@ -19,7 +19,9 @@
     "ae-devtools": "./devtools-cli/cli.mjs",
     "jsx-toolchain": "./jsx-toolchain/src/cli.mjs",
     "ae-devtools-mcp": "./mcp-server/server.mjs",
-    "ae-devtools-recover": "./recovery-orchestrator/cli.mjs"
+    "ae-devtools-recover": "./recovery-orchestrator/cli.mjs",
+    "ae-devtools-cep": "./cep-extension/devkit.mjs",
+    "ae-devtools-cep-lifecycle": "./cep-extension/cep-lifecycle.mjs"
   },
   "files": [
     "devtools-cli",
@@ -30,12 +32,13 @@
     "mcp-server",
     "recovery-orchestrator",
     "diagnostics",
+    "cep-extension",
     "jsx-toolchain/src",
     "jsx-toolchain/fixtures",
     "README.md"
   ],
   "scripts": {
-    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node recovery-orchestrator/tests/run.mjs && node diagnostics/tests/run.mjs && node jsx-toolchain/tests/run.mjs",
+    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node recovery-orchestrator/tests/run.mjs && node diagnostics/tests/run.mjs && node jsx-toolchain/tests/run.mjs && node cep-extension/tests/run.mjs",
     "smoke:consumer": "node scripts/consumer-smoke.mjs"
   },
   "dependencies": {

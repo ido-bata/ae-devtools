@@ -23,8 +23,9 @@
  *   host-jsx-es3       every *.jsx under the dir passes a documented
  *                      ES3 *subset* lint (see ES3_SUBSET_RULES).
  *                      This is a heuristic scan, NOT a grammar proof —
- *                      for a real ES3 parse use experiments/jsx-toolchain
- *                      `lintOutput` when its deps (acorn) are installed.
+ *                      for a real ES3 parse use the sibling
+ *                      jsx-toolchain package's `lintOutput` when its
+ *                      deps (acorn) are installed.
  *   debuggable-marker  informational: presence/absence of a
  *                      `.debuggable` file at the extension root
  *   load-proof         ALWAYS reported as "NOT RUN" — validation is
@@ -136,8 +137,9 @@ function stripComments(src) {
  * cannot be distinguished without parsing), `eval(`, `arguments`,
  * reserved-word-as-identifier checks.
  *
- * For a real ES3 grammar proof use experiments/jsx-toolchain's
- * `lintOutput` (acorn ecmaVersion 3) when its dependencies are
+ * For a real ES3 grammar proof use the sibling jsx-toolchain
+ * package's `lintOutput` (acorn ecmaVersion 3) when its dependencies
+ * are
  * installed — cep-extension stays zero-dependency, so this subset is
  * the documented fallback.
  */
