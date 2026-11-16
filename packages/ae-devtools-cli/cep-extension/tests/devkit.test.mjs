@@ -19,18 +19,31 @@ async function tmp() {
   return mkdtemp(join(tmpdir(), "cep-devkit-"));
 }
 
-function cli(args) {
-  return spawnSync(process.execPath, [DEVKIT, ...args], { encoding: "utf8" });
+function cli(args, opts = {}) {
+  const r = spawnSync(process.execPath, [DEVKIT, ...args], {
+    encoding: "utf8",
+    timeout: 30000,
+    ...opts,
+  });
+  if (r.error) {
+    // Spawn failure or timeout — fail loudly instead of asserting on
+    // undefined status/stdout.
+    throw new Error(`devkit ${args[0]} failed to run: ${r.error.message}`);
+  }
+  return r;
 }
 
 async function scaffoldTo(dir) {
   const r = cli([
     "scaffold",
     "--id", "com.example.devkit-panel",
+    // Non-default values: if devkit.mjs stopped forwarding --version/
+    // --host/--csxs, scaffold.mjs's defaults would silently produce the
+    // same-looking tree and this helper could not tell the difference.
     "--title", "Devkit Panel",
-    "--version", "0.1.0",
-    "--host", "[25.0,99.0]",
-    "--csxs", "12.0",
+    "--version", "1.2.3",
+    "--host", "[24.0,30.0)",
+    "--csxs", "11.1",
     "--out", dir,
   ]);
   assert.equal(r.status, 0, r.stderr);
@@ -48,6 +61,12 @@ test("devkit scaffold produces the full tree incl. jsx/host.jsx and validate pas
     assert.equal(report.ok, true);
     assert.equal(report.loadProof, "NOT RUN");
     assert.match(report.loadProofNote, /never loads|static/i);
+    // Non-default scaffold args must actually land in the manifest —
+    // otherwise a broken --version/--host/--csxs forward is invisible.
+    const manifest = await readFile(join(out, "CSXS", "manifest.xml"), "utf8");
+    assert.match(manifest, /ExtensionBundleVersion="1\.2\.3"/);
+    assert.match(manifest, /<Host Name="AEFT" Version="\[24\.0,30\.0\)"\/>/);
+    assert.match(manifest, /<RequiredRuntime Name="CSXS" Version="11\.1"\/>/);
     const byName = Object.fromEntries(report.checks.map((c) => [c.name, c]));
     assert.equal(byName["required-files"].status, "pass");
     assert.equal(byName["manifest-xml"].status, "pass");
@@ -74,6 +93,30 @@ test("validate catches a malformed manifest (xmllint or subset path)", async () 
     assert.equal(report.ok, false);
     const xml = report.checks.find((c) => c.name === "manifest-xml");
     assert.equal(xml.status, "fail");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("validate exercises the no-xmllint subset fallback branch", async () => {
+  const dir = await tmp();
+  try {
+    const out = join(dir, "panel");
+    await scaffoldTo(out);
+    await writeFile(join(out, "CSXS", "manifest.xml"),
+      '<?xml version="1.0"?><ExtensionManifest><ExtensionList>');
+    const prev = process.env.AE_DEVTOOLS_CEP_NO_XMLLINT;
+    process.env.AE_DEVTOOLS_CEP_NO_XMLLINT = "1";
+    try {
+      const report = await validateExtension(out);
+      const xml = report.checks.find((c) => c.name === "manifest-xml");
+      assert.equal(xml.status, "fail");
+      // The subset path must be identifiable in the detail text.
+      assert.match(xml.detail, /subset|xmllint/i);
+    } finally {
+      if (prev === undefined) delete process.env.AE_DEVTOOLS_CEP_NO_XMLLINT;
+      else process.env.AE_DEVTOOLS_CEP_NO_XMLLINT = prev;
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -146,19 +189,30 @@ test("validate fails on ES5+ constructs in host JSX (ES3 subset lint)", async ()
   try {
     const out = join(dir, "panel");
     await scaffoldTo(out);
+    // One trigger per ES3_SUBSET_RULES entry — deleting any rule from
+    // validate.mjs must fail this test.
     await writeFile(join(out, "jsx", "bad.jsx"),
-      "var items = [1,2,3];\n" +
-      "items.forEach(function (x) { $.writeln(x); });\n" +
-      "var s = JSON.stringify({ a: 1 });\n" +
-      "let y = () => 1;\n");
+      "var items = [1,2,3];\n" +                                   // line 1
+      "items.forEach(function (x) { $.writeln(x); });\n" +        // es3-es5-method
+      "var s = JSON.stringify({ a: 1 });\n" +                     // es3-json
+      "let y = () => 1;\n" +                                     // es3-let-const + es3-arrow
+      "class Foo {}\n" +                                         // es3-class
+      "var k = Object.keys(items);\n" +                          // es3-object-static
+      "var isArr = Array.isArray(items);\n");                     // es3-array-static
     const report = await validateExtension(out);
     assert.equal(report.ok, false);
     const jsx = report.checks.find((c) => c.name === "host-jsx-es3");
     assert.equal(jsx.status, "fail");
-    assert.match(jsx.detail, /es3-es5-method/);
-    assert.match(jsx.detail, /es3-json/);
-    assert.match(jsx.detail, /es3-let-const/);
-    assert.match(jsx.detail, /es3-arrow/);
+    // The offending file must be pinned — hits are aggregated across
+    // all *.jsx, so an unpinned assertion could be satisfied by a
+    // regression in the shipped template instead of bad.jsx.
+    assert.match(jsx.detail, /bad\.jsx/);
+    for (const code of [
+      "es3-es5-method", "es3-json", "es3-let-const", "es3-arrow",
+      "es3-class", "es3-object-static", "es3-array-static",
+    ]) {
+      assert.match(jsx.detail, new RegExp(code), `missing rule hit ${code}`);
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -209,7 +263,104 @@ test("debuggable marker is reported informationally", async () => {
     await writeFile(join(out, ".debuggable"), "");
     report = await validateExtension(out);
     dm = report.checks.find((c) => c.name === "debuggable-marker");
+    assert.equal(dm.status, "info");
     assert.match(dm.detail, /present/);
+    // The marker is informational only — it must never fail the report.
+    assert.equal(report.ok, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+/* ---- review-fix coverage ---- */
+
+test("host.jsx escapes Windows paths and quotes into parseable JSON", async () => {
+  // The template is plain ES3 — run it under Node with a stub `app`
+  // and assert the emitted string parses and round-trips.
+  const dir = await tmp();
+  try {
+    const out = join(dir, "panel");
+    await scaffoldTo(out);
+    const src = await readFile(join(out, "jsx", "host.jsx"), "utf8");
+    const winPath = "C:\\Users\\me\\proj\\a \"quoted\" dir\\file.aep";
+    const app = {
+      version: "25.0",
+      project: { file: { fsName: winPath } },
+    };
+    // host.jsx is a single IIFE expression statement; evalScript
+    // returns its completion value. Emulate that with eval().
+    const text = new Function("app", `return eval(${JSON.stringify(src)});`)(app);
+    const parsed = JSON.parse(text);
+    assert.equal(parsed.appVersion, "25.0");
+    assert.equal(parsed.project, winPath);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("panel refs may be extension-root-relative (/js/main.js)", async () => {
+  const dir = await tmp();
+  try {
+    const out = join(dir, "panel");
+    await scaffoldTo(out);
+    await writeFile(join(out, "index.html"),
+      '<html><head><script src="/js/main.js"></script></head><body></body></html>');
+    const report = await validateExtension(out);
+    const refs = report.checks.find((c) => c.name === "panel-references");
+    assert.equal(refs.status, "pass", refs.detail);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("manifest structure check ignores commented-out elements", async () => {
+  const dir = await tmp();
+  try {
+    const out = join(dir, "panel");
+    await scaffoldTo(out);
+    const manifest = await readFile(join(out, "CSXS", "manifest.xml"), "utf8");
+    // Comment out a required element — the structure check must still fail.
+    const broken = manifest.replace(/<DispatchInfoList>[\s\S]*?<\/DispatchInfoList>/,
+      "<!-- <DispatchInfoList><DispatchInfo><Resources/></DispatchInfo></DispatchInfoList> -->");
+    await writeFile(join(out, "CSXS", "manifest.xml"), broken);
+    const report = await validateExtension(out);
+    const s = report.checks.find((c) => c.name === "manifest-structure");
+    assert.equal(s.status, "fail");
+    assert.match(s.detail, /DispatchInfoList/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("ES3 lint: strings/comments cannot hide or fake violations", () => {
+  // `//` and `=>` inside string literals must not trip the lint;
+  // an unbalanced quote inside a comment must not mask real code.
+  const tricky = [
+    'var url = "https://example.com/a=>b";',
+    "var s = 'it\\'s fine';",
+    "// don't let this apostrophe break masking: var x = () => 1;",
+    "var arrow = () => 1;",
+  ].join("\n");
+  const hits = lintJsxEs3Subset(tricky);
+  assert.equal(hits.filter((h) => h.code === "es3-arrow").length, 1);
+  assert.equal(hits[0].line, 4);
+  // Array.prototype methods are ES3 — must NOT be flagged.
+  assert.deepEqual(lintJsxEs3Subset("var a=[1]; a.slice(0); a.push(1);"), []);
+  // Array.isArray IS ES5+ — must be flagged.
+  const stat = lintJsxEs3Subset("var b = Array.isArray(a);");
+  assert.equal(stat[0].code, "es3-array-static");
+});
+
+test("devkit CLI propagates scaffold exit codes", async () => {
+  const dir = await tmp();
+  try {
+    const bad = cli(["scaffold", "--id", "", "--out", join(dir, "x")]);
+    assert.equal(bad.status, 2);
+    assert.match(bad.stderr, /--id/);
+    // validate on a bad dir exits non-zero via exitCode (not process.exit)
+    const v = cli(["validate", join(dir, "nope")]);
+    assert.equal(v.status, 2);
+    assert.match(v.stderr, /not a directory/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

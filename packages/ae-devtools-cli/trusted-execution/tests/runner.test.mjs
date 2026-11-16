@@ -37,7 +37,7 @@ function makeTransport(reply, { hang = false, echoRequestId = true } = {}) {
       calls.push(text);
       if (hang) return new Promise(() => {});
       if (typeof reply === "string") return Promise.resolve(reply);
-      if (reply == null) return Promise.resolve(null);
+      if (reply === null || reply === undefined) return Promise.resolve(null);
       let requestId = null;
       try { requestId = codec.parse(text).requestId; } catch { /* ignore */ }
       const body = echoRequestId && requestId ? { ...reply, requestId } : reply;

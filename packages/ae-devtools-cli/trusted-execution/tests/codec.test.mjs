@@ -149,6 +149,79 @@ test("malformed JSON throws instead of guessing", () => {
   }
 });
 
+test("astral characters (surrogate pairs) survive verbatim — consent-hash parity", () => {
+  const codec = loadCodec();
+  // U+1F600 emoji and other astral chars are well-formed surrogate pairs;
+  // native JSON.stringify emits them raw and the codec must agree, or the
+  // executed source would differ from the consented source.
+  const value = { emoji: "\u{1F600}\u{1F4A9}", text: "a\u{20000}b" };
+  const native = JSON.stringify(value);
+  assert.equal(codec.stringify(value), native);
+  assert.deepEqual(JSON.parse(codec.stringify(value)), value);
+});
+
+test("lone surrogates are escaped losslessly, never substituted", () => {
+  const codec = loadCodec();
+  for (const lone of ["\uD800", "\uDFFF", "a\uD800b", "\uDBFF\uD800"]) {
+    const text = codec.stringify({ s: lone });
+    // No '?' substitution and no raw lone surrogate on the wire.
+    assert.ok(!text.includes("?"), `substituted ?: ${text}`);
+    assert.ok(!/[\uD800-\uDFFF]/.test(text), `raw lone surrogate on wire: ${text}`);
+    const back = codec.parse(text);
+    assert.equal(back.s, lone, `round-trip failed for ${JSON.stringify(lone)}`);
+  }
+  // Well-formed pair adjacent to a lone surrogate: pair raw, lone escaped.
+  const mixed = "\u{1F600}\uD800";
+  const out = codec.stringify(mixed);
+  assert.ok(out.includes("\\ud800"), `lone surrogate not escaped: ${out}`);
+  assert.equal(codec.parse(out), mixed);
+});
+
+test("C1 controls are escaped losslessly, not replaced by space", () => {
+  const codec = loadCodec();
+  const value = { s: "a\u0085b\u009Fb" };
+  const text = codec.stringify(value);
+  assert.ok(text.includes("\\u0085"), `C1 not escaped: ${text}`);
+  assert.ok(!text.includes(" "), `space substitution leaked: ${text}`);
+  assert.equal(codec.parse(text).s, value.s);
+});
+
+test("noncharacters U+FFFE/U+FFFF are escaped, not emitted raw or dropped", () => {
+  const codec = loadCodec();
+  const value = { s: "x\uFFFEy\uFFFFz" };
+  const text = codec.stringify(value);
+  assert.ok(!/[\uFFFE\uFFFF]/.test(text), `raw noncharacter emitted: ${text}`);
+  assert.equal(codec.parse(text).s, value.s);
+});
+
+test("malformed \\u escapes are refused, never coerced to NUL", () => {
+  const codec = loadCodec();
+  const bad = [
+    '"\\uZZZZ"',
+    '"\\u12"',
+    '"\\u123"',
+    '"\\u"',
+    '"abc\\u12x"',
+    '{"k":"\\uD8ZZ"}',
+  ];
+  for (const text of bad) {
+    assert.throws(() => codec.parse(text), /trusted-codec/, `accepted ${text}`);
+  }
+  // Valid escapes still parse.
+  assert.equal(codec.parse('"\\u0041\\u00e9"'), "Aé");
+});
+
+test("__proto__ keys are refused on parse (prototype pollution guard)", () => {
+  const codec = loadCodec();
+  assert.throws(
+    () => codec.parse('{"__proto__":{"polluted":true}}'),
+    /trusted-codec/,
+  );
+  // Ordinary keys still work, including ones that shadow safely.
+  const back = codec.parse('{"constructor":1,"a":2}');
+  assert.equal(back.a, 2);
+});
+
 test("ExtendScript Object.prototype pollution keys survive", () => {
   const codec = loadCodec();
   const value = { "+": 1, "-": 2, "*": 3, "/": 4 };

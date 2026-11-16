@@ -1,4 +1,6 @@
 {
+  "schema": "ae-devtools.a8n-transport.real-run/legacy-pre-v1",
+  "producerNote": "Recorded before the v1 schema discriminator existed; key set already matches the current producer minus schema/artifactsNote.",
   "issue": 49,
   "startedAt": "2026-11-15T01:16:27.014Z",
   "platform": "darwin/arm64",

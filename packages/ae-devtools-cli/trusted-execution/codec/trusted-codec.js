@@ -72,9 +72,34 @@ var TrustedCodec = (function () {
         while (hex.length < 4) { hex = "0" + hex; }
         out += "\\u" + hex;
       } else if (code > 126 && code < 160) {
-        out += " ";
-      } else if (code > 55295 && (code < 57344 || code > 65533)) {
-        out += "?"; // lone surrogate / noncharacter: never emit raw
+        // C1 controls: escape losslessly — substituting a different
+        // character would make the host execute source that differs
+        // from the consented/hashes source.
+        var c1 = code.toString(16);
+        while (c1.length < 4) { c1 = "0" + c1; }
+        out += "\\u" + c1;
+      } else if (code >= 55296 && code <= 57343) {
+        // UTF-16 surrogate. A well-formed pair is emitted raw (the two
+        // halves re-form the astral character, exactly like native
+        // JSON.stringify); a LONE surrogate is escaped losslessly as
+        // \uXXXX so no information is silently dropped.
+        var prevCode = i > 0 ? string.charCodeAt(i - 1) : 0;
+        var nextCode = i + 1 < string.length ? string.charCodeAt(i + 1) : 0;
+        var paired =
+          (code >= 55296 && code <= 56319 && nextCode >= 56320 && nextCode <= 57343) ||
+          (code >= 56320 && code <= 57343 && prevCode >= 55296 && prevCode <= 56319);
+        if (paired) {
+          out += c;
+        } else {
+          var lone = code.toString(16);
+          while (lone.length < 4) { lone = "0" + lone; }
+          out += "\\u" + lone;
+        }
+      } else if (code > 65533) {
+        // Noncharacters U+FFFE/U+FFFF: escape rather than emit raw.
+        var nonchar = code.toString(16);
+        while (nonchar.length < 4) { nonchar = "0" + nonchar; }
+        out += "\\u" + nonchar;
       } else {
         out += c;
       }
@@ -311,7 +336,12 @@ var TrustedCodec = (function () {
           pos++;
           var e = text.charAt(pos);
           if (e === "u") {
-            out += String.fromCharCode(parseInt(text.substr(pos + 1, 4), 16));
+            // Exactly four hex digits are required — anything else is a
+            // malformed escape and must be refused, not coerced into a
+            // NUL or a desynchronized cursor (native JSON.parse throws).
+            var uhex = text.substr(pos + 1, 4);
+            if (!/^[0-9A-Fa-f]{4}$/.test(uhex)) { perr("bad \\u escape"); }
+            out += String.fromCharCode(parseInt(uhex, 16));
             pos += 5;
           } else if (e === "n") { out += "\n"; pos++; }
           else if (e === "r") { out += "\r"; pos++; }
@@ -342,6 +372,11 @@ var TrustedCodec = (function () {
         while (true) {
           skip();
           var key = readString();
+          // "__proto__" would invoke the Object.prototype setter instead
+          // of creating an own property (prototype pollution). The codec
+          // refuses rather than guessing — same contract as malformed
+          // escapes above.
+          if (key === "__proto__") { perr("reserved object key __proto__"); }
           skip();
           if (text.charAt(pos) !== ":") { perr("expected colon"); }
           pos++;

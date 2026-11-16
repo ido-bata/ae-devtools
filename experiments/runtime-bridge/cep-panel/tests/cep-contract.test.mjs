@@ -1,12 +1,16 @@
 /*
- * cep-panel contract tests — shared CEP contract checks with
- * packages/ae-devtools-cli/cep-extension (Issue #36/#43, moved in
- * #115). Validates the STATIC
+ * cep-panel contract tests — panel-specific CEP contract checks that
+ * COMPLEMENT (not duplicate) the packaged validator
+ * packages/ae-devtools-cli/cep-extension/validate.mjs (Issue #36/#43,
+ * moved in #115). This suite keeps only the assertions specific to
+ * this bundle: the vendored XSD, the evalScript callback contract,
+ * #include freedom and app.version usage. Validates the STATIC
  * bundle under experiments/runtime-bridge/cep-panel/:
  *
  *   - CSXS/manifest.xml against the vendored official XSD
- *     (schema/ExtensionManifest_v_7_0.xsd — same file PR #40 vendors;
- *     deduplicate when both land)
+ *     (schema/ExtensionManifest_v_7_0.xsd — byte-identical copy of the
+ *     file vendored in packages/ae-devtools-cli/cep-extension/schema/;
+ *     the experiment keeps its own copy so it stays self-contained)
  *   - official CEP 5+/12 manifest structure (no pre-CEP5 attributes)
  *   - bundled CSInterface.js present and wired in index.html
  *   - evalScript single-argument callback contract + EvalScript-error
@@ -76,6 +80,17 @@ test("manifest validates against the vendored official XSD", async (t) => {
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("vendored XSD stays byte-identical to the cep-extension copy", async () => {
+  // Drift protection for the intentional duplicate vendored schema:
+  // both copies must carry the same official Adobe XSD bytes.
+  const { readFile: rf } = await import("node:fs/promises");
+  const sibling = join(PANEL, "..", "..", "..",
+    "packages", "ae-devtools-cli", "cep-extension", "schema",
+    "ExtensionManifest_v_7_0.xsd");
+  const [a, b] = await Promise.all([rf(XSD), rf(sibling)]);
+  assert.deepEqual(a, b, "cep-panel and cep-extension XSD copies diverged");
 });
 
 test("CSInterface.js is bundled and referenced by index.html", async () => {

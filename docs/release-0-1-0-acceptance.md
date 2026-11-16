@@ -14,14 +14,14 @@
 ## 分離原則（既存 AE への非干渉）
 
 - **owned session のみ**: After Effects の起動・終了は ae-a8n の owned
-  session 経路（`experiments/a8n-transport`、`--session a8n`）か、明示的に
+  session 経路（`packages/ae-devtools-cli/a8n-transport`、`--session a8n`）か、明示的に
   指定した専用 AE インストールで行う。オペレータの interactive session
   には attach しない・quit しない。
 - **disposable project のみ**: 証明用プロジェクトは受入のために新規作成し、
   終了後に破棄する。実プロジェクトは開かない。
 - **attached は拒否されることを確認済み**: 既に AE が起動している場合、
   ae-a8n は `attached` を返し dispatch 前に拒否する
-  （`experiments/a8n-transport/EVIDENCE.md` failure-path 記録）。
+  （`packages/ae-devtools-cli/a8n-transport/EVIDENCE.md` failure-path 記録）。
   受入中にユーザーが普段の AE を使っていても干渉しない。
 - **native plug-in の install 先**: `~/Library/Application Support/Adobe/
   After Effects/<ver>/Plug-ins/` への配置は専用セッション中のみ行い、
@@ -33,12 +33,12 @@
 ### A-1. owned-session JSX dispatch（実機検証済み経路の再確認・任意）
 
 この縦切りは **既に verified on real host**（macOS、AE 2026/2027、
-`experiments/a8n-transport/EVIDENCE.md` runs 3–4、ae-a8n ローカル
+`packages/ae-devtools-cli/a8n-transport/EVIDENCE.md` runs 3–4、ae-a8n ローカル
 ビルド `be78ca6` 経由）。受入マシンでの再実行は任意の spot check で
 あり、release 条件ではない:
 
 ```sh
-cd experiments/a8n-transport
+cd packages/ae-devtools-cli/a8n-transport
 node real-run.mjs --ae-a8n-root <ae-a8n checkout>
 ```
 
@@ -47,7 +47,7 @@ node real-run.mjs --ae-a8n-root <ae-a8n checkout>
   executable が残らないこと（helper process は別記録）。
 - 未カバー: npm 公開版 ae-a8n での確認は別ゲート（0.1.0 出荷対象外）。
 - 失敗時: `run-*.json` evidence と session trace が workdir に残る。
-  原因切り分けは `experiments/a8n-transport/README.md`。
+  原因切り分けは `packages/ae-devtools-cli/a8n-transport/README.md`。
 
 ### A-2. NativeProbe plug-in load proof（UNVERIFIED・既知の制限）
 
@@ -68,7 +68,7 @@ ad-hoc 署名を黙って回避しない。
 
 ### A-3.（任意）CEP panel load proof
 
-`experiments/cep-extension/LOAD-PROOF.md` — scaffold 生成パネルの
+`packages/ae-devtools-cli/cep-extension/LOAD-PROOF.md` — scaffold 生成パネルの
 load → `evalScript` round trip → unload。`PlayerDebugMode` は前後記録・
 復元。**UNVERIFIED** のまま 0.1.0 の既知の制限として記録済み。
 

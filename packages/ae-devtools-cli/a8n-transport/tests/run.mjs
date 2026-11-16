@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const files = readdirSync(here)
-  .filter((f) => f.endsWith(".test.mjs") && f !== "run.mjs")
+  .filter((f) => f.endsWith(".test.mjs"))
   .sort();
 
 let failed = 0;

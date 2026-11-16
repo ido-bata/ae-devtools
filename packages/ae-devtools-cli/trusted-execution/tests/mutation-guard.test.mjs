@@ -68,7 +68,8 @@ test("malformed aeRef descriptors are INVALID_REFERENCE — typed refusal, never
     assert.equal(result.status, "refused", label);
     assert.equal(result.reason, "INVALID_REFERENCE", label);
   }
-  // guardMutation surfaces the same typed refusal (project checks still win).
+  // guardMutation surfaces the same typed refusal: the reference check
+  // refuses with INVALID_REFERENCE (project checks pass — both are "proj-A").
   const viaGuard = guardMutation({
     descriptor: { aeRef: { type: "layer", name: "x", path: null } },
     snapshot: SNAPSHOT,
@@ -111,12 +112,16 @@ test("guardMutation enforces project identity before resolution", () => {
   assert.equal(ok.status, "resolved");
 });
 
-test("retry policy: UNKNOWN quarantines, pre-dispatch outcomes allow only new-request re-auth", () => {
-  assert.equal(retryDecision({ outcome: "UNKNOWN", idempotent: true }), "quarantine");
-  assert.equal(retryDecision({ outcome: "UNKNOWN", idempotent: false }), "quarantine");
+test("retry policy: only proven non-dispatch (BLOCKED/not-sent) may be re-issued", () => {
+  assert.equal(retryDecision({ outcome: "UNKNOWN" }), "quarantine");
   assert.equal(retryDecision({ outcome: "BLOCKED" }), "new-request-after-reauth");
-  assert.equal(retryDecision({ outcome: "REFUSED" }), "new-request-after-reauth");
   assert.equal(retryDecision({ outcome: "not-sent" }), "new-request-after-reauth");
+  // REFUSED has no re-issue path (contract §5: fix prerequisite first);
+  // COMPLETED/FAILED need a new intent; UNKNOWN quarantines for any op.
+  assert.equal(retryDecision({ outcome: "REFUSED" }), "quarantine");
+  assert.equal(retryDecision({ outcome: "refused" }), "quarantine");
   assert.equal(retryDecision({ outcome: "COMPLETED" }), "quarantine");
   assert.equal(retryDecision({ outcome: "FAILED" }), "quarantine");
+  // A null/absent input degrades to quarantine, never a throw.
+  assert.equal(retryDecision(null), "quarantine");
 });

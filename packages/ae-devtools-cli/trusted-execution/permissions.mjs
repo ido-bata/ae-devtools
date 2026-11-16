@@ -56,8 +56,10 @@ export function executionClassFor(advertisement, permission) {
   }
   if (permission === "execute") {
     // Only ExtendScript execution maps to trusted-dev-script today; native
-    // execute paths (aegp-native etc.) have no consent rule yet — fail closed.
-    if (execClass === "extendscript" || trust === "privileged-dev-code") {
+    // or unclassified execute paths (aegp-native, class "unknown") have no
+    // consent rule yet — fail closed even when risk.trust claims
+    // "privileged-dev-code".
+    if (execClass === "extendscript" && trust === "privileged-dev-code") {
       return "trusted-dev-script";
     }
     return null;

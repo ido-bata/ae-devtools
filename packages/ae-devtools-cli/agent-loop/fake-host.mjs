@@ -60,9 +60,17 @@ export function createFakeHost({ app, globals = {} } = {}) {
       return { ok: true, result: result === undefined ? null : result };
     } catch (e) {
       // Map the vm stack line back to the probe source line. The
-      // wrapper adds one line, so subtract 1.
-      const m = /:(\d+):(\d+)/.exec(e.stack || "");
-      const line = m ? Math.max(1, Number(m[1]) - 1) : null;
+      // wrapper adds one line, so subtract 1. Only `at ...` stack
+      // FRAMES carry positions — the error message line can itself
+      // contain ":d:d" text and must never be parsed as a position.
+      const stack = String(e.stack || "");
+      let line = null;
+      const frameRe = /^\s*at\s[^\n]*?:\s*(\d+):(\d+)\s*$/gm;
+      let fm;
+      while ((fm = frameRe.exec(stack)) !== null) {
+        line = Math.max(1, Number(fm[1]) - 1);
+        break;
+      }
       return {
         ok: false,
         error: {
@@ -85,10 +93,14 @@ export function createFakeHost({ app, globals = {} } = {}) {
       }
       const reply = evalSource(req.source, `<eval:${req.requestId || "?"}>`);
       // vm results come from another realm; normalize to plain JSON so
-      // the codec sees ordinary values (functions/undefined dropped).
-      if (reply.ok && reply.result !== null && typeof reply.result === "object") {
+      // the codec sees ordinary values. ANY non-serializable result
+      // (objects AND functions/symbols) must be normalized — a raw
+      // function reaching codec.stringify throws inside send(), which
+      // the runner would misclassify as UNKNOWN instead of FAILED.
+      if (reply.ok && reply.result !== null && reply.result !== undefined) {
         try {
-          reply.result = JSON.parse(JSON.stringify(reply.result));
+          const normalized = JSON.parse(JSON.stringify(reply.result));
+          reply.result = normalized === undefined ? String(reply.result) : normalized;
         } catch {
           reply.result = String(reply.result);
         }
@@ -120,7 +132,9 @@ export function createFakeApp() {
           items.push(it);
           return it;
         },
-        length: items.length,
+        // Live length — ExtendScript probes read app.project.items.length
+        // to count items, so a snapshot value would silently report 0.
+        get length() { return items.length; },
       },
       activeItem: null,
     },

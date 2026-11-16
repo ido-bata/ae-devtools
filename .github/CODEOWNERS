@@ -1,8 +1,11 @@
 # CODEOWNERS
-# パス別の ownership map。branch protection の require_code_owner_reviews は
-# false であり、本ファイルは approval gate ではない（ADR-0012 §7 solo
-# adjustment 参照）。release merge の実質的な承認境界は ADR-0012 の
-# explicit human authorization。
+# パス別の ownership map。本ファイルは approval gate ではない
+# （branch protection の設定は repo 外で適用され、現行値の正本は
+# ADR-0012 §7 / ADR-0002 — ここに値を転記すると drift する）。
+# release merge の実質的な承認境界は ADR-0012 の explicit human
+# authorization であり、reviewer 条件の現行の充足形は
+# docs/release.md §Release PR merge authorization（ADR-0012 §7 solo
+# adjustment を含む）を正本とする。
 #
 # 編集の前に:
 # 1. AGENTS.md §10–§17 を読み直す（governance skeleton）
@@ -30,11 +33,19 @@
 /.github/workflows/   @rebuildup
 /.github/CODEOWNERS   @rebuildup
 
-# Experiments — runtime bridge probes are security-sensitive (loopback only
-# token), so they belong with the repository owner.
+# Packaged CLI/tooling — moved from experiments/ into packages/ (Issue #115).
+# Contains the trusted-execution consent/codec path, the a8n transport,
+# the CEP devkit, and the agent loop: security-sensitive surfaces that
+# belong with the repository owner.
+/packages/             @rebuildup
+
+# Experiments — remaining runtime-bridge probes are security-sensitive
+# (loopback only token), so they belong with the repository owner.
 /experiments/         @rebuildup
 
 # Notes for future expansion:
 # - When the project adopts a second human owner, add a second column.
-# - When CODEOWNERS is used by branch protection (require review from Code Owners),
-#   ADR-0012 continues to require explicit human authorization for release PR merge.
+# - If branch protection is ever configured to require review from Code
+#   Owners, revisit the header above: under the current solo adjustment
+#   (ADR-0012 §7) this file remains an ownership map, not the approval
+#   gate — docs/release.md §Release PR merge authorization is canonical.

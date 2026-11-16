@@ -1,7 +1,7 @@
 /*
  * 02-active-item.jsx — JSON projection of app.project.activeItem.
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 02 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 02 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * The probe projects a small, stable set of fields. The exact set

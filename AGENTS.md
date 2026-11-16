@@ -338,7 +338,7 @@ Git 外の操作（release PR merge / tag / deploy / publish / notification 等�
 
 `release-x-y-z → main` release PR を含む side effect は **explicit user authorization 境界** に従う。
 
-- reviewer / CODEOWNERS approval は merge の前提条件
+- reviewer 条件は merge の前提条件（CODEOWNERS は approval gate ではなく ownership map。solo 構成での充足形は `docs/release.md` §Release PR merge authorization / ADR-0012 §7 を正本とする）
 - **merge そのものを実行する権限は user が保持**する
 - Agent は release-wide verification 完了 + release gate green + ready-to-merge 状態まで進めた時点で **ready-to-merge で停止** し、現在の head SHA / required checks / outstanding review conversations を report する
 - authorization 取得のための追加質問を行わない（permission 確認は user 側の発火に委ねる）

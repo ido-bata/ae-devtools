@@ -1,4 +1,6 @@
 {
+  "schema": "ae-devtools.a8n-transport.real-run/legacy-pre-v1",
+  "producerNote": "Recorded before the v1 schema discriminator existed; failure-path artifact (launchError + close:null) from the pre-#115 experiments/ location.",
   "issue": 49,
   "startedAt": "2026-11-15T01:18:15.605Z",
   "platform": "darwin/arm64",

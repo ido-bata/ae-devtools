@@ -19,7 +19,7 @@
  * LOAD-PROOF.md and an owned AE session.
  */
 import { spawnSync } from "node:child_process";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateExtension } from "./validate.mjs";
 
@@ -34,7 +34,14 @@ if (cmd === "scaffold") {
   const r = spawnSync(process.execPath, [join(HERE, "scaffold.mjs"), ...rest], {
     stdio: "inherit",
   });
-  process.exit(r.status ?? 1);
+  if (r.error) {
+    // Spawn failure (ENOENT etc.) or signal kill: status is null and
+    // there is no child diagnostic — surface it instead of a bare exit.
+    console.error(`devkit scaffold: ${r.error.message ?? String(r.error)}`);
+    process.exitCode = 2;
+  } else {
+    process.exitCode = r.status ?? 1;
+  }
 } else if (cmd === "validate") {
   const dir = rest[0];
   if (!dir || rest.length !== 1) {
@@ -43,11 +50,13 @@ if (cmd === "scaffold") {
   }
   try {
     const report = await validateExtension(dir);
+    // exitCode, not process.exit(): exiting immediately can truncate
+    // the JSON report when stdout is a pipe.
     console.log(JSON.stringify(report, null, 2));
-    process.exit(report.ok ? 0 : 1);
+    process.exitCode = report.ok ? 0 : 1;
   } catch (err) {
-    console.error(`devkit validate: ${err.message}`);
-    process.exit(2);
+    console.error(`devkit validate: ${err?.message ?? String(err)}`);
+    process.exitCode = 2;
   }
 } else {
   console.error(

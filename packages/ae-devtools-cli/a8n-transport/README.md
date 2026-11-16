@@ -36,7 +36,20 @@ runner.runScript(source)
   fix → re-execute → session-state verify → consent gates). Identical steps
   run against the fake and the real peer.
 - `real-run.mjs` — opt-in CLI: `node real-run.mjs [--install-dir D] [--out evidence.json]`.
+  Default `--out` is the current working directory (never the module
+  directory, so an installed package's `node_modules` is not mutated).
+  This is a repo/operator tool: it is shipped in the tarball for
+  completeness but has no `bin` entry; invoke it by path.
 - `tests/` — dependency-free `node:test` suite (`node tests/run.mjs`).
+
+## ae-a8n pin caveat
+
+`package.json` pins `@ido-bata/ae-a8n@0.1.0-alpha.2`, which predates the
+ae-a8n #103/#104 (+#105) host-context fixes — a real launch through the
+npm dependency fails (`EVIDENCE.md`, Attempt 1). Every green real-host
+run used a local ae-a8n checkout via `--ae-a8n-root`. Until a fixed
+release is published, `real-run.mjs` and `--session a8n` require
+`--ae-a8n-root <local build>`; do not treat the npm default as verified.
 
 ## Verification levels
 
@@ -53,8 +66,10 @@ runner.runScript(source)
   not authenticated authorization. Token issuance/verification is ae-a8n
   #97–#99 territory.
 - `aeDevtools.trustedEval` is an experiment seam: arbitrary JSX gated by
-  the client-side pipeline, built per-launch, owned sessions only. It must
-  not be presented as a shipped capability.
+  the client-side pipeline, built per-launch, owned sessions only. The
+  module ships inside the `@ae-devtools/cli` tarball (and is reachable
+  via the package's `./*` export map), but it remains an experiment —
+  it must not be presented as a supported, shipped capability.
 - The slice scenario is **read-only against the project** — AE may restore
   the user's last-opened project on launch, so no comp/layer/project
   mutation is performed here.

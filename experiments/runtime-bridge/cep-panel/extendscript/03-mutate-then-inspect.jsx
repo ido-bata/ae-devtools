@@ -3,7 +3,7 @@
  * new snapshot. Confirms that CSInterface.evalScript observes in-engine
  * mutations made earlier in the same session.
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 03 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 03 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Steps:

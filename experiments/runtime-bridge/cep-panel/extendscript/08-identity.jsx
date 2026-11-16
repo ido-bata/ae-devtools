@@ -1,7 +1,7 @@
 /*
  * 08-identity.jsx — temp comp + layer; returns index / id / name.
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 08 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 08 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Scope: this probe stops at "create + read". It does NOT exercise
