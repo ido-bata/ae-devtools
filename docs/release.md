@@ -43,7 +43,7 @@ validation evidence は CI 形態によって扱いが分かれる（[`writing-d
 
 いずれの場合も full snapshot の無条件 serialize は避け、reader が必要時に evidence を再 fetch できる pointer を本文に残す方針は共通。
 
-ae-devtools 現時点では GitHub Actions workflows は未 configured であり、release evidence は上記「CI が configured でない」分岐に従う。CI が configured になった時点で ADR / docs / Skill を更新する。
+ae-devtools では `.github/workflows/ci.yml`（`pull_request` 対象、package / experiment suite ごとの detect-and-skip job）と `.github/workflows/release-source-check.yml`（`main` 向け PR の defensive gate）が configured であり、release evidence は上記「native CI checks が available」分岐に従う。PR #1（`release-0-1-0 → main`）の checks が validated SHA に対する canonical evidence となる。
 
 ## Release gate
 
