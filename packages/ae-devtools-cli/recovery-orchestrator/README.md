@@ -1,4 +1,4 @@
-# recovery-orchestrator (Issue #55)
+# recovery-orchestrator (Issue #55, packaged as `ae-devtools-recover` in Issue #111)
 
 Crash / modal / session-rebuild orchestration between ae-devtools callers
 and ae-a8n's macOS GUI recovery surface (ae-a8n #109 observation, #111
@@ -63,17 +63,17 @@ see `orchestrator.mjs` header for semantics.
 ## Usage
 
 ```sh
-node cli.mjs evidence --since <ISO> --out <dir> \
+ae-devtools-recover evidence --since <ISO> --out <dir> \
   [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P] \
   [--proc-launch "<ps lstart>"] [--run-id ID]
 
-node cli.mjs observe --pid N --session-uid U --session-asid A \
+ae-devtools-recover observe --pid N --session-uid U --session-asid A \
   --ae-a8n-root <built-ae-a8n> [--shot-dir <dir>]          # read-only
 
-node cli.mjs recover --run-id <runId> --request-id R --method M \
+ae-devtools-recover recover --run-id <runId> --request-id R --method M \
   --ae-a8n-root <built-ae-a8n> [--runs-dir <dir>]          # GUI mutation
 
-node cli.mjs verify-exit --pid N --session-uid U --session-asid A \
+ae-devtools-recover verify-exit --pid N --session-uid U --session-asid A \
   --expectation exit|crash --evidence-dir <dir> \
   --ae-a8n-root <built-ae-a8n>
 ```
