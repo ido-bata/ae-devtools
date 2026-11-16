@@ -420,6 +420,14 @@ t("host failure without a resolvable position records honest no-map/no-position"
   assert.equal(res.status, "no-position");
 });
 
+t("wire FAILED outcome exits non-zero (Issue #105)", () => {
+  const hostError = JSON.stringify({ name: "Error", message: "wire-level failure" });
+  const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"],
+    { AE_DEVTOOLS_CLI_FAKE_HOST_ERROR: hostError });
+  assert.equal(r.body.outcome, "FAILED");
+  assert.equal(r.code, 1);
+});
+
 t("adapter-level refusal produces a transport-outcome diagnostics record", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--consent", "grant"]).body;
   assert.equal(r.outcome, "refused"); // destructive confirm missing

@@ -414,7 +414,12 @@ async function main() {
           method: opId ?? flags["read-op"] ?? "read.projectSummary",
           event: evidence.outcome === "UNKNOWN" ? "timeout" : "resolved",
         });
-        const bad = ["refused", "failed", "BLOCKED", "UNKNOWN"].includes(evidence.outcome);
+        // Wire outcomes are uppercase (FAILED/REFUSED/BLOCKED/UNKNOWN);
+        // adapter-level refusals surface as lowercase status. Compare
+        // case-insensitively — same convention as diagnostics.mjs
+        // wireState/FAILURE_OUTCOMES (Issue #105: wire FAILED exited 0).
+        const bad = ["refused", "failed", "blocked", "unknown"]
+          .includes(String(evidence.outcome ?? "").toLowerCase());
         code = bad ? 1 : 0;
         payload = { ...evidence, ...(typeof flags.out === "string" ? { evidenceFile: flags.out } : {}) };
       } catch (e) {
