@@ -7,6 +7,7 @@
   "scripts": {
     "render": "bun run scripts/render-templates.ts",
     "verify": "bun run scripts/verify.ts",
+    "collect": "bun run scripts/collect.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"
   },
