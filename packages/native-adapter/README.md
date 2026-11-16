@@ -17,8 +17,9 @@ This package contains:
 - `src/operations.ts` — the committed **per-operation registry**: the
   only place dispatchability is defined. Each entry carries
   `implemented`/`verifiedOnRealHost` evidence; `dispatchable` requires
-  both. Seeded with the 21 AEGP/SPBasicSuite calls that
-  `experiments/native-sdk/minimal-plugin/src/probe.cpp` actually makes.
+  both. 933 entries today: the AEGP/SPBasicSuite calls that
+  `experiments/native-sdk/minimal-plugin/src/probe.cpp` actually makes
+  plus inventory-only suite registrations (#63–#69).
 - `src/probe-result.ts` — validator for the NativeProbe result contract
   (`ae-devtools/native-probe-result/v1`;
   `specs/ae-capability-coverage/contracts/native-probe-result.md`).
@@ -37,9 +38,11 @@ treatable as callable. The coverage matrix itself records
 `compatible` means "versions and advertised per-operation availability
 line up" — it is not authorization and not behavioural proof.
 
-**Dispatchable operation count today: 0.** All 21 registry entries are
-`implemented-unverified` (NativeProbe compiles on macOS arm64; no
-authorized AE session has loaded it).
+**Dispatchable operation count today: 0.** Of the 933 registry entries,
+34 are `implemented-unverified` (NativeProbe compiles on macOS arm64;
+no authorized AE session has loaded it), 876 are `inventory-only`
+(reporting metadata, never callable), and 23 are
+`unsupported-or-unknown`.
 
 ## Negotiation contract (summary)
 
