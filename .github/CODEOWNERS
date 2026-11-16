@@ -1,6 +1,8 @@
 # CODEOWNERS
-# ガバナンス経路の所有者。Ruleset / branch protection と組合せ、
-# ADR-0012 / ADR-0003 で要求される review / approval の anchor を構成する。
+# パス別の ownership map。branch protection の require_code_owner_reviews は
+# false であり、本ファイルは approval gate ではない（ADR-0012 §7 solo
+# adjustment 参照）。release merge の実質的な承認境界は ADR-0012 の
+# explicit human authorization。
 #
 # 編集の前に:
 # 1. AGENTS.md §10–§17 を読み直す（governance skeleton）
