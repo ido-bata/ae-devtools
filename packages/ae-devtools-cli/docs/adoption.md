@@ -1,4 +1,4 @@
-# Adopting @ae-devtools/cli in an existing AE project
+# Adopting @ido-bata/ae-devtools-cli in an existing AE project
 
 対象読者: After Effects のスクリプト/拡張を TypeScript で開発している
 プロジェクト（例: Aulymo_v04, vidc-wAI）。
@@ -77,11 +77,11 @@ agent / deployment が注入する設計であり、package 側に既定の修�
 
 ```js
 import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION }
-  from "@ae-devtools/cli/agent-loop";
+  from "@ido-bata/ae-devtools-cli/agent-loop";
 import { createFakeHost, createFakeApp }
-  from "@ae-devtools/cli/agent-loop/fake-host";
-import { loadTrustedCodec } from "@ae-devtools/cli/trusted-execution/runner.mjs";
-import { consentScopeFor } from "@ae-devtools/cli/trusted-execution/permissions.mjs";
+  from "@ido-bata/ae-devtools-cli/agent-loop/fake-host";
+import { loadTrustedCodec } from "@ido-bata/ae-devtools-cli/trusted-execution/runner.mjs";
+import { consentScopeFor } from "@ido-bata/ae-devtools-cli/trusted-execution/permissions.mjs";
 ```
 
 最小の fake-level 利用例（`fixtures/clean.jsx` は package 同梱）:

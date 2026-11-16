@@ -1,4 +1,4 @@
-# @ae-devtools/cli — ae-devtools developer CLI
+# @ido-bata/ae-devtools-cli — ae-devtools developer CLI
 
 After Effects スクリプト・拡張開発のための開発者向け CLI。
 TypeScript/モダン JS → ExtendScript ES3 JSX のビルド・型検査・lint・
@@ -11,7 +11,7 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 ## Install
 
 ```sh
-npm install @ae-devtools/cli        # npm publish 後
+npm install @ido-bata/ae-devtools-cli        # npm publish 後
 # または tarball / git から:
 npm install ./ae-devtools-cli-0.2.0.tgz
 ```
@@ -124,9 +124,9 @@ CLI が存在しない。install した package から library として import
 
 ```js
 import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION }
-  from "@ae-devtools/cli/agent-loop";
+  from "@ido-bata/ae-devtools-cli/agent-loop";
 import { createFakeHost, createFakeApp }
-  from "@ae-devtools/cli/agent-loop/fake-host";
+  from "@ido-bata/ae-devtools-cli/agent-loop/fake-host";
 ```
 
 `runDevLoop` は dispatch→diagnose→fix→rerun→regression の dev loop
@@ -161,7 +161,7 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `diagnostics/` | `ae-devtools.diagnostics/v1` record schema, collector registry, JSX→TS sourcemap resolution (consumed by `ae-devtools diagnose`) |
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 | `cep-extension/` | CEP extension scaffold + validate devkit (`ae-devtools-cep`, `ae-devtools-cep-lifecycle` bins) |
-| `agent-loop/` | agent dev loop library (`@ae-devtools/cli/agent-loop`; bin なし、fake-level) |
+| `agent-loop/` | agent dev loop library (`@ido-bata/ae-devtools-cli/agent-loop`; bin なし、fake-level) |
 
 ## Verification
 

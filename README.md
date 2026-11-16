@@ -48,7 +48,7 @@ After Effects の **スクリプト／エクステンション開発そのもの
 
 ## 現在利用可能なもの
 
-`packages/ae-devtools-cli`（`@ae-devtools/cli`）— 外部プロジェクトから
+`packages/ae-devtools-cli`（`@ido-bata/ae-devtools-cli`）— 外部プロジェクトから
 `npm install` で利用できる開発者向け CLI + JSX toolchain。
 
 - `ae-devtools` — `doctor` / `discover` / `inspect` / `execute` / `verify`（fake session は AE 不要、real session は `@ido-bata/ae-a8n` 経由）
