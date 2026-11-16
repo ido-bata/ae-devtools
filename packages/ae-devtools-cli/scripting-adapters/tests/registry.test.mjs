@@ -14,17 +14,22 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { OPERATIONS, buildSource, getOperation, opsForDomain, registryReport } from "../registry.mjs";
 import { createAdapterFakeApp } from "../fake-app.mjs";
+import { fakeHostContext } from "../fake-host.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const symbolsJson = JSON.parse(
-  readFileSync(join(here, "..", "..", "..", "..", "inventories", "scripting", "generated", "symbols.json"), "utf8")
-);
+// These fixtures live at the REPOSITORY root / a sibling package — they
+// are not part of the published tarball, so the assertions that need
+// them are opt-in (skipped) when the files are absent.
+const SYMBOLS_JSON = join(here, "..", "..", "..", "..", "inventories", "scripting", "generated", "symbols.json");
+const CATALOG_JSON = join(here, "..", "..", "..", "..", "packages", "capability-catalog", "generated", "catalog.json");
+const repoFixtures = existsSync(SYMBOLS_JSON) && existsSync(CATALOG_JSON);
+const symbolsJson = repoFixtures ? JSON.parse(readFileSync(SYMBOLS_JSON, "utf8")) : null;
 
 function allSymbolIds() {
   const ids = new Set();
@@ -41,19 +46,13 @@ function allSymbolIds() {
 const SYMBOL_IDS = allSymbolIds();
 
 function evalSource(source, app) {
-  const ctx = vm.createContext({
-    app, JSON, Math, String, Number, Boolean, Array, Object, Date, RegExp,
-    Error, TypeError, ReferenceError, parseInt, parseFloat, isNaN, isFinite, undefined,
-    File: class File { constructor(p) { this.fsName = p; this.exists = true; } },
-    CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
-    CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
-  });
+  const ctx = vm.createContext(fakeHostContext(app));
   return vm.runInContext(`(function(){\n${source}\n})()`, ctx, { filename: "adapter.jsx" });
 }
 
 /* ---------- registry contract ---------- */
 
-test("every claimed member id exists in the scripting inventory", () => {
+test("every claimed member id exists in the scripting inventory", { skip: !repoFixtures && "repo-root fixtures not present (published tarball)" }, () => {
   const missing = [];
   for (const op of OPERATIONS) {
     for (const m of op.members) if (!SYMBOL_IDS.has(m)) missing.push(`${op.id}: ${m}`);
@@ -303,11 +302,10 @@ test("fixture: expression on non-expressionable property and addProperty misuse 
     /cannot be added|unknown effect matchName/);
 });
 
-test("coverage claims only reference members actually exercised AND present in the catalog", () => {
+test("coverage claims only reference members actually exercised AND present in the catalog", { skip: !repoFixtures && "repo-root fixtures not present (published tarball)" }, () => {
   const claims = JSON.parse(readFileSync(
     join(here, "..", "generated", "coverage-claims.json"), "utf8"));
-  const catalog = JSON.parse(readFileSync(
-    join(here, "..", "..", "..", "..", "packages", "capability-catalog", "generated", "catalog.json"), "utf8"));
+  const catalog = JSON.parse(readFileSync(CATALOG_JSON, "utf8"));
   const recordIds = new Set(catalog.records.map((r) => r.id));
   for (const [memberId, claim] of Object.entries(claims.claims)) {
     assert.ok(recordIds.has(memberId), `claim ${memberId} has no catalog record`);

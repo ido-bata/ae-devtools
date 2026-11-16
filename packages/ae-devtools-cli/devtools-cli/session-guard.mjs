@@ -120,9 +120,21 @@ export async function beginRun({ dir = RUNS_DIR, sessionKind, argv = [], exec = 
   return { runId, markerPath: markerPath(dir, runId), marker };
 }
 
+/**
+ * readMarker() returns a synthesized {status:"corrupt"} stub when the
+ * marker file cannot be parsed. Mutators must NOT write that stub back —
+ * doing so would overwrite the original corrupt content and destroy the
+ * residue/forensics it carries. writableMarker() returns null for both
+ * absent and corrupt markers.
+ */
+function writableMarker(dir, runId) {
+  const marker = readMarker(dir, runId);
+  return marker !== null && marker.status !== "corrupt" ? marker : null;
+}
+
 /** Attach session evidence once openSession resolves. */
 export function markSession(dir, runId, session) {
-  const marker = readMarker(dir, runId);
+  const marker = writableMarker(dir, runId);
   if (marker === null) return;
   marker.status = "open";
   marker.session = {
@@ -145,7 +157,7 @@ export function markSession(dir, runId, session) {
  * refuses markers that lack this — a self-declared session is not proof.
  */
 export function noteSessionProcess(dir, runId, evidence = {}) {
-  const marker = readMarker(dir, runId);
+  const marker = writableMarker(dir, runId);
   if (marker === null) return;
   const att = evidence.attestation;
   marker.session = {
@@ -183,7 +195,7 @@ export function noteSessionProcess(dir, runId, evidence = {}) {
  * pointer to re-resolve stored diagnostics (Issue #103).
  */
 export function attachEvidence(dir, runId, { file } = {}) {
-  const marker = readMarker(dir, runId);
+  const marker = writableMarker(dir, runId);
   if (marker === null) return false;
   marker.evidenceFile = typeof file === "string" ? file : null;
   marker.evidenceRecordedAt = new Date().toISOString();
@@ -197,7 +209,7 @@ export function attachEvidence(dir, runId, { file } = {}) {
  * request's state; only "timeout" is recoverable.
  */
 export function recordRequestEvent(dir, runId, { requestId, method, event }) {
-  const marker = readMarker(dir, runId);
+  const marker = writableMarker(dir, runId);
   if (marker === null) return false;
   if (typeof requestId !== "string" || requestId.length === 0) return false;
   if (!["dispatched", "timeout", "resolved", "recovery-attempted"].includes(event)) return false;
@@ -232,7 +244,7 @@ export function endRun(dir, runId, status) {
     rmSync(file, { force: true });
     return;
   }
-  const marker = readMarker(dir, runId);
+  const marker = writableMarker(dir, runId);
   if (marker !== null) {
     marker.status = status;
     marker.endedAt = new Date().toISOString();

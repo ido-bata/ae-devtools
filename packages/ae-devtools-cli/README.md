@@ -173,8 +173,9 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 
 ## Docs
 
-- Module READMEs: `devtools-cli/README.md`, `jsx-toolchain/README.md`,
-  `a8n-transport/README.md`, `trusted-execution/README.md`,
-  `mcp-server/README.md`, `recovery-orchestrator/README.md`,
-  `cep-extension/README.md`, `agent-loop/README.md`
+- Module READMEs: `devtools-cli/README.md`, `dev-loop/README.md`,
+  `jsx-toolchain/README.md`, `a8n-transport/README.md`,
+  `trusted-execution/README.md`, `mcp-server/README.md`,
+  `recovery-orchestrator/README.md`, `cep-extension/README.md`,
+  `agent-loop/README.md`
 - Canonical governance: repo ルートの `AGENTS.md`, `docs/`
