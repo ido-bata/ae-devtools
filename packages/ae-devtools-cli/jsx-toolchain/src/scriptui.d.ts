@@ -29,6 +29,12 @@
  * NOT proof the ScriptUI API lacks it — reads still fall through the
  * `[key: string]: any` index signature. Constructors accept
  * `...args: any[]` — arity is not checked.
+ *
+ * LIB CONSTRAINT: these are ambient GLOBAL declarations (`Window`,
+ * `Event`, `Image`, `Point`…) that collide with `lib.dom.d.ts`. They
+ * are meant for ExtendScript checking where the DOM lib must NOT be
+ * loaded — check.mjs pins `lib: ["lib.es5.d.ts"]`. Consumers including
+ * this file in their own tsconfig must do the same.
  */
 
 /** Common base for all ScriptUI elements (mirrors `_Control` in the reference). */
@@ -448,14 +454,12 @@ declare class FlashPlayer extends ScriptUIControl {
 
 /** A 2-element size value ([width, height]); array-like with width/height. */
 declare class Dimension extends Array<number> {
-  [key: string]: any;
   width?: any;
   height?: any;
 }
 
 /** A bounding rectangle ([left, top, right, bottom]); array-like. */
 declare class Bounds extends Array<number> {
-  [key: string]: any;
   bottom?: any;
   height?: any;
   left?: any;
@@ -468,7 +472,6 @@ declare class Bounds extends Array<number> {
 
 /** A 2-element point ([x, y]); array-like with x/y accessors. */
 declare class Point extends Array<number> {
-  [key: string]: any;
   left?: any;
   top?: any;
   x?: any;
@@ -477,7 +480,6 @@ declare class Point extends Array<number> {
 
 /** A 4-element margin value ([left, top, right, bottom]); array-like. */
 declare class Margins extends Array<number> {
-  [key: string]: any;
   left?: any;
   right?: any;
   top?: any;

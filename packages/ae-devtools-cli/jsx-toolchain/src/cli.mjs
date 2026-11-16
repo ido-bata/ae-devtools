@@ -36,8 +36,24 @@ function out(obj, code) {
   process.exit(code);
 }
 
+// Options that consume the following argument as their value. The file
+// operand must skip both the flag AND its value, or `-o dist main.ts`
+// would resolve the entry to "dist".
+const VALUE_OPTIONS = new Set(["-o", "--name"]);
+
+function positionalArgs() {
+  const out = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (VALUE_OPTIONS.has(a)) { i++; continue; }
+    if (a.startsWith("-")) continue;
+    out.push(a);
+  }
+  return out;
+}
+
 function needFile() {
-  const f = args.find((a) => !a.startsWith("-"));
+  const f = positionalArgs()[0];
   if (!f) { console.error("missing file argument"); process.exit(2); }
   return f;
 }
@@ -113,8 +129,11 @@ switch (cmd) {
     const stop = () => handle.close();
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
+    // done resolves only after watchers close AND any in-flight build
+    // settles; exit via exitCode so buffered stdout is flushed and the
+    // event loop drains naturally instead of being cut mid-write.
     await handle.done;
-    process.exit(0);
+    process.exitCode = 0;
     break;
   }
   case "check": {

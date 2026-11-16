@@ -82,9 +82,13 @@ survive the pipeline; it is not itself a proof.
   signatures — members are `any`-typed. It catches typos and gives
   discovery; it does not check argument types. Absence of a member is
   not proof of absence in the real API. Inventory classes are emitted
-  as `declare class` so `instanceof`/`new` typecheck (ExtendScript
-  exposes them as host constructors); the `constructor(...args: any[])`
-  is an over-approximation since no signature data exists.
+  as `interface` plus a structural value side only where the host
+  really supports `instanceof` (the inventory's `instanceofCaveat`
+  marks classes whose `instanceof` throws or always returns false —
+  those get no value side, so the check is a type error; `baseOnly`
+  abstract bases get a call signature so `instanceof` works but `new`
+  does not). `new X(...)` on the remaining classes and the rest-args
+  signature are over-approximations since no signature data exists.
 - `scriptui.d.ts` and the `ae-globals.d.ts` host objects are
   **hand-maintained**, modeled on `types-for-adobe@7.2.6` (MIT —
   `shared/ScriptUI.d.ts`, `shared/JavaScript.d.ts`, `shared/global.d.ts`
