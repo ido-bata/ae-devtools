@@ -159,6 +159,7 @@ explicit user/project decisionとして固定されたrelease scope/version/publ
 - `docs/vision.md` で未確定とされる product / transport / CEP・UXP 等の仕様は、この Operating Model から推測して固定しない。
 - VSCode / MCP / AE bridge / shared core の責務境界を project-specific architecture authority として維持する。
 - official Adobe / host verification evidence は version / candidate identity とともに記録する。
+- Agent Skills の install layout は `skills/` への vendor 方式を採用する（`.agents/skills/` + `.claude/skills/` canonical layout からの deviation）。`AGENTS.md` §17・`docs/development.md` の field ownership・`skills/dispatch-index.md` が `skills/` を canonical として参照しており、`skills-lock.json` の content hash で upstream freshness を検証する。
 
 ## Upstream source
 

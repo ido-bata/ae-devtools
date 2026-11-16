@@ -6,3 +6,11 @@ node_modules/
 
 # pinned third-party reference clones for inventories/tools verify
 .reference/
+
+# agent scratch / temporary artifacts (AGENTS.md §16)
+.tmp/
+
+# local environment secrets; committed examples (.env.example*) are allowed
+.env
+.env.*
+!.env.example*

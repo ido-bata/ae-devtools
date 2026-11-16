@@ -1,36 +1,177 @@
 ---
 name: linear-release-control
-description: Linear optional release planning / portfolio control plane の併用契約（採用時のみ）。
+description: current release-driven profileでLinearをrelease planning / health / portfolio Practiceとして使い、GitHub execution stateとのcanonical ownershipを保ってreconcileする時に使用する。
 ---
 
-# linear-release-control
+# Linear Release Control
 
-## 対象
+Layer: **Practice**
 
-Linear を **optional** release planning / portfolio control plane として併用する場合の契約。
-GitHub Issues が canonical dependency SoT を保持し、 Linear は planning / portfolio surface に
-とどまる（ ADR-0014 ）。
+Linearはcurrent release-driven profileの標準release planning / health / portfolio toolであり、Constitutionではない。重要なのはLinearというsurfaceではなく、Canonical Consistencyを保ったrelease-level planning ownershipである。
 
-## Default
+同等以上のportfolio/release-planning guaranteeを持つalternativeへ移行する場合はADR-0017のrefinement contractを使う。
 
-Linear は **採用しない**。 GitHub Projects を planning control plane に使う。
+## Use this Skill when
 
-## Canonical pointer
+- release Projectを作成・更新する
+- release health / target date / blockerを整理する
+- 複数repositoryのrelease状態を俯瞰する
+- Linear Project Updateを作成する
+- LinearとGitHubの状態差分をreconcileする
+- Initiative / Milestone / Cycle / Linear Issueを使うか判断する
 
-- `AGENTS.md` §10, §11
-- `docs/architecture/decisions/ADR-0014-linear-profile.md`
-- `docs/development.md` §Source / Work State of Truth / §Ticket Done
+通常のimplementationだけならこのSkillを読み込まない。
 
-## 採用時の境界（contract）
+## Source of Truth
 
-- Linear の ticket / dependency は **canonical にしない**
-- ticket 作成 / 更新は GitHub Issue を canonical、 Linear は mirror（ GitHub Issue 開設後 link する ）
-- Done boundary は **GitHub Issue close のみ**。 Linear の per-ticket status は同期しない
-- release-level reconciliation で Linear Project を Completed に揃える
-- 採用には ADR amendment（ workspace / team / projects / cycles / reconciliation owner / reconciliation job ）が必要
+- source / integration: Git
+- implementation scope / acceptance criteria: GitHub Issue
+- implementation dependency: GitHub Issue dependency metadata
+- code review / CI / merge evidence: GitHub PR / checks
+- release integration evidence: release PR
+- release goal / date / health / portfolio: Linear Project / Initiative
+- durable project knowledge: repository-controlled docs
 
-## Forbidden
+Linearの値からGitHub execution stateを推測しない。矛盾時はGitHub evidenceを確認してLinear側をreconcileする。
 
-- Linear ticket が GitHub Issue と無関係に存在すること
-- Linear 側の status で merge / Ready を駆動すること
-- Linear Project を canonical な release management surface として使うこと
+## Object mapping
+
+### Project
+
+`1 release train = 1 Linear Project`。週次計画とreleaseは1:1にせず、Projectはversion単位で管理する。
+
+同じversion / release date / release decisionを共有する複数repositoryは1 Projectへまとめてよい。独立versionなら分ける。
+
+最低限:
+
+- release goal
+- version
+- target date when known
+- health
+- release PR / repository / release docs links
+- release-level blockers / limitations
+
+### Initiative
+
+複数release Projectを束ねるproduct / roadmap goalだけに使う。単一releaseのためだけに作らない。
+
+### Milestone
+
+release-level checkpointだけに使う。
+
+- Scope frozen
+- Implementation complete
+- Release candidate verified
+- Released
+
+必要なcheckpointだけ作る。ticket groupingには使わない。
+
+### Cycle
+
+defaultでは週次planningをCycleへ重複登録しない。release cadenceは可変。
+
+次の場合のみ検討する:
+
+- releaseが複数planning windowを跨ぐ
+- 複数Project間のteam capacityを見たい
+- release cadenceとは別のiteration metricが必要
+
+### Linear Issue
+
+GitHub Issueを全面mirrorしない。
+
+Linear Issueは次のようなrelease-level / coordination workに限定する:
+
+- cross-repository blocker
+- external dependency
+- release decision
+- signing / distribution / store review
+- non-code deliverable
+- operational coordination
+
+code changeのscope / acceptance criteriaはGitHub Issueへ置き、Linear Issueからlinkする。
+
+## Release lifecycle
+
+### Start
+
+1. version / goal / 分かる場合のrelease dateを確認する。週次境界は自動公開日ではない。
+2. Linear Projectを作成または既存Projectをreconcileする。
+3. relevant repositories / release docsをresourceとしてlinkする。
+4. GitHubでrelease branchを作成する。
+5. release branchにmeaningful diffが入ったらDraft release PRを作成し、Linear Projectからlinkする。
+
+### During implementation
+
+1. implementationはGitHub Issue / ticket PRで追跡する。
+2. LinearへPR本文・CI log・review discussionを複製しない。
+3. release判断へ影響するblockerだけProject / Linear Issueへ反映する。
+4. 週次/変更量/滞留/緊急性でreview（hold/candidate/blocked）。GitHub scopeと公開価値・リスク・滞留・release-only CI/deploy実測を使い、PR数だけで判断しない。
+5. candidateならGitHub PRにfreeze SHA/scope、carry-over、validation、明示承認を記録。Linearはhealthのみ投影する。
+6. Project UpdateはGitHub actual stateを確認してから作成する。
+
+Project Updateの標準内容:
+
+- health: `onTrack / atRisk / offTrack`
+- completed / integrated highlights
+- current blockers
+- release gate state
+- next checkpoint / decision
+- canonical evidence links
+
+### Completion
+
+1. release PRのmergeとrelease-level gateをGitHubで確認する。
+2. tag / package / deploy / store等、projectで定義したactual availabilityを確認する。
+3. final Project Updateを作成する。
+4. `Released` milestoneを完了する。
+5. actual releaseが確認できた時点でProjectをCompletedへ移す。
+
+## Agent / MCP policy
+
+Interactive PM操作ではChatGPT等のLinear connector/pluginを使用してよい。
+
+external agentがLinearへ直接アクセスする場合はLinear公式remote MCPをcapabilityとして使える。
+
+- Coordinator / release manager: `https://mcp.linear.app/mcp`
+- read-only worker: `https://mcp.linear.app/mcp/readonly`
+
+implementation workerは原則Linear write不要。planning contextが必要ならread-onlyを優先する。
+
+MCP auth / API key / user-global client configをrepository truthにしない。credentialをcommitしない。
+
+## Mutation rules
+
+Linearへwriteする前にcanonical GitHub evidenceを確認する。
+
+禁止:
+
+- unmerged PRをDone / implementation completeと推測
+- failing / unknown CIを無視してhealthを楽観更新
+- Linearだけにtechnical dependencyを追加してGitHub dependency graphと分岐
+- acceptance criteriaをGitHubとLinearで別々に保守
+- full GitHub Issue mirrorを自動作成
+
+## Built-in Linear agents
+
+Linear coding sessionsはbaseline execution pathにしない。Supervisor isolation、number-only ticket branch、PR state lifecycle、release/stack topology、current-SHA validation contractを満たせるadapterとして明示導入した場合のみ使用する。
+
+Loopsもbaselineにしない。利用する場合はstatus summarization / notification等のderived automationに限定し、canonical execution stateを変更するautomationは個別reviewする。
+
+## Failure / unavailable fallback
+
+Linearが利用不能でもimplementation / release integrationを止めない。
+
+GitHub Issue / PR / release branch / repository docsからcanonical execution stateを復旧し、Linear復旧後にProject stateをreconcileする。
+
+## Constitutional mapping
+
+- Canonical Consistency: GitHub execution factsとLinear release-level factsのfield ownershipを分離する
+- Evidence Integrity: release health/progressをGitHubのdurable evidenceからreconcileする
+- Organizational Continuity: release goal/date/healthを一つのagent sessionだけに保持しない
+
+## Re-evaluate / remove
+
+- release planningを別systemが同等以上に担う
+- project規模/形態がLinear control planeを不要にする
+- GitHub等がrelease-level viewを十分に提供し二重surfaceのcostが上回る
