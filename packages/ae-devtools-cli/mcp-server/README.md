@@ -1,4 +1,4 @@
-# mcp-server — dev-loop MCP tools (Issue #20, CAP051 slice)
+# mcp-server — dev-loop MCP tools (Issue #20, CAP051 slice; packaged in Issue #107)
 
 A minimal **stdio MCP server** (newline-delimited JSON-RPC 2.0) that exposes
 the existing dev-loop core to AI coding agents. This is a thin client
@@ -20,9 +20,9 @@ never presented as real-host verification.**
 ## Sessions
 
 - `--session fake` (default): codec-faithful vm host via
-  `packages/ae-devtools-cli/devtools-cli/fake-session.mjs` — **fake/mock evidence
+  `../devtools-cli/fake-session.mjs` — **fake/mock evidence
   only**.
-- `--session a8n`: owned AE session via `packages/ae-devtools-cli/a8n-transport/
+- `--session a8n`: owned AE session via `../a8n-transport/
   session.mjs` `openSliceSession` — the only path that can produce
   "verified on real host" evidence, and only when it actually runs.
 - `--ae-a8n-root <dir>`, `--install-dir <dir>` are forwarded to the a8n
@@ -54,12 +54,17 @@ stderr.
 ## Usage
 
 ```sh
-node server.mjs                       # fake session (default)
-node server.mjs --session a8n --ae-a8n-root /path/to/ae-a8n
+# installed via @ae-devtools/cli:
+ae-devtools-mcp                          # fake session (default)
+ae-devtools-mcp --session a8n --ae-a8n-root /path/to/ae-a8n
+# from this repo checkout:
+node server.mjs
 ```
 
 Point any MCP client at this via stdio, e.g.
-`{"command": "node", "args": ["/abs/path/experiments/mcp-server/server.mjs"]}`.
+`{"command": "ae-devtools-mcp", "args": []}` (after
+`npm install @ae-devtools/cli`) or
+`{"command": "node", "args": ["/abs/path/packages/ae-devtools-cli/mcp-server/server.mjs"]}`.
 
 ## Tests
 

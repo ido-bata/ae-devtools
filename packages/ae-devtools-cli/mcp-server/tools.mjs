@@ -1,7 +1,7 @@
 /**
  * tools.mjs — the four dev-loop MCP tools (Issue #20, CAP051 slice).
  *
- * Thin wrappers over packages/ae-devtools-cli/dev-loop/devloop.mjs — the ONLY
+ * Thin wrappers over ../dev-loop/devloop.mjs — the ONLY
  * dispatch path is runOperation() underneath execute()/verify(). This
  * file adds no permission path:
  *
@@ -27,7 +27,7 @@
  * Every result payload carries the session/registry evidence level —
  * fake/mock results are never presented as real-host verification.
  */
-import { discover, inspect, execute, verify } from "../../packages/ae-devtools-cli/dev-loop/devloop.mjs";
+import { discover, inspect, execute, verify } from "../dev-loop/devloop.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
 
