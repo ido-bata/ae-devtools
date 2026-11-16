@@ -13,17 +13,45 @@
  * TODO(#52-followup): generate fuller declarations once signature data is
  * extracted into the inventory.
  *
+ * The `app` and `system` globals are declared ONCE, here — ae-api.d.ts
+ * (generated) provides the `AeAppApi`/`System` types and this file
+ * layers the hand-maintained shapes on top via interface `extends`.
+ * Do not redeclare the consts in ae-api.d.ts (TS2451/TS2403).
+ *
  * Issue #97 additions: ExtendScript host objects File/Folder
  * (declarations modeled on types-for-adobe@7.2.6 shared/JavaScript.d.ts,
- * MIT — the same provenance as scriptui.d.ts), the `Application` type
- * used to annotate `app`, and the `PREFType` enum used by
- * `app.preferences`/`app.settings` (values per the After Effects
- * Scripting Guide, Preferences object — ae-scripting.docsforadobe.dev).
- * Members not listed fall through `[key: string]: any`; absence of a
- * member here is not proof the host lacks it.
+ * MIT — the same provenance as scriptui.d.ts), and the `PREFType`
+ * enum used by `app.preferences`/`app.settings` (values per the After
+ * Effects Scripting Guide, Preferences object —
+ * ae-scripting.docsforadobe.dev). Members not listed fall through
+ * `[key: string]: any`; absence of a member here is not proof the host
+ * lacks it.
+ *
+ * LIB CONSTRAINT: like scriptui.d.ts, the bare `File`/`Folder`/`type`
+ * aliases below collide with `lib.dom.d.ts`. These ambient files are
+ * meant for ExtendScript checking where the DOM lib must NOT be
+ * loaded — check.mjs pins `lib: ["lib.es5.d.ts"]`. Consumers including
+ * them in their own tsconfig must do the same.
  */
 
+// `app` is the Application singleton. AeAppApi (generated) already
+// carries every inventory member; this interface only narrows the
+// hand-maintained high-traffic ones. No index signature — unknown
+// members stay type errors, same as the generated surface.
+interface AeApp extends AeAppApi {
+  version: string;
+  name: string;
+  project: AeProject;
+}
+
 declare const app: AeApp;
+
+// `system` is the System singleton; AeSystem adds nothing the
+// generated System class lacks beyond a narrower osName.
+interface AeSystem extends System {
+  osName: string;
+}
+
 declare const system: AeSystem;
 declare const $: {
   global: any;
@@ -37,14 +65,6 @@ declare const $: {
 declare function alert(message: string, title?: string, errorIcon?: boolean): void;
 declare function confirm(message: string, noAsDefault?: boolean, title?: string): boolean;
 declare function prompt(prompt: string, default_?: string, title?: string): string | null;
-
-interface AeApp {
-  version: string;
-  name: string;
-  project: AeProject;
-  /** most-recently-used / active item accessors vary by version — any until pinned */
-  [key: string]: any;
-}
 
 interface AeProject {
   name: string;
@@ -90,17 +110,12 @@ interface AeLayer {
   [key: string]: any;
 }
 
-interface AeSystem {
-  osName: string;
-  [key: string]: any;
-}
-
 // ---- ExtendScript host objects (Issue #97) ---------------------------
 // File/Folder are ExtendScript built-ins, NOT AE scripting classes, so
 // they are absent from the generated ae-api.d.ts. In ExtendScript both
 // are callable with or without `new` (e.g. `File("a.txt")` and
 // `new File("a.txt")` both work) — the call signatures below reflect
-// that. check.mjs pins `lib: ["es5"]` so these do not collide with the
+// that. check.mjs pins `lib: ["lib.es5.d.ts"]` so these do not collide with the
 // DOM lib's unrelated File/Window declarations.
 
 interface AeFile {
@@ -142,7 +157,9 @@ interface AeFolder {
   create(): boolean;
   remove(): boolean;
   rename(newName: string): boolean;
-  getFiles(...args: any[]): AeFile[] | AeFolder[];
+  // getFiles() returns ONE array that may mix File and Folder entries —
+  // a single array of the union, not a union of homogeneous arrays.
+  getFiles(...args: any[]): (AeFile | AeFolder)[];
   [key: string]: any;
 }
 
@@ -168,17 +185,6 @@ declare const Folder: AeFolderConstructor;
 // side is the constructor const above, the type side is these aliases.
 type File = AeFile;
 type Folder = AeFolder;
-
-/**
- * The `Application` type: `app` is the singleton instance. The AE
- * scripting inventory emits `AeAppApi` for the `app` owner but no
- * `Application` class name, so consumers annotating `app: Application`
- * get this permissive alias (index signature keeps it assignable from
- * AeApp and accepts every host member).
- */
-interface Application {
-  [key: string]: any;
-}
 
 /**
  * `PREFType` — which preferences file a `Preferences`/`Settings` call

@@ -12,7 +12,8 @@
  *
  *   node src/gen-ae-types.mjs [symbols.json] [out.d.ts]
  *
- * Defaults: ../../inventories/scripting/generated/symbols.json and
+ * Defaults: ../../../../inventories/scripting/generated/symbols.json
+ * (repo checkout required — the inventory is not published) and
  * src/ae-api.d.ts next to this file.
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -39,6 +40,11 @@ for (const sym of data.symbols ?? []) {
 
 const classNames = new Set((data.classes ?? []).map((c) => c.name));
 const baseOf = new Map((data.classes ?? []).map((c) => [c.name, c.baseClass]));
+// Per-class host-behavior metadata recorded by the inventory extractor:
+// `instanceofCaveat` ("throws-undefined" | "always-false") marks classes
+// whose `instanceof` is broken on the host; `baseOnly` marks abstract
+// bases that are not directly constructible.
+const classMeta = new Map((data.classes ?? []).map((c) => [c.name, c]));
 
 const lines = [];
 lines.push("/**");
@@ -48,12 +54,21 @@ lines.push(" *");
 lines.push(" * HONEST SCOPE: the inventory records symbol NAMES, kinds and access");
 lines.push(" * but almost no signatures. Every member is `any`-typed; methods take");
 lines.push(" * `...args: any[]`. This file catches typos and gives discovery — it");
-lines.push(" * does NOT check argument types or return shapes. Inventory classes are");
-lines.push(" * emitted as `declare class` (not `interface`) because ExtendScript");
-lines.push(" * exposes them as host constructor functions: `instanceof CompItem` and");
-lines.push(" * `new KeyframeEase(...)` are real host behavior (Issue #97). The");
-lines.push(" * `constructor(...args: any[])` is an over-approximation — the");
-lines.push(" * inventory has no signature data, so arity is not checked.");
+lines.push(" * does NOT check argument types or return shapes. Every inventory");
+lines.push(" * class is an `interface` plus — only where the host really supports");
+lines.push(" * `instanceof` — a structural `declare const` value side. The");
+lines.push(" * inventory's `instanceofCaveat` marks classes whose `instanceof`");
+lines.push(" * throws or always returns false (AVItem, Collection, FootageSource,");
+lines.push(" * Item, Layer, PropertyBase): those get NO value side, so");
+lines.push(" * `x instanceof Item` is a type error instead of a narrowing promise");
+lines.push(" * the host cannot keep. `baseOnly` abstract bases get a CALL");
+lines.push(" * signature (no construct signature): `instanceof` typechecks and");
+lines.push(" * narrows, `new X()` does not. Other classes get a construct");
+lines.push(" * signature, so `new X(...)` typechecks — an over-approximation,");
+lines.push(" * since the inventory has no signature data (arity and");
+lines.push(" * constructibility are not checked). The `app`/`system` globals are");
+lines.push(" * declared once in ae-globals.d.ts; this file provides only the");
+lines.push(" * `AeAppApi`/`System` types.");
 lines.push(" * ExtendScript builtins ($, File, Folder, BridgeTalk, Socket, XML,");
 lines.push(" * JSON-if-present) are NOT covered here; see ae-globals.d.ts for the");
 lines.push(" * hand-maintained extras.");
@@ -62,16 +77,16 @@ lines.push("");
 
 // ---- classes / owner interfaces -------------------------------------
 const emitted = new Set();
-const emitInterface = (name, members, { isClass }) => {
+const emitSymbol = (name, members, { isClass }) => {
   if (emitted.has(name)) return;
   emitted.add(name);
+  const meta = isClass ? classMeta.get(name) : null;
   const base = isClass ? baseOf.get(name) : null;
   const extendsClause = base && classNames.has(base) ? ` extends ${ident(base)}` : "";
-  // Classes get a value side: ExtendScript host classes are constructor
-  // functions, so `instanceof`/`new` must typecheck (Issue #97). The
-  // rest-args constructor is deliberate — no signature data exists.
-  lines.push(`${isClass ? "declare class" : "interface"} ${ident(name)}${extendsClause} {`);
-  if (isClass) lines.push("  constructor(...args: any[]);");
+  // Every inventory entry is emitted as an `interface` (type side only)
+  // so `extends` always resolves — `declare class X extends <interface>`
+  // is rejected by tsc (TS2689) when skipLibCheck is off.
+  lines.push(`interface ${ident(name)}${extendsClause} {`);
   const seen = new Set();
   for (const m of members) {
     const key = m.member;
@@ -88,6 +103,25 @@ const emitInterface = (name, members, { isClass }) => {
   }
   lines.push("}");
   lines.push("");
+  // Value side, emitted only where the host really provides one.
+  // `instanceofCaveat` classes get NONE: `x instanceof Item` is a type
+  // error here, matching the host where it throws / always returns
+  // false. The remaining classes get a structural const so `instanceof`
+  // typechecks and narrows:
+  //   - normal classes: a construct signature, so `new X(...)` also
+  //     typechecks (over-approximation — the inventory has no signature
+  //     data, so arity/constructibility are not checked);
+  //   - `baseOnly` abstract bases: a CALL signature instead, so
+  //     `instanceof` works but `new X()` is a type error (the host does
+  //     not construct base classes). The residual white lie is that
+  //     `X(...)` calls typecheck — documented, not hidden.
+  if (isClass && !meta?.instanceofCaveat) {
+    const sig = meta?.baseOnly
+      ? `(...args: any[]): ${ident(name)}`
+      : `new (...args: any[]): ${ident(name)}`;
+    lines.push(`declare const ${ident(name)}: { prototype: ${ident(name)}; ${sig} };`);
+    lines.push("");
+  }
 };
 
 // Emit base classes first so `extends` references resolve.
@@ -97,25 +131,23 @@ const ordered = [...classNames].sort((a, b) => {
 });
 for (const name of ordered) {
   // 'app' is both a class row and the singleton owner — emit it once,
-  // below, as AeAppApi + `declare const app`.
+  // below, as the AeAppApi interface (the `app` global itself lives in
+  // ae-globals.d.ts).
   if (name === "app") continue;
-  emitInterface(name, byOwner.get(name) ?? [], { isClass: true });
+  emitSymbol(name, byOwner.get(name) ?? [], { isClass: true });
 }
-// 'app' owner → the Application singleton type + const.
+// 'app' owner → the Application singleton TYPE. The `app`/`system`
+// global bindings are declared once in ae-globals.d.ts, which layers
+// the hand-maintained AeApp/AeSystem shapes on top of these types.
 if (byOwner.has("app")) {
-  emitInterface("AeAppApi", byOwner.get("app"), { isClass: false });
-  lines.push("declare const app: AeAppApi;");
-  lines.push("");
+  emitSymbol("AeAppApi", byOwner.get("app"), { isClass: false });
 }
-// 'System' class doubles as the `system` global in ExtendScript.
-if (classNames.has("System")) {
-  lines.push("declare const system: System;");
-  lines.push("");
-}
+// 'System' class is emitted above with the other classes; ae-globals.d.ts
+// declares `const system: AeSystem` where `AeSystem extends System`.
 // Remaining owners that are not classes (rare) still get interfaces.
 for (const [owner, members] of byOwner) {
   if (owner === "app" || owner === "global" || classNames.has(owner)) continue;
-  emitInterface(`Ae_${owner}`, members, { isClass: false });
+  emitSymbol(`Ae_${owner}`, members, { isClass: false });
 }
 
 // ---- enums ----------------------------------------------------------
