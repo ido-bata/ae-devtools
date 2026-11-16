@@ -67,7 +67,7 @@ release is published, `real-run.mjs` and `--session a8n` require
   #97–#99 territory.
 - `aeDevtools.trustedEval` is an experiment seam: arbitrary JSX gated by
   the client-side pipeline, built per-launch, owned sessions only. The
-  module ships inside the `@ae-devtools/cli` tarball (and is reachable
+  module ships inside the `@ido-bata/ae-devtools-cli` tarball (and is reachable
   via the package's `./*` export map), but it remains an experiment —
   it must not be presented as a supported, shipped capability.
 - The slice scenario is **read-only against the project** — AE may restore

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * cli.mjs — recovery-orchestrator CLI (Issue #55), shipped as the
- * `ae-devtools-recover` bin of @ae-devtools/cli (Issue #111).
+ * `ae-devtools-recover` bin of @ido-bata/ae-devtools-cli (Issue #111).
  *
  *   ae-devtools-recover evidence --since <ISO> --out <dir>
  *        [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P]

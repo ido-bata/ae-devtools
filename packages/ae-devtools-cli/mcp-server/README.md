@@ -54,7 +54,7 @@ stderr.
 ## Usage
 
 ```sh
-# installed via @ae-devtools/cli:
+# installed via @ido-bata/ae-devtools-cli:
 ae-devtools-mcp                          # fake session (default)
 ae-devtools-mcp --session a8n --ae-a8n-root /path/to/ae-a8n
 # from this repo checkout:
@@ -63,7 +63,7 @@ node server.mjs
 
 Point any MCP client at this via stdio, e.g.
 `{"command": "ae-devtools-mcp", "args": []}` (after
-`npm install @ae-devtools/cli`) or
+`npm install @ido-bata/ae-devtools-cli`) or
 `{"command": "node", "args": ["/abs/path/packages/ae-devtools-cli/mcp-server/server.mjs"]}`.
 
 ## Tests

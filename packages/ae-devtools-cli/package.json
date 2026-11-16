@@ -1,19 +1,20 @@
 {
-  "name": "@ae-devtools/cli",
+  "name": "@ido-bata/ae-devtools-cli",
   "version": "0.2.0",
-  "description": "ae-devtools developer CLI: JSX/TypeScript build, lint, typecheck, sourcemaps plus discover/inspect/execute/verify over the canonical trusted-execution path (Issue #92).",
+  "description": "Developer CLI, JSX/TypeScript toolchain, MCP server and extension devkits for After Effects scripting/extension/native development",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=18"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ido-bata/ae-devtools.git"
+    "url": "git+https://github.com/ido-bata/ae-devtools.git",
+    "directory": "packages/ae-devtools-cli"
   },
   "publishConfig": {
     "access": "public",
-    "tag": "next"
+    "tag": "latest"
   },
   "bin": {
     "ae-devtools": "./devtools-cli/cli.mjs",

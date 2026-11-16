@@ -16,7 +16,7 @@
  *     written). Re-runs sourcemap resolution and reports honest statuses.
  *
  * Boundary notes:
- *   - diagnostics/ ships inside the @ae-devtools/cli tarball and is
+ *   - diagnostics/ ships inside the @ido-bata/ae-devtools-cli tarball and is
  *     reached through guarded dynamic imports. A damaged/partial install
  *     degrades to an honest "unavailable" note — never a crash, never a
  *     fabricated position.
