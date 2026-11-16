@@ -12,8 +12,9 @@
 
 ## Release branch
 
-- 通常 1 週間 sprint 開始時に `main` から `release-<major>-<minor>-<patch>` を作成
-- 緊急 patch 等、release scope / date を明示的に decision する場合は 1 週間から外れてよい
+- release cadence は **deliverable-unit**（[`ADR-0015-deliverable-unit-release-cadence.md`](./architecture/decisions/ADR-0015-deliverable-unit-release-cadence.md)）。固定日程ではなく、独立して利用可能な成果物が成立した単位で release を切る
+- 前 release PR が pending の間は、次の release branch を **frozen head から** 作成する（`main` からではない。ADR-0015 §4）
+- 緊急 patch 等、release scope / date を明示的に decision する場合は cadence から外れてよい
 - patch release でも **`main` を直接変更せず** patch release branch からの release PR を使う
 - release branch は remote で head を解決できる必要があるため、push / fetch のいずれかが成立するようにする
 
