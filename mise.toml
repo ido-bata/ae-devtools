@@ -1,6 +1,12 @@
 # Project-local auxiliary tooling.
 # Bun is pinned here for Agent Skills CLI usage. Native/application toolchain
 # ownership remains with the repository's existing package/toolchain files.
+#
+# Note: canonical Agent Skills live in skills/ (vendored layout — see
+# skills/dispatch-index.md and organization/profiles/release-driven-solo.md
+# §Project-specific reconciliation). The tasks below operate on the upstream
+# .agents/skills layout and are used as the fetch/reference step when
+# re-vendoring skills/, not as the install target itself.
 
 [tools]
 bun = "1.4.2"
@@ -10,9 +16,9 @@ description = "List Agent Skills available from rebuildup/project-init"
 run = "bunx skills add rebuildup/project-init --list"
 
 [tasks.skills-bootstrap]
-description = "Install project-init Skills for Claude Code and universal .agents/skills consumers"
+description = "Fetch project-init Skills into .agents/skills + .claude/skills (reference step for re-vendoring skills/)"
 run = "bunx skills add rebuildup/project-init --skill '*' --agent claude-code --agent codex -y"
 
 [tasks.skills-update]
-description = "Update tracked project-local Agent Skills non-interactively"
+description = "Update .agents/skills installs non-interactively (reference step for re-vendoring skills/)"
 run = "bunx skills update -p -y"

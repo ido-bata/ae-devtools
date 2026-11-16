@@ -145,6 +145,8 @@ ae-devtools は vision.md で「現時点で未確定な事項」を多数記録
 
 同一 level で矛盾する場合は、**より specific かつ新しい canonical source** を優先する。old implementation や migration 途中の多数派が新しい canonical design / policy を上書きしてはいけない。
 
+本節の順序が project canonical であり、`engineering-decisions` Skill が示す一般的な precedence はこれを refine する handbook として扱う（Skill 側の level 配列をそのまま project の順位として適用しない）。Skill file 内の bare `ADR-NNNN` 参照は配布元 project-init の番号であり、本リポジトリの ADR とは別体系（`skills/dispatch-index.md` §Upstream reference の読み方）。
+
 ### 自明な判断を user に返さない
 
 次を **すべて** 満たす場合は agent 自身で判断して進める。project evidence で解ける事柄を user へ逐次 escalate しない。
@@ -414,10 +416,10 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 
 ### Skills（progressive disclosure）
 
-- [`skills/`](skills/) — Skills CLI で source を pin / refresh する。各 Skill は本文を読み直さず必要時のみ activate する
-- [`skills/dispatch-index.md`](skills/dispatch-index.md) — entrypoint
+- [`skills/`](skills/) — `rebuildup/project-init` から vendor した Skill 群。`skills-lock.json` が source / content hash を記録し、各 Skill は本文を読み直さず必要時のみ activate する。sync 手順は `skills/dispatch-index.md` を参照
+- [`skills/dispatch-index.md`](skills/dispatch-index.md) — entrypoint / taxonomy / upstream reference の読み方
 
-### 標準 Skill（標準的な役割分担。`skills/` 配下の SKILL 名称の mapping）
+### 標準 Skill（標準的な役割分担。`skills/` 配下の SKILL 名称の mapping。詳細は `skills/dispatch-index.md`）
 
 - `parallel-orchestration` — 並列 orchestration / 親子 / immutable snapshot
 - `sandbox-runtime` — sandbox / execution isolation / 環境複製
@@ -426,6 +428,8 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - `quality-gate` — adaptive quality profile / required verification level
 - `engineering-decisions` — decision precedence / user escalation
 - `security-maintenance` — security advisory intake / priority / release 割り
+- `security-audit` — 未知の security defect の能動探索
+- `secrets-management` — secret value の Infisical ライフサイクル
 - `onboarding` — fresh 開発者 / agent onboarding 経路
 - `agent-recovery` — recovery algorithm / structured checkpoint
 - `correctness-assurance` — 正しい答えを作る前提 / 不変条件・事前/事後条件 / 型・静的解析・runtime assertion / プロパティ・差分・review
@@ -433,5 +437,11 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - `design-refinement` — 実装前 evidence-first design / unknown 分解 / scope-risk 調整 / trade-off documentation
 - `writing-discipline` — reader-oriented writing / 作業 context から独立した artifact への再構成 / Select-Compose-Reread pipeline
 - `interaction-discipline` — agent ownership / blocker presentation / one-question escalation / tangent defer / persistent prose routing
+- `code-naming` — symbol / file / directory の命名・レビュー・rename 判断
+- `idea-discovery` — 既存の延長ではない新規アイデア・設計原理の探索
+- `skill-selection` — 必要能力の判定と Skill 導入・採否の記録
 - `linear-release-control` — Linear を optional release planning / health / portfolio control plane として使う契約（採用時のみ）
+- `herdr-runtime` — Herdr を使う場合の Supervisor/session Practice（採用時のみ）
+- `orca-frontend` — Orca を使う場合の worktree / agent terminal frontend（採用時のみ）
+- `supervisor-boundary` — Supervisor / Worker の権限分離が必要な場合の境界 contract（採用時のみ）
 - `worktree-workflow` — Worktrunk を WSL/Linux の worktree 操作 layer として使う契約 / branch base / port allocation
