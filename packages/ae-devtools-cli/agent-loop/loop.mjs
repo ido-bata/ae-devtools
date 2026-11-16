@@ -40,12 +40,13 @@
  * host-side re-validation, catalog-gate integration remain unproven
  * per runner.mjs non-claims).
  *
- * Diagnostic records intentionally mirror the
- * packages/ae-devtools-cli/diagnostics schema (Issue #37, PR #41)
- * field names — kind/severity/location — but are produced here
- * without importing that module so this module stands alone.
+ * Diagnostic records are canonical ae-devtools.diagnostics/v1 records
+ * built through packages/ae-devtools-cli/diagnostics/schema.mjs, so
+ * they validate with validateDiagnosticsRecord() and resolve through
+ * diagnostics/source-map.mjs like every other diagnostic source.
  */
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
+import { makeDiagnosticsRecord } from "../diagnostics/schema.mjs";
 
 /* Fake-session defaults pin the consent scope's target identity. A
  * real deployment supplies the actual AE session pin via `session`. */
@@ -71,28 +72,32 @@ function runInput(source, session, auth) {
   };
 }
 
-/* Normalize a runner FAILED outcome into a diagnostics-shaped record.
- * Positions come ONLY from host-reported fields (runner marks them
- * hostReported) — never inferred. */
+/* Normalize a runner FAILED outcome into a canonical diagnostics
+ * record (ae-devtools.diagnostics/v1). Positions come ONLY from
+ * host-reported fields (runner marks them hostReported) — never
+ * inferred; absent position fields stay absent. */
 export function toDiagnostic(outcome, requestId) {
   const err = outcome && outcome.error;
   if (!err) return null;
-  return {
-    schema: "diagnostics/v1",
+  const message =
+    typeof err.message === "string" && err.message.length > 0
+      ? err.message
+      : String(err.name ?? "script error");
+  const source = { assetKind: "jsx-script" };
+  if (typeof err.file === "string" && err.file.length > 0) source.path = err.file;
+  if (Number.isInteger(err.line) && err.line >= 1) source.line = err.line;
+  if (err.hostReported === true) source.hostReported = true;
+  return makeDiagnosticsRecord({
     kind: "script-exception",
     severity: "error",
-    source: { assetKind: "jsx-script", requestId: requestId ?? outcome.requestId ?? null },
-    message: String(err.message || ""),
-    location:
-      err.line != null || err.file != null
-        ? {
-            line: err.line ?? null,
-            file: err.file ?? null,
-            origin: err.hostReported === true ? "host-reported" : "unverified",
-          }
-        : null,
-    hostError: { name: err.name ?? null },
-  };
+    message,
+    source,
+    collector: "agent-loop",
+    requestId: typeof requestId === "string" && requestId.length > 0
+      ? requestId
+      : typeof outcome?.requestId === "string" ? outcome.requestId : undefined,
+    evidence: "fake",
+  });
 }
 
 function blockedReport(reason) {
@@ -103,6 +108,11 @@ function blockedReport(reason) {
     outcome: "BLOCKED",
     blockedReason: reason,
     stateDirty: false,
+    stateWasDirty: false,
+    stateResetVerified: false,
+    stateResetTrusted: false,
+    resetIncomplete: false,
+    callbackError: null,
     quarantined: [],
   };
 }
@@ -116,9 +126,24 @@ function blockedReport(reason) {
  * fixer(diagnostic, source, attempt) -> corrected source or null.
  * stateReset(source, attempt) -> Promise — restores fixture/project
  *   state; required before rerunning after a dirty FAILED unless
- *   allowDirtyRerun is explicitly set.
+ *   allowDirtyRerun is explicitly set. NOTE: the arguments describe the
+ *   dispatch that is ABOUT TO RUN (the fixed source and its attempt
+ *   index), not the attempt that failed — the failed attempt's source
+ *   is the previous iteration's record.
  * One runner instance is shared across attempts so requestId
  * single-use and UNKNOWN quarantine apply loop-wide.
+ *
+ * Report flags:
+ *   stateDirty         — an unreconciled mutation MAY persist right now
+ *                        (set by mayHaveMutated/stateChanged evidence;
+ *                        cleared only by a fingerprint-VERIFIED reset)
+ *   stateWasDirty      — sticky history: some attempt dirtied state
+ *   stateResetVerified — a reset was checked against the baseline
+ *                        fingerprint and matched
+ *   stateResetTrusted  — a reset ran with NO fingerprint to verify
+ *                        against (trusted, not verified)
+ *   resetIncomplete    — a reset ran but failed fingerprint
+ *                        verification; the loop stopped before rerun
  */
 export async function runDevLoop({
   source,
@@ -144,8 +169,11 @@ export async function runDevLoop({
     finalSource: source,
     outcome: null,
     stateDirty: false,
+    stateWasDirty: false,
     stateResetVerified: false,
+    stateResetTrusted: false,
     resetIncomplete: false,
+    callbackError: null,
     quarantined: [],
   };
   let current = source;
@@ -159,14 +187,40 @@ export async function runDevLoop({
     // baseline stops the loop before any further dispatch.
     if (pendingReset) {
       if (typeof stateReset === "function") {
-        await stateReset(current, attempt);
+        try {
+          await stateReset(current, attempt);
+        } catch (err) {
+          // A throwing reset may have partially applied — the safe
+          // report is FAILED + dirty + resetIncomplete, never an
+          // unhandled rejection that loses the evidence.
+          report.outcome = "FAILED";
+          report.stateDirty = true;
+          report.stateWasDirty = true;
+          report.resetIncomplete = true;
+          report.callbackError = {
+            stage: "stateReset",
+            message: err instanceof Error ? err.message : String(err),
+          };
+          return report;
+        }
         if (fp && fp() !== baselineFp) {
           report.outcome = "FAILED";
           report.stateDirty = true;
+          report.stateWasDirty = true;
           report.resetIncomplete = true;
+          // A failed verification revokes any earlier verified claim.
+          report.stateResetVerified = false;
           return report;
         }
-        report.stateResetVerified = true;
+        if (fp) {
+          // Verified against the baseline: the dirty flag clears (the
+          // historical fact stays in stateWasDirty).
+          report.stateResetVerified = true;
+          report.stateDirty = false;
+        } else {
+          // No fingerprint: the reset is trusted, NOT verified.
+          report.stateResetTrusted = true;
+        }
       } else if (!allowDirtyRerun) {
         report.outcome = "FAILED";
         report.stateDirty = true;
@@ -176,7 +230,16 @@ export async function runDevLoop({
     }
 
     const preFp = fp ? fp() : null;
-    const auth = await consentProvider(current, attempt);
+    let auth;
+    try {
+      auth = await consentProvider(current, attempt);
+    } catch (err) {
+      // Consent infrastructure failure before dispatch: nothing was
+      // sent this attempt — BLOCKED with the error surfaced.
+      report.outcome = "BLOCKED";
+      report.blockedReason = `CONSENT_PROVIDER_ERROR: ${err instanceof Error ? err.message : String(err)}`;
+      return report;
+    }
     const out = await runner.runScript(runInput(current, session, auth ?? {}));
     const postFp = fp ? fp() : null;
     const stateChanged = preFp !== null && postFp !== preFp;
@@ -189,9 +252,21 @@ export async function runDevLoop({
       stateChanged,
       result: out.result ?? null,
       error: out.error ?? null,
+      refusal: out.refusal ?? null,
+      unknownCategory: out.unknownCategory ?? null,
       retry: out.retry ?? null,
     });
     if (out.outcome === "UNKNOWN") report.quarantined.push(out.requestId);
+
+    // Mutation evidence applies to EVERY outcome, not only FAILED: an
+    // UNKNOWN reply may have mutated (runner classifies it
+    // mayHaveMutated), and a consumer reading stateDirty===false as
+    // "state is clean" must not be lied to.
+    const mutated = out.mayHaveMutated === true || stateChanged === true;
+    if (mutated && out.outcome !== "COMPLETED") {
+      report.stateDirty = true;
+      report.stateWasDirty = true;
+    }
 
     if (out.outcome === "COMPLETED") {
       report.outcome = "COMPLETED";
@@ -199,13 +274,15 @@ export async function runDevLoop({
       return report;
     }
     if (out.outcome !== "FAILED") {
-      // REFUSED/BLOCKED/UNKNOWN: stop, never silently retry.
+      // REFUSED/BLOCKED/UNKNOWN: stop, never silently retry. Surface
+      // the runner's reason so the report is not a bare outcome.
       report.outcome = out.outcome;
+      report.blockedReason =
+        out.refusal?.code ?? out.unknownCategory ?? out.blocker?.code ?? null;
       return report;
     }
 
-    const dirty = out.mayHaveMutated === true || stateChanged === true;
-    report.stateDirty = dirty ? true : report.stateDirty;
+    const dirty = mutated;
     pendingReset = dirty;
 
     const diag = toDiagnostic(out);
@@ -214,7 +291,17 @@ export async function runDevLoop({
       report.outcome = "FAILED";
       return report;
     }
-    const fixed = await fixer(diag, current, attempt);
+    let fixed;
+    try {
+      fixed = await fixer(diag, current, attempt);
+    } catch (err) {
+      report.outcome = "FAILED";
+      report.callbackError = {
+        stage: "fixer",
+        message: err instanceof Error ? err.message : String(err),
+      };
+      return report;
+    }
     if (typeof fixed !== "string" || fixed === current) {
       report.outcome = "FAILED";
       report.finalSource = current;
@@ -234,31 +321,50 @@ export async function runDevLoop({
  * asserts the script is idempotent (assumeIdempotent: true). Arbitrary
  * eval is treated as possibly-mutating; re-dispatching it "to check"
  * could duplicate side effects, so the default is an explicit skip.
+ * `ok` additionally requires that no mutation was MEASURED when a
+ * stateFingerprint is supplied — a COMPLETED rerun that changed state
+ * is reported ok:false with mutationDetected:true.
  */
 export async function regressionCheck({ source, transport, session, consentProvider, assumeIdempotent, stateFingerprint }) {
+  const empty = { ok: false, outcome: null, result: null, mutationDetected: null };
   if (assumeIdempotent !== true) {
     return {
-      ok: false,
+      ...empty,
       skipped: "mutating-unverified",
       reason: "regression rerun requires assumeIdempotent: true; arbitrary eval may mutate",
-      outcome: null,
     };
   }
   if (typeof consentProvider !== "function") {
-    return { ok: false, skipped: "consent-provider-required", outcome: "BLOCKED" };
+    return {
+      ...empty,
+      skipped: "consent-provider-required",
+      outcome: "BLOCKED",
+      reason: "no consentProvider supplied; the loop never self-issues consent",
+    };
   }
   const runner = createJsxRunner({ transport });
   const fp = typeof stateFingerprint === "function" ? stateFingerprint : null;
   const beforeFp = fp ? fp() : null;
-  const auth = await consentProvider(source, -1);
+  let auth;
+  try {
+    auth = await consentProvider(source, -1);
+  } catch (err) {
+    return {
+      ...empty,
+      skipped: "consent-provider-error",
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
   const out = await runner.runScript(runInput(source, session, auth ?? {}));
   const afterFp = fp ? fp() : null;
+  // When a fingerprint is supplied, mutation is MEASURED, not assumed:
+  // assumeIdempotent is the operator's claim; this is the evidence —
+  // and measured mutation FAILS the check, it does not ride along on ok.
+  const mutationDetected = beforeFp !== null ? afterFp !== beforeFp : null;
   return {
-    ok: out.outcome === "COMPLETED",
+    ok: out.outcome === "COMPLETED" && mutationDetected !== true,
     outcome: out.outcome,
     result: out.result ?? null,
-    // When a fingerprint is supplied, mutation is MEASURED, not assumed:
-    // assumeIdempotent is the operator's claim; this is the evidence.
-    mutationDetected: beforeFp !== null ? afterFp !== beforeFp : null,
+    mutationDetected,
   };
 }

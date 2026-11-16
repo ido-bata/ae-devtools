@@ -94,12 +94,13 @@ test("E2E: broken fixture -> diagnostic -> fix -> rerun -> COMPLETED", async () 
   assert.equal(report.diagnostics.length, 2);
   for (const d of report.diagnostics) {
     assert.equal(d.kind, "script-exception");
-    assert.equal(d.location.origin, "host-reported");
-    assert.equal(typeof d.location.line, "number");
+    assert.equal(d.recordVersion, "ae-devtools.diagnostics/v1");
+    assert.equal(d.source.hostReported, true);
+    assert.equal(typeof d.source.line, "number");
   }
   // First bug is on line 4 (var f = ...addd), second on line 5.
-  assert.equal(report.diagnostics[0].location.line, 4);
-  assert.equal(report.diagnostics[1].location.line, 5);
+  assert.equal(report.diagnostics[0].source.line, 4);
+  assert.equal(report.diagnostics[1].source.line, 5);
 });
 
 test("regression check reruns final source and requires COMPLETED", async () => {
@@ -168,11 +169,15 @@ test("toDiagnostic preserves host fields and never invents positions", () => {
       hostReported: true,
     },
   });
-  assert.equal(d.location.line, 9);
-  assert.equal(d.location.file, "probe.jsx");
-  assert.equal(d.location.origin, "host-reported");
+  assert.equal(d.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(d.collector, "agent-loop");
+  assert.equal(d.source.line, 9);
+  assert.equal(d.source.path, "probe.jsx");
+  assert.equal(d.source.hostReported, true);
+  assert.equal(d.requestId, "req-1");
   const noPos = toDiagnostic({ error: { name: "E", message: "m" } });
-  assert.equal(noPos.location, null);
+  assert.equal(noPos.source.line, undefined);
+  assert.equal(noPos.source.path, undefined);
   assert.equal(toDiagnostic({ outcome: "COMPLETED" }), null);
 });
 
@@ -191,7 +196,13 @@ test("reply with wrong requestId -> UNKNOWN via runner, loop stops, id quarantin
   assert.equal(report.outcome, "UNKNOWN");
   assert.equal(report.iterations.length, 1);
   assert.equal(report.iterations[0].outcome, "UNKNOWN");
+  assert.equal(report.iterations[0].unknownCategory, "REQUEST_ID_MISMATCH");
   assert.equal(report.quarantined.length, 1);
+  // UNKNOWN may have mutated — stateDirty must not read as "clean".
+  assert.equal(report.stateDirty, true);
+  assert.equal(report.stateWasDirty, true);
+  // The stop reason is surfaced, not a bare outcome.
+  assert.equal(report.blockedReason, "REQUEST_ID_MISMATCH");
 });
 
 /* ---- PR #45 re-review: loop safety contract ---- */
@@ -357,7 +368,10 @@ test("V4: regressionCheck with stateFingerprint detects real mutation vs clean r
     assumeIdempotent: true, // operator asserts idempotent — fingerprint proves otherwise
     stateFingerprint: t.fp,
   });
-  assert.equal(dirty.ok, true);
+  // Measured mutation FAILS the check: ok must not be true for a script
+  // that changed state during the regression rerun.
+  assert.equal(dirty.ok, false);
+  assert.equal(dirty.outcome, "COMPLETED");
   assert.equal(dirty.mutationDetected, true);
   assert.equal(t.app.__state.items.length, 1);
 
@@ -371,4 +385,48 @@ test("V4: regressionCheck with stateFingerprint detects real mutation vs clean r
   });
   assert.equal(clean.ok, true);
   assert.equal(clean.mutationDetected, false);
+});
+
+test("V5: a reset without stateFingerprint is trusted, NOT verified", async () => {
+  const t = makeStatefulTransport();
+  const report = await runDevLoop({
+    source: fixture("mutate-then-fail.jsx"),
+    transport: t,
+    fixer: () => fixture("clean.jsx"),
+    consentProvider: PROVIDER,
+    stateReset: async () => { t.app.__state.reset(); },
+    // NO stateFingerprint: nothing can verify the reset against baseline.
+  });
+  assert.equal(report.outcome, "COMPLETED");
+  assert.equal(report.stateResetVerified, false);
+  assert.equal(report.stateResetTrusted, true);
+  // Without verification the dirty flag is not cleared.
+  assert.equal(report.stateDirty, true);
+  assert.equal(report.stateWasDirty, true);
+});
+
+test("V6: throwing injected callbacks degrade to a report, never an unhandled rejection", async () => {
+  const t = makeStatefulTransport();
+  const boom = async () => { throw new Error("provider exploded"); };
+  const report = await runDevLoop({
+    source: fixture("clean.jsx"),
+    transport: t,
+    consentProvider: boom,
+  });
+  assert.equal(report.outcome, "BLOCKED");
+  assert.match(report.blockedReason, /CONSENT_PROVIDER_ERROR/);
+
+  const t2 = makeStatefulTransport();
+  const report2 = await runDevLoop({
+    source: fixture("broken.jsx"),
+    transport: t2,
+    fixer: () => fixture("clean.jsx"),
+    consentProvider: PROVIDER,
+    stateReset: async () => { throw new Error("reset exploded"); },
+    stateFingerprint: t2.fp,
+  });
+  assert.equal(report2.outcome, "FAILED");
+  assert.equal(report2.resetIncomplete, true);
+  assert.equal(report2.stateDirty, true);
+  assert.equal(report2.callbackError.stage, "stateReset");
 });

@@ -1,7 +1,7 @@
 /*
  * 06-concurrent-B.jsx — short read (app.version + project state).
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 05+06 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 05+06 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Pairs with 05-concurrent-A.jsx. When the panel fires

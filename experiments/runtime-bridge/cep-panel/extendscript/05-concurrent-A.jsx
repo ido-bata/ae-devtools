@@ -1,7 +1,7 @@
 /*
  * 05-concurrent-A.jsx — long-ish safe read (walk project tree).
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 05 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 05 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Designed to pair with 06-concurrent-B.jsx. Probe A walks the

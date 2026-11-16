@@ -37,7 +37,6 @@
  * ok === true iff no check has status "fail".
  */
 import { readdir, readFile, stat } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, resolve, relative, sep } from "node:path";
 
@@ -71,6 +70,10 @@ async function findJsx(dir, prefix = "") {
 }
 
 function xmllintAvailable() {
+  // Test hook: AE_DEVTOOLS_CEP_NO_XMLLINT=1 forces the subset fallback
+  // so the no-xmllint branch of validateExtension stays covered on
+  // machines that do have xmllint installed.
+  if (process.env.AE_DEVTOOLS_CEP_NO_XMLLINT === "1") return false;
   return spawnSync("xmllint", ["--version"], { encoding: "utf8" }).status === 0;
 }
 
@@ -90,7 +93,7 @@ export function xmlWellFormedSubset(xml) {
   const re = /<\/?([A-Za-z_][\w:.-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g;
   let m;
   while ((m = re.exec(stripped)) !== null) {
-    const [whole, name, attrs] = m;
+    const [whole, name] = m;
     const isClose = whole.startsWith("</");
     const selfClose = !isClose && /\/\s*>$/.test(whole);
     if (isClose) {
@@ -120,10 +123,19 @@ const MANIFEST_REQUIRED = [
   ["<MainPath>", "MainPath"],
 ];
 
-/** Strip // and /* *\/ comments (heuristic; strings may contain //). */
-function stripComments(src) {
+/**
+ * Blank out comments AND string literals for the ES3 lint, preserving
+ * line structure so reported line numbers stay accurate. Strings are
+ * masked FIRST so a `//`, `/*` or `=>` inside a literal cannot be
+ * mistaken for code (and a comment cannot swallow a string). Block
+ * comments are replaced by same-length whitespace — dropping the
+ * newlines inside them would shift every later line number.
+ */
+function maskNonCode(src) {
+  const mask = (s) => s.replace(/[^\n]/g, " ");
   return src
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'/g, mask)
+    .replace(/\/\*[\s\S]*?\*\//g, mask)
     .replace(/(^|[^:"'`])\/\/[^\n]*/g, "$1");
 }
 
@@ -154,15 +166,17 @@ export const ES3_SUBSET_RULES = [
     msg: "JSON.* is not part of the ES3 host surface" },
   { code: "es3-object-static", re: /\bObject\.(?:keys|create|definePropert|definePropertie|getOwnProperty|freeze|seal|preventExtensions|isFrozen|isSealed|isExtensible|getPrototypeOf)\w*\b/,
     msg: "Object.* static helpers are ES5+; absent from ExtendScript ES3" },
-  { code: "es3-array-static", re: /\bArray\.(?:isArray|from|of|prototype)\b/,
-    msg: "Array.* statics/prototype are ES5+; absent from ExtendScript ES3" },
+  // Array.isArray/from/of are ES5+ statics; Array.prototype.slice/call
+  // are valid ES3 and must not be flagged.
+  { code: "es3-array-static", re: /\bArray\.(?:isArray|from|of)\b/,
+    msg: "Array.* statics are ES5+; absent from ExtendScript ES3" },
   { code: "es3-es5-method", re: /\.(?:forEach|map|filter|reduce|reduceRight|some|every|find|findIndex|findLast|findLastIndex|includes|fill|copyWithin|flat|flatMap|at|with|toSorted|toReversed|toSpliced|trim|trimStart|trimEnd|padStart|padEnd|repeat|codePointAt|normalize|startsWith|endsWith|matchAll|replaceAll|keys|values|entries)\s*\(/,
     msg: "ES5+ prototype method call; absent from ExtendScript ES3" },
 ];
 
 /** Returns [{line, code, msg}] for ES5+ constructs in JSX source. */
 export function lintJsxEs3Subset(source) {
-  const code = stripComments(source);
+  const code = maskNonCode(source);
   const hits = [];
   const lines = code.split("\n");
   for (let i = 0; i < lines.length; i++) {
@@ -221,8 +235,13 @@ export async function validateExtension(dirArg) {
           : `XML subset check: ${res.error}`));
     }
 
-    // 3. manifest structure (heuristic element presence)
-    const missing = MANIFEST_REQUIRED.filter(([needle]) => !xml.includes(needle));
+    // 3. manifest structure (heuristic element presence). Match on
+    // comment/CDATA-stripped text so a commented-out element or a
+    // string value cannot satisfy the check by accident.
+    const xmlCode = xml
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, "");
+    const missing = MANIFEST_REQUIRED.filter(([needle]) => !xmlCode.includes(needle));
     checks.push(check("manifest-structure",
       missing.length === 0 ? "pass" : "fail",
       missing.length === 0
@@ -240,11 +259,18 @@ export async function validateExtension(dirArg) {
     const missingRefs = [];
     for (const ref of refs) {
       const clean = ref.split("?")[0].split("#")[0];
-      if (isAbsolutePath(clean)) {
+      // A leading "/" is CEP extension-root-relative (the extension
+      // folder is the local server root), NOT a filesystem-absolute
+      // path — resolve it inside the extension dir. Windows drive
+      // paths and UNC paths remain absolute and are rejected.
+      const rootRelative = clean.startsWith("/");
+      if (isAbsolutePath(clean) && !rootRelative) {
         missingRefs.push(`${ref} (absolute path — must stay inside the extension dir)`);
         continue;
       }
-      const target = resolve(dir, clean);
+      const target = rootRelative
+        ? resolve(dir, `.${clean}`)
+        : resolve(dir, clean);
       const rel = relative(dir, target);
       if (rel === ".." || rel.startsWith(`..${sep}`)) {
         missingRefs.push(`${ref} (escapes extension dir)`);
@@ -258,15 +284,29 @@ export async function validateExtension(dirArg) {
         ? `${refs.length} local resource ref(s) resolve inside the extension dir`
         : `unresolved/outside refs: ${missingRefs.join(", ")}`));
 
-    const wantsCs = /CSInterface\.js/.test(html);
-    const csPath = join(dir, "CSInterface.js");
-    const csExists = await isFile(csPath);
-    if (wantsCs) {
+    // CSInterface.js may be bundled at the root OR referenced from a
+    // sub-directory (e.g. lib/CSInterface.js) — resolve each referenced
+    // path instead of assuming the extension root.
+    const csRefs = refs.filter((r) => /CSInterface\.js(?:[?#]|$)/.test(r));
+    const csExists = await isFile(join(dir, "CSInterface.js"));
+    if (csRefs.length > 0) {
+      const unresolved = [];
+      for (const ref of csRefs) {
+        const clean = ref.split("?")[0].split("#")[0];
+        const rootRelative = clean.startsWith("/");
+        const target = rootRelative
+          ? resolve(dir, `.${clean}`)
+          : resolve(dir, clean);
+        const rel = relative(dir, target);
+        if ((rel === ".." || rel.startsWith(`..${sep}`)) || !(await isFile(target))) {
+          unresolved.push(ref);
+        }
+      }
       checks.push(check("csinterface",
-        csExists ? "pass" : "fail",
-        csExists
-          ? "index.html references bundled CSInterface.js and it exists"
-          : "index.html references CSInterface.js but the file is missing (must be bundled — host does not provide it)"));
+        unresolved.length === 0 ? "pass" : "fail",
+        unresolved.length === 0
+          ? `${csRefs.length} CSInterface.js reference(s) resolve to bundled file(s)`
+          : `CSInterface.js referenced but missing/outside: ${unresolved.join(", ")} (must be bundled — host does not provide it)`));
     } else {
       checks.push(check("csinterface", "info",
         csExists ? "CSInterface.js bundled but not referenced by index.html"

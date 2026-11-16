@@ -1,7 +1,7 @@
 /*
  * 04-exception.jsx — intentional throw to test error propagation.
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 04 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 04 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Per the CEP 12 Cookbook, evalScript returns the value of

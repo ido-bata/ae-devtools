@@ -4,6 +4,10 @@
  *
  *   node packages/ae-devtools-cli/a8n-transport/real-run.mjs [--install-dir <dir>] [--ae-a8n-root <dir>] [--out <evidence.json>]
  *
+ * Default --out is the CURRENT WORKING DIRECTORY, never the module
+ * directory: when this file ships inside an installed npm package,
+ * writing into HERE would drop evidence files into node_modules.
+ *
  * Requires `@ido-bata/ae-a8n` installed (see package.json) and an After
  * Effects installation discoverable by ae-a8n. Launches an OWNED session —
  * if AE is already running the launch resolves to attached/unknown and the
@@ -25,16 +29,21 @@
  *     recorded and exits nonzero.
  */
 import { execFile } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { assertSliceOutcomes, runVerticalSlice } from "./scenario.mjs";
 import { openSliceSession } from "./session.mjs";
 
 const execFileAsync = promisify(execFile);
-const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** Serialize evidence, creating the parent dir if needed. A missing
+ *  --out directory must not silently drop the run record. */
+function writeEvidence(out, evidence) {
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, JSON.stringify(evidence, null, 2) + "\n", "utf8");
+}
 
 function arg(flag) {
   const i = process.argv.indexOf(flag);
@@ -44,6 +53,10 @@ function arg(flag) {
 /** The main AE executable — helpers (crashpad_handler, CEPHtmlEngine,
  *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it. */
 const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)/;
+/** Known Adobe helper executables — used to classify
+ *  aeHelpersAfterClose. Anything else matching the install fragment
+ *  (e.g. this node's own harness) is NOT an Adobe helper. */
+const ADOBE_HELPER = /crashpad_handler|CEPHtmlEngine|dynamiclinkmanager|TeamProjectsLocalHub|AdobeCrashReport/i;
 
 /**
  * Snapshot `ps` rows whose command line mentions the AE install. With no
@@ -103,11 +116,12 @@ function traceSnippet(tracePath, maxBytes = 64 * 1024) {
 async function main() {
   const installDir = arg("--install-dir");
   const aeA8nRoot = arg("--ae-a8n-root");
-  const out = arg("--out") ?? join(HERE, "evidence", `run-${Date.now()}.json`);
+  const out = arg("--out") ?? join(process.cwd(), `ae-a8n-real-run-${Date.now()}.json`);
   const startedAt = new Date().toISOString();
   const processFragment = installDir ?? "Adobe After Effects";
 
   const evidence = {
+    schema: "ae-devtools.a8n-transport.real-run/v1",
     issue: 49,
     startedAt,
     platform: `${process.platform}/${process.arch}`,
@@ -127,7 +141,19 @@ async function main() {
   } catch (error) {
     // Launch/session failure: still write evidence. Whatever sessionRoot
     // the failed launch used is attached to the error by openSliceSession.
+    // Record that no close was driven by this script, so the field is
+    // never ambiguous: "close without quit on an attached host" (what
+    // ae-a8n may do internally — see the trace) is NOT the same as
+    // "this script closed the session".
     evidence.launchError = errorInfo(error);
+    // The failure may be a launch failure OR a post-launch refusal
+    // (e.g. attached/unknown ownership) — name the stage so consumers
+    // do not misread `launchError` as "AE failed to start".
+    evidence.failureStage = "openSliceSession";
+    evidence.close = {
+      attempted: false,
+      note: "session open failed; this script never owned a session to close — see trace for ae-a8n's internal close behaviour",
+    };
     if (error !== null && typeof error === "object") {
       evidence.sessionRoot = error.sliceSessionRoot ?? null;
       evidence.workdir = error.sliceWorkdir ?? null;
@@ -142,7 +168,7 @@ async function main() {
     // started but readiness/ownership failed) — record it, never hide it.
     evidence.aeProcessesAfterLaunchFailure = await aeProcessSnapshot(processFragment);
     evidence.finishedAt = new Date().toISOString();
-    writeFileSync(out, JSON.stringify(evidence, null, 2) + "\n", "utf8");
+    writeEvidence(out, evidence);
     console.log(`evidence written: ${out}`);
     console.error(`launch failed: ${evidence.launchError.message}`);
     process.exitCode = 1;
@@ -158,6 +184,11 @@ async function main() {
     hostScript: join(session.workdir, "a8n-host-ext.js"),
     sessionRoot: session.sessionRoot,
     tracePath: session.tracePath,
+    // hostScript/sessionRoot/workdir/tracePath point into the session
+    // workdir, which session.close() deletes — they are post-mortem
+    // identifiers of removed artifacts. The trace CONTENT is inlined
+    // under `trace`; the other artifacts are not recoverable.
+    artifactsNote: "hostScript/sessionRoot/workdir/tracePath identify session artifacts removed by session.close(); only `trace` survives inline",
   });
 
   let sliceError = null;
@@ -196,7 +227,11 @@ async function main() {
     // processes (crashpad, CEPHtmlEngine, dynamiclinkmanager,
     // TeamProjectsLocalHub) are documented to linger after AE quits.
     const mainExeLeft = rows.filter((p) => MAIN_EXE.test(p.args ?? ""));
-    evidence.aeHelpersAfterClose = rows.filter((p) => !MAIN_EXE.test(p.args ?? ""));
+    // Only KNOWN Adobe helper executables count as helpers — the node
+    // harness running this script also matches the install fragment
+    // and must not be mislabeled as an Adobe helper.
+    evidence.aeHelpersAfterClose = rows.filter((p) =>
+      !MAIN_EXE.test(p.args ?? "") && ADOBE_HELPER.test(p.args ?? ""));
     if (evidence.close.quit !== true || mainExeLeft.length > 0) {
       evidence.sessionQuarantined = true;
       evidence.quarantineReason = evidence.close.quit !== true
@@ -207,7 +242,7 @@ async function main() {
     evidence.transportSends = session.transport.sendCount();
   }
 
-  writeFileSync(out, JSON.stringify(evidence, null, 2) + "\n", "utf8");
+  writeEvidence(out, evidence);
   console.log(`evidence written: ${out}`);
   for (const step of evidence.steps) {
     console.log(`${step.outcome.padEnd(18)} ${step.label}`);

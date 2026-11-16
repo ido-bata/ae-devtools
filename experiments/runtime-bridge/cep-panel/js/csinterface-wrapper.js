@@ -11,7 +11,7 @@
  * After Effects instance in the environment that produced this
  * repository (Linux on WSL2, no AE installed). It exists to SUPPORT
  * the verification probes, not to claim any behavior is validated.
- * See ../EXPERIMENT-LOG.md and
+ * See ../../EXPERIMENT-LOG.md and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Corrected facts (per docs/architecture/research/corrections-02):

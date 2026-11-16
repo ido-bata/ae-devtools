@@ -66,6 +66,18 @@ test("class resolution follows the permission, not just the row", () => {
   assert.equal(executionClassFor(ROWS.nativeRow, "execute"), null);
   assert.equal(executionClassFor(ROWS.readRow, "host-callback"), null);
   assert.equal(executionClassFor(null, "read"), null);
+  // trusted-dev-script requires BOTH extendscript execution class AND
+  // privileged-dev-code trust: an unclassified ("unknown") execute row
+  // claiming privileged-dev-code, or an extendscript row without the
+  // trust label, has no consent rule — fail closed.
+  assert.equal(
+    executionClassFor(
+      { access: "execute", risk: { trust: "privileged-dev-code" }, execution: { class: "unknown" } },
+      "execute",
+    ),
+    null,
+  );
+  assert.equal(executionClassFor(ROWS.writeRow, "execute"), null);
 });
 
 test("read-only passes with a session pin and nothing else", () => {

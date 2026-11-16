@@ -23,7 +23,11 @@ export const CONTRACT_OUTCOME = {
 };
 
 export function toContractOutcome(outcome) {
-  const mapped = CONTRACT_OUTCOME[outcome];
+  // Own-property lookup only: a plain-object index would also resolve
+  // inherited members ("toString" → a function, "constructor" → Object).
+  const mapped = Object.prototype.hasOwnProperty.call(CONTRACT_OUTCOME, outcome)
+    ? CONTRACT_OUTCOME[outcome]
+    : undefined;
   if (mapped === undefined) {
     throw new Error(`unknown wire outcome ${JSON.stringify(outcome)}`);
   }
@@ -51,8 +55,10 @@ export function toContractOutcome(outcome) {
  * @returns outcome object per outcome-model.md §2 shape, extended with
  *   `mayHaveMutated` for write paths.
  */
-export function classifyWriteResult(input = {}) {
-  const { dispatched, reply, deadlineExceeded, hostBusyEvidence, partialMutation } = input;
+export function classifyWriteResult(input) {
+  // `input = {}` only covers undefined; an explicit null must degrade to
+  // the same typed BLOCKED outcome, never a destructure TypeError.
+  const { dispatched, reply, deadlineExceeded, hostBusyEvidence, partialMutation } = input ?? {};
 
   // Host-busy is REFUSED only on attributable host evidence: the attester
   // must be inside AE or an OS-observable signal, and must prove this
@@ -155,7 +161,8 @@ export function classifyWriteResult(input = {}) {
  * produces the trace record for an undo attempt; callers must not merge it
  * into the mutation's outcome.
  */
-export function undoTraceRecord({ operationId, undoResult }) {
+export function undoTraceRecord(input) {
+  const { operationId, undoResult } = input ?? {};
   return {
     kind: "undo",
     operationId,

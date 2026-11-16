@@ -122,7 +122,8 @@ export function resolveDescriptor(descriptor, snapshot) {
  *
  * @returns {{status:"pass",node:object}|{status:"refused",reason:string,detail:string}}
  */
-export function guardMutation({ descriptor, snapshot, projectIdentity }) {
+export function guardMutation(input) {
+  const { descriptor, snapshot, projectIdentity } = input ?? {};
   if (snapshot?.projectIdentity == null) {
     return { status: "refused", reason: "PROJECT_UNKNOWN", detail: "snapshot carries no project identity" };
   }
@@ -142,21 +143,22 @@ export function guardMutation({ descriptor, snapshot, projectIdentity }) {
 /**
  * Retry policy for an operation manifest row.
  *
- * Design §3 / probe outcome model: `UNKNOWN` is quarantined and never
- * resent for ANY operation — `idempotent: false` additionally bars even a
- * deliberate re-issue without new authorization. This function only
- * classifies; it never performs a retry.
+ * Design §3 / probe outcome model / catalog contract §5: `UNKNOWN` is
+ * quarantined and never resent for ANY operation. `BLOCKED`/`not-sent`
+ * is the ONLY outcome that may be re-issued — and only as a new request
+ * after new authorization and a state check. `REFUSED`/`refused` means
+ * "fix prerequisite; do not silently retry" and has no re-issue path.
+ * This function only classifies; it never performs a retry.
  *
- * @param {{outcome:string, idempotent?:boolean}} input
+ * @param {{outcome:string}} input
  * @returns {"quarantine"|"new-request-after-reauth"}
  */
-export function retryDecision({ outcome, idempotent }) {
-  if (outcome === "UNKNOWN") return "quarantine";
-  if (outcome === "BLOCKED" || outcome === "REFUSED" || outcome === "not-sent" || outcome === "refused") {
-    // Terminal pre-dispatch outcomes may be re-issued only as a NEW request
-    // after new authorization and state check (catalog contract §5).
+export function retryDecision(input) {
+  const { outcome } = input ?? {};
+  if (outcome === "BLOCKED" || outcome === "not-sent") {
     return "new-request-after-reauth";
   }
-  // COMPLETED / FAILED / completed / failed: new intent required.
+  // UNKNOWN quarantines; REFUSED needs the prerequisite fixed first;
+  // COMPLETED/FAILED require a new intent. None is re-issued here.
   return "quarantine";
 }

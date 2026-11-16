@@ -4,7 +4,7 @@
  * Status: UNVERIFIED. This file has not been executed against a real
  * After Effects instance in the environment that produced this
  * repository (Linux on WSL2, no AE installed). See
- * ../EXPERIMENT-LOG.md and
+ * ../../EXPERIMENT-LOG.md and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * Wiring:

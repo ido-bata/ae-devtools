@@ -1,7 +1,7 @@
 /*
  * 01-version.jsx — returns app.version as JSON.
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 01 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 01 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * This is the simplest probe. It exists to confirm that the

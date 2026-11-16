@@ -23,6 +23,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { scaffold, ScaffoldError } from "../scaffold.mjs";
+import { lintJsxEs3Subset } from "../validate.mjs";
 
 const HERE = fileURLToPath(new URL("..", import.meta.url));
 const SCAFFOLD = join(HERE, "scaffold.mjs");
@@ -99,18 +100,19 @@ test("generates the expected tree with substituted values", async () => {
     assert.ok(!main.includes("{{"), "no unexpanded placeholders in main.js");
 
     // jsx/host.jsx is the ES3 ExtendScript sample; it must stay inside
-    // the documented ES3 subset that devkit validate enforces.
-    // (Comments are stripped first — the header documents the banned
-    // constructs in prose.)
+    // the documented ES3 subset that devkit validate enforces. Use the
+    // validator's own rule set (lintJsxEs3Subset) rather than a
+    // re-implemented subset that could drift from it.
     const hostJsxRaw = await readFile(join(out, "jsx/host.jsx"), "utf8");
     assert.ok(!hostJsxRaw.includes("{{"), "no unexpanded placeholders in host.jsx");
-    const hostJsx = hostJsxRaw
+    assert.deepEqual(lintJsxEs3Subset(hostJsxRaw), [],
+      "generated host.jsx must pass the ES3 subset lint");
+    // app.version must be read as an attribute — strip comments first
+    // (the header documents the banned call in prose).
+    const hostJsxCode = hostJsxRaw
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-    assert.doesNotMatch(hostJsx, /\b(?:let|const)\s+[A-Za-z_$]/);
-    assert.doesNotMatch(hostJsx, /=>/);
-    assert.doesNotMatch(hostJsx, /\bJSON\s*\./);
-    assert.doesNotMatch(hostJsx, /app\.version\s*\(/);
+    assert.doesNotMatch(hostJsxCode, /app\.version\s*\(/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -195,11 +197,11 @@ test("regression: evalScript callback uses the single-result contract", async ()
   }
 });
 
-test("csinterface-wrapper.js and CSInterface.js are copied byte-identical", async () => {
+test("csinterface-wrapper.js, CSInterface.js and host.jsx are copied byte-identical", async () => {
   const dir = await tmp();
   try {
     const out = await scaffold({ ...BASE, out: join(dir, "panel") });
-    for (const rel of ["js/csinterface-wrapper.js", "CSInterface.js"]) {
+    for (const rel of ["js/csinterface-wrapper.js", "CSInterface.js", "jsx/host.jsx"]) {
       const generated = await readFile(join(out, rel), "utf8");
       const template = await readFile(join(HERE, "templates", rel), "utf8");
       assert.equal(generated, template, rel);

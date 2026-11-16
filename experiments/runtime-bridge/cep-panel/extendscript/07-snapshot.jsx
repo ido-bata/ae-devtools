@@ -2,7 +2,7 @@
  * 07-snapshot.jsx — structured snapshot of
  *   { version, project, activeItem, selection, selectedProperties }
  *
- * Status: UNVERIFIED. See ../EXPERIMENT-LOG.md Probe 07 and
+ * Status: UNVERIFIED. See ../../EXPERIMENT-LOG.md Probe 07 and
  * docs/architecture/research/07-real-ae-validation.md.
  *
  * This is the read path the daemon's inspect_* verbs will fan out

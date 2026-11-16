@@ -6,7 +6,7 @@
   CEP 12 shape (Adobe-CEP CEP_HTML_Test_Extension-12.0 sample +
   ExtensionManifest_v_7_0.xsd, unchanged through CEP 12). It has not
   been loaded by a real After Effects instance in the environment that
-  produced this repository. See ../EXPERIMENT-LOG.md Probe 01 and
+  produced this repository. See ../../EXPERIMENT-LOG.md Probe 01 and
   docs/architecture/research/07-real-ae-validation.md.
 
   Key fields:
@@ -27,7 +27,7 @@
   as attributes inside Extension/DispatchInfo): it does not validate
   against the official XSD. Same defect class fixed in PR #40 for
   packages/ae-devtools-cli/cep-extension/ (moved from
-  experiments/cep-extension/ in #115).
+  experiments/cep-extension/ in Issue #115).
 -->
 <ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    ExtensionBundleId="ae-devtools-bridge"
@@ -61,7 +61,7 @@
             the panel's ExtendScript bridge is invoked exclusively via
             CSInterface.evalScript from JS, not via a separate
             ExtendScript startup script. See
-            ../EXPERIMENT-LOG.md Probe 01 and
+            ../../EXPERIMENT-LOG.md Probe 01 and
             docs/architecture/ADR-0001-runtime-bridge.md Decision 2
             ("all CSInterface.evalScript calls funnel through one
             chokepoint module").

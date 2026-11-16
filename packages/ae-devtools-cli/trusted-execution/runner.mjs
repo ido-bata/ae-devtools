@@ -326,7 +326,7 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
       ...base,
       ...classified,
       contractOutcome: toContractOutcome(classified.outcome),
-      retry: retryDecision({ outcome: classified.outcome, idempotent: false }),
+      retry: retryDecision({ outcome: classified.outcome }),
     };
 
     // Host-reported error fields pass through for diagnostics (#37).
