@@ -3,11 +3,11 @@
  * Fake/unit level only; real-host evidence lives in EVIDENCE.md.
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { lintSource, lintOutput, hasErrors } from "../src/es3-lint.mjs";
 import { buildFile, buildProject, transpileToEs3 } from "../src/build.mjs";
 import { checkFile, checkProject } from "../src/check.mjs";
@@ -384,6 +384,88 @@ t("resolvePosition returns null when the middle hop is unmapped", async () => {
   const jsxMap = { version: 3, sources: ["b.js"], names: [], mappings: "AAAA" };
   const bundleMap = { version: 3, sources: ["a.ts"], names: [], mappings: "" };
   assert.equal(resolvePosition({ jsxMap, bundleMap, line: 1, column: 0 }), null);
+});
+
+// --- watch mode (Issue #101) -------------------------------------------
+
+t("cli watch rebuilds on entry/dependency change, survives failures, SIGINT exits", async () => {
+  const WATCH_SCHEMA = "ae-devtools.jsx-toolchain.watch/v1";
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-watch-"));
+  const srcDir = join(dir, "src");
+  const outDir = join(dir, "out");
+  const libPath = join(srcDir, "lib.ts");
+  const mainPath = join(srcDir, "main.ts");
+  const jsxPath = join(outDir, "main.jsx");
+  mkdirSync(srcDir, { recursive: true });
+  writeFileSync(libPath, 'export function label(): string { return "v1"; }\n');
+  writeFileSync(mainPath, 'import { label } from "./lib";\nvar v = label();\n$.writeln(v);\n');
+
+  const child = spawn("node", [CLI, "watch", mainPath, "-o", outDir], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr.on("data", (c) => { stderr += c; });
+  const statusLines = [];
+  child.stdout.on("data", (chunk) => {
+    for (const line of chunk.toString().split("\n")) {
+      if (!line.trim()) continue;
+      let obj;
+      try { obj = JSON.parse(line); } catch { continue; }
+      if (obj.schema === WATCH_SCHEMA) statusLines.push(obj);
+    }
+  });
+
+  const waitFor = (count, timeoutMs = 20000) => new Promise((res, rej) => {
+    const deadline = Date.now() + timeoutMs;
+    const poll = () => {
+      if (statusLines.length >= count) return res(statusLines[count - 1]);
+      if (Date.now() > deadline) {
+        return rej(new Error(`timeout waiting for watch status line ${count}; got ${statusLines.length}: ${stderr.slice(0, 300)}`));
+      }
+      setTimeout(poll, 25);
+    };
+    poll();
+  });
+  const exited = new Promise((res) => child.on("exit", (code, signal) => res({ code, signal })));
+
+  try {
+    // 1. initial build
+    const first = await waitFor(1);
+    assert.equal(first.status, "ok", JSON.stringify(first.diagnostics));
+    assert.equal(first.artifacts?.jsxPath, jsxPath);
+    assert.ok(Array.isArray(first.diagnostics));
+    assert.ok(first.ts);
+    assert.match(readFileSync(jsxPath, "utf8"), /v1/);
+
+    // 2. dependency change -> rebuild -> JSX regenerated
+    writeFileSync(libPath, 'export function label(): string { return "v2"; }\n');
+    const second = await waitFor(2);
+    assert.equal(second.status, "ok", JSON.stringify(second.diagnostics));
+    assert.match(readFileSync(jsxPath, "utf8"), /v2/);
+
+    // 3. broken source -> failure reported, watcher keeps going
+    writeFileSync(libPath, 'export function label(: string { return "broken";\n');
+    const third = await waitFor(3);
+    assert.notEqual(third.status, "ok");
+    assert.ok(third.diagnostics.length > 0);
+
+    // 4. fix -> ok again
+    writeFileSync(libPath, 'export function label(): string { return "v3"; }\n');
+    const fourth = await waitFor(4);
+    assert.equal(fourth.status, "ok", JSON.stringify(fourth.diagnostics));
+    assert.match(readFileSync(jsxPath, "utf8"), /v3/);
+
+    // 5. SIGINT exits cleanly
+    child.kill("SIGINT");
+    const { code, signal } = await Promise.race([
+      exited,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("watch did not exit after SIGINT")), 10000)),
+    ]);
+    assert.equal(code, 0, `exit code ${code} signal ${signal}; stderr: ${stderr.slice(0, 300)}`);
+  } finally {
+    if (child.exitCode === null && !child.killed) child.kill("SIGKILL");
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 t("ae-api.d.ts catches bogus AE member names", () => {

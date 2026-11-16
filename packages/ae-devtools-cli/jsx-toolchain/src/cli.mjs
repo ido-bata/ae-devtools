@@ -8,6 +8,9 @@
  *                                          multi-file -> bundled ES3 JSX
  *                                          + jsx.map + bundle.js.map
  *   jsx-toolchain check <file|dir|entry>     typecheck vs ae-api.d.ts
+ *   jsx-toolchain watch <entry> [-o dir] [--name n]
+ *                                          rebuild on change; one JSON
+ *                                          status line per build on stdout
  *   jsx-toolchain map <file.jsx.map> <line> [col]
  *                                          generated -> bundle position
  *   jsx-toolchain resolve <dir|prefix> <line> [col]
@@ -97,6 +100,23 @@ switch (cmd) {
     }, r.status === "ok" ? 0 : 1);
     break;
   }
+  case "watch": {
+    const f = needFile();
+    const ni = args.indexOf("--name");
+    const name = ni >= 0 ? args[ni + 1] : null;
+    const { watchProject } = await import("./watch.mjs");
+    const handle = watchProject(f, {
+      outDir: outDirArg(),
+      name,
+      onStatus: (s) => process.stdout.write(JSON.stringify(s) + "\n"),
+    });
+    const stop = () => handle.close();
+    process.on("SIGINT", stop);
+    process.on("SIGTERM", stop);
+    await handle.done;
+    process.exit(0);
+    break;
+  }
   case "check": {
     const f = needFile();
     const abs = resolve(f);
@@ -134,6 +154,6 @@ switch (cmd) {
     break;
   }
   default:
-    console.error("usage: jsx-toolchain <lint|build|build-project|check|map|resolve> ...");
+    console.error("usage: jsx-toolchain <lint|build|build-project|check|watch|map|resolve> ...");
     process.exit(2);
 }
