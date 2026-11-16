@@ -5,12 +5,19 @@
  * HONEST SCOPE: the inventory records symbol NAMES, kinds and access
  * but almost no signatures. Every member is `any`-typed; methods take
  * `...args: any[]`. This file catches typos and gives discovery — it
- * does NOT check argument types or return shapes. ExtendScript builtins
- * ($, File, Folder, BridgeTalk, Socket, XML, JSON-if-present) are NOT
- * covered here; see ae-globals.d.ts for the hand-maintained extras.
+ * does NOT check argument types or return shapes. Inventory classes are
+ * emitted as `declare class` (not `interface`) because ExtendScript
+ * exposes them as host constructor functions: `instanceof CompItem` and
+ * `new KeyframeEase(...)` are real host behavior (Issue #97). The
+ * `constructor(...args: any[])` is an over-approximation — the
+ * inventory has no signature data, so arity is not checked.
+ * ExtendScript builtins ($, File, Folder, BridgeTalk, Socket, XML,
+ * JSON-if-present) are NOT covered here; see ae-globals.d.ts for the
+ * hand-maintained extras.
  */
 
-interface AVItem {
+declare class AVItem {
+  constructor(...args: any[]);
   duration: any;
   footageMissing: any;
   frameDuration: any;
@@ -33,7 +40,8 @@ interface AVItem {
   width: any;
 }
 
-interface CharacterRange {
+declare class CharacterRange {
+  constructor(...args: any[]);
   characterEnd: any;
   characterStart: any;
   fillColor: any;
@@ -46,10 +54,12 @@ interface CharacterRange {
   toString(...args: any[]): any;
 }
 
-interface Collection {
+declare class Collection {
+  constructor(...args: any[]);
 }
 
-interface ComposedLineRange {
+declare class ComposedLineRange {
+  constructor(...args: any[]);
   characterEnd: any;
   characterRange(...args: any[]): any;
   characterStart: any;
@@ -57,13 +67,15 @@ interface ComposedLineRange {
   toString(...args: any[]): any;
 }
 
-interface FolderItem {
+declare class FolderItem {
+  constructor(...args: any[]);
   item(...args: any[]): any;
   items: any;
   numItems: any;
 }
 
-interface FontObject {
+declare class FontObject {
+  constructor(...args: any[]);
   designAxesData: any;
   designVector: any;
   familyName: any;
@@ -89,7 +101,8 @@ interface FontObject {
   writingScripts: any;
 }
 
-interface FontsObject {
+declare class FontsObject {
+  constructor(...args: any[]);
   allFonts: any;
   favoriteFontFamilyList: any;
   fontsDuplicateByPostScriptName: any;
@@ -108,7 +121,8 @@ interface FontsObject {
   substitutedFontReplacementMatchPolicy: any;
 }
 
-interface FootageSource {
+declare class FootageSource {
+  constructor(...args: any[]);
   alphaMode: any;
   conformFrameRate: any;
   displayFrameRate: any;
@@ -125,7 +139,8 @@ interface FootageSource {
   removePulldown: any;
 }
 
-interface GuideOptions {
+declare class GuideOptions {
+  constructor(...args: any[]);
   color: any;
   orientation: any;
   pinned: any;
@@ -133,7 +148,8 @@ interface GuideOptions {
   positionType: any;
 }
 
-interface ImportOptions {
+declare class ImportOptions {
+  constructor(...args: any[]);
   canImportAs(...args: any[]): any;
   file: any;
   forceAlphabetical: any;
@@ -144,7 +160,8 @@ interface ImportOptions {
   sequence: any;
 }
 
-interface Item {
+declare class Item {
+  constructor(...args: any[]);
   addGuide(...args: any[]): any;
   comment: any;
   dynamicLinkGUID: any;
@@ -161,12 +178,14 @@ interface Item {
   typeName: any;
 }
 
-interface KeyframeEase {
+declare class KeyframeEase {
+  constructor(...args: any[]);
   influence: any;
   speed: any;
 }
 
-interface MarkerValue {
+declare class MarkerValue {
+  constructor(...args: any[]);
   chapter: any;
   comment: any;
   cuePointName: any;
@@ -180,7 +199,8 @@ interface MarkerValue {
   url: any;
 }
 
-interface OutputModule {
+declare class OutputModule {
+  constructor(...args: any[]);
   applyTemplate(...args: any[]): any;
   file: any;
   getSetting(...args: any[]): any;
@@ -195,7 +215,8 @@ interface OutputModule {
   templates: any;
 }
 
-interface ParagraphRange {
+declare class ParagraphRange {
+  constructor(...args: any[]);
   characterEnd: any;
   characterRange(...args: any[]): any;
   characterStart: any;
@@ -203,7 +224,8 @@ interface ParagraphRange {
   toString(...args: any[]): any;
 }
 
-interface Preferences {
+declare class Preferences {
+  constructor(...args: any[]);
   deletePref(...args: any[]): any;
   getPrefAsBool(...args: any[]): any;
   getPrefAsFloat(...args: any[]): any;
@@ -218,7 +240,8 @@ interface Preferences {
   saveToDisk(...args: any[]): any;
 }
 
-interface Project {
+declare class Project {
+  constructor(...args: any[]);
   activeItem: any;
   autoFixExpressions(...args: any[]): any;
   bitsPerChannel: any;
@@ -280,7 +303,8 @@ interface Project {
   xmpPacket: any;
 }
 
-interface PropertyBase {
+declare class PropertyBase {
+  constructor(...args: any[]);
   active: any;
   canSetEnabled: any;
   duplicate(...args: any[]): any;
@@ -301,7 +325,8 @@ interface PropertyBase {
   selected: any;
 }
 
-interface RenderQueue {
+declare class RenderQueue {
+  constructor(...args: any[]);
   canQueueInAME: any;
   item(...args: any[]): any;
   items: any;
@@ -315,7 +340,8 @@ interface RenderQueue {
   stopRendering(...args: any[]): any;
 }
 
-interface RenderQueueItem {
+declare class RenderQueueItem {
+  constructor(...args: any[]);
   applyTemplate(...args: any[]): any;
   comp: any;
   duplicate(...args: any[]): any;
@@ -341,13 +367,15 @@ interface RenderQueueItem {
   timeSpanStart: any;
 }
 
-interface Settings {
+declare class Settings {
+  constructor(...args: any[]);
   getSetting(...args: any[]): any;
   haveSetting(...args: any[]): any;
   saveSetting(...args: any[]): any;
 }
 
-interface Shape {
+declare class Shape {
+  constructor(...args: any[]);
   closed: any;
   featherInterps: any;
   featherRadii: any;
@@ -361,7 +389,8 @@ interface Shape {
   vertices: any;
 }
 
-interface System {
+declare class System {
+  constructor(...args: any[]);
   callSystem(...args: any[]): any;
   machineName: any;
   osName: any;
@@ -369,7 +398,8 @@ interface System {
   userName: any;
 }
 
-interface TextDocument {
+declare class TextDocument {
+  constructor(...args: any[]);
   allCaps: any;
   applyFill: any;
   applyStroke: any;
@@ -440,13 +470,15 @@ interface TextDocument {
   verticalScale: any;
 }
 
-interface View {
+declare class View {
+  constructor(...args: any[]);
   active: any;
   options: any;
   setActive(...args: any[]): any;
 }
 
-interface Viewer {
+declare class Viewer {
+  constructor(...args: any[]);
   active: any;
   activeViewIndex: any;
   maximized: any;
@@ -455,7 +487,8 @@ interface Viewer {
   views: any;
 }
 
-interface ViewOptions {
+declare class ViewOptions {
+  constructor(...args: any[]);
   channels: any;
   checkerboards: any;
   exposure: any;
@@ -467,7 +500,8 @@ interface ViewOptions {
   zoom: any;
 }
 
-interface AVLayer extends Layer {
+declare class AVLayer extends Layer {
+  constructor(...args: any[]);
   addToMotionGraphicsTemplate(...args: any[]): any;
   addToMotionGraphicsTemplateAs(...args: any[]): any;
   adjustmentLayer: any;
@@ -510,10 +544,12 @@ interface AVLayer extends Layer {
   width: any;
 }
 
-interface CameraLayer extends Layer {
+declare class CameraLayer extends Layer {
+  constructor(...args: any[]);
 }
 
-interface CompItem extends AVItem {
+declare class CompItem extends AVItem {
+  constructor(...args: any[]);
   activeCamera: any;
   bgColor: any;
   counters: any;
@@ -552,13 +588,15 @@ interface CompItem extends AVItem {
   workAreaStart: any;
 }
 
-interface FileSource extends FootageSource {
+declare class FileSource extends FootageSource {
+  constructor(...args: any[]);
   file: any;
   missingFootagePath: any;
   reload(...args: any[]): any;
 }
 
-interface FootageItem extends AVItem {
+declare class FootageItem extends AVItem {
+  constructor(...args: any[]);
   file: any;
   mainSource: any;
   openInViewer(...args: any[]): any;
@@ -568,12 +606,14 @@ interface FootageItem extends AVItem {
   replaceWithSolid(...args: any[]): any;
 }
 
-interface ItemCollection extends Collection {
+declare class ItemCollection extends Collection {
+  constructor(...args: any[]);
   addComp(...args: any[]): any;
   addFolder(...args: any[]): any;
 }
 
-interface Layer extends PropertyGroup {
+declare class Layer extends PropertyGroup {
+  constructor(...args: any[]);
   activeAtTime(...args: any[]): any;
   addGuide(...args: any[]): any;
   applyPreset(...args: any[]): any;
@@ -612,7 +652,8 @@ interface Layer extends PropertyGroup {
   time: any;
 }
 
-interface LayerCollection extends Collection {
+declare class LayerCollection extends Collection {
+  constructor(...args: any[]);
   add(...args: any[]): any;
   addBoxText(...args: any[]): any;
   addCamera(...args: any[]): any;
@@ -628,12 +669,14 @@ interface LayerCollection extends Collection {
   precompose(...args: any[]): any;
 }
 
-interface LightLayer extends Layer {
+declare class LightLayer extends Layer {
+  constructor(...args: any[]);
   lightSource: any;
   lightType: any;
 }
 
-interface MaskPropertyGroup extends PropertyGroup {
+declare class MaskPropertyGroup extends PropertyGroup {
+  constructor(...args: any[]);
   color: any;
   inverted: any;
   locked: any;
@@ -643,20 +686,24 @@ interface MaskPropertyGroup extends PropertyGroup {
   rotoBezier: any;
 }
 
-interface OMCollection extends Collection {
+declare class OMCollection extends Collection {
+  constructor(...args: any[]);
   add(...args: any[]): any;
 }
 
-interface ParametricMeshLayer extends AVLayer {
+declare class ParametricMeshLayer extends AVLayer {
+  constructor(...args: any[]);
   parametricBevelOptions: any;
   parametricMeshOptions: any;
   parametricMeshType: any;
 }
 
-interface PlaceholderSource extends FootageSource {
+declare class PlaceholderSource extends FootageSource {
+  constructor(...args: any[]);
 }
 
-interface Property extends PropertyBase {
+declare class Property extends PropertyBase {
+  constructor(...args: any[]);
   addKey(...args: any[]): any;
   addToMotionGraphicsTemplate(...args: any[]): any;
   addToMotionGraphicsTemplateAs(...args: any[]): any;
@@ -733,7 +780,8 @@ interface Property extends PropertyBase {
   valueText: any;
 }
 
-interface PropertyGroup extends PropertyBase {
+declare class PropertyGroup extends PropertyBase {
+  constructor(...args: any[]);
   addProperty(...args: any[]): any;
   addVariableFontAxis(...args: any[]): any;
   canAddProperty(...args: any[]): any;
@@ -741,21 +789,26 @@ interface PropertyGroup extends PropertyBase {
   property(...args: any[]): any;
 }
 
-interface RQItemCollection extends Collection {
+declare class RQItemCollection extends Collection {
+  constructor(...args: any[]);
   add(...args: any[]): any;
 }
 
-interface ShapeLayer extends AVLayer {
+declare class ShapeLayer extends AVLayer {
+  constructor(...args: any[]);
 }
 
-interface SolidSource extends FootageSource {
+declare class SolidSource extends FootageSource {
+  constructor(...args: any[]);
   color: any;
 }
 
-interface TextLayer extends AVLayer {
+declare class TextLayer extends AVLayer {
+  constructor(...args: any[]);
 }
 
-interface ThreeDModelLayer extends AVLayer {
+declare class ThreeDModelLayer extends AVLayer {
+  constructor(...args: any[]);
 }
 
 interface AeAppApi {

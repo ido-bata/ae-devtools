@@ -48,9 +48,15 @@ lines.push(" *");
 lines.push(" * HONEST SCOPE: the inventory records symbol NAMES, kinds and access");
 lines.push(" * but almost no signatures. Every member is `any`-typed; methods take");
 lines.push(" * `...args: any[]`. This file catches typos and gives discovery — it");
-lines.push(" * does NOT check argument types or return shapes. ExtendScript builtins");
-lines.push(" * ($, File, Folder, BridgeTalk, Socket, XML, JSON-if-present) are NOT");
-lines.push(" * covered here; see ae-globals.d.ts for the hand-maintained extras.");
+lines.push(" * does NOT check argument types or return shapes. Inventory classes are");
+lines.push(" * emitted as `declare class` (not `interface`) because ExtendScript");
+lines.push(" * exposes them as host constructor functions: `instanceof CompItem` and");
+lines.push(" * `new KeyframeEase(...)` are real host behavior (Issue #97). The");
+lines.push(" * `constructor(...args: any[])` is an over-approximation — the");
+lines.push(" * inventory has no signature data, so arity is not checked.");
+lines.push(" * ExtendScript builtins ($, File, Folder, BridgeTalk, Socket, XML,");
+lines.push(" * JSON-if-present) are NOT covered here; see ae-globals.d.ts for the");
+lines.push(" * hand-maintained extras.");
 lines.push(" */");
 lines.push("");
 
@@ -61,7 +67,11 @@ const emitInterface = (name, members, { isClass }) => {
   emitted.add(name);
   const base = isClass ? baseOf.get(name) : null;
   const extendsClause = base && classNames.has(base) ? ` extends ${ident(base)}` : "";
-  lines.push(`${isClass ? "interface" : "interface"} ${ident(name)}${extendsClause} {`);
+  // Classes get a value side: ExtendScript host classes are constructor
+  // functions, so `instanceof`/`new` must typecheck (Issue #97). The
+  // rest-args constructor is deliberate — no signature data exists.
+  lines.push(`${isClass ? "declare class" : "interface"} ${ident(name)}${extendsClause} {`);
+  if (isClass) lines.push("  constructor(...args: any[]);");
   const seen = new Set();
   for (const m of members) {
     const key = m.member;

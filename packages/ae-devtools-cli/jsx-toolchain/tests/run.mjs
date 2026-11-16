@@ -226,6 +226,35 @@ t("check passes ok.ts", () => {
   assert.equal(r.ok, true, JSON.stringify(r.diagnostics));
 });
 
+t("check passes ScriptUI + host-globals fixture (Issue #97)", () => {
+  const r = checkFile(join(FIX, "scriptui.ts"));
+  assert.equal(r.ok, true, JSON.stringify(r.diagnostics));
+});
+
+t("check still rejects genuinely unknown names", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const f = join(dir, "bad.ts");
+    writeFileSync(f, 'var g = new TotallyBogusControl("x");\nvar n = missingGlobalName;\n');
+    const r = checkFile(f);
+    assert.equal(r.ok, false);
+    const names = r.diagnostics.filter((d) => d.code === "tsc-2304");
+    assert.ok(names.some((d) => d.message.includes("TotallyBogusControl")), JSON.stringify(r.diagnostics));
+    assert.ok(names.some((d) => d.message.includes("missingGlobalName")), JSON.stringify(r.diagnostics));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t("check rejects DOM globals (lib is ES5-only, Issue #97)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
+  try {
+    const f = join(dir, "dom.ts");
+    writeFileSync(f, 'var d = document.title;\nvar w = window.location;\n');
+    const r = checkFile(f);
+    assert.equal(r.ok, false);
+    assert.ok(r.diagnostics.some((d) => d.message.includes("document")), JSON.stringify(r.diagnostics));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
 t("cli build writes jsx+map to outdir", () => {
   const dir = mkdtempSync(join(tmpdir(), "jsx-toolchain-"));
   try {
