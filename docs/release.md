@@ -68,7 +68,7 @@ stacked PR 構造を採用した場合、predecessor の rebase / update / merge
 
 `release-x-y-z → main` PR merge 直前に **次の状態** を満たすこと:
 
-- assigned reviewer / CODEOWNERS approval が green
+- review 条件が green: solo-maintainer 構成では GitHub approval count は 0 であり、ADR-0012 §7 の solo adjustment に従い「自動レビュー + agent 側独立レビュー + release evidence」で代替する（CODEOWNERS は approval gate ではなく ownership map）
 - required CI / checks current landing candidate で green
 - target release のチケットが ready 状態（未 commit の依存なし）
 - outstanding blocking review conversation が 0
@@ -80,13 +80,15 @@ stacked PR 構造を採用した場合、predecessor の rebase / update / merge
 
 [`ADR-0012-release-merge-authorization.md`](./architecture/decisions/ADR-0012-release-merge-authorization.md) の **explicit user authorization 境界** に従う。
 
-- reviewer / CODEOWNERS approval は merge の **前提条件**
+- reviewer / CODEOWNERS approval は merge の **前提条件**（solo 構成では ADR-0012 §7 の solo adjustment により代替条件で充足。実質的な binding 条件は次項の explicit user authorization）
 - merge そのものを実行する権限は **user** が保持する
 - Agent は release-wide verification 完了 + release gate green + ready-to-merge 状態まで進めた時点で **ready-to-merge で停止**
 - その時点の head SHA / required checks / outstanding review conversations を report
 - authorization 取得のための追加質問は行わない
 
 merge は user が明示的に authorization した時にのみ実行する。merge 後に `main` がその version の released state となる。
+
+merge method は **merge commit** を使う（`required_linear_history` は solo 構成で無効化済み）。merge commit の第2 parent が freeze SHA と一致することを `git rev-parse <merge-sha>^2` で検証し、freeze SHA ↔ 統合後 SHA の対応を機械的に確認できるようにする。squash / rebase は per-issue の追跡性と freeze SHA の保全を損なうため使わない。
 
 ## Tags / releases の公開
 

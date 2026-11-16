@@ -48,7 +48,7 @@ It does **not** apply to:
 
 Each in-scope side effect requires **both**:
 
-- **(a) reviewer / CODEOWNERS approval** — the standard GitHub-required reviewer (typically one or more; configured in branch protection / ruleset). This is a **necessary** condition and is enforceable mechanically by `required_pull_request_reviews` in the protection ruleset.
+- **(a) reviewer / CODEOWNERS approval** — the standard GitHub-required reviewer (typically one or more; configured in branch protection / ruleset). This is a **necessary** condition and is enforceable mechanically by `required_pull_request_reviews` in the protection ruleset. For the current solo-maintainer configuration this branch is satisfied per §7's solo-maintainer adjustment (automated + agent-side review + release evidence); the count is `0` in settings because self-approval is impossible.
 - **(b) explicit human "merge" authorization** — a human (the repository owner or a designated human gate) issues a direct instruction to perform the merge. This is enforced by **process, not by the ruleset alone**: the agent must stop at ready-to-merge and not proceed without an explicit instruction.
 
 The two are not interchangeable. Reviewer approval alone does not authorize the merge.
@@ -100,12 +100,37 @@ This is also a recovery operation external side effect and must be journaled per
 Even with this policy in place, the ruleset on `main` must enforce:
 
 - require PR (no direct push),
-- require 1+ reviewer or CODEOWNERS approval,
 - disallow force push / branch deletion,
-- require linear history (per project preference; recorded in `docs/development.md`),
+- require conversation resolution before merge,
 - require status check pass before merge (when CI is configured).
 
-This is the mechanical side. The "human authorization" side is process-only and not enforceable by the ruleset alone.
+**Solo-maintainer adjustment (2026-11-16, Issue #125).** This repository
+is currently maintained by a single human (`@rebuildup`), who is also
+the PR author. GitHub cannot approve its own pull request, so a
+mechanical `required_approving_review_count >= 1` would be an
+unmeetable formal gate. The ruleset therefore sets the count to **0**;
+`require_code_owner_reviews` was already `false`, and CODEOWNERS is an
+ownership map, not an approval gate. The "reviewer approval" branch of
+this ADR is satisfied for a solo maintainer by the combination of:
+
+- independent automated review where available (advisory only),
+- the agent-side independent review recorded in the release PR, and
+- the release evidence required by `docs/release.md`.
+
+The binding authorization remains part (b): **explicit human "merge"
+instruction**. Nothing in this adjustment weakens that boundary.
+
+Similarly, `required_linear_history` was relaxed to allow **merge
+commits** into `main`: ticket PRs land via merge commits, and a merge
+commit preserves the frozen release head as the second parent, making
+the freeze SHA ↔ merge SHA correspondence mechanically verifiable
+(`git rev-parse <merge>^2`). Squash would collapse per-issue
+traceability; rebase would rewrite freeze SHAs. Where a project later
+adopts multiple maintainers, restoring `required_approving_review_count
+>= 1` is a settings change, not an ADR amendment.
+
+This is the mechanical side. The "human authorization" side is
+process-only and not enforceable by the ruleset alone.
 
 ### 8. Documentation in `docs/release.md` and `AGENTS.md`
 
