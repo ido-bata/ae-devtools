@@ -115,6 +115,27 @@ load / reload / unload（CAP059）と UXP（CAP060）は UNVERIFIED /
 BLOCKED** — gated 手順は `cep-extension/LOAD-PROOF.md`、詳細と
 証拠水準は `cep-extension/README.md` を参照。
 
+## Agent dev loop library (`agent-loop/`)
+
+bin は提供しない。`fixer` / `consentProvider` / `stateReset` は
+呼び出し側（coding agent / deployment）が注入するため、正直な既定
+CLI が存在しない。install した package から library として import
+する:
+
+```js
+import { runDevLoop, regressionCheck, toDiagnostic, FAKE_SESSION }
+  from "@ae-devtools/cli/agent-loop";
+import { createFakeHost, createFakeApp }
+  from "@ae-devtools/cli/agent-loop/fake-host";
+```
+
+`runDevLoop` は dispatch→diagnose→fix→rerun→regression の dev loop
+（Issue #38）。silent retry なし、fix budget は bounded、consent は
+attempt ごとに注入 provider が評価、dirty FAILED 後の rerun は
+`stateReset` 検証または明示 `allowDirtyRerun` が必須。詳細は
+`agent-loop/README.md`。**fake/mock level のみ** — real AE dispatch /
+ExtendScript semantics / real-host regression は未検証。
+
 ## JSX toolchain
 
 ```sh
@@ -140,6 +161,7 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `diagnostics/` | `ae-devtools.diagnostics/v1` record schema, collector registry, JSX→TS sourcemap resolution (consumed by `ae-devtools diagnose`) |
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 | `cep-extension/` | CEP extension scaffold + validate devkit (`ae-devtools-cep`, `ae-devtools-cep-lifecycle` bins) |
+| `agent-loop/` | agent dev loop library (`@ae-devtools/cli/agent-loop`; bin なし、fake-level) |
 
 ## Verification
 
@@ -154,5 +176,5 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 - Module READMEs: `devtools-cli/README.md`, `jsx-toolchain/README.md`,
   `a8n-transport/README.md`, `trusted-execution/README.md`,
   `mcp-server/README.md`, `recovery-orchestrator/README.md`,
-  `cep-extension/README.md`
+  `cep-extension/README.md`, `agent-loop/README.md`
 - Canonical governance: repo ルートの `AGENTS.md`, `docs/`
