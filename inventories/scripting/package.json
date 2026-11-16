@@ -1,0 +1,17 @@
+{
+  "name": "@ae-devtools/inventory-scripting",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic extractor for the After Effects Scripting API symbol inventory (CAP005-CAP008).",
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "refresh": "bun run scripts/build.ts --refresh",
+    "verify": "bun run scripts/verify.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.4",
+    "typescript": "^5.9.3"
+  }
+}

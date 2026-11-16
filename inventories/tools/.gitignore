@@ -1,0 +1,2 @@
+# verify.ts temp render dir (removed on success; never commit)
+.tmp-verify/

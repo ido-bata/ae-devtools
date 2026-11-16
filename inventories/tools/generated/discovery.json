@@ -1,0 +1,57 @@
+{
+  "discovery": {
+    "id": "CAP001",
+    "purpose": "Inventory of real After Effects control tools and the operations they actually implement in source (not README claims).",
+    "searchTerms": [
+      "after effects mcp",
+      "AfterEffects MCP",
+      "after effects automation mcp",
+      "after effects extendscript bridge mcp"
+    ],
+    "searchedAt": "2026-11-12",
+    "scope": "GitHub repository search (gh search repos) for MCP servers controlling Adobe After Effects, plus repos already cited by ae-devtools/ae-a8n research (BenZed/after-effects, ido-bata/Ae_LayerNote, ido-bata/ae-a8n) and this repository's experiments/runtime-bridge.",
+    "selectionCriteria": "Examined when the repository contains readable source that reaches After Effects (ExtendScript/CEP/bridge) and is a plausible control tool. Top search results by activity were cloned; deep extraction was performed where the tool surface was machine-locatable. Every examined tool records commit + license + observation date.",
+    "outOfScope": [
+      "README/marketing claims without source",
+      "closed-source or unlicensed binaries without readable source",
+      "tools not reached by the search terms (the population is open; no completeness claim)",
+      "real-host execution (source review only — see ae-devtools #13-#19)"
+    ],
+    "sources": [
+      "gh search repos \"after effects mcp\" --limit 30 (2026-11-12)",
+      "ae-devtools docs/architecture/research/ (existing research)",
+      "ae-a8n ADR-0001 (BenZed/after-effects citation)",
+      "specs/ae-capability-coverage/research.md §4 parity discovery protocol (read from branch 6)"
+    ]
+  },
+  "refreshProcedure": [
+    {
+      "step": 1,
+      "action": "Re-run the discovery search and diff the candidate set against snapshot/tools.json + NOT_EXAMINED.",
+      "command": "gh search repos \"after effects mcp\" --limit 30 --json fullName,license,updatedAt,stargazersCount"
+    },
+    {
+      "step": 2,
+      "action": "Fetch each pinned clone and report upstream commits newer than the pinned SHA.",
+      "command": "bun run refresh"
+    },
+    {
+      "step": 3,
+      "action": "Re-extract from the pinned checkouts (deterministic).",
+      "command": "bun run extract"
+    },
+    {
+      "step": 4,
+      "action": "Verify committed output is byte-identical to a fresh run and every cited file+line resolves.",
+      "command": "bun run verify"
+    },
+    {
+      "step": 5,
+      "action": "Accept an upstream update only after review: re-pin the commit in scripts/registry.ts (or `bun run refresh -- --update <tool>`), re-run steps 3-4, commit the delta."
+    },
+    {
+      "step": 6,
+      "action": "Add a newly discovered tool: clone into .reference/<dir>, add a ToolDef (commit/license/status) to scripts/registry.ts, add an adapter under scripts/adapters/, add its semantic ids to scripts/semantics.ts, re-run steps 3-4."
+    }
+  ]
+}

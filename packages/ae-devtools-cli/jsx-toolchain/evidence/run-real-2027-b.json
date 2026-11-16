@@ -1,0 +1,102 @@
+{
+  "schema": "ae-devtools.jsx-toolchain.real-run/v1",
+  "issue": 52,
+  "startedAt": "2026-11-15T01:45:00.125Z",
+  "steps": [
+    {
+      "name": "session.launch",
+      "at": "2026-11-15T01:45:05.238Z",
+      "ok": true,
+      "aeVersion": "27.0x78",
+      "ownership": "owned",
+      "aeA8nSource": "local:/private/tmp/ae-a8n-105-103",
+      "aeA8nHead": "be78ca659b3937c09841e8b236a91edf961e3fad"
+    },
+    {
+      "name": "build.ok",
+      "at": "2026-11-15T01:45:05.312Z",
+      "ok": true,
+      "status": "ok",
+      "jsxBytes": 185
+    },
+    {
+      "name": "dispatch.ok",
+      "at": "2026-11-15T01:45:05.921Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "detail": null
+    },
+    {
+      "name": "verify.global-write",
+      "at": "2026-11-15T01:45:06.185Z",
+      "ok": true,
+      "observed": "hello ae 27.0x78",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "build.runtime-error",
+      "at": "2026-11-15T01:45:06.194Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "dispatch.runtime-error",
+      "at": "2026-11-15T01:45:06.571Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostError": "__toolchainUndeclaredIdentifierは未定義です。",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3
+    },
+    {
+      "name": "sourcemap.to-source",
+      "at": "2026-11-15T01:45:06.571Z",
+      "ok": true,
+      "mapped": {
+        "source": "runtime-error.ts",
+        "line": 3,
+        "column": 48,
+        "name": null,
+        "content": "// Deliberate runtime fault for real-host sourcemap verification.\nfunction boom(): void {\n  var missing = __toolchainUndeclaredIdentifier;\n  $.global.__toolchainBoom = missing;\n}\nboom();\n"
+      }
+    },
+    {
+      "name": "mystery.build",
+      "at": "2026-11-15T01:45:06.576Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "mystery.detect+diagnose",
+      "at": "2026-11-15T01:45:07.074Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3,
+      "mapped": {
+        "source": "mystery.ts",
+        "line": 3
+      }
+    },
+    {
+      "name": "mystery.fix+rerun",
+      "at": "2026-11-15T01:45:07.731Z",
+      "ok": true,
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "mystery.verify",
+      "at": "2026-11-15T01:45:08.222Z",
+      "ok": true,
+      "observed": "fixed",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "session.close",
+      "at": "2026-11-15T01:45:09.063Z",
+      "ok": true
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-11-15T01:45:09.063Z"
+}

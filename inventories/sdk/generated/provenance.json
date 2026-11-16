@@ -1,0 +1,45 @@
+{
+  "schema": "ae-devtools.sdk-inventory.provenance/v0-provisional",
+  "schemaStatus": "provisional",
+  "release": "26.5",
+  "distribution": "macOS",
+  "acquisition": {
+    "method": "Adobe-distributed After Effects SDK archive, obtained by the operator and supplied locally. The repository never vendors the SDK.",
+    "archiveSha256": "7b837d594696ca0ece1ddba5e15b0fd3bf1ee908a1c7be04d4627180aa7ece7e"
+  },
+  "license": {
+    "licenseFileInPackage": false,
+    "searchedFor": [
+      "licen*",
+      "eula",
+      "readme",
+      "notice",
+      "terms",
+      "copying",
+      "*.txt"
+    ],
+    "finding": "The SDK archive contains no license, EULA, readme or notice text file. The only documents are two PDFs that redirect to the public documentation site.",
+    "headerNoticeFamilies": {
+      "adobe-confidential-no-reproduction": 29,
+      "no-notice": 13,
+      "adobe-permissive": 4,
+      "other-copyright-only": 3,
+      "other-restrictive": 21
+    },
+    "conclusion": "No grant to redistribute header content was found. Committed output is therefore restricted to aggregate counts, hashes and provenance."
+  },
+  "corpus": {
+    "headerFiles": 70,
+    "byExtension": {
+      ".h": 68,
+      ".hpp": 2
+    },
+    "totalBytes": 1444830,
+    "combinedSha256": "b93f4ff61a720ac358a29d146e68c18a30bb1a6e6ace5f1451e610f50b61d72b"
+  },
+  "hashes": {
+    "algorithm": "sha256",
+    "headerCount": 70,
+    "note": "Per-header hashes are recorded in aggregate.json perHeader[].sha256."
+  }
+}

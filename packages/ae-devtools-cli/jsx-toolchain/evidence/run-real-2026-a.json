@@ -1,0 +1,71 @@
+{
+  "schema": "ae-devtools.jsx-toolchain.real-run/v1",
+  "issue": 52,
+  "startedAt": "2026-11-15T01:44:11.817Z",
+  "steps": [
+    {
+      "name": "session.launch",
+      "at": "2026-11-15T01:44:16.865Z",
+      "ok": true,
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nSource": "local:/private/tmp/ae-a8n-105-103",
+      "aeA8nHead": "be78ca659b3937c09841e8b236a91edf961e3fad"
+    },
+    {
+      "name": "build.ok",
+      "at": "2026-11-15T01:44:16.910Z",
+      "ok": true,
+      "status": "ok",
+      "jsxBytes": 185
+    },
+    {
+      "name": "dispatch.ok",
+      "at": "2026-11-15T01:44:17.460Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "detail": null
+    },
+    {
+      "name": "verify.global-write",
+      "at": "2026-11-15T01:44:17.863Z",
+      "ok": true,
+      "observed": "hello ae 26.5.3x9",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "build.runtime-error",
+      "at": "2026-11-15T01:44:17.872Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "dispatch.runtime-error",
+      "at": "2026-11-15T01:44:18.298Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostError": "__toolchainUndeclaredIdentifierは未定義です。",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3
+    },
+    {
+      "name": "sourcemap.to-source",
+      "at": "2026-11-15T01:44:18.299Z",
+      "ok": true,
+      "mapped": {
+        "source": "runtime-error.ts",
+        "line": 3,
+        "column": 48,
+        "name": null,
+        "content": "// Deliberate runtime fault for real-host sourcemap verification.\nfunction boom(): void {\n  var missing = __toolchainUndeclaredIdentifier;\n  $.global.__toolchainBoom = missing;\n}\nboom();\n"
+      }
+    },
+    {
+      "name": "session.close",
+      "at": "2026-11-15T01:44:19.232Z",
+      "ok": true
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-11-15T01:44:19.233Z"
+}

@@ -1,0 +1,6 @@
+# Local-only per-symbol extraction output.
+# Derived from ADOBE CONFIDENTIAL SDK headers; never commit or publish.
+.local/
+
+# A locally extracted SDK tree, if a developer points the extractor inside the repo.
+sdk/

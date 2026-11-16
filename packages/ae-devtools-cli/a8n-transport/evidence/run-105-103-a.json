@@ -1,0 +1,130 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/legacy-pre-v1",
+  "producerNote": "Recorded before the v1 schema discriminator and the installDir/aeA8nHead/sessionRoot/tracePath/assertionViolations/trace/process-snapshot fields existed; key set reflects the older producer.",
+  "issue": 49,
+  "startedAt": "2026-11-15T01:10:29.262Z",
+  "platform": "darwin/arm64",
+  "node": "v24.22.1",
+  "pin": {
+    "sessionId": "a8n-slice-37436be3-965e-48bc-856e-ccbb66d74491",
+    "aeVersion": "27.0x78",
+    "dispatchId": "disp-7bd0c00a-9b33-436a-8d47-ab0e60686fd9"
+  },
+  "aeA8nSource": "local:/tmp/ae-a8n-105-103",
+  "hostInfo": {
+    "version": "27.0x78",
+    "build": "78"
+  },
+  "ownership": {
+    "kind": "owned",
+    "evidence": "pid 28493 is still the only instance"
+  },
+  "hostScript": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-g8DtWl/a8n-host-ext.js",
+  "steps": [
+    {
+      "label": "connect.state",
+      "source": "String(app.version)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "27.0x78",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 0,
+      "sendsAfter": 1
+    },
+    {
+      "label": "project.state",
+      "source": "String(app.project.numItems)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 1,
+      "sendsAfter": 2
+    },
+    {
+      "label": "error.capture",
+      "source": "__a8nSliceUndeclaredIdentifier;",
+      "outcome": "FAILED",
+      "contractOutcome": "failed",
+      "requestState": "ACKED",
+      "result": null,
+      "error": {
+        "name": "ReferenceError",
+        "message": "__a8nSliceUndeclaredIdentifierは未定義です。",
+        "line": 1,
+        "hostReported": true
+      },
+      "refusal": null,
+      "sendsBefore": 2,
+      "sendsAfter": 3
+    },
+    {
+      "label": "fix.rerun",
+      "source": "String(app.project.numItems + 0)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 3,
+      "sendsAfter": 4
+    },
+    {
+      "label": "verify.counter.1",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "1",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 4,
+      "sendsAfter": 5
+    },
+    {
+      "label": "verify.counter.2",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "2",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 5,
+      "sendsAfter": 6
+    },
+    {
+      "label": "consent.tampered",
+      "source": "String(app.version)",
+      "outcome": "BLOCKED",
+      "contractOutcome": "not-sent",
+      "requestState": "NOT_SENT",
+      "result": null,
+      "error": null,
+      "refusal": {
+        "code": "CONSENT_SCOPE_MISMATCH",
+        "message": "consent scope does not match this dispatch (session/operation/args/project)"
+      },
+      "sendsBefore": 6,
+      "sendsAfter": 6
+    },
+    {
+      "label": "consent.denied",
+      "source": "__DENY__ String(app.version)",
+      "outcome": "REFUSED-BEFORE-SEND",
+      "reason": "policy denied: source carries __DENY__ marker",
+      "sendsBefore": 6,
+      "sendsAfter": 6
+    }
+  ],
+  "close": {
+    "quit": true
+  },
+  "finishedAt": "2026-11-15T01:10:37.413Z",
+  "transportSends": 6
+}

@@ -1,0 +1,268 @@
+{
+  "schemaNote": "Provisional shape; final schema owned by issue #11.",
+  "evidenceLevel": "not-run",
+  "statement": "Nothing in this list was executed. Each row states a behaviour only a real After Effects host can settle, and is labelled `requires real host`.",
+  "realHostRequirements": [
+    {
+      "id": "provisional.ae.realhost.member-exists-on-build",
+      "behaviour": "Each inventoried member is actually present on the named AE build (26.5.3 and 27.0.0), which the documentation alone cannot establish for a specific install.",
+      "category": "version-difference",
+      "whyDocumentationIsInsufficient": "The community guide describes a rolling current state and is not versioned per AE build. Adobe publishes no per-build member list, so presence on a specific build is only observable in that build.",
+      "affects": [
+        "all scripting members"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.object-identity-across-calls",
+      "behaviour": "Whether a host object obtained in one script invocation still designates the same underlying entity in a later invocation, and how that identity fails after undo, redo, layer reorder, item deletion or project close.",
+      "category": "host-object-lifetime",
+      "whyDocumentationIsInsufficient": "The guide documents that indices shift and that collections update automatically, but states no contract for reference survival across script boundaries.",
+      "affects": [
+        "Item",
+        "Layer",
+        "Property",
+        "RenderQueueItem",
+        "CompItem"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.stale-handle-error-shape",
+      "behaviour": "The exact error type, message and recoverability produced when a stale or invalid host object is used.",
+      "category": "error-behavior",
+      "whyDocumentationIsInsufficient": "No enumerated error taxonomy is published for stale handles; the guide describes behaviours anecdotally per method.",
+      "affects": [
+        "all object-returning members"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.undo-step-cardinality",
+      "behaviour": "How many undo steps a given multi-mutation script produces, and whether an interrupted script leaves a partially applied but undoable state.",
+      "category": "undo",
+      "whyDocumentationIsInsufficient": "Grouping rules are documented, but the resulting step count per operation and behaviour under Esc interruption are runtime facts.",
+      "affects": [
+        "write operations",
+        "app.beginUndoGroup",
+        "app.endUndoGroup"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.dialog-blocking-under-automation",
+      "behaviour": "Which host operations raise a modal dialog or panel that beginSuppressDialogs does not suppress, and whether such a dialog blocks a non-interactive run indefinitely.",
+      "category": "ae-ui",
+      "whyDocumentationIsInsufficient": "Documented suppression covers script error dialogs only; the set of other modals is not enumerated anywhere.",
+      "affects": [
+        "render",
+        "import",
+        "save",
+        "preferences",
+        "app.open"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.permission-preference-default-state",
+      "behaviour": "The actual default state of the file-write/network permission preference on a fresh install of each target build, and whether the state is readable from script.",
+      "category": "file-permission",
+      "whyDocumentationIsInsufficient": "Adobe documents that the default denies writes; it does not document a scripting API that reads the current state, nor installation-time variation.",
+      "affects": [
+        "File",
+        "Folder",
+        "Socket",
+        "any output path"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.locale-value-formatting",
+      "behaviour": "How numeric, time and enumerated values are stringified under a non-English UI language, and whether match-name lookup is locale-independent.",
+      "category": "value-representation",
+      "whyDocumentationIsInsufficient": "The guide gives English display names and documents match names as the stable identifier, but does not state locale behaviour for value conversion or error text.",
+      "affects": [
+        "Property.value",
+        "TextDocument",
+        "time formatting",
+        "match-name lookup"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.render-completion-signal",
+      "behaviour": "Whether a render launched from script signals completion synchronously, and what a caller observes if AE is busy or the render is cancelled.",
+      "category": "host-lifecycle",
+      "whyDocumentationIsInsufficient": "Render queue objects are documented as data; the completion and cancellation signalling contract for a script caller is not.",
+      "affects": [
+        "RenderQueue",
+        "RenderQueueItem",
+        "OutputModule"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.expression-engine-selection-effect",
+      "behaviour": "Which engine actually evaluates an existing project's expressions after project.expressionEngine is changed, and whether stored expressions are migrated or reinterpreted.",
+      "category": "version-difference",
+      "whyDocumentationIsInsufficient": "Adobe documents that two engines exist and differ in ECMAScript level, but not the migration semantics for stored expression text.",
+      "affects": [
+        "Project.expressionEngine",
+        "expression-enabled properties"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.globals-collision-across-scripts",
+      "behaviour": "Whether two independently authored scripts that define the same global name interfere, and whether a dispatcher can reliably observe and clear globals it did not create.",
+      "category": "host-object-lifetime",
+      "whyDocumentationIsInsufficient": "The guide warns that globals persist per session and advises unique names; it gives no isolation or enumeration contract.",
+      "affects": [
+        "all scripts sharing one AE session"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.interrupt-partial-write-state",
+      "behaviour": "What state a project is left in when Esc interrupts a script midway through a multi-step mutation, and whether the partial state is saved, dirty, or rolled back.",
+      "category": "undo",
+      "whyDocumentationIsInsufficient": "Esc is documented as a stop mechanism, but no transactional guarantee is stated.",
+      "affects": [
+        "write operations",
+        "Project.save"
+      ],
+      "evidenceRequired": "requires real host"
+    },
+    {
+      "id": "provisional.ae.realhost.parameter-value-range-enforcement",
+      "behaviour": "Whether documented parameter ranges are enforced by the host or silently clamped, and which error surfaces when out of range.",
+      "category": "error-behavior",
+      "whyDocumentationIsInsufficient": "The guide states ranges as documentation of intent; enforcement location and failure mode are not specified per method.",
+      "affects": [
+        "methods with documented ranges"
+      ],
+      "evidenceRequired": "requires real host"
+    }
+  ],
+  "realHostSummary": {
+    "total": 12,
+    "byCategory": {
+      "ae-ui": 1,
+      "error-behavior": 2,
+      "file-permission": 1,
+      "host-lifecycle": 1,
+      "host-object-lifetime": 2,
+      "undo": 2,
+      "value-representation": 1,
+      "version-difference": 2
+    }
+  },
+  "tierDivergences": [
+    {
+      "id": "provisional.ae.divergence.symbol-reference-absent-in-adobe-tier",
+      "divergenceClass": "coverage-asymmetry",
+      "topic": "Symbol-level scripting reference",
+      "adobePosition": "Publishes script loading, file/network permission, invocation and engine-level statements. Does not enumerate classes, methods, attributes or enums, and links to the community guide for the scripting capabilities themselves.",
+      "communityPosition": "Provides the class/member reference this inventory is built from, at a pinned revision.",
+      "consequence": "There is no Adobe-official symbol set to cross-check against. Every symbol row in this inventory is community-sourced, and 'documented' in this repository means 'documented by the community guide', not 'documented by Adobe'. Adobe-tier agreement cannot be claimed for any symbol.",
+      "requiresRealHost": false,
+      "affectedIds": []
+    },
+    {
+      "id": "provisional.ae.divergence.es3-scope-differs-in-subject",
+      "divergenceClass": "statement-level",
+      "topic": "ECMAScript level",
+      "adobePosition": "States that the legacy ExtendScript *expression* engine is ECMAScript 3 and that the JavaScript expression engine in AE 16.0 is ECMAScript 2018; identifies ExtendScript as the scripting language.",
+      "communityPosition": "States that the AE scripting engine supports ECMA-262 3rd Edition and also implements E4X.",
+      "consequence": "The two statements are about different engines and only coincide on 'ES3'. Adobe does not state a scripting-engine ECMAScript level on the cited page; the ES3 scripting claim rests on the community tier. Do not present 'Adobe confirms ES3 scripting' as a sourced fact.",
+      "requiresRealHost": false,
+      "affectedIds": [
+        "provisional.ae.constraint.es3-ecma262-3rd-edition",
+        "provisional.ae.constraint.expression-engine-es2018-not-scripting"
+      ]
+    },
+    {
+      "id": "provisional.ae.divergence.no-versioned-member-list-in-either-tier",
+      "divergenceClass": "coverage-asymmetry",
+      "topic": "Per-version member availability",
+      "adobePosition": "Publishes per-release 'what's new' pages, but not a per-version scripting member list.",
+      "communityPosition": "Keeps a changelog of scripting additions/removals per AE release and marks many individual members with an 'added in' note, but the guide describes a rolling current state rather than a frozen per-build API.",
+      "consequence": "A member's availability on AE 26.5.3 or 27.0.0 is inferred from changelog notes, not observed. Members without an 'added in' note have an unknown introduction version; they are counted as 'version unstated' rather than assumed original.",
+      "requiresRealHost": true,
+      "affectedIds": []
+    },
+    {
+      "id": "provisional.ae.divergence.enum-integers-not-stable",
+      "divergenceClass": "statement-level",
+      "topic": "Enum wire stability",
+      "adobePosition": "Silent — no enum stability statement on the cited pages.",
+      "communityPosition": "Warns that the integer values behind guide orientationType/positionType differ between AE versions and instructs comparing against named constants.",
+      "consequence": "Serialising an enum as its integer is unsafe across versions, but this rests on one community statement for one enum family. It is not established as a general rule for all enums.",
+      "requiresRealHost": true,
+      "affectedIds": [
+        "provisional.ae.constraint.guide-enum-integers-differ-between-versions"
+      ]
+    },
+    {
+      "id": "provisional.ae.divergence.undocumented-members-community-only",
+      "divergenceClass": "single-tier-only",
+      "topic": "Members the community marks as undocumented by Adobe",
+      "adobePosition": "Silent — these members appear in no Adobe reference.",
+      "communityPosition": "Documents the member but warns it is officially undocumented, discovered by research, and may change or disappear.",
+      "consequence": "These rows carry `undocumented-community-research` status. They must not be counted with documented members, and an adapter targeting them carries unquantified breakage risk.",
+      "requiresRealHost": false,
+      "affectedIds": []
+    },
+    {
+      "id": "provisional.ae.divergence.default-permission-state-unversioned",
+      "divergenceClass": "statement-level",
+      "topic": "Default file/network permission",
+      "adobePosition": "States scripts may not write files or use the network by default, gated by one Scripting & Expressions preference. No AE version is stated on the page.",
+      "communityPosition": "Describes the permission gate as a runtime concern but does not give a per-version default-state table either.",
+      "consequence": "The 'denied by default' statement is unversioned on both sides. Whether it holds on 26.5.3 and 27.0.0 is a real-host fact, not a documented one.",
+      "requiresRealHost": true,
+      "affectedIds": [
+        "provisional.ae.constraint.file-write-off-by-default",
+        "provisional.ae.constraint.network-off-by-default-same-switch"
+      ]
+    },
+    {
+      "id": "provisional.ae.divergence.match-names-outside-symbol-scope",
+      "divergenceClass": "coverage-asymmetry",
+      "topic": "AE internal match names",
+      "adobePosition": "No published match-name table on the cited pages.",
+      "communityPosition": "Maintains first-party effect and per-layer-type match-name tables (list-shaped, several hundred rows).",
+      "consequence": "Match names are the stable identifiers scripts must use, yet they are only community-documented. They are excluded from this issue's symbol denominators by design and recorded as a gap for a later inventory slice.",
+      "requiresRealHost": false,
+      "affectedIds": []
+    },
+    {
+      "id": "provisional.ae.divergence.error-taxonomy-absent-both",
+      "divergenceClass": "coverage-asymmetry",
+      "topic": "Error taxonomy",
+      "adobePosition": "No enumerated scripting error taxonomy on the cited pages.",
+      "communityPosition": "Describes errors per method anecdotally; no enumerated taxonomy.",
+      "consequence": "Failure classification for adapters cannot be derived from documentation. Error handling must be designed to tolerate unknown error shapes rather than map a documented set.",
+      "requiresRealHost": true,
+      "affectedIds": []
+    },
+    {
+      "id": "provisional.ae.divergence.variable-font-page-names-symbols-undated",
+      "divergenceClass": "single-tier-only",
+      "topic": "Symbols named in Adobe prose",
+      "adobePosition": "Names addVariableFontAxis, fontObject and designAxesData in a worked example, with no version range and no reference-style entry.",
+      "communityPosition": "Documents the same symbols as reference entries; the changelog attributes the variable-font-axis API to AE 26.0.",
+      "consequence": "Adobe's page is evidence that the symbols are Adobe-sanctioned, but not evidence of their version bound or arity. The version claim is community-sourced.",
+      "requiresRealHost": false,
+      "affectedIds": []
+    }
+  ],
+  "divergenceSummary": {
+    "total": 9,
+    "byClass": {
+      "coverage-asymmetry": 4,
+      "single-tier-only": 2,
+      "statement-level": 3
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "run": "run-20261113-2",
+  "issue": "ido-bata/ae-devtools#13",
+  "caps": ["CAP021", "CAP024"],
+  "evidenceLevel": "verified on real host (macOS only)",
+  "source": {
+    "repo": "ido-bata/ae-devtools",
+    "branch": "13",
+    "headSha": "874b2ad",
+    "probeClient": "experiments/read-only-probe/probe.mjs",
+    "hostScript": "host/probe-dispatcher.jsx (generated probe-start.jsx, ES3)"
+  },
+  "host": {
+    "aeProduct": "Adobe After Effects 2026",
+    "aeVersion": "26.5.3x9",
+    "aeBuildName": "26.5.3x9",
+    "pid": 1054,
+    "sessionOwnership": "owned-by-probe (launched by agent for this run; no user project; user's AE 2027 session untouched)",
+    "activation": "osascript DoScriptFile on the owned instance (owner-authorized equivalent of File > Scripts > Run Script File); a prior attempt via the AE '-r' launch flag did NOT activate the dispatcher",
+    "os": { "product": "macOS", "version": "27.2.1", "build": "26B131" },
+    "cpu": { "model": "Apple M5", "cores": 10 },
+    "aeProcessCpuPercentAtCapture": 26.6,
+    "aeProcessRssBytesAtCapture": 563392,
+    "userName": "rebui",
+    "locale": "ja_JP"
+  },
+  "sessionIdentity": {
+    "channelId": "chan-f01f13fe42f33344",
+    "sessionId": "sess-disp-cc004b7d-6af716bd",
+    "dispatchId": "disp-cc004b7d-6af716bd"
+  },
+  "commands": [
+    { "command": "identify", "requestId": "ed7eaab3467c8aae5a9980a0edf0d4b3", "outcome": "COMPLETED", "roundTripMs": 208, "hostEvalMs": 0 },
+    { "command": "ping", "requestId": "bc1f995aacce349d7eb03c8e4eebaa3f", "outcome": "COMPLETED", "roundTripMs": 157, "hostEvalMs": 0 },
+    { "command": "snapshot", "requestId": "1198c5f021a8c57ca878806fb9c6c311", "outcome": "COMPLETED", "roundTripMs": 260, "hostEvalMs": 0 },
+    { "command": "sysinfo", "requestId": "90d1dc65b62117bd94bcc6764220b810", "outcome": "COMPLETED", "roundTripMs": 208, "hostEvalMs": 0 },
+    { "command": "diagnose", "outcome": "COMPLETED (client-side OS observation only)" }
+  ],
+  "anomalies": [
+    "app.scriptingVersion evaluated to the string \"undefined\" on AE 26.5.3x9 (property absent or unset; recorded verbatim, not coerced)",
+    "sysinfo systemFolderName and hostName returned empty strings",
+    "snapshot reported projectOpen=true with projectItemCount=0 (untitled/empty project state)",
+    "prepare --expect-ae '26.5' pinned a prefix that mismatched app.version '26.5.3x9' and was correctly REFUSED WRONG_TARGET; pinning requires the exact app.version string",
+    "an earlier request sent before dispatcher activation timed out UNKNOWN (NO_REPLY_BEFORE_DEADLINE) and its late claim was REFUSED EXPIRED — no resend, per outcome-model.md",
+    "the first generated probe-start.jsx (channel run-20261113) was syntactically invalid due to a placeholder double-quoting bug; fixed in 874b2ad with a parse regression test"
+  ],
+  "notCovered": [
+    "Windows (UNVERIFIED — no Windows host per owner decision)",
+    "AE 2027 (27.0.0) real-host run",
+    "busy/modal/timeout-under-load field behavior (V3/V4 of ADR-0005)",
+    "restart tolerance (V5)"
+  ]
+}

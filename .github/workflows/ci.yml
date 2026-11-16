@@ -1,0 +1,247 @@
+name: ci
+
+# Automated verification for ticket PRs. The only other workflow
+# (release-source-check.yml) fires on PRs into `main`; ticket PRs target
+# release-x-y-z branches and previously ran no checks at all.
+#
+# Each job detects whether its surface exists on the head tree and skips
+# cleanly when it does not, so the same file serves every ticket branch.
+
+on:
+  pull_request:
+
+# Superseded PR pushes cancel their stale runs instead of occupying
+# runners until the platform default timeout.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  github-config:
+    # Syntax-level YAML parse only — this does NOT validate GitHub
+    # workflow/issue-form schemas.
+    name: github-config (issue templates + workflow YAML syntax parse)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse GitHub config YAML
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in .github/ISSUE_TEMPLATE/*.yml .github/ISSUE_TEMPLATE/*.yaml .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$f" ] || continue
+            # Pass the path via ARGV — interpolating "$f" into the Ruby
+            # source would break (or inject) on filenames containing
+            # quotes. Surface the parser diagnostic, not just "invalid".
+            if ! err=$(ruby -ryaml -e 'YAML.load_file(ARGV[0])' "$f" 2>&1); then
+              # Escape %, CR and LF: a filename is PR-controlled and a
+              # raw newline/% in a workflow command property is parsed
+              # as command injection by the runner.
+              escf=$(printf '%s' "$f" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g')
+              escm=$(printf '%s' "$err" | head -1 | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g')
+              echo "::error file=$escf::invalid YAML: $escm"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
+  capability-catalog:
+    name: capability-catalog (bun test / typecheck / verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect package
+        id: detect
+        run: |
+          if [ -f packages/capability-catalog/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "packages/capability-catalog not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: oven-sh/setup-bun@v2
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bun install --frozen-lockfile
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bun test
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bunx tsc --noEmit
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/capability-catalog
+        run: bun run verify
+
+  native-adapter:
+    name: native-adapter (bun test / typecheck / verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect package
+        id: detect
+        run: |
+          if [ -f packages/native-adapter/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "packages/native-adapter not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: oven-sh/setup-bun@v2
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bun install --frozen-lockfile
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bun test
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bunx tsc --noEmit
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/native-adapter
+        run: bun run verify
+
+  read-only-probe:
+    name: read-only-probe (node:test, fake responder)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect probe
+        id: detect
+        run: |
+          if [ -f experiments/read-only-probe/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "experiments/read-only-probe not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/read-only-probe/tests/run.mjs
+
+  ae-devtools-cli:
+    name: ae-devtools-cli (packaged suites + consumer smoke, fake-level)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # engines.node is ">=22"; exercise both the minimum and the current
+    # LTS line (the pre-merge jobs pinned 22 and 24 respectively).
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect package
+        id: detect
+        run: |
+          if [ -f packages/ae-devtools-cli/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "packages/ae-devtools-cli not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: packages/ae-devtools-cli/package-lock.json
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/ae-devtools-cli
+        run: npm ci
+      # xmllint is required for the cep-extension XSD contract test —
+      # without it that test would silently skip and the contract
+      # would be unverified.
+      - if: steps.detect.outputs.present == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      # Run every suite even when an earlier one fails, so a single
+      # broken suite cannot hide the status of the rest. Each suite is
+      # also guarded individually: a head that has the package but not
+      # every suite directory (older ticket branches) skips cleanly
+      # instead of aborting on MODULE_NOT_FOUND.
+      - if: steps.detect.outputs.present == 'true'
+        run: |
+          set -uo pipefail
+          fail=0
+          ran=0
+          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension agent-loop; do
+            if [ ! -f "packages/ae-devtools-cli/$d/tests/run.mjs" ]; then
+              echo "=== $d === (absent on this head; skipping)"
+              continue
+            fi
+            ran=$((ran + 1))
+            echo "=== $d ==="
+            if ! node "packages/ae-devtools-cli/$d/tests/run.mjs"; then
+              echo "::error::suite $d failed"
+              fail=1
+            fi
+          done
+          if [ "$ran" -eq 0 ]; then
+            echo "::error::no ae-devtools-cli suites found on this head"
+            exit 1
+          fi
+          exit "$fail"
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/ae-devtools-cli
+        run: npm run smoke:consumer
+
+  cep-panel-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect suite
+        id: detect
+        run: |
+          if [ -f experiments/runtime-bridge/cep-panel/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "cep-panel contract tests not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # xmllint is required for the XSD contract test — without it the
+      # test would silently skip and the contract would be unverified.
+      - if: steps.detect.outputs.present == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/runtime-bridge/cep-panel/tests/run.mjs
+  vscode-debugger:
+    name: vscode-debugger (launch.json contract, no AE)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect suite
+        id: detect
+        run: |
+          if [ -f experiments/vscode-debugger/tests/run.mjs ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "experiments/vscode-debugger not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: experiments/vscode-debugger
+        run: npm ci
+      - if: steps.detect.outputs.present == 'true'
+        run: node experiments/vscode-debugger/tests/run.mjs

@@ -1,0 +1,136 @@
+name: release-source-check
+
+# Defensive path referenced from docs/release.md §Release PR merge
+# authorization. Branch protection / rulesets on `main` enforce
+# "no direct push", but on some GitHub plans head-branch-pattern
+# constraints are unavailable on the legacy protection model. This
+# workflow guards `release-*` integration PRs as a second layer.
+#
+# AGENTS.md §10 + ADR-0003 + ADR-0012 + docs/release.md を前提とする。
+#
+# 動作:
+# - trigger: PR open / reopen / synchronize / synchronize 後の push
+# - gate: PR が `release-x-y-z` branch 宛てであることを要求する
+# - 違反時: PR を close せず fail check を立て、template comment を残す
+#
+# 重要:
+# - この workflow は **merge を実行しない**. merge は ADR-0012 の
+#   explicit user authorization 境界に従う
+# - close もしない（誤検知時に手動 reopen できる余地を残す）
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - edited
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  source-check:
+    name: "Verify head branch shape"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Inspect head ref
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          REPO_FULL: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          printf 'head.ref=%s\n' "$HEAD_REF"
+          printf 'head.repo=%s\n' "$HEAD_REPO"
+          printf 'base.ref=%s\n' "$BASE_REF"
+
+          # Rule 0: the head branch must live in THIS repository. A fork
+          # can name its branch release-x-y-z too, but a fork head does
+          # not satisfy the in-repo release integration contract.
+          if [ "$HEAD_REPO" != "$REPO_FULL" ]; then
+            echo "::error title=Release PR head must be in this repository::fork からの PR は release 統合経路を満たしません。head repo: $HEAD_REPO"
+            exit 1
+          fi
+
+          # Rule 1: base must be `main`
+          if [ "$BASE_REF" != "main" ]; then
+            echo "::error title=Release PR base must be main::release-x-y-z → main の統合経路である必要があります。"
+            exit 1
+          fi
+
+          # Rule 2: head must match release-x-y-z pattern
+          if ! echo "$HEAD_REF" | grep -Eq '^release-[0-9]+-[0-9]+-[0-9]+$'; then
+            echo "::error title=Release PR head must be release-x-y-z::PR head branch は 'release-<major>-<minor>-<patch>' 形式である必要があります。"
+            exit 1
+          fi
+
+          echo "OK: release PR head/base shape satisfies the contract."
+
+      # Advisory only: a comment-posting failure (token scope, API
+      # hiccup) must not fail a check that already verified the shape.
+      - name: Add release PR guidance comment (first open only)
+        if: github.event.action == 'opened'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "$(cat <<'EOF'
+          ## release-source-check
+
+          This PR targets `main` from a `release-<major>-<minor>-<patch>` head, which satisfies the
+          integration contract in `docs/release.md` and `ADR-0003` / `ADR-0012`.
+
+          **次のステップ**
+          1. release evidence (`docs/release.md` §Release PR) を PR body に集約。
+          2. reviewer 条件を充足させる。solo-maintainer 構成では GitHub
+             approval count は 0 であり、CODEOWNERS は approval gate では
+             ない — ADR-0012 §7 の solo adjustment（自動レビュー + agent 側
+             独立レビュー + release evidence）で代替する
+             （`docs/release.md` §Release PR merge authorization）。
+          3. required checks (CI configured の場合) が green であることを確認。
+          4. ready-to-merge 状態で **停止** し、 explicit user authorization を待つ。
+             agent は **merge を実行しません**。
+
+          -- release-source-check workflow
+          EOF
+          )"
+
+      # Documented contract: on a shape violation the check fails AND a
+      # template comment is left. The step above only runs on success,
+      # so post the violation guidance here.
+      - name: Post violation guidance comment (first open only)
+        if: failure() && github.event.action == 'opened'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "$(cat <<'EOF'
+          ## release-source-check: contract violation
+
+          この PR は release 統合経路の shape 条件を満たしていません
+          （head がこの repository の `release-<major>-<minor>-<patch>`
+          branch であること、base が `main` であること）。
+          `docs/release.md` §Release PR merge authorization と
+          ADR-0003 / ADR-0012 を確認してください。この check は
+          merge を実行しません。
+
+          -- release-source-check workflow
+          EOF
+          )"

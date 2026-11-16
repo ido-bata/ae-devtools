@@ -1,0 +1,17 @@
+{
+  "name": "@ae-devtools/inventory-tools",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic extractor for the AE control tool parity inventory (CAP001-CAP004).",
+  "scripts": {
+    "extract": "bun run scripts/extract.ts",
+    "refresh": "bun run scripts/refresh.ts",
+    "verify": "bun run scripts/verify.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.4",
+    "typescript": "^5.9.3"
+  }
+}

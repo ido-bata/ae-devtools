@@ -1,0 +1,178 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/legacy-pre-v1",
+  "producerNote": "Recorded before the v1 schema discriminator existed; key set already matches the current producer minus schema/artifactsNote.",
+  "issue": 49,
+  "startedAt": "2026-11-15T01:16:34.724Z",
+  "platform": "darwin/arm64",
+  "node": "v24.22.1",
+  "installDir": "/Applications/Adobe After Effects 2026",
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": 75529,
+      "args": "node experiments/a8n-transport/real-run.mjs --install-dir /Applications/Adobe After Effects 2026 --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-gate-2026-a.json"
+    }
+  ],
+  "steps": [
+    {
+      "label": "connect.state",
+      "source": "String(app.version)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "26.5.3x9",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 0,
+      "sendsAfter": 1
+    },
+    {
+      "label": "project.state",
+      "source": "String(app.project.numItems)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 1,
+      "sendsAfter": 2
+    },
+    {
+      "label": "error.capture",
+      "source": "__a8nSliceUndeclaredIdentifier;",
+      "outcome": "FAILED",
+      "contractOutcome": "failed",
+      "requestState": "ACKED",
+      "result": null,
+      "error": {
+        "name": "ReferenceError",
+        "message": "__a8nSliceUndeclaredIdentifierは未定義です。",
+        "line": 1,
+        "hostReported": true
+      },
+      "refusal": null,
+      "sendsBefore": 2,
+      "sendsAfter": 3
+    },
+    {
+      "label": "fix.rerun",
+      "source": "String(app.project.numItems + 0)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 3,
+      "sendsAfter": 4
+    },
+    {
+      "label": "verify.counter.1",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "1",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 4,
+      "sendsAfter": 5
+    },
+    {
+      "label": "verify.counter.2",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "2",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 5,
+      "sendsAfter": 6
+    },
+    {
+      "label": "consent.tampered",
+      "source": "String(app.version)",
+      "outcome": "BLOCKED",
+      "contractOutcome": "not-sent",
+      "requestState": "NOT_SENT",
+      "result": null,
+      "error": null,
+      "refusal": {
+        "code": "CONSENT_SCOPE_MISMATCH",
+        "message": "consent scope does not match this dispatch (session/operation/args/project)"
+      },
+      "sendsBefore": 6,
+      "sendsAfter": 6
+    },
+    {
+      "label": "consent.denied",
+      "source": "__DENY__ String(app.version)",
+      "outcome": "REFUSED-BEFORE-SEND",
+      "reason": "policy denied: source carries __DENY__ marker",
+      "sendsBefore": 6,
+      "sendsAfter": 6
+    }
+  ],
+  "close": {
+    "quit": true
+  },
+  "pin": {
+    "sessionId": "a8n-slice-904d1b85-1d2a-4593-97b9-f4f08026604f",
+    "aeVersion": "26.5.3x9",
+    "dispatchId": "disp-cb442084-b999-470c-bfdb-e0f56c8665b6"
+  },
+  "aeA8nSource": "local:/private/tmp/ae-a8n-105-103",
+  "aeA8nHead": "be78ca659b3937c09841e8b236a91edf961e3fad",
+  "hostInfo": {
+    "version": "26.5.3x9",
+    "build": "9"
+  },
+  "ownership": {
+    "kind": "owned",
+    "evidence": "pid 75879 is still the only instance"
+  },
+  "hostScript": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-l4dQ8u/a8n-host-ext.js",
+  "sessionRoot": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-l4dQ8u/a8n-session",
+  "tracePath": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-l4dQ8u/a8n-session/trace.jsonl",
+  "assertionViolations": [],
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-15T01:16:39.125Z\",\"op\":\"session.probe\",\"status\":\"ok\",\"durationMs\":3626,\"args\":{\"method\":\"app.info\"},\"result\":{\"version\":\"26.5.3x9\",\"build\":\"9\"}}\n{\"seq\":1,\"ts\":\"2026-11-15T01:16:39.556Z\",\"op\":\"session.launch\",\"status\":\"ok\",\"durationMs\":4209,\"args\":{\"transport\":\"script-invocation\"},\"result\":{\"version\":\"26.5.3x9\",\"build\":\"9\",\"ownership\":{\"kind\":\"owned\",\"evidence\":\"pid 75879 is still the only instance\"}}}\n{\"seq\":2,\"ts\":\"2026-11-15T01:16:40.179Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":230,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"String(app.version)\",\"requestId\":\"req-254e50ea3a6d2e36\"},\"result\":{\"requestId\":\"req-254e50ea3a6d2e36\",\"ok\":true,\"resultJson\":\"\\\"26.5.3x9\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":3,\"ts\":\"2026-11-15T01:16:40.757Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":460,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"String(app.project.numItems)\",\"requestId\":\"req-e51060d10c8d9856\"},\"result\":{\"requestId\":\"req-e51060d10c8d9856\",\"ok\":true,\"resultJson\":\"\\\"0\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":4,\"ts\":\"2026-11-15T01:16:41.245Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":385,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"__a8nSliceUndeclaredIdentifier;\",\"requestId\":\"req-5783c2e3d1a346d1\"},\"result\":{\"requestId\":\"req-5783c2e3d1a346d1\",\"ok\":false,\"evalError\":\"{...}\"}}\n{\"seq\":5,\"ts\":\"2026-11-15T01:16:41.935Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":521,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"String(app.project.numItems + 0)\",\"requestId\":\"req-fea19fe0f45393bc\"},\"result\":{\"requestId\":\"req-fea19fe0f45393bc\",\"ok\":true,\"resultJson\":\"\\\"0\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":6,\"ts\":\"2026-11-15T01:16:43.273Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":868,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);\",\"requestId\":\"req-8ad40ee1a9273807\"},\"result\":{\"requestId\":\"req-8ad40ee1a9273807\",\"ok\":true,\"resultJson\":\"\\\"1\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":7,\"ts\":\"2026-11-15T01:16:43.900Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":422,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);\",\"requestId\":\"req-891b78d1c0ff7822\"},\"result\":{\"requestId\":\"req-891b78d1c0ff7822\",\"ok\":true,\"resultJson\":\"\\\"2\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n",
+  "aeProcessesAfterClose": [
+    {
+      "pid": 75529,
+      "args": "node experiments/a8n-transport/real-run.mjs --install-dir /Applications/Adobe After Effects 2026 --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-gate-2026-a.json"
+    },
+    {
+      "pid": 76317,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/2a9a8c54-60ec-4b16-3112-ce8664da1506.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/2a9a8c54-60ec-4b16-3112-ce8664da1506.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/2a9a8c54-60ec-4b16-3112-ce8664da1506.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/external/ae1f48fa-c015-463e-c34a-3e8f5bb35708.envelope --report-id=ae1f48fa-c015-463e-c34a-3e8f5bb35708 --handshake-fd=5"
+    },
+    {
+      "pid": 76362,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/dynamiclinkmanager"
+    },
+    {
+      "pid": 76524,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    }
+  ],
+  "aeHelpersAfterClose": [
+    {
+      "pid": 75529,
+      "args": "node experiments/a8n-transport/real-run.mjs --install-dir /Applications/Adobe After Effects 2026 --ae-a8n-root /private/tmp/ae-a8n-105-103 --out experiments/a8n-transport/evidence/run-gate-2026-a.json"
+    },
+    {
+      "pid": 76317,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/2a9a8c54-60ec-4b16-3112-ce8664da1506.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/2a9a8c54-60ec-4b16-3112-ce8664da1506.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/2a9a8c54-60ec-4b16-3112-ce8664da1506.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/external/ae1f48fa-c015-463e-c34a-3e8f5bb35708.envelope --report-id=ae1f48fa-c015-463e-c34a-3e8f5bb35708 --handshake-fd=5"
+    },
+    {
+      "pid": 76362,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/dynamiclinkmanager"
+    },
+    {
+      "pid": 76524,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    }
+  ],
+  "finishedAt": "2026-11-15T01:16:45.375Z",
+  "transportSends": 6
+}

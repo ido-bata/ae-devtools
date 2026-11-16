@@ -1,0 +1,8 @@
+{
+  "schema": "ae-devtools.domain-coverage/v1",
+  "domain": "project-items-comps-layers",
+  "issue": "https://github.com/ido-bata/ae-devtools/issues/15",
+  "title": "Project / footage / items / comps / layers / selection / parenting / timing",
+  "categories": ["project", "item", "comp", "layer", "collection", "source"],
+  "notes": "CAP029-CAP032 scope. 'application' (app.* host/application surface), 'ui', 'system', 'preferences' and render-side categories are deliberately out of this domain; they belong to #16/#20 boundaries. Every member stays listed until an adapter exists — uncovered is the honest denominator, not a gap to hide."
+}

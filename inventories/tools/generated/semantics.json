@@ -1,0 +1,6322 @@
+{
+  "provisional": true,
+  "note": "Provisional normalization owned by ae-devtools#11. One Adobe operation reached through several wrappers is counted once (grouped by semanticId); gap = a competitor reaches an operation that neither ae-a8n nor ae-devtools implements.",
+  "semanticOps": [
+    {
+      "id": "app.instance-lifecycle",
+      "provisional": true,
+      "label": "Discover/start/stop local AE instances",
+      "adobeOperation": "process lifecycle outside AE (launcher control)",
+      "tools": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "app.quit",
+      "provisional": true,
+      "label": "Quit After Effects",
+      "adobeOperation": "app.quit() with unsaved-changes guard",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "app.set-environment",
+      "provisional": true,
+      "label": "Set process environment variables",
+      "adobeOperation": "$.setenv (ExtendScript process-scoped env)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "app.version-info",
+      "provisional": true,
+      "label": "Read app version/build info",
+      "adobeOperation": "ExtendScript app.version / app.buildNumber",
+      "tools": [
+        "ido-bata/ae-a8n",
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "audio.analyze-audio-waveform",
+      "provisional": true,
+      "label": "Analyze audio waveform",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "audio.animate-to-audio",
+      "provisional": true,
+      "label": "Animate to audio",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "audio.get-audio-info",
+      "provisional": true,
+      "label": "Get audio info",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "audio.set-audio-levels",
+      "provisional": true,
+      "label": "Set audio levels",
+      "adobeOperation": "Audio property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "camera.add-camera-layer",
+      "provisional": true,
+      "label": "Add camera layer",
+      "adobeOperation": "Camera layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "camera.create-camera",
+      "provisional": true,
+      "label": "Create camera",
+      "adobeOperation": "Camera layer DOM",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "camera.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "adobeOperation": "Camera layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.add-composition-marker",
+      "provisional": true,
+      "label": "Add composition marker",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.comp-info",
+      "provisional": true,
+      "label": "Comp info",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.compose-op",
+      "provisional": true,
+      "label": "Precompose / track matte / blend mode / parent / 3D structure ops",
+      "adobeOperation": "CompItem.layers precompose, trackMatteType, blendingMode, parent, threeDLayer",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "comp.create",
+      "provisional": true,
+      "label": "Create a composition",
+      "adobeOperation": "Project.items.addComp",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ido-bata/ae-a8n",
+        "ido-bata/ae-devtools",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.delete",
+      "provisional": true,
+      "label": "Delete",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.get-layer",
+      "provisional": true,
+      "label": "Read one layer's info",
+      "adobeOperation": "Layer id/name/index/enabled/selected projection",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.get-report",
+      "provisional": true,
+      "label": "Get report",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.get-time",
+      "provisional": true,
+      "label": "Get time",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.info",
+      "provisional": true,
+      "label": "Read composition settings",
+      "adobeOperation": "CompItem name/width/height/duration/frameRate",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.inspect-comp",
+      "provisional": true,
+      "label": "Inspect comp",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.list-comps",
+      "provisional": true,
+      "label": "List comps",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.list-layers",
+      "provisional": true,
+      "label": "List a comp's layers",
+      "adobeOperation": "CompItem.numLayers / CompItem.layer(i) projection",
+      "tools": [
+        "ido-bata/Ae_LayerNote",
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.localize-comp",
+      "provisional": true,
+      "label": "Localize comp",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.open-in-viewer",
+      "provisional": true,
+      "label": "Open a comp in the viewer",
+      "adobeOperation": "CompItem.openInViewer",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "comp.render-composition",
+      "provisional": true,
+      "label": "Render composition",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-active",
+      "provisional": true,
+      "label": "Set active",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-comp-settings",
+      "provisional": true,
+      "label": "Set comp settings",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-composition-properties",
+      "provisional": true,
+      "label": "Set composition properties",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-renderer",
+      "provisional": true,
+      "label": "Set renderer",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "comp.update-settings",
+      "provisional": true,
+      "label": "Update settings",
+      "adobeOperation": "CompItem DOM (composition settings, items, timing)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "devtools.bridge.eval",
+      "provisional": true,
+      "label": "Submit arbitrary ExtendScript over the loopback bridge",
+      "adobeOperation": "none yet — v1 stub does not dispatch to AE",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "devtools.bridge.healthz",
+      "provisional": true,
+      "label": "Loopback bridge listener health probe",
+      "adobeOperation": "none — static HTTP response",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "devtools.probe.error-propagation",
+      "provisional": true,
+      "label": "Force an evalScript error-path failure (probe)",
+      "adobeOperation": "none — $.error probe, no project operation",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "edit.build-smart-edit",
+      "provisional": true,
+      "label": "Build smart edit",
+      "adobeOperation": "Footage edit assembly (cut/keep segments)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "edit.build-youtube-edit",
+      "provisional": true,
+      "label": "Build youtube edit",
+      "adobeOperation": "Footage edit assembly (cut/keep segments)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.add-any-effect",
+      "provisional": true,
+      "label": "Add any effect",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.apply",
+      "provisional": true,
+      "label": "Apply an effect to a layer",
+      "adobeOperation": "Effect Parade addProperty",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.copy-effects",
+      "provisional": true,
+      "label": "Copy effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.get-parameter",
+      "provisional": true,
+      "label": "Read one effect parameter",
+      "adobeOperation": "Property value read",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "effect.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "effect.list-available-effects",
+      "provisional": true,
+      "label": "List available effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.list-effect-params",
+      "provisional": true,
+      "label": "List effect params",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.list-parameters",
+      "provisional": true,
+      "label": "List an effect's parameters",
+      "adobeOperation": "Effect property iteration (describeProperty)",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "effect.mcp-aftereffects-apply-effect",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.mcp-aftereffects-apply-effect-template",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect template",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.mcp-aftereffects-get-effects-help",
+      "provisional": true,
+      "label": "Mcp aftereffects get effects help",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.modify-effect-properties",
+      "provisional": true,
+      "label": "Modify effect properties",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.remove",
+      "provisional": true,
+      "label": "Remove",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.reorder-effects",
+      "provisional": true,
+      "label": "Reorder effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.search-effects",
+      "provisional": true,
+      "label": "Search effects",
+      "adobeOperation": "Effect/Property DOM (effects and their parameters)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "effect.set-parameter",
+      "provisional": true,
+      "label": "Set an effect parameter",
+      "adobeOperation": "Property.setValue",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "expression.add-expression-control",
+      "provisional": true,
+      "label": "Add expression control",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.apply-expression-template",
+      "provisional": true,
+      "label": "Apply expression template",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.enable",
+      "provisional": true,
+      "label": "Enable/disable an expression without clearing it",
+      "adobeOperation": "Property.expressionEnabled",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.enable-expression",
+      "provisional": true,
+      "label": "Enable expression",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.get",
+      "provisional": true,
+      "label": "Get",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.list-all",
+      "provisional": true,
+      "label": "Collect all expressions in the project",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "expression.remove",
+      "provisional": true,
+      "label": "Remove",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.search",
+      "provisional": true,
+      "label": "Search project expressions",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "expression.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Property expression DOM (expression text/enabled/error)",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "expression.stats",
+      "provisional": true,
+      "label": "Aggregate statistics over project expressions",
+      "adobeOperation": "Property expression DOM (aggregation read)",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "expression.test",
+      "provisional": true,
+      "label": "Temporarily apply an expression to probe runtime errors",
+      "adobeOperation": "Property.expression temp assignment restored in-call",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "expression.validate",
+      "provisional": true,
+      "label": "Syntax/semantic expression validation without applying",
+      "adobeOperation": "none — linting of the passed string, no project operation",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "footage.find-missing-footage",
+      "provisional": true,
+      "label": "Find missing footage",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.import",
+      "provisional": true,
+      "label": "Import",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.relink-footage",
+      "provisional": true,
+      "label": "Relink footage",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.remove-proxy",
+      "provisional": true,
+      "label": "Remove proxy",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.replace-footage",
+      "provisional": true,
+      "label": "Replace footage",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "footage.set-proxy",
+      "provisional": true,
+      "label": "Set proxy",
+      "adobeOperation": "Footage import and footage item DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "geometry.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Layer geometry options DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.get",
+      "provisional": true,
+      "label": "List keyframes on a property",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.scale-keyframe-timing",
+      "provisional": true,
+      "label": "Scale keyframe timing",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set-effect-keyframe",
+      "provisional": true,
+      "label": "Set effect keyframe",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set-keyframe-advanced",
+      "provisional": true,
+      "label": "Set keyframe advanced",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "keyframe.set-path",
+      "provisional": true,
+      "label": "Set path",
+      "adobeOperation": "Property keyframe DOM (keys and interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-adjustment-layer",
+      "provisional": true,
+      "label": "Add adjustment layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-av-layer",
+      "provisional": true,
+      "label": "Add av layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-layer",
+      "provisional": true,
+      "label": "Add layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-null",
+      "provisional": true,
+      "label": "Add null",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-shape",
+      "provisional": true,
+      "label": "Add shape",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-solid",
+      "provisional": true,
+      "label": "Add a solid layer",
+      "adobeOperation": "CompItem.layers.addSolid",
+      "tools": [
+        "ido-bata/ae-devtools",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.add-text",
+      "provisional": true,
+      "label": "Add a text layer",
+      "adobeOperation": "CompItem.layers.addText + TextDocument property setValue",
+      "tools": [
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.center-layers",
+      "provisional": true,
+      "label": "Center layers",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.create-adjustment-layer",
+      "provisional": true,
+      "label": "Create adjustment layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.create-layer",
+      "provisional": true,
+      "label": "Create layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.create-text-layer",
+      "provisional": true,
+      "label": "Create text layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.delete",
+      "provisional": true,
+      "label": "Delete",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.get-3d-info",
+      "provisional": true,
+      "label": "Get 3d info",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.get-comment",
+      "provisional": true,
+      "label": "Read a layer's comment",
+      "adobeOperation": "Layer.comment",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "layer.get-layer",
+      "provisional": true,
+      "label": "Get layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "layer.get-layer-clip-frames",
+      "provisional": true,
+      "label": "Get layer clip frames",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.get-selection",
+      "provisional": true,
+      "label": "Read the current UI layer selection",
+      "adobeOperation": "Comp/layer selectedLayers projection",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "layer.get-shape-paths",
+      "provisional": true,
+      "label": "Read shape layer paths",
+      "adobeOperation": "ADBE Vector Shape vertices/inTangents/outTangents",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.get-transform",
+      "provisional": true,
+      "label": "Read layer transform values",
+      "adobeOperation": "ADBE Transform Group property values",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.info",
+      "provisional": true,
+      "label": "Info",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.inspect-layer",
+      "provisional": true,
+      "label": "Inspect layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "layer.list",
+      "provisional": true,
+      "label": "List",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.list-effects",
+      "provisional": true,
+      "label": "List effects on a layer",
+      "adobeOperation": "ADBE Effect Parade property iteration",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.list-layer-effects",
+      "provisional": true,
+      "label": "List layer effects",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.list-properties",
+      "provisional": true,
+      "label": "List a layer's properties",
+      "adobeOperation": "Layer property group iteration",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "layer.modify-layer",
+      "provisional": true,
+      "label": "Modify layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.precompose-layers",
+      "provisional": true,
+      "label": "Precompose layers",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.reorder-layer",
+      "provisional": true,
+      "label": "Reorder layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.select",
+      "provisional": true,
+      "label": "Change UI layer selection",
+      "adobeOperation": "Layer.selected",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.set-3d",
+      "provisional": true,
+      "label": "Set 3d",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.set-comment",
+      "provisional": true,
+      "label": "Write a layer's comment",
+      "adobeOperation": "Layer.comment",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "layer.set-enabled",
+      "provisional": true,
+      "label": "Enable/disable a layer",
+      "adobeOperation": "Layer.enabled",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "layer.set-layer",
+      "provisional": true,
+      "label": "Set layer",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.set-layer-parent",
+      "provisional": true,
+      "label": "Set layer parent",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.set-mask",
+      "provisional": true,
+      "label": "Set mask",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "layer.set-properties",
+      "provisional": true,
+      "label": "Set properties",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "light.add-light-layer",
+      "provisional": true,
+      "label": "Add light layer",
+      "adobeOperation": "Light layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "light.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "adobeOperation": "Light layer DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.add",
+      "provisional": true,
+      "label": "Add",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.add-layer-marker",
+      "provisional": true,
+      "label": "Add layer marker",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.add-markers-bulk",
+      "provisional": true,
+      "label": "Add markers bulk",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.delete-marker",
+      "provisional": true,
+      "label": "Delete marker",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.get-markers",
+      "provisional": true,
+      "label": "Get markers",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.get-nearest",
+      "provisional": true,
+      "label": "Get nearest",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.navigate",
+      "provisional": true,
+      "label": "Navigate",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "marker.snap",
+      "provisional": true,
+      "label": "Snap",
+      "adobeOperation": "Marker property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.add",
+      "provisional": true,
+      "label": "Add",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.delete-mask",
+      "provisional": true,
+      "label": "Delete mask",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.get-mask-path",
+      "provisional": true,
+      "label": "Get mask path",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "mask.list-masks",
+      "provisional": true,
+      "label": "List masks",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.set-mask-keyframes",
+      "provisional": true,
+      "label": "Set mask keyframes",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.set-mask-path",
+      "provisional": true,
+      "label": "Set mask path",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mask.set-mask-properties",
+      "provisional": true,
+      "label": "Set mask properties",
+      "adobeOperation": "Mask property DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "material.set",
+      "provisional": true,
+      "label": "Set",
+      "adobeOperation": "Layer material options DOM",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "menu.exec-menu",
+      "provisional": true,
+      "label": "Exec menu",
+      "adobeOperation": "app menu commands (findMenuCommandId / executeCommand)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "menu.execute-command",
+      "provisional": true,
+      "label": "Execute a menu command",
+      "adobeOperation": "app.executeCommand",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "menu.find-command",
+      "provisional": true,
+      "label": "Find a menu command id by name",
+      "adobeOperation": "app.findMenuCommandId",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "mogrt.add-essential-property",
+      "provisional": true,
+      "label": "Add an Essential Graphics controller property",
+      "adobeOperation": "MotionGraphicsTemplate controller surface (comp MotionGraphics)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mogrt.export",
+      "provisional": true,
+      "label": "Export a Motion Graphics template",
+      "adobeOperation": "comp.exportAsMotionGraphicsTemplate",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "mogrt.template-op",
+      "provisional": true,
+      "label": "Template op",
+      "adobeOperation": "Motion graphics template (MOGRT) DOM",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "motion.apply-preset",
+      "provisional": true,
+      "label": "Apply preset",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.audit-motion-coverage",
+      "provisional": true,
+      "label": "Audit motion coverage",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.build-motion-video",
+      "provisional": true,
+      "label": "Build motion video",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.create-motion-blueprint",
+      "provisional": true,
+      "label": "Create motion blueprint",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.create-motion-template",
+      "provisional": true,
+      "label": "Create motion template",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.list-motion-templates",
+      "provisional": true,
+      "label": "List motion templates",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.repair-motion-blueprint",
+      "provisional": true,
+      "label": "Repair motion blueprint",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "motion.validate-motion-blueprint",
+      "provisional": true,
+      "label": "Validate motion blueprint",
+      "adobeOperation": "Motion graphics / animation preset surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "path.create",
+      "provisional": true,
+      "label": "Create",
+      "adobeOperation": "Mask/shape path DOM (vertices and tangents)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "path.get",
+      "provisional": true,
+      "label": "Get",
+      "adobeOperation": "Mask/shape path DOM (vertices and tangents)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "preference.get-workflow-preferences",
+      "provisional": true,
+      "label": "Get workflow preferences",
+      "adobeOperation": "Preferences surface",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "preference.set-workflow-preferences",
+      "provisional": true,
+      "label": "Set workflow preferences",
+      "adobeOperation": "Preferences surface",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.active-item",
+      "provisional": true,
+      "label": "Read the active project item projection",
+      "adobeOperation": "Project.activeItem projection",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "project.close",
+      "provisional": true,
+      "label": "Close the open project",
+      "adobeOperation": "Project.close(CloseOptions)",
+      "tools": [
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.create",
+      "provisional": true,
+      "label": "Create",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.info",
+      "provisional": true,
+      "label": "Read project metadata",
+      "adobeOperation": "Project.file / Project.numItems",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.list-comps",
+      "provisional": true,
+      "label": "List compositions in the project",
+      "adobeOperation": "Project item iteration (CompItem properties)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.list-items",
+      "provisional": true,
+      "label": "List items",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.op",
+      "provisional": true,
+      "label": "Op",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "project.open",
+      "provisional": true,
+      "label": "Open a project file",
+      "adobeOperation": "app.open(File)",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.organize-project-items",
+      "provisional": true,
+      "label": "Organize project items",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.reduce-project",
+      "provisional": true,
+      "label": "Reduce project",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.save",
+      "provisional": true,
+      "label": "Save",
+      "adobeOperation": "After Effects Project/Item DOM (project file, items, metadata)",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "project.snapshot",
+      "provisional": true,
+      "label": "Structured project state snapshot",
+      "adobeOperation": "Project/comp/selection state read",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "project.walk-tree",
+      "provisional": true,
+      "label": "Walk the project item tree (counts)",
+      "adobeOperation": "Project.item(i) iteration (read-only)",
+      "tools": [
+        "ido-bata/ae-devtools"
+      ]
+    },
+    {
+      "id": "render.add-to-render-queue",
+      "provisional": true,
+      "label": "Add to render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.control-render",
+      "provisional": true,
+      "label": "Control render",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.frame",
+      "provisional": true,
+      "label": "Render one frame to a PNG file",
+      "adobeOperation": "CompItem.saveFrameToPng",
+      "tools": [
+        "ido-bata/ae-a8n",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.list-render-queue",
+      "provisional": true,
+      "label": "List render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.list-render-templates",
+      "provisional": true,
+      "label": "List render templates",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.queue-op",
+      "provisional": true,
+      "label": "Render queue add/render/batch/AME queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "render.remove-from-render-queue",
+      "provisional": true,
+      "label": "Remove from render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render",
+      "provisional": true,
+      "label": "Render",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-aerender",
+      "provisional": true,
+      "label": "Render aerender",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-queue",
+      "provisional": true,
+      "label": "Render queue",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-status",
+      "provisional": true,
+      "label": "Render status",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.render-templates",
+      "provisional": true,
+      "label": "Render templates",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.set-render-queue-item",
+      "provisional": true,
+      "label": "Set render queue item",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "render.start-render",
+      "provisional": true,
+      "label": "Start render",
+      "adobeOperation": "Render output (render queue / saveFrameToPng / frame export)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "search.search",
+      "provisional": true,
+      "label": "Search",
+      "adobeOperation": "Project search (item name matching)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "search.search-presets",
+      "provisional": true,
+      "label": "Search presets",
+      "adobeOperation": "Project search (item name matching)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "shape.add-operator",
+      "provisional": true,
+      "label": "Add operator",
+      "adobeOperation": "Shape layer group/path DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "shape.create",
+      "provisional": true,
+      "label": "Create",
+      "adobeOperation": "Shape layer group/path DOM",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "subtitle.create-subtitle",
+      "provisional": true,
+      "label": "Create subtitle",
+      "adobeOperation": "Subtitle text creation",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.check-bridge",
+      "provisional": true,
+      "label": "Check bridge",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.get-help",
+      "provisional": true,
+      "label": "Get help",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.get-results",
+      "provisional": true,
+      "label": "Read the temp result file of a dispatched script",
+      "adobeOperation": "none — local file read",
+      "tools": [
+        "BenZed/after-effects"
+      ]
+    },
+    {
+      "id": "system.health",
+      "provisional": true,
+      "label": "Health",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.prepare-command",
+      "provisional": true,
+      "label": "Wrap a function/command for dispatch",
+      "adobeOperation": "none — request-local object construction",
+      "tools": [
+        "BenZed/after-effects"
+      ]
+    },
+    {
+      "id": "system.result-error",
+      "provisional": true,
+      "label": "Error type for script results returned from AE",
+      "adobeOperation": "none — result plumbing",
+      "tools": [
+        "BenZed/after-effects"
+      ]
+    },
+    {
+      "id": "system.run-bridge-test",
+      "provisional": true,
+      "label": "Run bridge test",
+      "adobeOperation": "Bridge/host system surface (ping, health, script execution)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.run-jsx",
+      "provisional": true,
+      "label": "Run arbitrary caller-supplied ExtendScript",
+      "adobeOperation": "arbitrary ExtendScript eval — access depends on the script",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "BenZed/after-effects",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "system.write-script-file",
+      "provisional": true,
+      "label": "Write a compiled script to the Scripts Panel folder",
+      "adobeOperation": "none — local file write, AE not launched",
+      "tools": [
+        "BenZed/after-effects"
+      ]
+    },
+    {
+      "id": "text.create-text-animator",
+      "provisional": true,
+      "label": "Create text animator",
+      "adobeOperation": "Text layer / TextDocument DOM",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "text.set-text",
+      "provisional": true,
+      "label": "Set text",
+      "adobeOperation": "Text layer / TextDocument DOM",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "text.text-animator-op",
+      "provisional": true,
+      "label": "Text animator op",
+      "adobeOperation": "Text layer / TextDocument DOM",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "time.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "adobeOperation": "Comp/layer timing (current time, retiming)",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "time.timing-op",
+      "provisional": true,
+      "label": "Layer in/out, comp duration/fps, markers, time remap",
+      "adobeOperation": "Comp/layer timing (current time, retiming)",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "tool.ae-guide",
+      "provisional": true,
+      "label": "Serve a bundled usage guide topic",
+      "adobeOperation": "none — server-local documentation read",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.analyze-cuts",
+      "provisional": true,
+      "label": "Analyze footage for cuts (silence/scene detection)",
+      "adobeOperation": "none — external media analysis outside AE",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.analyze-motion",
+      "provisional": true,
+      "label": "Summarize an animation from key reads",
+      "adobeOperation": "Property keyframe DOM (key/ease reads, server-side summary)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.animate-from-data",
+      "provisional": true,
+      "label": "Generate animation from external data",
+      "adobeOperation": "Property keyframe DOM (bulk generated keys)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.apply-easy-ease",
+      "provisional": true,
+      "label": "Apply easy-ease to keyframes",
+      "adobeOperation": "Property keyframe DOM (setTemporalEaseAtKey/interpolation)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.archive-issue",
+      "provisional": true,
+      "label": "Archive an issue-journal entry",
+      "adobeOperation": "none — local file store rewrite",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.audit-editorial-plan",
+      "provisional": true,
+      "label": "Audit an editorial plan for problems",
+      "adobeOperation": "none — request-local plan analysis",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.await-job",
+      "provisional": true,
+      "label": "Block on a running render/batch job",
+      "adobeOperation": "none — server job registry wait",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.batch-set-expressions",
+      "provisional": true,
+      "label": "Set expressions on many properties at once",
+      "adobeOperation": "Property expression DOM (bulk writes)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.cancel-job",
+      "provisional": true,
+      "label": "Cancel a running render/batch job",
+      "adobeOperation": "aerender/batch process termination (host-side)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.check-setup",
+      "provisional": true,
+      "label": "Report panel/bridge installation status",
+      "adobeOperation": "none — install-state inspection",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.collect-files",
+      "provisional": true,
+      "label": "Collect the project's source files into one folder",
+      "adobeOperation": "app.project item file copy + relink on disk",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.comp-diff",
+      "provisional": true,
+      "label": "Diff a comp against a stored fingerprint",
+      "adobeOperation": "structural layer fingerprint comparison (read)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.contact-sheet",
+      "provisional": true,
+      "label": "Compose captured frames into one contact sheet",
+      "adobeOperation": "none — local image compositing",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.copy-animation",
+      "provisional": true,
+      "label": "Copy a layer's animation onto other layers",
+      "adobeOperation": "Property keyframe DOM (key copy incl. eases/expressions)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.copy-keyframes",
+      "provisional": true,
+      "label": "Copy keyframes between properties",
+      "adobeOperation": "Property keyframe DOM (key copy)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-adjustment-layer",
+      "provisional": true,
+      "label": "Create an adjustment layer",
+      "adobeOperation": "CompItem.layers.addSolid with adjustment flag",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-camera-layer",
+      "provisional": true,
+      "label": "Create a camera layer",
+      "adobeOperation": "CompItem.layers.addCamera",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-editorial-plan",
+      "provisional": true,
+      "label": "Generate an editorial plan document",
+      "adobeOperation": "none — local file write",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-light-layer",
+      "provisional": true,
+      "label": "Create a light layer",
+      "adobeOperation": "CompItem.layers.addLight",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-logo-reveal",
+      "provisional": true,
+      "label": "Build a logo reveal animation",
+      "adobeOperation": "layer/keyframe creation driven by a shipped template",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-lower-third",
+      "provisional": true,
+      "label": "Build a lower-third graphic",
+      "adobeOperation": "layer/keyframe/shape creation driven by a shipped template",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-null-layer",
+      "provisional": true,
+      "label": "Create a null layer",
+      "adobeOperation": "CompItem.layers.addNull",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-precomp-layer",
+      "provisional": true,
+      "label": "Insert an existing comp into another as a layered comp",
+      "adobeOperation": "CompItem.layers.add(comp)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-review",
+      "provisional": true,
+      "label": "Record a review item in the local review store",
+      "adobeOperation": "none — local file write",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-shape-layer",
+      "provisional": true,
+      "label": "Create a shape layer",
+      "adobeOperation": "CompItem.layers.addShape",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-solid-layer",
+      "provisional": true,
+      "label": "Create a solid layer",
+      "adobeOperation": "CompItem.layers.addSolid",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-text-layer",
+      "provisional": true,
+      "label": "Create a text layer",
+      "adobeOperation": "CompItem.layers.addText + TextDocument property writes",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-title-card",
+      "provisional": true,
+      "label": "Build a title card animation",
+      "adobeOperation": "layer/keyframe creation driven by a shipped template",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.create-transition",
+      "provisional": true,
+      "label": "Build a transition between layers",
+      "adobeOperation": "layer/keyframe creation driven by a shipped template",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.debugalert",
+      "provisional": true,
+      "label": "Raise a debug alert dialog",
+      "adobeOperation": "ExtendScript alert() (debug)",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "tool.decide-review",
+      "provisional": true,
+      "label": "Record a decision on a review item",
+      "adobeOperation": "none — local file write",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.delete-checkpoints",
+      "provisional": true,
+      "label": "Delete stored comp checkpoints",
+      "adobeOperation": "project item removal (checkpoint comps)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.delete-layer",
+      "provisional": true,
+      "label": "Delete a layer",
+      "adobeOperation": "Layer DOM (layer removal)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.diagnostics",
+      "provisional": true,
+      "label": "Project diagnostics (missing footage, fonts, broken expressions)",
+      "adobeOperation": "Project state scans assembled manually",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "tool.duplicate-layer",
+      "provisional": true,
+      "label": "Duplicate a layer",
+      "adobeOperation": "Layer.duplicate",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.execute-script",
+      "provisional": true,
+      "label": "Execute arbitrary ExtendScript",
+      "adobeOperation": "arbitrary ExtendScript eval",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.get-comp-tree",
+      "provisional": true,
+      "label": "Read a comp with its nested layer tree",
+      "adobeOperation": "CompItem/layer recursion (pre-comp walk)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.get-job",
+      "provisional": true,
+      "label": "Inspect a render/batch job record",
+      "adobeOperation": "none — server job registry read",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.get-layer-full",
+      "provisional": true,
+      "label": "Read one layer's full state",
+      "adobeOperation": "Layer property/effect/marker/text projection",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.get-property",
+      "provisional": true,
+      "label": "Read a named property by path",
+      "adobeOperation": "Property value read by matchName path",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "tool.get-results",
+      "provisional": true,
+      "label": "Fetch a bridge job result",
+      "adobeOperation": "none — job result retrieval",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.import",
+      "provisional": true,
+      "label": "Import a file into the project",
+      "adobeOperation": "app.project.importFile",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.import-3d-from-blender",
+      "provisional": true,
+      "label": "Import a Blender scene as AE layers",
+      "adobeOperation": "footage import + layer creation driven by external data",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.import-folder",
+      "provisional": true,
+      "label": "Import every file in a folder",
+      "adobeOperation": "app.project.importFile (folder walk)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.init-project",
+      "provisional": true,
+      "label": "Initialize a project folder on disk",
+      "adobeOperation": "none — local folder write",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.layout-op",
+      "provisional": true,
+      "label": "Measure/align/distribute/stack/pin/fit/stagger layout helpers",
+      "adobeOperation": "Layer Transform property writes derived from sourceRectAtTime reads",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "tool.link-properties",
+      "provisional": true,
+      "label": "Link one property to another with an expression",
+      "adobeOperation": "Property expression DOM (pick-whip style link)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-blender-jobs",
+      "provisional": true,
+      "label": "List queued Blender render jobs",
+      "adobeOperation": "none — local job registry read",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-checkpoints",
+      "provisional": true,
+      "label": "List stored comp checkpoints",
+      "adobeOperation": "project item iteration (read)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-fonts",
+      "provisional": true,
+      "label": "List available fonts",
+      "adobeOperation": "app.fonts enumeration",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-instances",
+      "provisional": true,
+      "label": "List AE instances registered with a broker",
+      "adobeOperation": "none — broker-local registry read",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-known-issues",
+      "provisional": true,
+      "label": "List issue-journal entries",
+      "adobeOperation": "none — local file store read",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-layers",
+      "provisional": true,
+      "label": "List a comp's layers (compact)",
+      "adobeOperation": "CompItem.numLayers / layer projection",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-presets",
+      "provisional": true,
+      "label": "List available animation presets",
+      "adobeOperation": "Effects & Presets surface (preset scan)",
+      "tools": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.list-reviews",
+      "provisional": true,
+      "label": "List review items from the local review store",
+      "adobeOperation": "none — local file store read",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.log-issue",
+      "provisional": true,
+      "label": "Record an issue-journal entry",
+      "adobeOperation": "none — local file write",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.mark-issue-reported",
+      "provisional": true,
+      "label": "Mark an issue-journal entry reported",
+      "adobeOperation": "none — local file rewrite",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.match-reference",
+      "provisional": true,
+      "label": "Match a reference look/motion",
+      "adobeOperation": "effect/property writes derived from analysis",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.offset-keyframes",
+      "provisional": true,
+      "label": "Shift keyframes in time",
+      "adobeOperation": "Property keyframe DOM (key time shift)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.parent-layer",
+      "provisional": true,
+      "label": "Set or clear a layer's parent",
+      "adobeOperation": "Layer.parent",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.place-audio-cues",
+      "provisional": true,
+      "label": "Import audio and place cue layers",
+      "adobeOperation": "footage import + AVLayer timing writes",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.populate-template",
+      "provisional": true,
+      "label": "Populate a comp template with data",
+      "adobeOperation": "layer property writes driven by data",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.prepare-blender-3d-job",
+      "provisional": true,
+      "label": "Queue a Blender render for later AE import",
+      "adobeOperation": "none — external Blender job submission",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.project-checkpoint",
+      "provisional": true,
+      "label": "Create/list project checkpoints",
+      "adobeOperation": "project save snapshot to disk (file-system level)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.project-revert",
+      "provisional": true,
+      "label": "Revert the project to a saved checkpoint",
+      "adobeOperation": "project open/close lifecycle around a saved file",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.purge-unused-footage",
+      "provisional": true,
+      "label": "Remove unused footage items from the project",
+      "adobeOperation": "app.project.reduceProject / unused item removal",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.query-project",
+      "provisional": true,
+      "label": "Multi-command project query dispatcher",
+      "adobeOperation": "Project/comp/layer/property read projections",
+      "tools": [
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "tool.queue-in-ame",
+      "provisional": true,
+      "label": "Hand a comp to Adobe Media Encoder",
+      "adobeOperation": "AME queue handoff (external app)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.read-tree",
+      "provisional": true,
+      "label": "Structured paginated project tree read",
+      "adobeOperation": "Project/comp/layer/property reflection",
+      "tools": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.reconnect",
+      "provisional": true,
+      "label": "Re-inject a bridge bootstrap into AE",
+      "adobeOperation": "host lifecycle (AfterFX -r bootstrap run)",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.remove-keyframes",
+      "provisional": true,
+      "label": "Remove keyframes from a property",
+      "adobeOperation": "Property keyframe removal",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.reorder-layer",
+      "provisional": true,
+      "label": "Move a layer in the render stack",
+      "adobeOperation": "Layer move before/after (index invalidation)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.retime-keyframes",
+      "provisional": true,
+      "label": "Move/stretch/reverse/stagger existing keyframes",
+      "adobeOperation": "Property keyframe DOM (key time rewrites)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.reverse-keyframes",
+      "provisional": true,
+      "label": "Reverse keyframe order in time",
+      "adobeOperation": "Property keyframe DOM (key time reversal)",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.save-frame",
+      "provisional": true,
+      "label": "Save a frame to an image file",
+      "adobeOperation": "CompItem.saveFrameToPng",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.scanfolder",
+      "provisional": true,
+      "label": "Scan a folder and return file names",
+      "adobeOperation": "none — local filesystem read",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "tool.see-frame",
+      "provisional": true,
+      "label": "Preview a frame as an image",
+      "adobeOperation": "CompItem.saveFrameToPng (preview-oriented)",
+      "tools": [
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.select",
+      "provisional": true,
+      "label": "Change UI selection of layers",
+      "adobeOperation": "Layer.selected",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-effect-enabled",
+      "provisional": true,
+      "label": "Enable/disable an effect",
+      "adobeOperation": "Effect.enabled",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-interpolation",
+      "provisional": true,
+      "label": "Set one keyframe's interpolation/flags",
+      "adobeOperation": "Property keyframe DOM (setInterpolationTypeAtKey)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-layer",
+      "provisional": true,
+      "label": "Update layer metadata (name/enabled/locked/shy/solo/3D/blend/label/in-out)",
+      "adobeOperation": "Layer DOM (layer creation and layer properties)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-property",
+      "provisional": true,
+      "label": "Set a named property by path",
+      "adobeOperation": "Property.setValue by matchName path",
+      "tools": [
+        "23d1/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    },
+    {
+      "id": "tool.set-shape-path",
+      "provisional": true,
+      "label": "Write shape path vertices/tangents",
+      "adobeOperation": "ADBE Vector Shape (shape.setValue)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-shape-property",
+      "provisional": true,
+      "label": "Set a shape property (fill/stroke/group/gradient)",
+      "adobeOperation": "Shape layer property setValue",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-spatial-tangents",
+      "provisional": true,
+      "label": "Set a keyframe's spatial tangents",
+      "adobeOperation": "Property keyframe DOM (setSpatialTangentsAtKey)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-temporal-ease",
+      "provisional": true,
+      "label": "Set a keyframe's in/out temporal ease",
+      "adobeOperation": "Property keyframe DOM (setTemporalEaseAtKey)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-transform",
+      "provisional": true,
+      "label": "Set transform properties (position/scale/rotation/anchor/opacity)",
+      "adobeOperation": "ADBE Transform Group property writes",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.set-work-area",
+      "provisional": true,
+      "label": "Set a comp's work area",
+      "adobeOperation": "CompItem.workAreaStart/workAreaDuration",
+      "tools": [
+        "ishu86/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.setup-panel",
+      "provisional": true,
+      "label": "Install the CEP panel on disk",
+      "adobeOperation": "none — local install (panel files / debug preference)",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.status",
+      "provisional": true,
+      "label": "Report host/bridge connection status",
+      "adobeOperation": "none — host status read",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.test-animation",
+      "provisional": true,
+      "label": "Run a canned bridge animation test",
+      "adobeOperation": "arbitrary ExtendScript eval (test payload)",
+      "tools": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.tool-library-save",
+      "provisional": true,
+      "label": "Persist a reusable script artifact in the local tool library",
+      "adobeOperation": "none — local file store, no AE contact",
+      "tools": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.tool-library-search",
+      "provisional": true,
+      "label": "Search the local tool library",
+      "adobeOperation": "none — local file store read",
+      "tools": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.transcribe-video",
+      "provisional": true,
+      "label": "Transcribe video audio to text (local)",
+      "adobeOperation": "none — external transcription, no AE contact",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.transcript-to-cuts",
+      "provisional": true,
+      "label": "Derive cut segments from a transcript",
+      "adobeOperation": "none — local file processing",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.undo",
+      "provisional": true,
+      "label": "Trigger an app-level undo",
+      "adobeOperation": "app.undo / undo group close",
+      "tools": [
+        "23d1/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.validate-expressions",
+      "provisional": true,
+      "label": "Force-evaluate expressions and report errors",
+      "adobeOperation": "Property expression DOM (expressionError reads)",
+      "tools": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.verify-blender-job",
+      "provisional": true,
+      "label": "Check a Blender render job's state",
+      "adobeOperation": "none — local job registry read",
+      "tools": [
+        "HeroicSwan/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.workspace-bind",
+      "provisional": true,
+      "label": "Bind a task to an AE project and manage write access",
+      "adobeOperation": "host capability state (no direct project mutation)",
+      "tools": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "tool.writetextfile",
+      "provisional": true,
+      "label": "Write a text file at an absolute path",
+      "adobeOperation": "none — local filesystem write",
+      "tools": [
+        "ido-bata/Ae_LayerNote"
+      ]
+    },
+    {
+      "id": "ui.alert",
+      "provisional": true,
+      "label": "Raise a modal alert dialog",
+      "adobeOperation": "ExtendScript alert()",
+      "tools": [
+        "ido-bata/ae-a8n"
+      ]
+    },
+    {
+      "id": "view.capture-frame",
+      "provisional": true,
+      "label": "Capture frame",
+      "adobeOperation": "Viewer / frame capture surface",
+      "tools": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ]
+    },
+    {
+      "id": "view.capture-frames",
+      "provisional": true,
+      "label": "Capture frames",
+      "adobeOperation": "Viewer / frame capture surface",
+      "tools": [
+        "HeroicSwan/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision"
+      ]
+    }
+  ],
+  "gapMatrix": [
+    {
+      "semanticId": "app.instance-lifecycle",
+      "provisional": true,
+      "label": "Discover/start/stop local AE instances",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "app.quit",
+      "provisional": true,
+      "label": "Quit After Effects",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "app.set-environment",
+      "provisional": true,
+      "label": "Set process environment variables",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "app.version-info",
+      "provisional": true,
+      "label": "Read app version/build info",
+      "inAeA8n": true,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "audio.analyze-audio-waveform",
+      "provisional": true,
+      "label": "Analyze audio waveform",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "audio.animate-to-audio",
+      "provisional": true,
+      "label": "Animate to audio",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "audio.get-audio-info",
+      "provisional": true,
+      "label": "Get audio info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "audio.set-audio-levels",
+      "provisional": true,
+      "label": "Set audio levels",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "camera.add-camera-layer",
+      "provisional": true,
+      "label": "Add camera layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "camera.create-camera",
+      "provisional": true,
+      "label": "Create camera",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "camera.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.add-composition-marker",
+      "provisional": true,
+      "label": "Add composition marker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.comp-info",
+      "provisional": true,
+      "label": "Comp info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.compose-op",
+      "provisional": true,
+      "label": "Precompose / track matte / blend mode / parent / 3D structure ops",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.create",
+      "provisional": true,
+      "label": "Create a composition",
+      "inAeA8n": true,
+      "inAeDevtools": true,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.delete",
+      "provisional": true,
+      "label": "Delete",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.get-layer",
+      "provisional": true,
+      "label": "Read one layer's info",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.get-report",
+      "provisional": true,
+      "label": "Get report",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.get-time",
+      "provisional": true,
+      "label": "Get time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.info",
+      "provisional": true,
+      "label": "Read composition settings",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.inspect-comp",
+      "provisional": true,
+      "label": "Inspect comp",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.list-comps",
+      "provisional": true,
+      "label": "List comps",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.list-layers",
+      "provisional": true,
+      "label": "List a comp's layers",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.localize-comp",
+      "provisional": true,
+      "label": "Localize comp",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.open-in-viewer",
+      "provisional": true,
+      "label": "Open a comp in the viewer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "comp.render-composition",
+      "provisional": true,
+      "label": "Render composition",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-active",
+      "provisional": true,
+      "label": "Set active",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-comp-settings",
+      "provisional": true,
+      "label": "Set comp settings",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-composition-properties",
+      "provisional": true,
+      "label": "Set composition properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-renderer",
+      "provisional": true,
+      "label": "Set renderer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "comp.update-settings",
+      "provisional": true,
+      "label": "Update settings",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "devtools.bridge.eval",
+      "provisional": true,
+      "label": "Submit arbitrary ExtendScript over the loopback bridge",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "devtools.bridge.healthz",
+      "provisional": true,
+      "label": "Loopback bridge listener health probe",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "devtools.probe.error-propagation",
+      "provisional": true,
+      "label": "Force an evalScript error-path failure (probe)",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "edit.build-smart-edit",
+      "provisional": true,
+      "label": "Build smart edit",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "edit.build-youtube-edit",
+      "provisional": true,
+      "label": "Build youtube edit",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.add-any-effect",
+      "provisional": true,
+      "label": "Add any effect",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.apply",
+      "provisional": true,
+      "label": "Apply an effect to a layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.copy-effects",
+      "provisional": true,
+      "label": "Copy effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.get-parameter",
+      "provisional": true,
+      "label": "Read one effect parameter",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.list-available-effects",
+      "provisional": true,
+      "label": "List available effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.list-effect-params",
+      "provisional": true,
+      "label": "List effect params",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.list-parameters",
+      "provisional": true,
+      "label": "List an effect's parameters",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "effect.mcp-aftereffects-apply-effect",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.mcp-aftereffects-apply-effect-template",
+      "provisional": true,
+      "label": "Mcp aftereffects apply effect template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.mcp-aftereffects-get-effects-help",
+      "provisional": true,
+      "label": "Mcp aftereffects get effects help",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.modify-effect-properties",
+      "provisional": true,
+      "label": "Modify effect properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.remove",
+      "provisional": true,
+      "label": "Remove",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.reorder-effects",
+      "provisional": true,
+      "label": "Reorder effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.search-effects",
+      "provisional": true,
+      "label": "Search effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "effect.set-parameter",
+      "provisional": true,
+      "label": "Set an effect parameter",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "expression.add-expression-control",
+      "provisional": true,
+      "label": "Add expression control",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.apply-expression-template",
+      "provisional": true,
+      "label": "Apply expression template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.enable",
+      "provisional": true,
+      "label": "Enable/disable an expression without clearing it",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.enable-expression",
+      "provisional": true,
+      "label": "Enable expression",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.get",
+      "provisional": true,
+      "label": "Get",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.list-all",
+      "provisional": true,
+      "label": "Collect all expressions in the project",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.remove",
+      "provisional": true,
+      "label": "Remove",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.search",
+      "provisional": true,
+      "label": "Search project expressions",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.stats",
+      "provisional": true,
+      "label": "Aggregate statistics over project expressions",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.test",
+      "provisional": true,
+      "label": "Temporarily apply an expression to probe runtime errors",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "expression.validate",
+      "provisional": true,
+      "label": "Syntax/semantic expression validation without applying",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.find-missing-footage",
+      "provisional": true,
+      "label": "Find missing footage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.import",
+      "provisional": true,
+      "label": "Import",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.relink-footage",
+      "provisional": true,
+      "label": "Relink footage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.remove-proxy",
+      "provisional": true,
+      "label": "Remove proxy",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.replace-footage",
+      "provisional": true,
+      "label": "Replace footage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "footage.set-proxy",
+      "provisional": true,
+      "label": "Set proxy",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "geometry.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.get",
+      "provisional": true,
+      "label": "List keyframes on a property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.scale-keyframe-timing",
+      "provisional": true,
+      "label": "Scale keyframe timing",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set-effect-keyframe",
+      "provisional": true,
+      "label": "Set effect keyframe",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set-keyframe-advanced",
+      "provisional": true,
+      "label": "Set keyframe advanced",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "keyframe.set-path",
+      "provisional": true,
+      "label": "Set path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-adjustment-layer",
+      "provisional": true,
+      "label": "Add adjustment layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-av-layer",
+      "provisional": true,
+      "label": "Add av layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-layer",
+      "provisional": true,
+      "label": "Add layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-null",
+      "provisional": true,
+      "label": "Add null",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-shape",
+      "provisional": true,
+      "label": "Add shape",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.add-solid",
+      "provisional": true,
+      "label": "Add a solid layer",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.add-text",
+      "provisional": true,
+      "label": "Add a text layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.center-layers",
+      "provisional": true,
+      "label": "Center layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.create-adjustment-layer",
+      "provisional": true,
+      "label": "Create adjustment layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.create-layer",
+      "provisional": true,
+      "label": "Create layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.create-text-layer",
+      "provisional": true,
+      "label": "Create text layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.delete",
+      "provisional": true,
+      "label": "Delete",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.duplicate",
+      "provisional": true,
+      "label": "Duplicate",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-3d-info",
+      "provisional": true,
+      "label": "Get 3d info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-comment",
+      "provisional": true,
+      "label": "Read a layer's comment",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-layer",
+      "provisional": true,
+      "label": "Get layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-layer-clip-frames",
+      "provisional": true,
+      "label": "Get layer clip frames",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-selection",
+      "provisional": true,
+      "label": "Read the current UI layer selection",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.get-shape-paths",
+      "provisional": true,
+      "label": "Read shape layer paths",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.get-transform",
+      "provisional": true,
+      "label": "Read layer transform values",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.info",
+      "provisional": true,
+      "label": "Info",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.inspect-layer",
+      "provisional": true,
+      "label": "Inspect layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.list",
+      "provisional": true,
+      "label": "List",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.list-effects",
+      "provisional": true,
+      "label": "List effects on a layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.list-layer-effects",
+      "provisional": true,
+      "label": "List layer effects",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.list-properties",
+      "provisional": true,
+      "label": "List a layer's properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.modify-layer",
+      "provisional": true,
+      "label": "Modify layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.precompose-layers",
+      "provisional": true,
+      "label": "Precompose layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.reorder-layer",
+      "provisional": true,
+      "label": "Reorder layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.select",
+      "provisional": true,
+      "label": "Change UI layer selection",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.set-3d",
+      "provisional": true,
+      "label": "Set 3d",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.set-comment",
+      "provisional": true,
+      "label": "Write a layer's comment",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.set-enabled",
+      "provisional": true,
+      "label": "Enable/disable a layer",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "layer.set-layer",
+      "provisional": true,
+      "label": "Set layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.set-layer-parent",
+      "provisional": true,
+      "label": "Set layer parent",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.set-mask",
+      "provisional": true,
+      "label": "Set mask",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "layer.set-properties",
+      "provisional": true,
+      "label": "Set properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "light.add-light-layer",
+      "provisional": true,
+      "label": "Add light layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "light.set-options",
+      "provisional": true,
+      "label": "Set options",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.add",
+      "provisional": true,
+      "label": "Add",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.add-layer-marker",
+      "provisional": true,
+      "label": "Add layer marker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.add-markers-bulk",
+      "provisional": true,
+      "label": "Add markers bulk",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.delete-marker",
+      "provisional": true,
+      "label": "Delete marker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.get-markers",
+      "provisional": true,
+      "label": "Get markers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.get-nearest",
+      "provisional": true,
+      "label": "Get nearest",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.navigate",
+      "provisional": true,
+      "label": "Navigate",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "marker.snap",
+      "provisional": true,
+      "label": "Snap",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.add",
+      "provisional": true,
+      "label": "Add",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.delete-mask",
+      "provisional": true,
+      "label": "Delete mask",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.get-mask-path",
+      "provisional": true,
+      "label": "Get mask path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.layer-op",
+      "provisional": true,
+      "label": "Layer op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.list-masks",
+      "provisional": true,
+      "label": "List masks",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.set-mask-keyframes",
+      "provisional": true,
+      "label": "Set mask keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.set-mask-path",
+      "provisional": true,
+      "label": "Set mask path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mask.set-mask-properties",
+      "provisional": true,
+      "label": "Set mask properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "material.set",
+      "provisional": true,
+      "label": "Set",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "menu.exec-menu",
+      "provisional": true,
+      "label": "Exec menu",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "menu.execute-command",
+      "provisional": true,
+      "label": "Execute a menu command",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "menu.find-command",
+      "provisional": true,
+      "label": "Find a menu command id by name",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "mogrt.add-essential-property",
+      "provisional": true,
+      "label": "Add an Essential Graphics controller property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mogrt.export",
+      "provisional": true,
+      "label": "Export a Motion Graphics template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "mogrt.template-op",
+      "provisional": true,
+      "label": "Template op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.apply-preset",
+      "provisional": true,
+      "label": "Apply preset",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.audit-motion-coverage",
+      "provisional": true,
+      "label": "Audit motion coverage",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.build-motion-video",
+      "provisional": true,
+      "label": "Build motion video",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.create-motion-blueprint",
+      "provisional": true,
+      "label": "Create motion blueprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.create-motion-template",
+      "provisional": true,
+      "label": "Create motion template",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.list-motion-templates",
+      "provisional": true,
+      "label": "List motion templates",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.repair-motion-blueprint",
+      "provisional": true,
+      "label": "Repair motion blueprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "motion.validate-motion-blueprint",
+      "provisional": true,
+      "label": "Validate motion blueprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "path.create",
+      "provisional": true,
+      "label": "Create",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "path.get",
+      "provisional": true,
+      "label": "Get",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "preference.get-workflow-preferences",
+      "provisional": true,
+      "label": "Get workflow preferences",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "preference.set-workflow-preferences",
+      "provisional": true,
+      "label": "Set workflow preferences",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.active-item",
+      "provisional": true,
+      "label": "Read the active project item projection",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "project.close",
+      "provisional": true,
+      "label": "Close the open project",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "project.create",
+      "provisional": true,
+      "label": "Create",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.info",
+      "provisional": true,
+      "label": "Read project metadata",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ido-bata/Ae_LayerNote",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "project.list-comps",
+      "provisional": true,
+      "label": "List compositions in the project",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "project.list-items",
+      "provisional": true,
+      "label": "List items",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.op",
+      "provisional": true,
+      "label": "Op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.open",
+      "provisional": true,
+      "label": "Open a project file",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "project.organize-project-items",
+      "provisional": true,
+      "label": "Organize project items",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.reduce-project",
+      "provisional": true,
+      "label": "Reduce project",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.save",
+      "provisional": true,
+      "label": "Save",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "project.snapshot",
+      "provisional": true,
+      "label": "Structured project state snapshot",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "project.walk-tree",
+      "provisional": true,
+      "label": "Walk the project item tree (counts)",
+      "inAeA8n": false,
+      "inAeDevtools": true,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "render.add-to-render-queue",
+      "provisional": true,
+      "label": "Add to render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.control-render",
+      "provisional": true,
+      "label": "Control render",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.frame",
+      "provisional": true,
+      "label": "Render one frame to a PNG file",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": false
+    },
+    {
+      "semanticId": "render.list-render-queue",
+      "provisional": true,
+      "label": "List render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.list-render-templates",
+      "provisional": true,
+      "label": "List render templates",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.queue-op",
+      "provisional": true,
+      "label": "Render queue add/render/batch/AME queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.remove-from-render-queue",
+      "provisional": true,
+      "label": "Remove from render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render",
+      "provisional": true,
+      "label": "Render",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-aerender",
+      "provisional": true,
+      "label": "Render aerender",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-queue",
+      "provisional": true,
+      "label": "Render queue",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-status",
+      "provisional": true,
+      "label": "Render status",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.render-templates",
+      "provisional": true,
+      "label": "Render templates",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.set-render-queue-item",
+      "provisional": true,
+      "label": "Set render queue item",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "render.start-render",
+      "provisional": true,
+      "label": "Start render",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "search.search",
+      "provisional": true,
+      "label": "Search",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "search.search-presets",
+      "provisional": true,
+      "label": "Search presets",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "shape.add-operator",
+      "provisional": true,
+      "label": "Add operator",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "shape.create",
+      "provisional": true,
+      "label": "Create",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "subtitle.create-subtitle",
+      "provisional": true,
+      "label": "Create subtitle",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.check-bridge",
+      "provisional": true,
+      "label": "Check bridge",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.get-help",
+      "provisional": true,
+      "label": "Get help",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.get-results",
+      "provisional": true,
+      "label": "Read the temp result file of a dispatched script",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "BenZed/after-effects"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.health",
+      "provisional": true,
+      "label": "Health",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.prepare-command",
+      "provisional": true,
+      "label": "Wrap a function/command for dispatch",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "BenZed/after-effects"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.result-error",
+      "provisional": true,
+      "label": "Error type for script results returned from AE",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "BenZed/after-effects"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.run-bridge-test",
+      "provisional": true,
+      "label": "Run bridge test",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.run-jsx",
+      "provisional": true,
+      "label": "Run arbitrary caller-supplied ExtendScript",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "BenZed/after-effects",
+        "Dakkshin/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "system.write-script-file",
+      "provisional": true,
+      "label": "Write a compiled script to the Scripts Panel folder",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "BenZed/after-effects"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "text.create-text-animator",
+      "provisional": true,
+      "label": "Create text animator",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "text.set-text",
+      "provisional": true,
+      "label": "Set text",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "text.text-animator-op",
+      "provisional": true,
+      "label": "Text animator op",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "time.set-time",
+      "provisional": true,
+      "label": "Set time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "time.timing-op",
+      "provisional": true,
+      "label": "Layer in/out, comp duration/fps, markers, time remap",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.ae-guide",
+      "provisional": true,
+      "label": "Serve a bundled usage guide topic",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.analyze-cuts",
+      "provisional": true,
+      "label": "Analyze footage for cuts (silence/scene detection)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.analyze-motion",
+      "provisional": true,
+      "label": "Summarize an animation from key reads",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.animate-from-data",
+      "provisional": true,
+      "label": "Generate animation from external data",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.apply-easy-ease",
+      "provisional": true,
+      "label": "Apply easy-ease to keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.archive-issue",
+      "provisional": true,
+      "label": "Archive an issue-journal entry",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.audit-editorial-plan",
+      "provisional": true,
+      "label": "Audit an editorial plan for problems",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.await-job",
+      "provisional": true,
+      "label": "Block on a running render/batch job",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.batch-set-expressions",
+      "provisional": true,
+      "label": "Set expressions on many properties at once",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.cancel-job",
+      "provisional": true,
+      "label": "Cancel a running render/batch job",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.check-setup",
+      "provisional": true,
+      "label": "Report panel/bridge installation status",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.collect-files",
+      "provisional": true,
+      "label": "Collect the project's source files into one folder",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.comp-diff",
+      "provisional": true,
+      "label": "Diff a comp against a stored fingerprint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.contact-sheet",
+      "provisional": true,
+      "label": "Compose captured frames into one contact sheet",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.copy-animation",
+      "provisional": true,
+      "label": "Copy a layer's animation onto other layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.copy-keyframes",
+      "provisional": true,
+      "label": "Copy keyframes between properties",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-adjustment-layer",
+      "provisional": true,
+      "label": "Create an adjustment layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-camera-layer",
+      "provisional": true,
+      "label": "Create a camera layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-editorial-plan",
+      "provisional": true,
+      "label": "Generate an editorial plan document",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-light-layer",
+      "provisional": true,
+      "label": "Create a light layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-logo-reveal",
+      "provisional": true,
+      "label": "Build a logo reveal animation",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-lower-third",
+      "provisional": true,
+      "label": "Build a lower-third graphic",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-null-layer",
+      "provisional": true,
+      "label": "Create a null layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-precomp-layer",
+      "provisional": true,
+      "label": "Insert an existing comp into another as a layered comp",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-review",
+      "provisional": true,
+      "label": "Record a review item in the local review store",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-shape-layer",
+      "provisional": true,
+      "label": "Create a shape layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-solid-layer",
+      "provisional": true,
+      "label": "Create a solid layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-text-layer",
+      "provisional": true,
+      "label": "Create a text layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-title-card",
+      "provisional": true,
+      "label": "Build a title card animation",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.create-transition",
+      "provisional": true,
+      "label": "Build a transition between layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.debugalert",
+      "provisional": true,
+      "label": "Raise a debug alert dialog",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.decide-review",
+      "provisional": true,
+      "label": "Record a decision on a review item",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.delete-checkpoints",
+      "provisional": true,
+      "label": "Delete stored comp checkpoints",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.delete-layer",
+      "provisional": true,
+      "label": "Delete a layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.diagnostics",
+      "provisional": true,
+      "label": "Project diagnostics (missing footage, fonts, broken expressions)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.duplicate-layer",
+      "provisional": true,
+      "label": "Duplicate a layer",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.execute-script",
+      "provisional": true,
+      "label": "Execute arbitrary ExtendScript",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-comp-tree",
+      "provisional": true,
+      "label": "Read a comp with its nested layer tree",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-job",
+      "provisional": true,
+      "label": "Inspect a render/batch job record",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-layer-full",
+      "provisional": true,
+      "label": "Read one layer's full state",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-property",
+      "provisional": true,
+      "label": "Read a named property by path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.get-results",
+      "provisional": true,
+      "label": "Fetch a bridge job result",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.import",
+      "provisional": true,
+      "label": "Import a file into the project",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.import-3d-from-blender",
+      "provisional": true,
+      "label": "Import a Blender scene as AE layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.import-folder",
+      "provisional": true,
+      "label": "Import every file in a folder",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.init-project",
+      "provisional": true,
+      "label": "Initialize a project folder on disk",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.layout-op",
+      "provisional": true,
+      "label": "Measure/align/distribute/stack/pin/fit/stagger layout helpers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.link-properties",
+      "provisional": true,
+      "label": "Link one property to another with an expression",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-blender-jobs",
+      "provisional": true,
+      "label": "List queued Blender render jobs",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-checkpoints",
+      "provisional": true,
+      "label": "List stored comp checkpoints",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-fonts",
+      "provisional": true,
+      "label": "List available fonts",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-instances",
+      "provisional": true,
+      "label": "List AE instances registered with a broker",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-known-issues",
+      "provisional": true,
+      "label": "List issue-journal entries",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-layers",
+      "provisional": true,
+      "label": "List a comp's layers (compact)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-presets",
+      "provisional": true,
+      "label": "List available animation presets",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.list-reviews",
+      "provisional": true,
+      "label": "List review items from the local review store",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.log-issue",
+      "provisional": true,
+      "label": "Record an issue-journal entry",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.mark-issue-reported",
+      "provisional": true,
+      "label": "Mark an issue-journal entry reported",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.match-reference",
+      "provisional": true,
+      "label": "Match a reference look/motion",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.offset-keyframes",
+      "provisional": true,
+      "label": "Shift keyframes in time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.parent-layer",
+      "provisional": true,
+      "label": "Set or clear a layer's parent",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.place-audio-cues",
+      "provisional": true,
+      "label": "Import audio and place cue layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.populate-template",
+      "provisional": true,
+      "label": "Populate a comp template with data",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.prepare-blender-3d-job",
+      "provisional": true,
+      "label": "Queue a Blender render for later AE import",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.project-checkpoint",
+      "provisional": true,
+      "label": "Create/list project checkpoints",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.project-revert",
+      "provisional": true,
+      "label": "Revert the project to a saved checkpoint",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.purge-unused-footage",
+      "provisional": true,
+      "label": "Remove unused footage items from the project",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.query-project",
+      "provisional": true,
+      "label": "Multi-command project query dispatcher",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.queue-in-ame",
+      "provisional": true,
+      "label": "Hand a comp to Adobe Media Encoder",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.read-tree",
+      "provisional": true,
+      "label": "Structured paginated project tree read",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.reconnect",
+      "provisional": true,
+      "label": "Re-inject a bridge bootstrap into AE",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.remove-keyframes",
+      "provisional": true,
+      "label": "Remove keyframes from a property",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.reorder-layer",
+      "provisional": true,
+      "label": "Move a layer in the render stack",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.retime-keyframes",
+      "provisional": true,
+      "label": "Move/stretch/reverse/stagger existing keyframes",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.reverse-keyframes",
+      "provisional": true,
+      "label": "Reverse keyframe order in time",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.save-frame",
+      "provisional": true,
+      "label": "Save a frame to an image file",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.scanfolder",
+      "provisional": true,
+      "label": "Scan a folder and return file names",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.see-frame",
+      "provisional": true,
+      "label": "Preview a frame as an image",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.select",
+      "provisional": true,
+      "label": "Change UI selection of layers",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-effect-enabled",
+      "provisional": true,
+      "label": "Enable/disable an effect",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-interpolation",
+      "provisional": true,
+      "label": "Set one keyframe's interpolation/flags",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-layer",
+      "provisional": true,
+      "label": "Update layer metadata (name/enabled/locked/shy/solo/3D/blend/label/in-out)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-property",
+      "provisional": true,
+      "label": "Set a named property by path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-shape-path",
+      "provisional": true,
+      "label": "Write shape path vertices/tangents",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-shape-property",
+      "provisional": true,
+      "label": "Set a shape property (fill/stroke/group/gradient)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-spatial-tangents",
+      "provisional": true,
+      "label": "Set a keyframe's spatial tangents",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-temporal-ease",
+      "provisional": true,
+      "label": "Set a keyframe's in/out temporal ease",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-transform",
+      "provisional": true,
+      "label": "Set transform properties (position/scale/rotation/anchor/opacity)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.set-work-area",
+      "provisional": true,
+      "label": "Set a comp's work area",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ishu86/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.setup-panel",
+      "provisional": true,
+      "label": "Install the CEP panel on disk",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.status",
+      "provisional": true,
+      "label": "Report host/bridge connection status",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.test-animation",
+      "provisional": true,
+      "label": "Run a canned bridge animation test",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Dakkshin/after-effects-mcp",
+        "TheLlamainator/after-effects-mcp",
+        "a-y-ibrahim/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.tool-library-save",
+      "provisional": true,
+      "label": "Persist a reusable script artifact in the local tool library",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.tool-library-search",
+      "provisional": true,
+      "label": "Search the local tool library",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.transcribe-video",
+      "provisional": true,
+      "label": "Transcribe video audio to text (local)",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.transcript-to-cuts",
+      "provisional": true,
+      "label": "Derive cut segments from a transcript",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.undo",
+      "provisional": true,
+      "label": "Trigger an app-level undo",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "23d1/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.validate-expressions",
+      "provisional": true,
+      "label": "Force-evaluate expressions and report errors",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.verify-blender-job",
+      "provisional": true,
+      "label": "Check a Blender render job's state",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.workspace-bind",
+      "provisional": true,
+      "label": "Bind a task to an AE project and manage write access",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "tool.writetextfile",
+      "provisional": true,
+      "label": "Write a text file at an absolute path",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "ido-bata/Ae_LayerNote"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "ui.alert",
+      "provisional": true,
+      "label": "Raise a modal alert dialog",
+      "inAeA8n": true,
+      "inAeDevtools": false,
+      "competitors": [],
+      "gap": false
+    },
+    {
+      "semanticId": "view.capture-frame",
+      "provisional": true,
+      "label": "Capture frame",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "Engine-Room-Games/after-effects-mcp",
+        "HeroicSwan/after-effects-mcp",
+        "JUNKDOGE-JOE/after-effects-mcp"
+      ],
+      "gap": true
+    },
+    {
+      "semanticId": "view.capture-frames",
+      "provisional": true,
+      "label": "Capture frames",
+      "inAeA8n": false,
+      "inAeDevtools": false,
+      "competitors": [
+        "HeroicSwan/after-effects-mcp",
+        "VolksRat71/after-effects-mcp-vision"
+      ],
+      "gap": true
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extendscript-debug",
+      "request": "launch",
+      "name": "Launch in After Effects",
+      "hostAppSpecifier": "aftereffects-27.0",
+      "engineName": "main",
+      "script": "/tmp/probe.jsx",
+      "bringToFront": false,
+      "debugLevel": 1
+    }
+  ]
+}

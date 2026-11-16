@@ -1,0 +1,57 @@
+{
+  "run": "run-20261113-3",
+  "issue": "ido-bata/ae-devtools#13",
+  "caps": ["CAP021", "CAP024"],
+  "evidenceLevel": "verified on real host (macOS only)",
+  "source": {
+    "repo": "ido-bata/ae-devtools",
+    "branch": "13",
+    "headSha": "c11b1ad",
+    "probeClient": "experiments/read-only-probe/probe.mjs",
+    "hostScript": "host/probe-dispatcher.jsx (generated probe-start.jsx, ES3)",
+    "note": "post-supervision-review head: hostClock is true UTC, every method returns session identity, pin survives refused re-identifies, REFUSED releases the in-flight guard"
+  },
+  "host": {
+    "aeProduct": "Adobe After Effects 2026",
+    "aeVersion": "26.5.3x9",
+    "aeBuildName": "26.5.3x9",
+    "pid": 60663,
+    "sessionOwnership": "owned-by-probe (launched by agent for this run via `open -na`; no user project; user's interactive AE 2027 session pid 39586 never touched)",
+    "activation": "osascript DoScriptFile on the owned AE 2026 instance only (owner-authorized equivalent of File > Scripts > Run Script File)",
+    "os": { "product": "macOS", "version": "27.2.1", "build": "26B131" },
+    "cpu": { "model": "Apple M5", "cores": 10 },
+    "aeProcessCpuPercentAtCapture": 19.7,
+    "aeProcessRssBytesAtCapture": 585216,
+    "userName": "rebui",
+    "locale": "ja_JP"
+  },
+  "sessionIdentity": {
+    "channelId": "chan-8afdca95d4c51869",
+    "sessionId": "sess-disp-1ccc5fa1-6af71e9e",
+    "dispatchId": "disp-1ccc5fa1-6af71e9e"
+  },
+  "commands": [
+    { "command": "identify", "requestId": "644603110bcaa6d1cac70019069b8e88", "outcome": "COMPLETED", "roundTripMs": 262, "hostEvalMs": 0 },
+    { "command": "ping", "requestId": "a12f8390697ec5cded2e4e4b3ed569fc", "outcome": "COMPLETED", "roundTripMs": 315, "hostEvalMs": 0, "note": "result carries full session identity (post-fix)" },
+    { "command": "snapshot", "requestId": "f4688485fbee39f45e9895d97d5771c2", "outcome": "COMPLETED", "roundTripMs": 263, "hostEvalMs": 0 },
+    { "command": "sysinfo", "requestId": "1f55943c15f6b7e6bde4ff5517d75919", "outcome": "COMPLETED", "roundTripMs": 314, "hostEvalMs": 0 },
+    { "command": "ping", "requestId": "b82d75975781f77e952e1c7085d17482", "outcome": "REFUSED", "refusal": "WRONG_TARGET", "note": "--expect-ae 27.0.0 against AE 26.5.3x9; host-side version pin refused before execution" },
+    { "command": "identify", "requestId": "5e74da2154bdbf5c0d338c5587729508", "outcome": "COMPLETED", "roundTripMs": 211, "note": "same session re-identify: pin NOT rewritten (pinnedAt unchanged)" },
+    { "command": "ping", "requestId": "cf002ac13bb591e20e27be68db925258", "outcome": "COMPLETED", "roundTripMs": 261, "note": "executed on final head c11b1ad" },
+    { "command": "diagnose", "outcome": "COMPLETED (client-side OS observation only)" }
+  ],
+  "anomalies": [
+    "app.scriptingVersion evaluated to the string \"undefined\" on AE 26.5.3x9 (property absent or unset; recorded verbatim, not coerced)",
+    "sysinfo systemFolderName and hostName returned empty strings",
+    "snapshot reported projectOpen=true with projectItemCount=0 (untitled/empty project state)",
+    "during verification a REFUSED reply left the in-flight guard set until deadline (subsequent command BLOCKED ONE_IN_FLIGHT); fixed in c11b1ad — host REFUSED is terminal+ACKed and releases the guard immediately",
+    "the first DoScriptFile attempt timed out client-side while AE 2026 was still launching; the retry after AppleScript responded succeeded"
+  ],
+  "notCovered": [
+    "Windows (UNVERIFIED — no Windows host per owner decision)",
+    "AE 2027 (27.0.0) real-host run",
+    "busy/modal/timeout-under-load field behavior (V3/V4 of ADR-0005)",
+    "restart tolerance (V5)",
+    "client-side wrong-target refusal on a real second session (covered by fake-responder tests; only one owned AE was launched)"
+  ]
+}
