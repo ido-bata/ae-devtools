@@ -79,6 +79,7 @@ body:
     attributes:
       label: "Governance checks"
       options:
-        - label: "AGENTS.md §11 (decision precedence) の sequence を意識している
-        - label: "本 Issue と対応する ADR amendment branch を前以て切らない（Issue 経由で切ります）
+        - label: "AGENTS.md §11 (decision precedence) の sequence を意識している"
+        - label: "本 Issue と対応する ADR amendment branch を前以て切らない（Issue 経由で切ります）"
         - label: "ADR-0012 の merge 境界を守る：release PR merge は explicit user authorization を要求する
+"

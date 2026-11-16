@@ -77,7 +77,8 @@ body:
     attributes:
       label: "Governance checks"
       options:
-        - label: "本 Issue は AGENTS.md §1「ビジョン未確定を勝手に固定しない」を尊重している
-        - label: "AGENTS.md §10 の branch naming 規約（`<issue-number>` のみ）に沿う branch 名を後続 PR で使う予定
-        - label: "Draft PR を first meaningful commit 直後に作成する運用に従う予定
+        - label: "本 Issue は AGENTS.md §1「ビジョン未確定を勝手に固定しない」を尊重している"
+        - label: "AGENTS.md §10 の branch naming 規約（`<issue-number>` のみ）に沿う branch 名を後続 PR で使う予定"
+        - label: "Draft PR を first meaningful commit 直後に作成する運用に従う予定"
         - label: "AGENTS.md §11「自明な判断を user に返さない」を意識している
+"
