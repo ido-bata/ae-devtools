@@ -7,12 +7,19 @@
  *   node scripts/coverage-claims.mjs
  */
 import { writeFileSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { OPERATIONS } from "../registry.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "generated", "coverage-claims.json");
+// Repo root is four levels up from scripts/ (scripts → scripting-adapters
+// → ae-devtools-cli → packages → root). Deriving the provenance path from
+// the registry module's real location keeps the emitted repo-relative
+// string identical while removing a literal that must be hand-edited on
+// every move of this file.
+const repoRoot = join(here, "..", "..", "..", "..");
+const registryPath = fileURLToPath(import.meta.resolve("../registry.mjs"));
 
 const claims = {};
 for (const op of OPERATIONS) {
@@ -24,7 +31,7 @@ for (const op of OPERATIONS) {
 }
 const doc = {
   schema: "ae-devtools.adapter-coverage-claims/v1",
-  generatedFrom: "packages/ae-devtools-cli/scripting-adapters/registry.mjs",
+  generatedFrom: relative(repoRoot, registryPath),
   evidenceLevel: "fake/mock only",
   realHostVerified: 0,
   claims,

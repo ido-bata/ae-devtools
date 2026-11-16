@@ -27,7 +27,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { RUNS_DIR } from "./session-guard.mjs";
+import { RUNS_DIR, GUARD_SCHEMA } from "./session-guard.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // packages/ae-devtools-cli/devtools-cli → packaged diagnostics/
@@ -36,7 +36,7 @@ const DIAG_DIR = join(HERE, "..", "diagnostics");
 export const DIAGNOSTICS_BLOCK_SCHEMA = "ae-devtools.cli.diagnostics/v1";
 export const DIAGNOSE_SCHEMA = "ae-devtools.cli.diagnose/v1";
 export const DIAGNOSTICS_RECORD_VERSION = "ae-devtools.diagnostics/v1";
-export const RUN_GUARD_SCHEMA = "ae-devtools.cli.run-guard/v1";
+export const RUN_GUARD_SCHEMA = GUARD_SCHEMA;
 
 let libsPromise = null;
 /**
@@ -62,22 +62,58 @@ export function loadDiagnosticsLibs() {
   return libsPromise;
 }
 
-/** Outcomes that mean the dispatch did not complete cleanly. */
-const FAILURE_OUTCOMES = new Set(["refused", "failed", "FAILED", "BLOCKED", "UNKNOWN"]);
+/** Wire outcomes that mean the dispatch did not complete cleanly. */
+const FAILURE_WIRE_STATES = new Set(["REFUSED", "FAILED", "BLOCKED", "UNKNOWN"]);
+
+/** Normalize any outcome spelling to the wire vocabulary for severity. */
+function wireState(raw) {
+  const s = String(raw ?? "").toLowerCase();
+  return { refused: "REFUSED", failed: "FAILED", completed: "COMPLETED", blocked: "BLOCKED", unknown: "UNKNOWN" }[s] ?? String(raw ?? "UNKNOWN");
+}
 
 /**
- * Whether a execute/verify result deserves a diagnostics block. Wire
- * outcomes are uppercase (FAILED/UNKNOWN/BLOCKED), adapter-level refusals
- * surface as lowercase `status`, and a host-reported `error` is itself
- * failure evidence even when the wire outcome looks odd.
+ * First failure-bearing outcome across a result's spellings, normalized
+ * to the wire vocabulary, or null when nothing failure-shaped exists.
+ *
+ * Spellings seen in the wild:
+ *   - wire results: uppercase `outcome` (FAILED/REFUSED/BLOCKED/UNKNOWN)
+ *   - adapter-level refusals: lowercase `status` ("refused"/"failed")
+ *     with NO wire `outcome` — the dispatch never reached the runner
+ *   - adapter payload failures: wire `outcome` "COMPLETED" PLUS
+ *     `status` "failed" — the failure-bearing status MUST win over the
+ *     completed wire outcome
+ *   - a host-reported `error` object is failure evidence even when every
+ *     outcome spelling looks clean
+ *
+ * `outcome` is the caller-computed fallback (evidence.outcome). The
+ * comparison is normalized — wire "REFUSED" and adapter "refused" are
+ * the same state (Issue #127: uppercase REFUSED used to slip through).
+ */
+export function failureOutcome(result, outcome) {
+  const candidates = [];
+  if (result !== null && typeof result === "object") {
+    candidates.push(result.status, result.outcome);
+  }
+  candidates.push(outcome);
+  for (const c of candidates) {
+    if (typeof c !== "string" || c.length === 0) continue;
+    const w = wireState(c);
+    if (FAILURE_WIRE_STATES.has(w)) return w;
+  }
+  if (
+    result !== null && typeof result === "object" &&
+    result.error !== null && typeof result.error === "object"
+  ) {
+    return "FAILED";
+  }
+  return null;
+}
+
+/**
+ * Whether a execute/verify result deserves a diagnostics block.
  */
 export function isFailureResult(result, outcome) {
-  if (FAILURE_OUTCOMES.has(outcome)) return true;
-  if (result !== null && typeof result === "object") {
-    if (result.status === "failed" || result.status === "refused") return true;
-    if (result.error !== null && typeof result.error === "object") return true;
-  }
-  return false;
+  return failureOutcome(result, outcome) !== null;
 }
 
 /** Session pin → diagnostics `session` block (strings only, absent stays absent). */
@@ -88,12 +124,6 @@ function pinSession(pin) {
     if (typeof pin[k] === "string") s[k] = pin[k];
   }
   return Object.keys(s).length > 0 ? s : undefined;
-}
-
-/** Normalize any outcome spelling to the wire vocabulary for severity. */
-function wireState(raw) {
-  const s = String(raw ?? "").toLowerCase();
-  return { refused: "REFUSED", failed: "FAILED", completed: "COMPLETED", blocked: "BLOCKED", unknown: "UNKNOWN" }[s] ?? String(raw ?? "UNKNOWN");
 }
 
 /**
@@ -114,28 +144,35 @@ function recordForFailure(libs, { result, outcome, session, requestId }) {
     // fields; fromAeError accepts either shape.
     return libs.collectors.fromAeError(hostErr, { ctx });
   }
-  const state = wireState(result?.outcome ?? outcome ?? result?.status);
+  // The failure-bearing status wins over a COMPLETED wire outcome
+  // (adapter ok:false payloads); failureOutcome normalizes every
+  // spelling to the wire vocabulary.
+  const state = failureOutcome(result, outcome) ?? wireState(result?.outcome ?? outcome ?? result?.status);
   const adapterMsg =
     result?.adapterError?.error?.message ??
     (typeof result?.adapterError?.message === "string" ? result.adapterError.message : null) ??
     (typeof result?.adapterError === "string" ? result.adapterError : null);
+  // `code` carries the machine reason exactly once (reason / wire
+  // refusal code); `detail` carries the human-readable fields —
+  // including the host's refusal message, which used to be dropped.
   const detail = [
-    result?.reason,
     result?.detail,
-    result?.refusal?.code,
+    result?.refusal?.message,
     result?.unknownCategory,
     adapterMsg,
   ].filter((v) => typeof v === "string" && v.length > 0).join(" ");
   return libs.collectors.fromTransportOutcome(
-    { outcome: state, code: result?.reason ?? result?.status ?? null, detail: detail || null },
+    { outcome: state, code: result?.reason ?? result?.refusal?.code ?? null, detail: detail || null },
     { ctx },
   );
 }
 
 /**
  * Build the additive `diagnostics` block for a failed execute/verify
- * evidence record. Never throws: a missing diagnostics checkout or an
- * unexpected shape degrades to status "unavailable" with the reason.
+ * evidence record. Never throws: a missing diagnostics checkout degrades
+ * to status "unavailable"; a record-build/resolution failure degrades to
+ * status "error" — the two are distinct so consumers can tell "module
+ * not installed" from "module ran but failed".
  */
 export async function buildFailureDiagnostics({ result, outcome, session, requestId, mapDir } = {}) {
   const block = {
@@ -154,15 +191,28 @@ export async function buildFailureDiagnostics({ result, outcome, session, reques
   }
   try {
     const record = recordForFailure(libs, { result, outcome, session, requestId });
-    // Collector defaults are experiment-level; the evidence label must
-    // reflect THIS session's level honestly.
-    record.evidence = session?.kind === "fake" ? "fake" : "real-host";
+    // Evidence label honesty: "fake" only for fake sessions; "real-host"
+    // only when the failure was actually observed through the host /
+    // transport on an owned AE session (a wire outcome or a host error
+    // reply). A client-side refusal never reached the host, and an
+    // absent/unknown session proves nothing — leave `evidence` absent
+    // rather than claim an observation that did not happen.
+    const hostObserved =
+      (result !== null && typeof result === "object" && typeof result.outcome === "string") ||
+      (result !== null && typeof result === "object" && result.error !== null && typeof result.error === "object");
+    if (session?.kind === "fake") {
+      record.evidence = "fake";
+    } else if (session?.kind === "a8n" && hostObserved) {
+      record.evidence = "real-host";
+    } else {
+      delete record.evidence;
+    }
     block.records.push(record);
     const opts = {};
     if (typeof mapDir === "string" && mapDir.length > 0) opts.mapDir = mapDir;
     block.resolutions.push(libs.sourceMap.resolveDiagnosticsSource(record, opts));
   } catch (e) {
-    block.status = "unavailable";
+    block.status = "error";
     block.reason = String(e?.message ?? e);
   }
   return block;
@@ -194,13 +244,23 @@ function resolveTarget(input, { dir = RUNS_DIR } = {}) {
  * Returns { records, notes, followUp } — followUp is a path to load next
  * (run marker → linked evidence file).
  */
-function recordsFromDocument(parsed, { dir = RUNS_DIR } = {}) {
+function recordsFromDocument(parsed, { recordVersion = DIAGNOSTICS_RECORD_VERSION } = {}) {
   const notes = [];
   if (parsed === null || typeof parsed !== "object") {
     return { records: [], notes: ["target is not a JSON object"], followUp: null };
   }
-  if (parsed.recordVersion === DIAGNOSTICS_RECORD_VERSION) {
+  if (parsed.recordVersion === recordVersion) {
     return { records: [parsed], source: "diagnostics-record", notes, followUp: null };
+  }
+  if (parsed.schema === "ae-devtools.cli.error/v1") {
+    // The CLI writes this shape to --out when execute/verify throws
+    // before producing a run record — say so instead of the generic
+    // "unrecognized document" note.
+    notes.push(
+      `CLI run failed before producing a result (${parsed.code ?? "?"})` +
+      (typeof parsed.message === "string" ? `: ${parsed.message}` : ""),
+    );
+    return { records: [], source: "cli-error", notes, followUp: null };
   }
   if (parsed.schema === "ae-devtools.cli.run/v1") {
     const d = parsed.diagnostics;
@@ -252,7 +312,11 @@ export async function runDiagnose(input, flags = {}, { dir = RUNS_DIR } = {}) {
     payload.notes.push("packaged diagnostics/ is not loadable from this install; sourcemap resolution unavailable");
     return { code: 2, payload };
   }
-  payload.libs = { status: "ok", recordVersion: DIAGNOSTICS_RECORD_VERSION };
+  // The record version is owned by the packaged schema module — take it
+  // from the loaded libs so a version bump there cannot silently break
+  // recognition of stored records here.
+  const recordVersion = libs.schema?.DIAGNOSTICS_RECORD_VERSION ?? DIAGNOSTICS_RECORD_VERSION;
+  payload.libs = { status: "ok", recordVersion };
 
   const found = resolveTarget(input, { dir });
   if (found === null) {
@@ -277,12 +341,12 @@ export async function runDiagnose(input, flags = {}, { dir = RUNS_DIR } = {}) {
   if (typeof flags["bundle-map"] === "string") opts.bundleMapPath = flags["bundle-map"];
 
   // A run marker may link to the evidence file that holds the records.
-  let doc = recordsFromDocument(parsed, { dir });
+  let doc = recordsFromDocument(parsed, { recordVersion });
   payload.source = doc.source;
   payload.notes.push(...doc.notes);
   if (doc.followUp !== null) {
     try {
-      const follow = recordsFromDocument(readJsonFile(doc.followUp), { dir });
+      const follow = recordsFromDocument(readJsonFile(doc.followUp), { recordVersion });
       payload.notes.push(...follow.notes);
       if (follow.records.length > 0) {
         doc = { ...follow, source: `${doc.source} → ${follow.source}` };

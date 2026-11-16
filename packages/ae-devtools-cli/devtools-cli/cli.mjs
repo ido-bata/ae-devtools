@@ -61,7 +61,7 @@ import { fileURLToPath } from "node:url";
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openFakeSession } from "./fake-session.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
-import { buildFailureDiagnostics, isFailureResult, runDiagnose } from "./diagnostics.mjs";
+import { buildFailureDiagnostics, failureOutcome, runDiagnose } from "./diagnostics.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
@@ -397,10 +397,14 @@ async function main() {
         // Completed runs carry no block; failures always do — an
         // "unavailable" status is recorded honestly when the packaged
         // diagnostics/ module cannot be loaded (e.g. damaged install).
-        if (isFailureResult(result, evidence.outcome)) {
+        // failureOutcome normalizes every spelling (wire uppercase,
+        // adapter lowercase status) AND lets a failure-bearing status
+        // win over a COMPLETED wire outcome (adapter ok:false payloads).
+        const failState = failureOutcome(result, evidence.outcome);
+        if (failState !== null) {
           evidence.diagnostics = await buildFailureDiagnostics({
             result,
-            outcome: evidence.outcome,
+            outcome: failState,
             session: state.session,
             requestId,
             mapDir: typeof flags["map-dir"] === "string" ? flags["map-dir"] : undefined,
@@ -414,13 +418,11 @@ async function main() {
           method: opId ?? flags["read-op"] ?? "read.projectSummary",
           event: evidence.outcome === "UNKNOWN" ? "timeout" : "resolved",
         });
-        // Wire outcomes are uppercase (FAILED/REFUSED/BLOCKED/UNKNOWN);
-        // adapter-level refusals surface as lowercase status. Compare
-        // case-insensitively — same convention as diagnostics.mjs
-        // wireState/FAILURE_OUTCOMES (Issue #105: wire FAILED exited 0).
-        const bad = ["refused", "failed", "blocked", "unknown"]
-          .includes(String(evidence.outcome ?? "").toLowerCase());
-        code = bad ? 1 : 0;
+        // The exit decision uses the SAME failure-bearing outcome as the
+        // diagnostics gate — evidence.outcome alone is the wire spelling
+        // and would read COMPLETED for an adapter-level failure while
+        // result.status says "failed" (Issue #127).
+        code = failState !== null ? 1 : 0;
         payload = { ...evidence, ...(typeof flags.out === "string" ? { evidenceFile: flags.out } : {}) };
       } catch (e) {
         payload = {
@@ -451,14 +453,23 @@ async function main() {
         };
       }
       if (typeof flags.out === "string" && payload) {
+        let wroteOut = false;
         try {
           writeFileSync(flags.out, JSON.stringify(payload, null, 2));
-          // Link surviving residue markers to the evidence file so
-          // `diagnose <runId>` can find the stored records. Cleanly
-          // closed runs have no marker — attachEvidence no-ops there.
-          attachEvidence(RUNS_DIR, guard.runId, { file: resolve(flags.out) });
+          wroteOut = true;
         } catch (e) {
           process.stderr.write(`warning: could not write --out ${flags.out}: ${e.message}\n`);
+        }
+        // Link surviving residue markers to the evidence file so
+        // `diagnose <runId>` can find the stored records. Cleanly
+        // closed runs have no marker — attachEvidence no-ops there.
+        // Separate try: a marker-write failure is not an --out failure.
+        if (wroteOut) {
+          try {
+            attachEvidence(RUNS_DIR, guard.runId, { file: resolve(flags.out) });
+          } catch (e) {
+            process.stderr.write(`warning: could not link run marker to --out ${flags.out}: ${e.message}\n`);
+          }
         }
       }
       if (cleanupResult.ok === false) {

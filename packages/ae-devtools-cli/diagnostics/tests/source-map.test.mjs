@@ -143,6 +143,44 @@ test("unmapped: explicit column with no segments stays unmapped", () => {
   assert.equal(r.status, "unmapped");
 });
 
+test("explicit map options are authoritative when discovery fails", () => {
+  // The record's source.path is a host-side path absent on this machine
+  // — discovery finds nothing, but the caller-supplied map must win.
+  const rec = recordWith({ assetKind: "jsx-script", path: "/nonexistent/host-side.jsx", line: 3 });
+  const r = resolveDiagnosticsSource(rec, { jsxMapPath: SINGLE_MAP });
+  assert.equal(r.status, "mapped");
+  assert.equal(r.original.file, "runtime-error.ts");
+  assert.equal(r.original.line, 3);
+});
+
+test("explicit pre-parsed maps resolve a record with no path at all", () => {
+  const rec = recordWith({ assetKind: "jsx-script", line: 18 }); // no source.path
+  const jsxMap = loadSourceMap(join(PROJECT_DIR, "probe.jsx.map"));
+  const bundleMap = loadSourceMap(join(PROJECT_DIR, "probe.bundle.js.map"));
+  const r = resolveDiagnosticsSource(rec, { jsxMap, bundleMap });
+  assert.equal(r.status, "mapped");
+  assert.equal(r.original.file, "main.ts");
+  assert.equal(r.original.line, 6);
+});
+
+test("explicit jsxMapPath still pair-discovers the project bundle map", () => {
+  const rec = recordWith({ assetKind: "jsx-script", path: "/nonexistent/x.jsx", line: 18 });
+  const r = resolveDiagnosticsSource(rec, { jsxMapPath: join(PROJECT_DIR, "probe.jsx.map") });
+  assert.equal(r.status, "mapped");
+  assert.ok(r.maps.bundle?.endsWith("probe.bundle.js.map"));
+  assert.equal(r.original.file, "main.ts");
+});
+
+test("invalid-map: undecodable mappings VLQ is reported, not thrown", () => {
+  // "!!!!" is not valid base64 VLQ — parseMappings throws a plain Error
+  // lazily inside lookup(); the resolver must surface invalid-map.
+  const jsxMap = { version: 3, sources: ["a.ts"], names: [], mappings: "!!!!" };
+  const rec = recordWith({ assetKind: "jsx-script", path: SINGLE_JSX, line: 3 });
+  const r = resolveDiagnosticsSource(rec, { jsxMap });
+  assert.equal(r.status, "invalid-map");
+  assert.match(r.reason, /invalid base64/);
+});
+
 test("no-map: record path has no sibling .jsx.map", () => {
   const rec = recordWith({ assetKind: "jsx-script", path: "/nonexistent/nowhere.jsx", line: 3 });
   const r = resolveDiagnosticsSource(rec);
@@ -239,6 +277,21 @@ test("locateMapFiles: bundle.js.map derives the jsx map", () => {
   assert.ok(r.jsxMapPath.endsWith("probe.jsx.map"));
 });
 
+test("locateMapFiles: preferName '.bundle.js' stem still matches the jsx map", () => {
+  const dir = mkdtempSync(join(tmpdir(), "diag-smap-"));
+  try {
+    copyFileSync(join(PROJECT_DIR, "probe.jsx.map"), join(dir, "probe.jsx.map"));
+    copyFileSync(SINGLE_MAP, join(dir, "other.jsx.map"));
+    // A bundle-artifact basename must reduce to the same "probe" stem —
+    // otherwise directory discovery falls through to ambiguous.
+    const r = locateMapFiles(dir, { preferName: "probe.bundle.js" });
+    assert.equal(r.status, "ok");
+    assert.ok(r.jsxMapPath.endsWith("probe.jsx.map"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("locateMapFiles: output prefix works", () => {
   const r = locateMapFiles(join(SINGLE_DIR, "runtime-error"));
   assert.equal(r.status, "ok");
@@ -256,6 +309,35 @@ test("cli: --jsx/--line prints mapped JSON and exits 0", () => {
   const r = JSON.parse(out);
   assert.equal(r.status, "mapped");
   assert.equal(r.original.file, "runtime-error.ts");
+});
+
+test("cli: explicit --jsx-map/--bundle-map resolve a record whose path is absent", () => {
+  const dir = mkdtempSync(join(tmpdir(), "diag-smap-"));
+  try {
+    const recPath = join(dir, "rec.json");
+    writeFileSync(recPath, JSON.stringify(recordWith({
+      assetKind: "jsx-script", path: "/nonexistent/host-side.jsx", line: 3,
+    })));
+    const single = JSON.parse(execFileSync(process.execPath,
+      [CLI, recPath, "--jsx-map", SINGLE_MAP], { encoding: "utf8" }));
+    assert.equal(single.status, "mapped");
+    assert.equal(single.original.file, "runtime-error.ts");
+
+    // two-hop: project jsx map + explicit bundle map
+    writeFileSync(recPath, JSON.stringify(recordWith({
+      assetKind: "jsx-script", path: "/nonexistent/host-side.jsx", line: 18,
+    })));
+    const project = JSON.parse(execFileSync(process.execPath,
+      [CLI, recPath,
+        "--jsx-map", join(PROJECT_DIR, "probe.jsx.map"),
+        "--bundle-map", join(PROJECT_DIR, "probe.bundle.js.map")],
+      { encoding: "utf8" }));
+    assert.equal(project.status, "mapped");
+    assert.equal(project.original.file, "main.ts");
+    assert.equal(project.original.line, 6);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("cli: record file input works; unmapped exits 1", () => {

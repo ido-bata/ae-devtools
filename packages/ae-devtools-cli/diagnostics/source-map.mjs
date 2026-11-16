@@ -51,6 +51,20 @@ export class SourceMapError extends Error {
 const JSX_MAP_SUFFIX = ".jsx.map";
 const BUNDLE_MAP_SUFFIX = ".bundle.js.map";
 
+/**
+ * Strip known artifact/map suffixes to get the artifact stem used for
+ * map-directory disambiguation. Handles the compound forms a caller can
+ * hand us: `probe.bundle.js`, `probe.bundle.js.map`, `probe.jsx.map`,
+ * `probe.jsx`, `probe.js`, `probe.map` — all reduce to `probe`.
+ */
+function artifactStem(name) {
+  let s = String(name);
+  s = s.replace(/\.bundle\.js(\.map)?$/, "");
+  s = s.replace(/\.jsx\.map$/, "");
+  s = s.replace(/\.(jsx?|tsx?|map)$/, "");
+  return s;
+}
+
 function isPlainObject(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
@@ -148,7 +162,7 @@ export function locateMapFiles(target, { preferName = null } = {}) {
       .map((f) => join(abs, f));
     if (candidates.length === 0) return { status: "none" };
     if (preferName) {
-      const stem = preferName.replace(/\.(jsx|tsx?|jsx?)$/, "");
+      const stem = artifactStem(preferName);
       const match = candidates.filter((p) => basename(p, JSX_MAP_SUFFIX) === stem);
       if (match.length === 1) return pair(match[0]) ?? { status: "none" };
       if (match.length > 1) return { status: "ambiguous", candidates: match };
@@ -165,13 +179,10 @@ export function locateMapFiles(target, { preferName = null } = {}) {
   return { status: "none" };
 }
 
-const parsedCache = new WeakMap();
+// Reuse the same parse cache lookup() populates on the map object —
+// a line-only query would otherwise parse the mappings twice.
 function segmentsFor(map, line) {
-  let lines = parsedCache.get(map);
-  if (!lines) {
-    lines = parseMappings(map);
-    parsedCache.set(map, lines);
-  }
+  const lines = map.__parsed ?? (map.__parsed = parseMappings(map));
   return lines[line - 1] ?? [];
 }
 
@@ -199,7 +210,11 @@ function firstMappedColumn(map, line) {
  * without it, a single jsx→TS hop.
  *
  * Returns { status: "mapped"|"unmapped", original, hops } where `hops`
- * records each map traversal (content stripped).
+ * records each map traversal (content stripped). Output convention:
+ * `original.line` is 1-based; `original.column` is 0-based (raw Source
+ * Map convention — the same parity as jsx-toolchain's resolvePosition).
+ * `original.excerpt`/`contentAvailable` come only from the map's own
+ * `sourcesContent`.
  */
 export function resolveGeneratedPosition({ jsxMap, bundleMap = null, line, column = 0, columnSpecified = true }) {
   let genCol = column;
@@ -229,7 +244,7 @@ export function resolveGeneratedPosition({ jsxMap, bundleMap = null, line, colum
         column: mid.column,
         name: mid.name ?? null,
         excerpt: excerptFromContent(mid.content, mid.line),
-        contentAvailable: mid.content != null,
+        contentAvailable: mid.content !== null,
       },
       hops,
     };
@@ -251,7 +266,7 @@ export function resolveGeneratedPosition({ jsxMap, bundleMap = null, line, colum
       column: orig.column,
       name: orig.name ?? null,
       excerpt: excerptFromContent(orig.content, orig.line),
-      contentAvailable: orig.content != null,
+      contentAvailable: orig.content !== null,
       via: {
         jsx: { line, column: genCol },
         bundle: { line: mid.line, column: mid.column ?? 0 },
@@ -280,6 +295,9 @@ function emptyResult(record) {
  * position. Options:
  *   jsxPath / mapDir / jsxMapPath / bundleMapPath — explicit artifact or
  *     map locations; `jsxMap` / `bundleMap` — pre-parsed map objects.
+ *     Explicit map options are authoritative: when a jsx map is supplied
+ *     explicitly, artifact discovery is skipped entirely (the record's
+ *     source.path is often a host-side path absent on this machine).
  *   preferName — artifact basename used to disambiguate map directories.
  *
  * Never throws for expected data problems; returns a result object with
@@ -307,91 +325,110 @@ export function resolveDiagnosticsSource(record, opts = {}) {
     column: hasColumn ? source.column : null,
   };
 
-  // --- locate the artifact / maps -------------------------------------
-  const candidates = [];
-  if (typeof opts.jsxPath === "string") candidates.push(opts.jsxPath);
-  if (typeof source.path === "string" && source.path.length > 0) {
-    if (typeof opts.mapDir === "string") {
-      candidates.push(join(opts.mapDir, basename(source.path)));
-      candidates.push(join(opts.mapDir, source.path));
-    }
-    candidates.push(source.path);
-  }
-  // mapDir itself is a discovery target: an AE-reported file name may
-  // not match the artifact path layout, so fall back to scanning it.
-  if (typeof opts.mapDir === "string") {
-    candidates.push(opts.mapDir);
-  }
-  if (candidates.length === 0) {
-    base.status = "no-map";
-    base.reason = "no artifact path on the record and no jsxPath/mapDir option";
-    return base;
-  }
-
-  const preferName =
-    opts.preferName ??
-    (typeof source.path === "string" ? basename(source.path).replace(/\.[^.]*$/, "") : null);
-
-  let located = null;
+  // --- locate the maps -------------------------------------------------
+  // Explicit map options are AUTHORITATIVE: when the caller supplies
+  // jsxMap/jsxMapPath (and optionally bundleMap/bundleMapPath), discovery
+  // is skipped entirely — the record's source.path is often a host-side
+  // path that does not exist on this machine, and a failed discovery
+  // must not veto maps the caller explicitly provided.
+  const explicitJsxMap = isPlainObject(opts.jsxMap);
+  const explicitJsxPath = typeof opts.jsxMapPath === "string" && opts.jsxMapPath.length > 0;
   const attempted = [];
-  for (const cand of candidates) {
-    const r = locateMapFiles(cand, { preferName });
-    attempted.push({ target: cand, result: r.status });
-    if (r.status === "ok") { located = r; break; }
-    if (r.status === "ambiguous" && located === null) located = { ambiguous: r };
-  }
-  if (located === null) {
-    base.status = "no-map";
-    base.reason = `no .jsx.map found for: ${candidates.join(", ")}`;
-    base.attempts = attempted;
-    return base;
-  }
-  if (located.ambiguous) {
-    base.status = "ambiguous";
-    base.reason = "multiple .jsx.map candidates; pass jsxPath or preferName to disambiguate";
-    base.candidates = located.ambiguous.candidates;
-    return base;
-  }
 
-  base.maps.jsx = located.jsxMapPath;
-  base.maps.bundle = located.bundleMapPath;
-
-  // Explicit map options override discovery.
-  const jsxMapPath = typeof opts.jsxMapPath === "string" ? resolve(opts.jsxMapPath) : located.jsxMapPath;
-  const bundleMapPath =
-    typeof opts.bundleMapPath === "string"
+  let jsxMapPath = explicitJsxPath ? resolve(opts.jsxMapPath) : null;
+  let bundleMapPath =
+    typeof opts.bundleMapPath === "string" && opts.bundleMapPath.length > 0
       ? resolve(opts.bundleMapPath)
-      : located.bundleMapPath;
+      : null;
+
+  if (!explicitJsxMap && !explicitJsxPath) {
+    const candidates = [];
+    if (typeof opts.jsxPath === "string") candidates.push(opts.jsxPath);
+    if (typeof source.path === "string" && source.path.length > 0) {
+      if (typeof opts.mapDir === "string") {
+        candidates.push(join(opts.mapDir, basename(source.path)));
+        candidates.push(join(opts.mapDir, source.path));
+      }
+      candidates.push(source.path);
+    }
+    // mapDir itself is a discovery target: an AE-reported file name may
+    // not match the artifact path layout, so fall back to scanning it.
+    if (typeof opts.mapDir === "string") {
+      candidates.push(opts.mapDir);
+    }
+    if (candidates.length === 0) {
+      base.status = "no-map";
+      base.reason = "no artifact path on the record and no jsxPath/mapDir/jsxMap option";
+      return base;
+    }
+
+    const preferName =
+      opts.preferName ??
+      (typeof source.path === "string" ? artifactStem(basename(source.path)) : null);
+
+    let located = null;
+    for (const cand of candidates) {
+      const r = locateMapFiles(cand, { preferName });
+      attempted.push({ target: cand, result: r.status });
+      if (r.status === "ok") { located = r; break; }
+      if (r.status === "ambiguous" && located === null) located = { ambiguous: r };
+    }
+    if (located === null) {
+      base.status = "no-map";
+      base.reason = `no .jsx.map found for: ${candidates.join(", ")}`;
+      base.attempts = attempted;
+      return base;
+    }
+    if (located.ambiguous) {
+      base.status = "ambiguous";
+      base.reason = "multiple .jsx.map candidates; pass jsxPath or preferName to disambiguate";
+      base.candidates = located.ambiguous.candidates;
+      return base;
+    }
+
+    jsxMapPath = located.jsxMapPath;
+    if (bundleMapPath === null) bundleMapPath = located.bundleMapPath;
+  } else if (bundleMapPath === null && jsxMapPath !== null) {
+    // Explicit jsx map path without an explicit bundle map: still
+    // pair-discover the project bundle-map sibling (build-project emits
+    // <name>.bundle.js.map next to <name>.jsx.map).
+    const r = locateMapFiles(jsxMapPath);
+    attempted.push({ target: jsxMapPath, result: r.status });
+    if (r.status === "ok") bundleMapPath = r.bundleMapPath;
+  }
+
   base.maps.jsx = jsxMapPath;
   base.maps.bundle = bundleMapPath;
+  if (attempted.length > 0) base.attempts = attempted;
 
   let jsxMap;
   let bundleMap = null;
   try {
-    jsxMap = isPlainObject(opts.jsxMap) ? opts.jsxMap : loadSourceMap(jsxMapPath);
+    jsxMap = explicitJsxMap ? opts.jsxMap : loadSourceMap(jsxMapPath);
     if (isPlainObject(opts.bundleMap)) {
       bundleMap = opts.bundleMap;
     } else if (bundleMapPath !== null) {
       bundleMap = loadSourceMap(bundleMapPath);
     }
+    // resolveGeneratedPosition parses mappings lazily — a syntactically
+    // valid but undecodable VLQ payload throws a plain Error, which must
+    // surface as invalid-map, not an uncaught exception.
+    const res = resolveGeneratedPosition({
+      jsxMap,
+      bundleMap,
+      line: source.line,
+      column: genCol0,
+      columnSpecified: hasColumn,
+    });
+    base.status = res.status;
+    base.original = res.original;
+    base.hops = res.hops;
+    if (res.status === "unmapped") {
+      base.reason = "map found but the generated position is not covered by any mapping";
+    }
   } catch (e) {
     base.status = "invalid-map";
     base.reason = e.message;
-    return base;
-  }
-
-  const res = resolveGeneratedPosition({
-    jsxMap,
-    bundleMap,
-    line: source.line,
-    column: genCol0,
-    columnSpecified: hasColumn,
-  });
-  base.status = res.status;
-  base.original = res.original;
-  base.hops = res.hops;
-  if (res.status === "unmapped") {
-    base.reason = "map found but the generated position is not covered by any mapping";
   }
   return base;
 }

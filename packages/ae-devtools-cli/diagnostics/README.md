@@ -71,6 +71,11 @@ errors normally carry a line and no column — a line-only query resolves
 to the **first mapped segment on that generated line** (a real mapping,
 recorded in `hops`), never an interpolated guess.
 
+Result convention: `original.line` is **1-based**; `original.column` is
+**0-based** (raw Source Map convention — the same parity as
+jsx-toolchain's `resolvePosition`). `hops[].generated.column` is the
+effective 0-based generated column used for the lookup.
+
 ### CLI
 
 ```sh
