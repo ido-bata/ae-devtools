@@ -4,10 +4,13 @@
  * from an external project directory (Issue #92 acceptance).
  *
  * Steps: npm pack → temp consumer dir → npm install <tgz> → run the real
- * bins (`ae-devtools`, `jsx-toolchain`) against a tiny TS fixture with the
- * fake session. No After Effects required; evidence stays fake-level.
+ * bins (`ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`) against a tiny
+ * TS fixture with the fake session. The MCP check spawns `ae-devtools-mcp`
+ * and does an initialize + tools/list JSON-RPC round-trip over stdio.
+ * No After Effects required; evidence stays fake-level.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import assertNode from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -24,6 +27,16 @@ function run(cmd, args, opts = {}) {
 function check(name, fn) {
   try {
     fn();
+    results.push({ name, ok: true });
+    console.log(`PASS ${name}`);
+  } catch (e) {
+    results.push({ name, ok: false, error: String(e.message ?? e).slice(0, 400) });
+    console.log(`FAIL ${name}: ${String(e.message ?? e).slice(0, 200)}`);
+  }
+}
+async function checkAsync(name, fn) {
+  try {
+    await fn();
     results.push({ name, ok: true });
     console.log(`PASS ${name}`);
   } catch (e) {
@@ -57,6 +70,7 @@ try {
     run("npm", ["install", "--no-audit", "--no-fund", tgzPath], { cwd: consumer });
     assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools")), "ae-devtools bin missing");
     assert(existsSync(join(consumer, "node_modules", ".bin", "jsx-toolchain")), "jsx-toolchain bin missing");
+    assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-mcp")), "ae-devtools-mcp bin missing");
   });
 
   const BIN = join(consumer, "node_modules", ".bin");
@@ -124,6 +138,69 @@ try {
     try { out = run(join(BIN, "jsx-toolchain"), ["lint", "bad.ts"], { cwd: consumer }); }
     catch (e) { code = e.status ?? 1; out = String(e.stdout ?? "") + String(e.stderr ?? ""); }
     assert(code !== 0 || out.includes('"ok":false') || out.includes('"ok": false'), "lint did not flag ES6 syntax");
+  });
+
+  // 9. ae-devtools-mcp: spawn the installed bin and do an initialize +
+  //    tools/list JSON-RPC round-trip over stdio (fake session, consent
+  //    defaults untouched — no dispatch is attempted here).
+  await checkAsync("ae-devtools-mcp initialize + tools/list", async () => {
+    const child = spawn(join(BIN, "ae-devtools-mcp"), ["--session", "fake"], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let buf = "";
+    let stderr = "";
+    const inbox = [];
+    const waiters = [];
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      buf += chunk;
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i);
+        buf = buf.slice(i + 1);
+        if (line.trim().length === 0) continue;
+        const msg = JSON.parse(line);
+        const w = waiters.findIndex((x) => x.id === msg.id);
+        if (w >= 0) waiters.splice(w, 1)[0].resolve(msg);
+        else inbox.push(msg);
+      }
+    });
+    child.stderr.on("data", (d) => { stderr += d; });
+
+    let nextId = 1;
+    const request = (method, params) => new Promise((resolve, reject) => {
+      const id = nextId++;
+      const timer = setTimeout(() => reject(new Error(`timeout ${method}; stderr: ${stderr}`)), 20_000);
+      waiters.push({ id, resolve: (m) => { clearTimeout(timer); resolve(m); } });
+      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
+    });
+
+    try {
+      const init = await request("initialize", { protocolVersion: "2025-06-18", capabilities: {} });
+      assertNode.equal(init.result?.serverInfo?.name, "ae-devtools-mcp", "unexpected serverInfo");
+      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
+
+      const list = await request("tools/list");
+      const names = (list.result?.tools ?? []).map((t) => t.name).sort();
+      assertNode.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_verify"], "tools/list mismatch");
+
+      // Consent default deny still holds through the packaged bin: an
+      // ae_execute without consent must be refused before any session.
+      const denied = await request("tools/call", {
+        name: "ae_execute",
+        arguments: { opId: "read.projectSummary" },
+      });
+      const deniedPayload = JSON.parse(denied.result.content[0].text);
+      assertNode.equal(deniedPayload.status, "refused");
+      assertNode.equal(deniedPayload.reason, "CONSENT_NOT_GRANTED");
+      assertNode.equal(deniedPayload.dispatched, false);
+
+      child.stdin.end();
+      const code = await new Promise((resolve) => child.on("exit", resolve));
+      assertNode.equal(code, 0, `ae-devtools-mcp exited ${code}; stderr: ${stderr}`);
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    }
   });
 } finally {
   const failed = results.filter((r) => !r.ok);

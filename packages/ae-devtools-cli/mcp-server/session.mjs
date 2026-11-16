@@ -15,10 +15,10 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { openFakeSession } from "../../packages/ae-devtools-cli/devtools-cli/fake-session.mjs";
+import { openFakeSession } from "../devtools-cli/fake-session.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const EXP = join(HERE, "..", "..", "packages", "ae-devtools-cli");
+const EXP = join(HERE, "..");
 
 /**
  * @param {"fake"|"a8n"} kind

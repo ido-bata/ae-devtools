@@ -15,7 +15,7 @@ npm install ./ae-devtools-cli-<version>.tgz
 npm install github:ido-bata/ae-devtools#release-0-2-0
 ```
 
-提供される bin: `ae-devtools`, `jsx-toolchain`。
+提供される bin: `ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`。
 
 ## What you get
 
@@ -31,6 +31,29 @@ npm install github:ido-bata/ae-devtools#release-0-2-0
 | `jsx-toolchain lint <file>` | ES3 非互換構文 lint | 不要 |
 | `jsx-toolchain build-project <entry> -o dist` | TS→ES3 JSX + sourcemap | 不要 |
 | `jsx-toolchain resolve <outdir> <line> <col>` | JSX位置→TS位置 | 不要 |
+| `ae-devtools-mcp`（MCP stdio server） | `ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify` を MCP tool として公開 | fake session は不要 |
+
+## MCP client からの利用
+
+`ae-devtools-mcp` は依存なしの NDJSON JSON-RPC stdio server。MCP
+client（Claude Desktop 等）の設定例:
+
+```json
+{
+  "mcpServers": {
+    "ae-devtools": {
+      "command": "ae-devtools-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+実機 AE に繋ぐ場合は `"args": ["--session", "a8n", "--ae-a8n-root",
+"/path/to/ae-a8n"]` を渡す（owned session のみ。attached/unknown は拒否）。
+`ae_execute` / `ae_verify` は CLI と同じ consent 契約で、`consent:"grant"`
+が無い呼び出しは session を開く前に refuse される。default の fake session
+の結果は fake/mock evidence であり real-host 検証ではない。
 
 ## Verified adoption smoke (2026-11-16)
 

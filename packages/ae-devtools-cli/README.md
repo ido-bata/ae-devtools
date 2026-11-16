@@ -16,11 +16,33 @@ npm install @ae-devtools/cli        # npm publish 後
 npm install ./ae-devtools-cli-0.2.0.tgz
 ```
 
-Provides two bins:
+Provides three bins:
 
 - `ae-devtools` — developer CLI (`doctor`, `discover`, `inspect`,
   `execute`, `verify`, `runs`, `reap`)
 - `jsx-toolchain` — TS→ES3 JSX build / `check` / `lint` / `resolve`
+- `ae-devtools-mcp` — stdio MCP server exposing the dev-loop tools
+  (`ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify`)
+
+## MCP server
+
+`ae-devtools-mcp` speaks newline-delimited JSON-RPC 2.0 on stdio (no
+extra dependencies). Point any MCP client at it:
+
+```json
+{ "mcpServers": {
+    "ae-devtools": { "command": "ae-devtools-mcp", "args": [] } } }
+```
+
+Claude Desktop: add the same entry under `mcpServers` in
+`claude_desktop_config.json`. For a real After Effects session pass
+`"args": ["--session", "a8n", "--ae-a8n-root", "/path/to/ae-a8n"]`;
+the default `--session fake` is fake/mock evidence only.
+
+`ae_execute` / `ae_verify` keep the CLI consent contract:
+`consent:"grant"` is required (default deny, checked before any
+session opens), destructive ops need `confirmDestructive:true`, render
+ops `confirmRender:true`. See `mcp-server/README.md` for details.
 
 ## Quick start (fake session — no AE required)
 
@@ -64,6 +86,7 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `trusted-execution/` | codec, consent/permissions, outcomes, mutation guard, runner |
 | `scripting-adapters/` | operation registry + fake host + coverage claims |
 | `a8n-transport/` | owned-session transport over `@ido-bata/ae-a8n` |
+| `mcp-server/` | stdio MCP server (JSON-RPC) over the dev-loop core |
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 
 ## Verification
@@ -77,5 +100,6 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 ## Docs
 
 - Module READMEs: `devtools-cli/README.md`, `jsx-toolchain/README.md`,
-  `a8n-transport/README.md`, `trusted-execution/README.md`
+  `a8n-transport/README.md`, `trusted-execution/README.md`,
+  `mcp-server/README.md`
 - Canonical governance: repo ルートの `AGENTS.md`, `docs/`

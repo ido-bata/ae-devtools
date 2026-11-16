@@ -17,7 +17,8 @@
   },
   "bin": {
     "ae-devtools": "./devtools-cli/cli.mjs",
-    "jsx-toolchain": "./jsx-toolchain/src/cli.mjs"
+    "jsx-toolchain": "./jsx-toolchain/src/cli.mjs",
+    "ae-devtools-mcp": "./mcp-server/server.mjs"
   },
   "files": [
     "devtools-cli",
@@ -25,12 +26,13 @@
     "trusted-execution",
     "scripting-adapters",
     "a8n-transport",
+    "mcp-server",
     "jsx-toolchain/src",
     "jsx-toolchain/fixtures",
     "README.md"
   ],
   "scripts": {
-    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node jsx-toolchain/tests/run.mjs",
+    "test": "node devtools-cli/tests/run.mjs && node dev-loop/tests/run.mjs && node trusted-execution/tests/run.mjs && node scripting-adapters/tests/run.mjs && node a8n-transport/tests/run.mjs && node mcp-server/tests/run.mjs && node jsx-toolchain/tests/run.mjs",
     "smoke:consumer": "node scripts/consumer-smoke.mjs"
   },
   "dependencies": {

@@ -117,7 +117,7 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         run: |
           set -e
-          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport jsx-toolchain; do
+          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server jsx-toolchain; do
             echo "=== $d ==="
             node "packages/ae-devtools-cli/$d/tests/run.mjs"
           done
@@ -237,27 +237,6 @@ jobs:
         run: npm ci
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/vscode-debugger/tests/run.mjs
-
-  mcp-server:
-    name: mcp-server (node:test, fake-level)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/mcp-server/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "experiments/mcp-server not on this head; skipping"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/mcp-server/tests/run.mjs
 
   recovery-orchestrator:
     name: recovery-orchestrator (node:test, fake-level)

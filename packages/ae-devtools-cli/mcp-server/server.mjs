@@ -25,9 +25,10 @@
  * the session/registry it came from. The default `--session fake` host
  * is FAKE/MOCK level — it proves wiring only, never After Effects
  * behavior. Real-host evidence requires `--session a8n` on an owned AE
- * session via packages/ae-devtools-cli/a8n-transport.
+ * session via ../a8n-transport.
  */
 import { createInterface } from "node:readline";
+import { realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -191,13 +192,26 @@ function parseArgs(argv) {
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// Installed bins are symlinks into node_modules/.bin, so argv[1] is the
+// shim path while import.meta.url is already realpath-resolved by Node.
+// Compare realpaths or the packaged `ae-devtools-mcp` bin would never
+// start the server.
+function isMainEntry() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(resolve(entry)) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+const isMain = isMainEntry();
 
 if (isMain) {
   const flags = parseArgs(process.argv.slice(2));
   const sessionKind = flags.session ?? "fake";
   if (!["fake", "a8n"].includes(sessionKind)) {
-    process.stderr.write("usage: server.mjs [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");
+    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");
     process.exit(2);
   }
   const server = createServer({
