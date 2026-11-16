@@ -54,6 +54,7 @@ test("generates the expected tree with substituted values", async () => {
       "CSInterface.js",
       "js/main.js",
       "js/csinterface-wrapper.js",
+      "jsx/host.jsx",
     ]) {
       assert.equal((await stat(join(out, rel))).isFile(), true, rel);
     }
@@ -96,6 +97,20 @@ test("generates the expected tree with substituted values", async () => {
     assert.match(main, /com\.example\.probe-panel/);
     assert.match(main, /intentional error probe|intentional-error/);
     assert.ok(!main.includes("{{"), "no unexpanded placeholders in main.js");
+
+    // jsx/host.jsx is the ES3 ExtendScript sample; it must stay inside
+    // the documented ES3 subset that devkit validate enforces.
+    // (Comments are stripped first — the header documents the banned
+    // constructs in prose.)
+    const hostJsxRaw = await readFile(join(out, "jsx/host.jsx"), "utf8");
+    assert.ok(!hostJsxRaw.includes("{{"), "no unexpanded placeholders in host.jsx");
+    const hostJsx = hostJsxRaw
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+    assert.doesNotMatch(hostJsx, /\b(?:let|const)\s+[A-Za-z_$]/);
+    assert.doesNotMatch(hostJsx, /=>/);
+    assert.doesNotMatch(hostJsx, /\bJSON\s*\./);
+    assert.doesNotMatch(hostJsx, /app\.version\s*\(/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

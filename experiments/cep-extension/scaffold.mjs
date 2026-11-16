@@ -10,6 +10,9 @@
  *                                        bundled — the host does NOT provide it)
  *   <out>/js/main.js
  *   <out>/js/csinterface-wrapper.js   (copied verbatim from templates/)
+ *   <out>/jsx/host.jsx                (ES3 ExtendScript sample the panel
+ *                                        can evalScript; subset-linted by
+ *                                        devkit.mjs validate)
  *
  * Node >= 22, zero dependencies, no network, no AE. The generated tree is
  * a *development target fixture*: generating it is automated-test-level
@@ -185,6 +188,8 @@ export async function scaffold(args) {
     ["CSInterface.js", await readFile(join(TEMPLATES, "CSInterface.js"), "utf8")],
     ["js/main.js", await renderTemplate("js/main.js.tmpl", vars)],
     ["js/csinterface-wrapper.js", await readFile(join(TEMPLATES, "js/csinterface-wrapper.js"), "utf8")],
+    // ES3 ExtendScript sample host script (copied verbatim).
+    ["jsx/host.jsx", await readFile(join(TEMPLATES, "jsx/host.jsx"), "utf8")],
   ];
 
   for (const [rel, content] of files) {

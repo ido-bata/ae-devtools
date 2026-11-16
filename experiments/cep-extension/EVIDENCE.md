@@ -17,12 +17,14 @@ touched.
 
 | Item | Command | Result | Level |
 | --- | --- | --- | --- |
-| Scaffold generation + validation | `node tests/run.mjs` | 11/11 scaffold tests green | **automated test** |
+| Scaffold generation + validation | `node tests/run.mjs` | 11/11 scaffold tests green (incl. `jsx/host.jsx` ES3 assertions) | **automated test** |
+| Devkit `scaffold`/`validate` CLI | `node tests/run.mjs` (devkit.test.mjs) | 10/10 devkit tests green; validate reports `loadProof: "NOT RUN"` on every run | **automated test** |
 | Lifecycle machine (install/uninstall/status/cleanup/logs/PlayerDebugMode status) | `node tests/run.mjs` (lifecycle.test.mjs) | 8/8 lifecycle tests green; fixture dirs only, real CEP dir untouched | **automated test** |
-| Suite total | `node tests/run.mjs` | 19/19 tests, 2/2 files green | **automated test** |
+| Suite total | `node tests/run.mjs` | 29/29 tests, 3/3 files green | **automated test** |
 | CLI happy path / refusal paths | same suite (spawnSync CLI cases) | exit 0 / 2 / 3 as specified | **automated test** |
 | Manifest vs official XSD | `xmllint --schema schema/ExtensionManifest_v_7_0.xsd` | valid (Version pinned to schema's enumerated `7.0`; emitted `12.0` asserted separately — published XSD is stale vs CEP 12 sample) | **automated test** |
 | Manifest structure | official CEP 12 sample + cookbook | `ExtensionList`/`ExecutionEnvironment`/`DispatchInfoList` shape; corrected from pre-CEP5 attribute form | **source-reviewed + XSD** |
+| JSX ES3 check (`devkit validate`) | `validate.mjs` ES3 subset rules | heuristic comment-stripped scan for unambiguous ES5+ constructs — NOT a grammar proof; `experiments/jsx-toolchain` `lintOutput` (acorn ES3 parse) is the stronger check when its deps are installed | **automated test (subset)** |
 | `CSInterface.js` provisioning | official cookbook: "include these JavaScript files in your HTML extension" | **bundled** (official CEP_12.x file copied to extension root); earlier host-provided assumption was wrong | **source-reviewed** |
 | `evalScript` callback contract | official `CSInterface.js` + cookbook | single `result` arg; `EvalScript error.` sentinel on failure; regression-tested | **source-reviewed + automated test** |
 | `app.version` usage | scripting inventory `provisional.ae.scripting.app.version` (kind=attribute) | read as property `app.version`, never called; regression-tested | **source-reviewed + automated test** |

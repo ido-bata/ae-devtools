@@ -14,7 +14,7 @@
 
 | CAP | Requirement | State |
 | --- | --- | --- |
-| CAP057 | CEP scaffold generation (manifest/CSXS/host range/debug-load config) | **implemented, automated-test level** — `scaffold.mjs` + `tests/` |
+| CAP057 | CEP scaffold generation (manifest/CSXS/host range/debug-load config) | **implemented, automated-test level** — `scaffold.mjs` + `devkit.mjs validate` + `tests/` |
 | CAP058 | Build/install/reload/unload/cleanup mechanization per OS | **partially mechanized** — `cep-lifecycle.mjs` (install/uninstall/status/cleanup/logs, `PlayerDebugMode` status check); real CEP load/reload stays **UNVERIFIED** — `LOAD-PROOF.md` |
 | CAP059 | Real-host panel load → `evalScript` round trip → reload → unload | **UNVERIFIED** — gated on owned AE session |
 | CAP060 | UXP plugin development lifecycle | **BLOCKED/UNVERIFIED** — see below |
@@ -38,6 +38,8 @@ Output tree:
 <out>/js/main.js                 # ES5 panel logic: api version, app.version
                                 #   (attribute, not a call), error probe
 <out>/js/csinterface-wrapper.js  # copied verbatim from templates/
+<out>/jsx/host.jsx               # ES3 ExtendScript sample the panel can
+                                #   evalScript (subset-linted by validate)
 ```
 
 The scaffold refuses to overwrite a non-empty `--out` without `--force`
@@ -46,6 +48,62 @@ separators), semver-ish version, CSXS dotted version and host version
 range, and escapes all substituted values. `--force` regenerates the
 scaffold's own outputs only — unrelated files in the directory are the
 caller's responsibility.
+
+## Using from an external project
+
+The whole `cep-extension/` directory is self-contained: **Node >= 22,
+zero dependencies, no network, no AE**. An external project can either
+invoke it in place or vendor the directory.
+
+### Option A — run in place (no copying)
+
+```sh
+# scaffold a new panel project in the current directory
+node /path/to/ae-devtools/experiments/cep-extension/devkit.mjs scaffold \
+    --id com.example.my-panel --title "My Panel" \
+    --version 0.1.0 --host "[25.0,99.0]" --csxs 12.0 \
+    --out ./my-panel
+
+# static validation of any extension dir (fresh scaffold or your own)
+node /path/to/ae-devtools/experiments/cep-extension/devkit.mjs validate ./my-panel
+```
+
+`devkit.mjs scaffold` forwards all arguments to `scaffold.mjs` unchanged;
+`devkit.mjs validate` prints a JSON report and exits 0 when no check
+fails, 1 on failures, 2 on usage/io errors.
+
+### Option B — vendor the directory
+
+Copy `experiments/cep-extension/` into your project (e.g.
+`tools/cep-extension/`). `scaffold.mjs` resolves its templates relative
+to its own location, so the copy works standalone:
+
+```sh
+cp -R /path/to/ae-devtools/experiments/cep-extension tools/cep-extension
+node tools/cep-extension/devkit.mjs scaffold --id com.example.my-panel --out ./my-panel
+node tools/cep-extension/devkit.mjs validate ./my-panel
+```
+
+`validate` checks: required files (`CSXS/manifest.xml`, `index.html`),
+manifest well-formedness (`xmllint` when available, otherwise a
+documented XML subset tag-balance check — reported as such), required
+CEP 5+/12 manifest elements, that every local `<script src>`/`<link
+href>` in `index.html` resolves inside the extension dir, that a
+referenced `CSInterface.js` is bundled (the host does NOT provide it),
+and that every `*.jsx` host script stays inside a documented ES3
+*subset* (heuristic — for a real ES3 grammar proof use
+`experiments/jsx-toolchain` `lintOutput` when its deps are installed).
+It also reports `.debuggable` marker presence informationally and
+always reports `loadProof: "NOT RUN"`.
+
+### Loading the result into AE (gated — not done by this devkit)
+
+`validate` is **static/fake-level evidence only** — it never loads the
+extension. Real loading follows `LOAD-PROOF.md`: install via
+`cep-lifecycle.mjs install`, ensure `PlayerDebugMode` for unsigned
+debug loads (or sign for the production path), restart/refresh an
+**owned** AE session, then verify panel load → `evalScript` round trip
+→ reload → unload. Windows paths are modeled but UNVERIFIED.
 
 ## Lifecycle CLI — what is mechanized vs what stays UNVERIFIED
 
@@ -92,7 +150,8 @@ gate and an owned AE session):
 
 ## Evidence level
 
-- Scaffold generation and validation: **automated test** (`node tests/run.mjs`, zero deps; 11 scaffold tests).
+- Scaffold generation and validation: **automated test** (`node tests/run.mjs`, zero deps; 11 scaffold tests + 10 devkit/validate tests).
+- Devkit `validate` (manifest well-formedness, structure, panel refs, CSInterface bundling, JSX ES3 subset): **automated test** — static checks only; `loadProof` is always reported `NOT RUN`.
 - Lifecycle install/uninstall/status/cleanup/logs/`PlayerDebugMode` check: **automated test** (8 lifecycle tests, fixture dirs only — no real CEP dir touched unless `--target` is passed explicitly).
 - Manifest correctness: **XSD-validated** — `tests/scaffold.test.mjs` validates generated output against the vendored official `schema/ExtensionManifest_v_7_0.xsd` (Adobe states the schema is unchanged CEP 7→12) via `xmllint`. Note: the published XSD enumerates manifest `Version` as `7.0` only while the official CEP 12 sample ships `Version="12.0"`; the test pins the emitted copy to `7.0` for schema validation and asserts `12.0` separately — the schema is stale relative to Adobe's own sample.
 - `CSInterface.js`: **bundled** — the official CEP 12 cookbook requires including it in the extension ("include these JavaScript files in your HTML extension"); the earlier host-provided assumption was wrong and is corrected.
@@ -144,9 +203,12 @@ cep-extension/
 ├── EVIDENCE.md                # evidence ledger
 ├── LOAD-PROOF.md              # gated real-AE load procedure + fixtures
 ├── scaffold.mjs               # generator CLI (Node >= 22, zero deps)
+├── devkit.mjs                 # external-project entry: scaffold | validate
+├── validate.mjs               # static extension-dir validator (JSON report)
 ├── cep-lifecycle.mjs          # lifecycle CLI (install/uninstall/status/cleanup/logs/playerdebugmode)
 ├── lifecycle.mjs              # lifecycle machine (ownership marker, tmp+rename, foreign-dir refusal)
 ├── schema/                    # vendored official ExtensionManifest_v_7_0.xsd
-├── templates/                 # manifest/html/js templates + CSInterface.js + wrapper
+├── templates/                 # manifest/html/js templates + jsx/host.jsx
+│                              #   + CSInterface.js + wrapper
 └── tests/                     # node:test suite (fake-level only)
 ```
