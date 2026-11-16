@@ -11,12 +11,11 @@
  *                              + <name>.bundle.js.map     (bundle → TS, two hops)
  *
  * The VLQ/mapping consumer is imported from jsx-toolchain
- * (`../../packages/ae-devtools-cli/jsx-toolchain/src/sourcemap.mjs`, `lookup`) — it is deliberately
+ * (`../jsx-toolchain/src/sourcemap.mjs`, `lookup`) — it is deliberately
  * NOT copied. The two-hop composition mirrors `resolvePosition` in
- * `packages/ae-devtools-cli/jsx-toolchain/src/bundle.mjs`; that module cannot be imported here
- * because it pulls in esbuild/typescript, which the diagnostics CI job
- * does not install. `lookup` is dependency-free and is the actual
- * map-reading logic; the hop composition is a few lines.
+ * `../jsx-toolchain/src/bundle.mjs`; that module cannot be imported here
+ * because it pulls in esbuild/typescript, which the diagnostics test
+ * suite does not need at runtime beyond the dependency-free `lookup`.
  *
  * Honesty rules — a position is never guessed:
  *   - no map file found              → status "no-map"
@@ -38,7 +37,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { lookup, parseMappings } from "../../packages/ae-devtools-cli/jsx-toolchain/src/sourcemap.mjs";
+import { lookup, parseMappings } from "../jsx-toolchain/src/sourcemap.mjs";
 
 export const SOURCE_MAP_RESULT_SCHEMA = "ae-devtools.diagnostics.source-map/v1";
 

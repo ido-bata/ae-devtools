@@ -18,8 +18,9 @@ const CLI = join(HERE, "..", "cli.mjs");
 const RUNS_DIR = join(tmpdir(), "ae-devtools-cli-test-runs");
 // diagnostics fixtures (committed sourcemap artifacts, Issue #37/#95):
 // runtime-error.jsx line 3 maps back to runtime-error.ts line 3.
-const REPO_ROOT = join(HERE, "..", "..", "..", "..");
-const DIAG_FIXTURE_JSX = join(REPO_ROOT, "experiments", "diagnostics", "tests", "fixtures", "single", "runtime-error.jsx");
+// Packaged diagnostics module (Issue #113): diagnostics/ ships in the
+// tarball next to devtools-cli/.
+const DIAG_FIXTURE_JSX = join(HERE, "..", "..", "diagnostics", "tests", "fixtures", "single", "runtime-error.jsx");
 let passed = 0;
 
 function run(args, env = {}) {

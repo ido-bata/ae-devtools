@@ -2,8 +2,9 @@
 
 - Status: **Proposed design note**, not an accepted contract. Record
   schema versioning follows the catalog contract §7 compatibility rules
-  once promoted; until then `experiments/diagnostics/` is the reference
-  implementation at fake/mock level.
+  once promoted; the reference implementation lives at
+  `packages/ae-devtools-cli/diagnostics/` (packaged in `@ae-devtools/cli`,
+  Issue #113) at fake/mock level.
 - Parent spec: [spec.md](../spec.md) FR-16, US9; plan: [plan.md](../plan.md);
   consumers: [#20](https://github.com/ido-bata/ae-devtools/issues/20)
   (VSCode/MCP diagnostics surface), [#38](https://github.com/ido-bata/ae-devtools/issues/38)
@@ -42,7 +43,7 @@ JSX line is inference and must be marked as such (or omitted).
 
 Every `kind` has an explicit collector status —
 `implemented-fake`, `pending-real-host`, or `unsupported-with-reason` —
-recorded in `experiments/diagnostics/collectors.mjs`. A kind with no
+recorded in `packages/ae-devtools-cli/diagnostics/collectors.mjs`. A kind with no
 reachable collector is **still in the model**; it reports pending with
 its upstream dependency named (#16 render adapters, #17/#18 plugin load
 proofs, #36 panel logs). This mirrors FR-13: unreachable sources keep

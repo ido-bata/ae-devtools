@@ -19,7 +19,7 @@ npm install ./ae-devtools-cli-0.2.0.tgz
 Provides four bins:
 
 - `ae-devtools` — developer CLI (`doctor`, `discover`, `inspect`,
-  `execute`, `verify`, `runs`, `reap`)
+  `execute`, `verify`, `runs`, `reap`, `diagnose`)
 - `jsx-toolchain` — TS→ES3 JSX build / `check` / `lint` / `resolve`
 - `ae-devtools-mcp` — stdio MCP server exposing the dev-loop tools
   (`ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify`)
@@ -114,6 +114,7 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `a8n-transport/` | owned-session transport over `@ido-bata/ae-a8n` |
 | `mcp-server/` | stdio MCP server (JSON-RPC) over the dev-loop core |
 | `recovery-orchestrator/` | crash/modal recovery orchestration (`ae-devtools-recover` bin) |
+| `diagnostics/` | `ae-devtools.diagnostics/v1` record schema, collector registry, JSX→TS sourcemap resolution (consumed by `ae-devtools diagnose`) |
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 
 ## Verification

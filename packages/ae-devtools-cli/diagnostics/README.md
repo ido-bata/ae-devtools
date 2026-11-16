@@ -4,7 +4,9 @@
 > directory defines the single diagnostics model every failure source
 > feeds (spec FR-16) and registers honest per-source collection status.
 > It is not a transport, not a UI surface, and not real-host evidence.
-> Design note: `../../specs/ae-capability-coverage/design/diagnostics.md`.
+> Packaged inside `@ae-devtools/cli` (Issue #113) and consumed by
+> `ae-devtools diagnose` / failure-evidence diagnostics blocks.
+> Design note: `../../../specs/ae-capability-coverage/design/diagnostics.md`.
 
 ## What this is
 
@@ -55,7 +57,8 @@ Source Map v3 files emitted by `packages/ae-devtools-cli/jsx-toolchain`:
 The VLQ consumer is **imported** from
 `../jsx-toolchain/src/sourcemap.mjs` (`lookup`/`parseMappings`), not
 copied. `jsx-toolchain/src/bundle.mjs` cannot be imported here because
-it pulls in esbuild/typescript, which this CI job does not install.
+it pulls in esbuild/typescript; `lookup` is dependency-free, so the
+tests never invoke tsc/esbuild.
 
 Result statuses are honest: `mapped` / `unmapped` / `no-map` /
 `no-position` / `invalid-map` / `ambiguous`. Nothing is guessed —
@@ -82,9 +85,8 @@ usage/IO errors.
 
 `tests/fixtures/{single,project}/` are committed build outputs produced
 by jsx-toolchain's own `buildFile`/`buildProject` against
-`packages/ae-devtools-cli/jsx-toolchain/fixtures/` sources (regeneration recipe in
-the test file header). Tests deliberately do not invoke tsc/esbuild so
-the diagnostics CI job stays dependency-free.
+`../jsx-toolchain/fixtures/` sources (regeneration recipe in
+the test file header). Tests deliberately do not invoke tsc/esbuild.
 
 ## Evidence level
 

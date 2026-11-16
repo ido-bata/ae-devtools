@@ -15,6 +15,7 @@ trusted runner, quarantine).
 | `execute <opId> [--args json] [--confirm-destructive] [--confirm-render]` | dispatch via canonical path |
 | `verify [--read-op opId]` | post-execution read-back; never infers success from the write |
 | `runs` | list run-guard markers — residue from runs that did not close cleanly (exit 1 when any exist) |
+| `diagnose <record.json\|marker\|runId> [--map-dir d] [--jsx p] [--jsx-map p] [--bundle-map p]` | read a stored diagnostics/evidence/run-marker record and re-resolve every `ae-devtools.diagnostics/v1` record through sourcemaps; read-only, no dispatch. Failed execute/verify runs also embed an additive `diagnostics` block in their `ae-devtools.cli.run/v1` evidence (Issue #103); the record schema/collectors/sourcemap resolver live in the packaged `../diagnostics/` module (Issue #113) |
 | `reap <runId> [--confirm]` | recover ONE stale leftover; only when the marker proves `ownership: owned` **with ae-a8n attestation provenance** (`session.process.attestation` recorded from `AfterEffects.recoveryTarget()`/`ownership()` at open — a self-declared claim cannot authorize a quit), the runner pid is dead (PID-reuse checked via start stamp), and the single AE candidate **is the attested aePid** with a matching start stamp. Attached/unknown hosts and unattested markers are reported, never quit |
 
 ## Sessions

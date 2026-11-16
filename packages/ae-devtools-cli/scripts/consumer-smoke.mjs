@@ -10,7 +10,11 @@
  * initialize + tools/list JSON-RPC round-trip over stdio. The recover
  * check runs only the read-only `evidence` subcommand — `observe`,
  * `recover` and `verify-exit` need a real GUI session / After Effects
- * (ae-a8n #109/#111 surfaces) and stay out of smoke by design.
+ * (ae-a8n #109/#111 surfaces) and stay out of smoke by design. The
+ * diagnostics check runs a fake host failure through `execute --out`
+ * and then `ae-devtools diagnose` on the stored evidence, proving the
+ * packaged diagnostics/ module resolves sourcemaps in a consumer
+ * install (Issue #113) — it must NOT degrade to "unavailable".
  * No After Effects required; evidence stays fake-level.
  */
 import { execFileSync, spawn } from "node:child_process";
@@ -79,6 +83,9 @@ try {
   });
 
   const BIN = join(consumer, "node_modules", ".bin");
+  // JSX line in dist/panel.jsx that resolves back to a .ts source —
+  // reused by the diagnostics round-trip below.
+  let smokeMappedLine = null;
 
   // 3. doctor (no AE contact)
   check("ae-devtools doctor", () => {
@@ -130,13 +137,57 @@ try {
         try {
           json = JSON.parse(run(join(BIN, "jsx-toolchain"), ["resolve", "dist", String(line), String(col)], { cwd: consumer }));
         } catch { /* exit 1 = unmapped position; keep scanning */ }
-        if (json?.original && /\.tsx?$/.test(json.original.source ?? json.original.file ?? "")) { mapped = json.original; break outer; }
+        if (json?.original && /\.tsx?$/.test(json.original.source ?? json.original.file ?? "")) { mapped = json.original; smokeMappedLine = line; break outer; }
       }
     }
     assert(mapped, "no JSX position resolved back to a TypeScript source position");
   });
 
-  // 8. lint rejects ES3-incompatible syntax
+  // 8. failure diagnostics round-trip (Issue #113): a fake host error
+  //    produces an evidence record whose diagnostics block resolves
+  //    through sourcemaps, and `ae-devtools diagnose` re-resolves the
+  //    stored record from the consumer install. The packaged
+  //    diagnostics/ module must load — libs.status "ok", never
+  //    "unavailable" — and the resolution must carry real sourcemap
+  //    fields back to the consumer's TypeScript source.
+  check("ae-devtools diagnose resolves packaged diagnostics in consumer install", () => {
+    assert(smokeMappedLine !== null, "no mapped JSX line found in earlier check");
+    const hostError = JSON.stringify({
+      name: "Error",
+      message: "consumer smoke injected host failure",
+      line: smokeMappedLine,
+      file: join(consumer, "dist", "panel.jsx"),
+    });
+    const evidencePath = join(work, "consumer-evidence.json");
+    let out = "";
+    try {
+      out = run(join(BIN, "ae-devtools"), [
+        "execute", "read.projectSummary", "--session", "fake",
+        "--consent", "grant", "--out", evidencePath,
+      ], { env: { ...process.env, AE_DEVTOOLS_CLI_FAKE_HOST_ERROR: hostError } });
+    } catch (e) {
+      // wire FAILED exits 1; the JSON payload is still on stdout
+      out = String(e.stdout ?? "");
+    }
+    const ex = JSON.parse(out);
+    assertNode.equal(ex.diagnostics?.schema, "ae-devtools.cli.diagnostics/v1", "diagnostics block missing");
+    assertNode.equal(ex.diagnostics.status, "ok", "diagnostics block not ok: " + JSON.stringify(ex.diagnostics).slice(0, 300));
+    assertNode.equal(ex.diagnostics.records[0]?.recordVersion, "ae-devtools.diagnostics/v1");
+    assertNode.equal(ex.diagnostics.resolutions[0]?.status, "mapped", "execute-time resolution not mapped");
+    assert(existsSync(evidencePath), "evidence file not written");
+
+    const d = JSON.parse(run(join(BIN, "ae-devtools"), ["diagnose", evidencePath]));
+    assertNode.equal(d.schema, "ae-devtools.cli.diagnose/v1");
+    assertNode.equal(d.libs?.status, "ok", "diagnostics libs unavailable in consumer install: " + JSON.stringify(d.libs));
+    assertNode.equal(d.recordCount, 1);
+    const res = d.results[0]?.resolution;
+    assertNode.ok(res, "diagnose resolution missing");
+    assertNode.equal(res.status, "mapped", "diagnose resolution not mapped: " + JSON.stringify(res).slice(0, 300));
+    assertNode.match(res.original?.file ?? "", /\.tsx?$/, "resolution did not reach a TypeScript source");
+    assertNode.ok(res.maps?.jsx, "sourcemap path missing from resolution");
+  });
+
+  // 9. lint rejects ES3-incompatible syntax
   check("jsx-toolchain lint catches ES6+ syntax", () => {
     writeFileSync(join(consumer, "bad.ts"), "const f = () => JSON.stringify({a:1});\n");
     let code = 0, out = "";
@@ -145,7 +196,7 @@ try {
     assert(code !== 0 || out.includes('"ok":false') || out.includes('"ok": false'), "lint did not flag ES6 syntax");
   });
 
-  // 9. ae-devtools-mcp: spawn the installed bin and do an initialize +
+  // 10. ae-devtools-mcp: spawn the installed bin and do an initialize +
   //    tools/list JSON-RPC round-trip over stdio (fake session, consent
   //    defaults untouched — no dispatch is attempted here).
   await checkAsync("ae-devtools-mcp initialize + tools/list", async () => {
@@ -208,7 +259,7 @@ try {
     }
   });
 
-  // 10. ae-devtools-recover: read-only `evidence` subcommand only.
+  // 11. ae-devtools-recover: read-only `evidence` subcommand only.
   //     observe/recover/verify-exit require a real GUI session and a
   //     built ae-a8n checkout (#109/#111 surfaces) — they are
   //     real-host paths and deliberately NOT smoke-tested here.

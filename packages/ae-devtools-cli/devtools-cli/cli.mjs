@@ -24,7 +24,7 @@
  * Failure diagnostics (Issue #103): a failed/refused execute or verify
  * adds an additive `diagnostics` block to the evidence record —
  * ae-devtools.diagnostics/v1 record(s) plus sourcemap resolution via
- * experiments/diagnostics. `diagnose` re-reads a stored record
+ * the packaged diagnostics/ module. `diagnose` re-reads a stored record
  * (--out evidence file, bare diagnostics record, or surviving run
  * marker) and reports fresh resolution. Both are read-only; neither
  * adds a dispatch path.
@@ -395,8 +395,8 @@ async function main() {
         // Additive failure diagnostics (Issue #103): a unified
         // ae-devtools.diagnostics/v1 record plus sourcemap resolution.
         // Completed runs carry no block; failures always do — an
-        // "unavailable" status is recorded honestly when the diagnostics
-        // checkout cannot be loaded (e.g. installed package).
+        // "unavailable" status is recorded honestly when the packaged
+        // diagnostics/ module cannot be loaded (e.g. damaged install).
         if (isFailureResult(result, evidence.outcome)) {
           evidence.diagnostics = await buildFailureDiagnostics({
             result,
