@@ -22,7 +22,8 @@ git clone --depth 1 --branch release-0-2-0 \
 npm install ./ae-devtools/packages/ae-devtools-cli
 ```
 
-提供される bin: `ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`。
+提供される bin: `ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`,
+`ae-devtools-recover`。
 
 ## What you get
 
@@ -39,6 +40,8 @@ npm install ./ae-devtools/packages/ae-devtools-cli
 | `jsx-toolchain build-project <entry> -o dist` | TS→ES3 JSX + sourcemap | 不要 |
 | `jsx-toolchain resolve <outdir> <line> <col>` | JSX位置→TS位置 | 不要 |
 | `ae-devtools-mcp`（MCP stdio server） | `ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify` を MCP tool として公開 | fake session は不要 |
+| `ae-devtools-recover evidence --since <ISO> --out <dir>` | crash evidence（`.ips` / Sentry envelope）収集 + 相関付け | 不要（read-only） |
+| `ae-devtools-recover observe/recover/verify-exit` | GUI 観測・timeout recovery・exit 検証 | 必要 + ae-a8n #109/#111 build |
 
 ## MCP client からの利用
 
@@ -99,3 +102,10 @@ tarball install して実行:
 - evidence level は常に記録される。fake-level を real-host verified と
   見做さない。
 - 実行・認可・transport の正本は ae-a8n。この CLI はその consumer。
+- `ae-devtools-recover` の `observe` / `recover` / `verify-exit` は
+  ae-a8n repo の #109/#111 export（`readGuiSession` /
+  `listAppInstances` / `censusRunnerInSession` / `MacGuiRecovery` /
+  `MacHostRecovery` / GUI lease）を含む **ローカル build** を
+  `--ae-a8n-root` で指す必要がある。公開版 `@ido-bata/ae-a8n` には
+  未搭載であり、実機 GUI 経路は未検証（fake-level のみ）。
+  `evidence` サブコマンドは AE / GUI 不要で動作する。

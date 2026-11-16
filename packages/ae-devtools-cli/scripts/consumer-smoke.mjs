@@ -4,9 +4,13 @@
  * from an external project directory (Issue #92 acceptance).
  *
  * Steps: npm pack → temp consumer dir → npm install <tgz> → run the real
- * bins (`ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`) against a tiny
- * TS fixture with the fake session. The MCP check spawns `ae-devtools-mcp`
- * and does an initialize + tools/list JSON-RPC round-trip over stdio.
+ * bins (`ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`,
+ * `ae-devtools-recover`) against a tiny TS fixture with the fake
+ * session. The MCP check spawns `ae-devtools-mcp` and does an
+ * initialize + tools/list JSON-RPC round-trip over stdio. The recover
+ * check runs only the read-only `evidence` subcommand — `observe`,
+ * `recover` and `verify-exit` need a real GUI session / After Effects
+ * (ae-a8n #109/#111 surfaces) and stay out of smoke by design.
  * No After Effects required; evidence stays fake-level.
  */
 import { execFileSync, spawn } from "node:child_process";
@@ -71,6 +75,7 @@ try {
     assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools")), "ae-devtools bin missing");
     assert(existsSync(join(consumer, "node_modules", ".bin", "jsx-toolchain")), "jsx-toolchain bin missing");
     assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-mcp")), "ae-devtools-mcp bin missing");
+    assert(existsSync(join(consumer, "node_modules", ".bin", "ae-devtools-recover")), "ae-devtools-recover bin missing");
   });
 
   const BIN = join(consumer, "node_modules", ".bin");
@@ -201,6 +206,29 @@ try {
     } finally {
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
     }
+  });
+
+  // 10. ae-devtools-recover: read-only `evidence` subcommand only.
+  //     observe/recover/verify-exit require a real GUI session and a
+  //     built ae-a8n checkout (#109/#111 surfaces) — they are
+  //     real-host paths and deliberately NOT smoke-tested here.
+  check("ae-devtools-recover evidence emits JSON manifest", () => {
+    const reportsDir = join(work, "reports-empty");
+    mkdirSync(reportsDir, { recursive: true });
+    const outDir = join(work, "evidence-out");
+    const out = run(join(BIN, "ae-devtools-recover"), [
+      "evidence",
+      "--since", new Date(Date.now() - 3600e3).toISOString(),
+      "--out", outDir,
+      "--reports-dir", reportsDir,
+    ]);
+    const json = JSON.parse(out);
+    // cli.mjs spreads the manifest last, so `schema` is the manifest's
+    // own schema; `kind` is the stable discriminator for this output.
+    assertNode.equal(json.kind, "crash-evidence", "unexpected evidence output kind");
+    assertNode.equal(json.complete, true, "evidence collection reported incomplete");
+    assertNode.ok(json.counts && typeof json.counts.total === "number", "counts missing");
+    assert(existsSync(join(outDir, "manifest.json")), "manifest.json missing");
   });
 } finally {
   const failed = results.filter((r) => !r.ok);

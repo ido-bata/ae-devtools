@@ -16,13 +16,15 @@ npm install @ae-devtools/cli        # npm publish 後
 npm install ./ae-devtools-cli-0.2.0.tgz
 ```
 
-Provides three bins:
+Provides four bins:
 
 - `ae-devtools` — developer CLI (`doctor`, `discover`, `inspect`,
   `execute`, `verify`, `runs`, `reap`)
 - `jsx-toolchain` — TS→ES3 JSX build / `check` / `lint` / `resolve`
 - `ae-devtools-mcp` — stdio MCP server exposing the dev-loop tools
   (`ae_discover` / `ae_inspect` / `ae_execute` / `ae_verify`)
+- `ae-devtools-recover` — crash/modal recovery orchestration
+  (`evidence` / `observe` / `recover` / `verify-exit`)
 
 ## MCP server
 
@@ -66,6 +68,30 @@ ae-devtools execute <opId> --session a8n --ae-a8n-root <local-a8n-checkout> --co
 owned-session launch を使う。`attached`/`unknown` ownership は拒否される。
 consent の default は deny。destructive/render op は追加の confirm flag が必要。
 
+## Crash recovery (`ae-devtools-recover`)
+
+```sh
+ae-devtools-recover evidence --since <ISO> --out <dir> \
+  [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P] \
+  [--reports-dir d]... [--sentry-dir d]...
+```
+
+`evidence` は macOS の DiagnosticReports（`.ips`）と Sentry envelope を
+収集し、sha256 付きで target process へ相関付ける read-only コマンド。
+AE / GUI 不要で consumer 環境でも動く。
+
+`observe` / `recover` / `verify-exit` は real-host 前提:
+
+- `--ae-a8n-root <built-ae-a8n>` が必要。ae-a8n repo の #109（GUI 観測）/
+  #111（GUI lease + dialog class）の export を含む build が前提で、
+  現時点の npm 公開版 (`@ido-bata/ae-a8n@0.1.0-alpha.2`) には未搭載。
+- `recover` は devtools-cli の run marker
+  (`ae-devtools.cli.run-guard/v1`) による認可が必須。self-declared
+  flag では GUI mutation に到達しない。
+- 実機 GUI 経路は **UNVERIFIED**（fake-level のみ、`tests/run.mjs`）。
+
+詳細は `recovery-orchestrator/README.md`。
+
 ## JSX toolchain
 
 ```sh
@@ -87,6 +113,7 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `scripting-adapters/` | operation registry + fake host + coverage claims |
 | `a8n-transport/` | owned-session transport over `@ido-bata/ae-a8n` |
 | `mcp-server/` | stdio MCP server (JSON-RPC) over the dev-loop core |
+| `recovery-orchestrator/` | crash/modal recovery orchestration (`ae-devtools-recover` bin) |
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 
 ## Verification
@@ -101,5 +128,5 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 
 - Module READMEs: `devtools-cli/README.md`, `jsx-toolchain/README.md`,
   `a8n-transport/README.md`, `trusted-execution/README.md`,
-  `mcp-server/README.md`
+  `mcp-server/README.md`, `recovery-orchestrator/README.md`
 - Canonical governance: repo ルートの `AGENTS.md`, `docs/`

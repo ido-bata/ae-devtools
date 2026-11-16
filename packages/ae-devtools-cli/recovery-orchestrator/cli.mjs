@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 /**
- * cli.mjs — recovery-orchestrator CLI (Issue #55).
+ * cli.mjs — recovery-orchestrator CLI (Issue #55), shipped as the
+ * `ae-devtools-recover` bin of @ae-devtools/cli (Issue #111).
  *
- *   node cli.mjs evidence --since <ISO> --out <dir>
+ *   ae-devtools-recover evidence --since <ISO> --out <dir>
  *        [--pid N] [--proc-name NAME] [--app-version V] [--proc-path P]
  *        [--run-id ID] [--reports-dir d]... [--sentry-dir d]...
  *
- *   node cli.mjs observe --pid N --session-uid U --session-asid A
+ *   ae-devtools-recover observe --pid N --session-uid U --session-asid A
  *        [--session-user NAME] [--allow-console]
  *        [--ae-a8n-root <dir>] [--shot-dir <dir>]
  *
- *   node cli.mjs recover --run-id <id> --request-id R --method M
+ *   ae-devtools-recover recover --run-id <id> --request-id R --method M
  *        [--timeout-ms N] [--ae-a8n-root <dir>] [--shot-dir <dir>]
  *
- *   node cli.mjs verify-exit --pid N --session-uid U --session-asid A
+ *   ae-devtools-recover verify-exit --pid N --session-uid U --session-asid A
  *        [--expectation exit|crash] [--evidence-dir <dir>] [--since <ISO>]
  *        [--reports-dir d]... [--sentry-dir d]...
  *        [--ae-a8n-root <dir>]
@@ -46,8 +47,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import {
   authorizeRecovery,
@@ -58,9 +58,7 @@ import {
   runTimeoutRecovery,
   verifyHostExit,
 } from "./orchestrator.mjs";
-import { RUNS_DIR } from "../../packages/ae-devtools-cli/devtools-cli/session-guard.mjs";
-
-const EXP = dirname(dirname(fileURLToPath(import.meta.url)));
+import { RUNS_DIR } from "../devtools-cli/session-guard.mjs";
 
 function parseArgs(argv) {
   const pos = [];
@@ -227,7 +225,7 @@ async function main() {
   const needsA8n = ["observe", "recover", "verify-exit"].includes(cmd);
   if (!needsA8n) {
     process.stderr.write(
-      "usage: cli.mjs <evidence|observe|recover|verify-exit> ...\n" +
+      "usage: ae-devtools-recover <evidence|observe|recover|verify-exit> ...\n" +
         "  see header comment for flags\n",
     );
     return 2;
