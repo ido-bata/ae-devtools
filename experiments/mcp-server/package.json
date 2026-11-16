@@ -1,0 +1,14 @@
+{
+  "name": "ae-devtools-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "stdio MCP server exposing the ae-devtools dev-loop core (Issue #20, CAP051 slice). Zero runtime dependencies.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node tests/run.mjs"
+  }
+}
