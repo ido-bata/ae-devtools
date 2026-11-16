@@ -2,7 +2,7 @@
 /**
  * real-run.mjs — opt-in REAL-AE vertical slice for Issue #49.
  *
- *   node experiments/a8n-transport/real-run.mjs [--install-dir <dir>] [--ae-a8n-root <dir>] [--out <evidence.json>]
+ *   node packages/ae-devtools-cli/a8n-transport/real-run.mjs [--install-dir <dir>] [--ae-a8n-root <dir>] [--out <evidence.json>]
  *
  * Requires `@ido-bata/ae-a8n` installed (see package.json) and an After
  * Effects installation discoverable by ae-a8n. Launches an OWNED session —

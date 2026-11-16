@@ -46,7 +46,7 @@ export type RepoInputs = {
 };
 
 export function loadRepoInputs(): RepoInputs {
-  const ADAPTER_CLAIMS_PATH = "experiments/scripting-adapters/generated/coverage-claims.json";
+  const ADAPTER_CLAIMS_PATH = "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json";
   const scripting = importScripting({
     symbols: load(INPUT_PATHS.scriptingSymbols),
     summary: load(INPUT_PATHS.scriptingSummary),

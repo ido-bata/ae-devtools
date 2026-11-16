@@ -6,7 +6,7 @@
  * catalog domain it belongs to, the inventory symbol ids it exercises,
  * a mutating flag, an argument schema, and a `source(args)` builder
  * that emits ES3 ExtendScript for the trusted-execution runner
- * (experiments/trusted-execution/runner.mjs). Operations are NOT MCP
+ * (packages/ae-devtools-cli/trusted-execution/runner.mjs). Operations are NOT MCP
  * tools — per Issue #15, the registry + trusted eval path is the
  * delivery mechanism, not per-symbol tool proliferation.
  *

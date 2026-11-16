@@ -24,7 +24,7 @@ for (const op of OPERATIONS) {
 }
 const doc = {
   schema: "ae-devtools.adapter-coverage-claims/v1",
-  generatedFrom: "experiments/scripting-adapters/registry.mjs",
+  generatedFrom: "packages/ae-devtools-cli/scripting-adapters/registry.mjs",
   evidenceLevel: "fake/mock only",
   realHostVerified: 0,
   claims,

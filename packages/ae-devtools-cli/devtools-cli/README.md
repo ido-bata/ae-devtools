@@ -1,6 +1,6 @@
 # devtools-cli — developer CLI over the dev-loop core (Issue #54)
 
-Thin CLI wrapper around `experiments/dev-loop/devloop.mjs`
+Thin CLI wrapper around `packages/ae-devtools-cli/dev-loop/devloop.mjs`
 (discover/inspect/execute/verify). Adds **no** permission path — every
 dispatch still goes through `runOperation()` (consent scope, gates,
 trusted runner, quarantine).
@@ -20,7 +20,7 @@ trusted runner, quarantine).
 ## Sessions
 
 - `--session fake` (default): codec-faithful vm host — **fake/mock only** evidence.
-- `--session a8n`: owned AE session via `experiments/a8n-transport`
+- `--session a8n`: owned AE session via `packages/ae-devtools-cli/a8n-transport`
   (Issue #49, Draft PR #50). Requires that experiment on the branch and,
   for unreleased ae-a8n builds, `--ae-a8n-root <checkout>`.
 

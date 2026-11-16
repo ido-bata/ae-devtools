@@ -20,9 +20,9 @@ never presented as real-host verification.**
 ## Sessions
 
 - `--session fake` (default): codec-faithful vm host via
-  `experiments/devtools-cli/fake-session.mjs` — **fake/mock evidence
+  `packages/ae-devtools-cli/devtools-cli/fake-session.mjs` — **fake/mock evidence
   only**.
-- `--session a8n`: owned AE session via `experiments/a8n-transport/
+- `--session a8n`: owned AE session via `packages/ae-devtools-cli/a8n-transport/
   session.mjs` `openSliceSession` — the only path that can produce
   "verified on real host" evidence, and only when it actually runs.
 - `--ae-a8n-root <dir>`, `--install-dir <dir>` are forwarded to the a8n

@@ -44,7 +44,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import { GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
+import { GUARD_SCHEMA, latestRequestEvent } from "../../packages/ae-devtools-cli/devtools-cli/session-guard.mjs";
 
 export const SCHEMA = "ae-devtools.recovery-orchestrator/v2";
 export { GUARD_SCHEMA };

@@ -15,10 +15,10 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { openFakeSession } from "../devtools-cli/fake-session.mjs";
+import { openFakeSession } from "../../packages/ae-devtools-cli/devtools-cli/fake-session.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const EXP = join(HERE, "..");
+const EXP = join(HERE, "..", "..", "packages", "ae-devtools-cli");
 
 /**
  * @param {"fake"|"a8n"} kind
@@ -32,7 +32,7 @@ export async function openSession(kind = "fake", options = {}) {
   if (kind === "a8n") {
     const tdir = join(EXP, "a8n-transport", "session.mjs");
     if (!existsSync(tdir)) {
-      const e = new Error("a8n session requires experiments/a8n-transport (Issue #49) — not present on this branch");
+      const e = new Error("a8n session requires packages/ae-devtools-cli/a8n-transport (Issue #49) — not present on this branch");
       e.code = "A8N_TRANSPORT_MISSING";
       throw e;
     }

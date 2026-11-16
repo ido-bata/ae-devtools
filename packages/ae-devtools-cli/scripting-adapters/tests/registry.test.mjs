@@ -23,7 +23,7 @@ import { createAdapterFakeApp } from "../fake-app.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const symbolsJson = JSON.parse(
-  readFileSync(join(here, "..", "..", "..", "inventories", "scripting", "generated", "symbols.json"), "utf8")
+  readFileSync(join(here, "..", "..", "..", "..", "inventories", "scripting", "generated", "symbols.json"), "utf8")
 );
 
 function allSymbolIds() {
@@ -307,7 +307,7 @@ test("coverage claims only reference members actually exercised AND present in t
   const claims = JSON.parse(readFileSync(
     join(here, "..", "generated", "coverage-claims.json"), "utf8"));
   const catalog = JSON.parse(readFileSync(
-    join(here, "..", "..", "..", "packages", "capability-catalog", "generated", "catalog.json"), "utf8"));
+    join(here, "..", "..", "..", "..", "packages", "capability-catalog", "generated", "catalog.json"), "utf8"));
   const recordIds = new Set(catalog.records.map((r) => r.id));
   for (const [memberId, claim] of Object.entries(claims.claims)) {
     assert.ok(recordIds.has(memberId), `claim ${memberId} has no catalog record`);

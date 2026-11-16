@@ -4,16 +4,16 @@
  *
  * When ExtendScript inside AE reports an error at a generated JSX
  * `{line, column}`, this module maps that position back through the
- * Source Map v3 artifacts emitted by `experiments/jsx-toolchain`:
+ * Source Map v3 artifacts emitted by `packages/ae-devtools-cli/jsx-toolchain`:
  *
  *   single-file `build`        : <name>.jsx.map            (jsx → TS, one hop)
  *   project `build-project`    : <name>.jsx.map            (jsx → bundle)
  *                              + <name>.bundle.js.map     (bundle → TS, two hops)
  *
  * The VLQ/mapping consumer is imported from jsx-toolchain
- * (`../jsx-toolchain/src/sourcemap.mjs`, `lookup`) — it is deliberately
+ * (`../../packages/ae-devtools-cli/jsx-toolchain/src/sourcemap.mjs`, `lookup`) — it is deliberately
  * NOT copied. The two-hop composition mirrors `resolvePosition` in
- * `jsx-toolchain/src/bundle.mjs`; that module cannot be imported here
+ * `packages/ae-devtools-cli/jsx-toolchain/src/bundle.mjs`; that module cannot be imported here
  * because it pulls in esbuild/typescript, which the diagnostics CI job
  * does not install. `lookup` is dependency-free and is the actual
  * map-reading logic; the hop composition is a few lines.
@@ -38,7 +38,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { lookup, parseMappings } from "../jsx-toolchain/src/sourcemap.mjs";
+import { lookup, parseMappings } from "../../packages/ae-devtools-cli/jsx-toolchain/src/sourcemap.mjs";
 
 export const SOURCE_MAP_RESULT_SCHEMA = "ae-devtools.diagnostics.source-map/v1";
 

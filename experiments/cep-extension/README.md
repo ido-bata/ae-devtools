@@ -92,7 +92,7 @@ href>` in `index.html` resolves inside the extension dir, that a
 referenced `CSInterface.js` is bundled (the host does NOT provide it),
 and that every `*.jsx` host script stays inside a documented ES3
 *subset* (heuristic — for a real ES3 grammar proof use
-`experiments/jsx-toolchain` `lintOutput` when its deps are installed).
+`packages/ae-devtools-cli/jsx-toolchain` `lintOutput` when its deps are installed).
 It also reports `.debuggable` marker presence informationally and
 always reports `loadProof: "NOT RUN"`.
 

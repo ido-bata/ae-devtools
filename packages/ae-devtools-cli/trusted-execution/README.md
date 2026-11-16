@@ -12,7 +12,7 @@
 ## Layout
 
 ```
-experiments/trusted-execution/
+packages/ae-devtools-cli/trusted-execution/
 ├── README.md                  # this file
 ├── codec/
 │   └── trusted-codec.js       # ES3 strict codec (TrustedJson + ae* wrappers)
@@ -156,5 +156,5 @@ catalog dispatch gate (`assertDispatchAllowed`):
 ## Running
 
 ```sh
-node experiments/trusted-execution/tests/run.mjs
+node packages/ae-devtools-cli/trusted-execution/tests/run.mjs
 ```

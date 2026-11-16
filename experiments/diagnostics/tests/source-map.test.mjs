@@ -2,13 +2,13 @@
  * Tests for diagnostics → source-position mapping (Issue #37, CAP064).
  *
  * Automated-test / fake-level evidence only: the fixtures under
- * ./fixtures were produced by `experiments/jsx-toolchain`'s own build
+ * ./fixtures were produced by `packages/ae-devtools-cli/jsx-toolchain`'s own build
  * commands (single-file `build` of fixtures/runtime-error.ts and
  * project `build-project` of fixtures/project/main.ts) and committed —
  * the diagnostics CI job installs no toolchain dependencies, so tests
  * must not invoke tsc/esbuild. No After Effects is involved.
  *
- * Regenerate fixtures (from experiments/jsx-toolchain, after npm install):
+ * Regenerate fixtures (from packages/ae-devtools-cli/jsx-toolchain, after npm install):
  *   node -e 'import("./src/build.mjs").then(async m => {
  *     m.buildFile("fixtures/runtime-error.ts", { outDir: "../diagnostics/tests/fixtures/single" });
  *     await m.buildProject("fixtures/project/main.ts", { outDir: "../diagnostics/tests/fixtures/project", name: "probe" });

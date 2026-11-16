@@ -14,8 +14,8 @@
 
 | Capability | State | Evidence |
 | --- | --- | --- |
-| Trusted ExtendScript execution pipeline (codec, permissions, outcomes, mutation guard, runner) | merged groundwork on `release-0-1-0` (`experiments/trusted-execution`) | automated test (fake) |
-| Owned-session JSX dispatch via `aeDevtools.trustedEval` on `@ido-bata/ae-a8n` | branch `49`, Draft PR #50 | **verified on real host**: AE 27.0.0 + 26.5.3, 4 consecutive green runs (`experiments/a8n-transport/EVIDENCE.md` on `origin/49`) |
+| Trusted ExtendScript execution pipeline (codec, permissions, outcomes, mutation guard, runner) | merged groundwork on `release-0-1-0` (`packages/ae-devtools-cli/trusted-execution`) | automated test (fake) |
+| Owned-session JSX dispatch via `aeDevtools.trustedEval` on `@ido-bata/ae-a8n` | branch `49`, Draft PR #50 | **verified on real host**: AE 27.0.0 + 26.5.3, 4 consecutive green runs (`packages/ae-devtools-cli/a8n-transport/EVIDENCE.md` on `origin/49`) |
 | Read-only probe / session pinning / outcome model | merged (`experiments/read-only-probe`) | verified on real host (read-only) |
 | Capability catalog + drift gate + domain coverage metadata | merged (`packages/capability-catalog`) | automated test |
 | Dev-loop core `discover/inspect/execute/verify` | branch `20`, Draft PR #48 — stacked on unmerged #46/#47 | fake/mock only |

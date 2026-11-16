@@ -5,7 +5,7 @@
  * Requires the a8n-transport slice (Issue #49) present at
  * ../a8n-transport/ and a local ae-a8n build with the #103+#105 fixes:
  *
- *   node experiments/jsx-toolchain/real-run.mjs \
+ *   node packages/ae-devtools-cli/jsx-toolchain/real-run.mjs \
  *     --ae-a8n-root /path/to/ae-a8n-checkout [--install-dir <dir>] [--out evidence.json]
  *
  * What it proves on an OWNED macOS AE session:

@@ -46,7 +46,7 @@ it cannot reach.
 Resolves a diagnostics record's `source` block — an ExtendScript
 `{line, column?}` position inside a generated `.jsx` artifact — back to
 the original TypeScript `{file, line, column, excerpt}` using the
-Source Map v3 files emitted by `experiments/jsx-toolchain`:
+Source Map v3 files emitted by `packages/ae-devtools-cli/jsx-toolchain`:
 
 - single-file `build` → `<name>.jsx.map` (one hop, jsx → TS)
 - project `build-project` → `<name>.jsx.map` + `<name>.bundle.js.map`
@@ -82,7 +82,7 @@ usage/IO errors.
 
 `tests/fixtures/{single,project}/` are committed build outputs produced
 by jsx-toolchain's own `buildFile`/`buildProject` against
-`experiments/jsx-toolchain/fixtures/` sources (regeneration recipe in
+`packages/ae-devtools-cli/jsx-toolchain/fixtures/` sources (regeneration recipe in
 the test file header). Tests deliberately do not invoke tsc/esbuild so
 the diagnostics CI job stays dependency-free.
 
