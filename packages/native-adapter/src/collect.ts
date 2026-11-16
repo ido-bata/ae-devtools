@@ -383,7 +383,10 @@ export function collectProbeResults(logText: string, supplied: CollectSupplied):
     }
     if (kind === "end") {
       if (exec?.kind === "probe-run") exec.ended = true;
-      else exec?.diagnostics.push(line);
+      else {
+        exec ??= newExec(sawStart ? "tick" : "registration");
+        exec.diagnostics.push(line);
+      }
       continue;
     }
     if (kind === "reason") {
@@ -392,7 +395,8 @@ export function collectProbeResults(logText: string, supplied: CollectSupplied):
         if (r === "initial" || r === "identity-change" || r === "recovery") exec.reason = r;
         else exec.diagnostics.push(line);
       } else {
-        exec?.diagnostics.push(line);
+        exec ??= newExec(sawStart ? "tick" : "registration");
+        exec.diagnostics.push(line);
       }
       continue;
     }
@@ -400,14 +404,18 @@ export function collectProbeResults(logText: string, supplied: CollectSupplied):
       const parsed = parseOpLine(line);
       if (!parsed) {
         // malformed op line: verbatim diagnostic + well-formedness flag
-        (exec ?? (exec = newExec(sawStart ? "tick" : "registration"))).diagnostics.push(line);
+        (exec ??= newExec(sawStart ? "tick" : "registration")).diagnostics.push(line);
         exec.recordsWellFormed = false;
         continue;
       }
-      if (exec === null) {
-        // op lines only reach the log via entry flush or an open run;
-        // before the first probe.start they are the registration flush.
-        exec = newExec("registration");
+      exec ??= newExec(sawStart ? "tick" : "registration");
+      if (exec.kind === "tick") {
+        // quiet ticks discard buffered op records — an `op ` line in a
+        // tick segment violates the emission model; keep it verbatim
+        // and fail well-formedness rather than fabricate call evidence.
+        exec.diagnostics.push(line);
+        exec.recordsWellFormed = false;
+        continue;
       }
       if (parsed.overflow) {
         // `op __overflow` is a dropped-record marker, not a call — keep
