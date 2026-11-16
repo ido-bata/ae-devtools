@@ -194,6 +194,48 @@ Status は **Proposed** のまま維持する。昇格（Accepted 化）・却�
   TCC/loopback ACL 変更、Adobe の third-party external ExtendScript invocation に対する
   姿勢変化（ADR-0001 Risks）、SDK release の ABI 変更。
 
+### D7. product-surface ownership — ae-a8n / ae-devtools / ae-test（Issue #90、2026-11-16 追加）
+
+D1–D6 は実行境界と capability 契約の境界を定めた。本節はその上位にある
+**プロダクト面の所有境界** を固定する。個別機能の帰属に迷った場合は
+まず本節で判定し、実行・認可・transport が関わる場合は D1–D6 を併読する。
+
+| 領域 | ae-a8n | ae-devtools | ae-test |
+| --- | --- | --- | --- |
+| 汎用 AE 自動化 API とホスト実装 | **©** | ⊕（消費） | ⊕ |
+| AE 接続・所有権・対象同定・起動/終了/resume | **©**（#107 crash detection, #108 session resume, #109 GUI observation + dialog classification, #111 GUI lease が該当） | ⊕ | ⊕ |
+| 実行 transport / IPC / serialization / 実行認可 / timeout / UNKNOWN 非再送 | **©** | ⊕（devtools 独自の dispatch path・consent path を作らない） | ⊕ |
+| 汎用 GUI 状態観測・モーダル分類・クラッシュ検出・セッション復旧 primitive | **©** | ⊕（開発者向け orchestration/diagnostics として消費。#55 はこの範囲に再スコープ） | ⊕ |
+| AE 操作の生の結果・trace・artifact | **©** | ⊕（診断レコードへの変換・表示） | ⊕ |
+| Scripting/SDK API inventory・capability ID・型・補完・coverage | ⊕ | **©** | ⊕ |
+| JSX/TypeScript scaffold・build・lint・watch・source map | ⊕ | **©** | ⊕ |
+| 開発者向け CLI / VSCode Extension / MCP / Runtime Inspector | ⊕ | **©** | ⊕ |
+| 開発用コードの実行ワークフロー・診断統合・デバッグ連携 | ⊕ | **©**（実行そのものは ae-a8n 経路に委譲） | ⊕ |
+| ScriptUI/CEP/UXP の開発・デバッグ・ライフサイクル管理 | ⊕ | **©** | ⊕ |
+| AEGP/Effect/IO 等 Native SDK 開発ハーネス・ビルド・ABI・プラグイン検証 | ⊕（host lifecycle 内で動く plugin の process 管理は D2 のとおり交差。R3 Open は維持） | **©**（harness/調査側） | ⊕ |
+| 開発用パッケージ・テンプレート・ツールの配布 | ⊕ | **©** | ⊕ |
+| 汎用 fixture・assertion・画像/レンダー比較・conformance・E2E evidence | ⊕ | ⊕（開発者向けの起動・結果表示のみ提供） | **©** |
+
+**判定ルール（実装判断）:**
+
+1. AE を一般的に操作する機能 → ae-a8n。AE 開発者がコードを書き・実行し・検査し・
+   デバッグする機能 → ae-devtools。他の AE 利用プロジェクトで共通する検証 → ae-test。
+2. 両方に関わる場合、**ホスト実行・認可は ae-a8n、開発者向け機能は ae-devtools**
+   に分離する。devtools に暫定的な重複実装（独自 transport / 独自 consent /
+   独自 recovery primitive）を増やさない。
+3. Native callback・CEP/UXP 固有の開発機能を、ae-a8n の汎用 API へ無理に移さない。
+4. 実行方式・transport が未確定でも、開発者向け API 契約（capability ID・
+   operation registry・evidence level）は devtools 側で定義し独立に進める。
+   既存の稼働経路（ae-a8n shipped file-envelope transport + `aeDevtools.trustedEval`
+   static extension）は維持する。
+5. 他リポジトリの実装変更が必要な場合は、そのリポジトリの正本・権限に従って
+   Issue 化する（例: ae-a8n #102 capabilities negotiation、ae-test #19/#21）。
+
+**本節が変更しないもの:** D1–D6 の決定と Open questions（R1/R3 を含む）、
+ADR-0001（devtools）の Proposed 状態、ae-a8n/ae-test 側 ADR の内容。
+本節は「どの repo がどのプロダクト面を所有するか」の宣言であり、
+個別契約の詳細は各 repo の Issue/Spec が canonical。
+
 ---
 
 ## CAP017 に対する記録: 矛盾と共通点
