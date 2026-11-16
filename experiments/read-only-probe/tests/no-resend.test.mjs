@@ -32,7 +32,7 @@ test("timeout yields UNKNOWN and the request file is left in place, never remove
   const root = mkdtempSync(join(tmpdir(), "probe-noresend-"));
   try {
     const { channel } = makeChannel(root);   // no responder: bridge missing
-    const r = run(["ping", channel, "300"]);
+    const r = run(["ping", channel, "1500"]);
     assert.equal(r.event.outcome, "UNKNOWN");
     assert.equal(r.event.unknownCategory, "NO_REPLY_BEFORE_DEADLINE");
     assert.equal(r.event.requestState, "SENT_NOT_ACKNOWLEDGED");
@@ -48,8 +48,8 @@ test("a second command after UNKNOWN uses a NEW id — no id is ever reused", ()
   const root = mkdtempSync(join(tmpdir(), "probe-noresend2-"));
   try {
     const { channel } = makeChannel(root);
-    const first = run(["ping", channel, "250"]);
-    const second = run(["ping", channel, "250"]);
+    const first = run(["ping", channel, "1500"]);
+    const second = run(["ping", channel, "1500"]);
     assert.equal(first.event.outcome, "UNKNOWN");
     assert.equal(second.event.outcome, "UNKNOWN");
     const id1 = first.event.requestId;
@@ -69,7 +69,7 @@ test("one invocation writes exactly one request — there is no auto-retry path"
   const root = mkdtempSync(join(tmpdir(), "probe-noresend3-"));
   try {
     const { channel } = makeChannel(root);
-    run(["ping", channel, "400"]);
+    run(["ping", channel, "1500"]);
     assert.equal(requestIdInbox(channel).length, 1,
       "one ping must produce exactly one request file (no resend loop)");
     const trace = readFileSync(join(channel, "trace.jsonl"), "utf8").trim().split("\n");
@@ -92,7 +92,7 @@ test("one-in-flight: a SECOND command while the first is un-acknowledged writes 
       deadlineMs: Date.now() + 60_000,
     });
     const before = readdirSync(join(channel, "inbox"));
-    const r = run(["ping", channel, "300"]);
+    const r = run(["ping", channel, "1500"]);
     assert.equal(r.event.outcome, "BLOCKED");
     assert.equal(r.event.blocker.code, "ONE_IN_FLIGHT");
     assert.equal(r.event.requestState, "NOT_SENT");
@@ -112,7 +112,7 @@ test("an expired in-flight marker does not block forever (deadline-bounded)", ()
       startedAt: new Date(Date.now() - 70_000).toISOString(),
       deadlineMs: Date.now() - 10_000,   // long past
     });
-    const r = run(["ping", channel, "300"]);
+    const r = run(["ping", channel, "1500"]);
     assert.equal(r.event.outcome, "UNKNOWN");   // proceeds, then times out
     assert.equal(requestIdInbox(channel).length, 1);
   } finally {

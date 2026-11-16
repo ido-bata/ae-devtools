@@ -47,8 +47,10 @@ test("N concurrent probe processes produce exactly one in-flight request", async
   try {
     const { channel } = makeChannel(root);   // no responder: winner ends UNKNOWN
     const N = 6;
+    // The deadline must cover claim election (~200ms confirm) plus process
+    // spawn stagger, or late contenders legitimately send after expiry.
     const results = await Promise.all(
-      Array.from({ length: N }, () => runProbe(channel, 500)),
+      Array.from({ length: N }, () => runProbe(channel, 3000)),
     );
     for (const r of results) {
       assert.equal(r.err, "", `probe wrote to stderr: ${r.err}`);
@@ -98,8 +100,10 @@ test("concurrent reclaim of an expired claim: exactly one winner, fresh claims n
         startedAt: new Date(Date.now() - 60_000).toISOString(),
         deadlineMs: Date.now() - 1_000,
       }) + "\n", { mode: 0o600 });
+      // Same margin as above: election + stagger must fit inside the
+      // deadline or a late contender wins a legitimately freed slot.
       const results = await Promise.all(
-        Array.from({ length: N }, () => runProbe(channel, 400)),
+        Array.from({ length: N }, () => runProbe(channel, 3000)),
       );
       for (const r of results) {
         assert.ok(r.event, `probe produced no JSON event: ${r.out} ${r.err}`);
