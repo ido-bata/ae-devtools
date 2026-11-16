@@ -29,15 +29,15 @@
 
 GitHub Projects と Linear で同じ field を二重 canonical にしない。**Linear の Project status / Done 境界は release-level reconciliation** で個別チケットの Done 境界に含めない（[ADR-0014](./architecture/decisions/ADR-0014-linear-profile.md)）。
 
-## Weekly release sprint
+## Release cadence / sprint
 
-- 通常 sprint は **1 週間**。これは planning cadence であり、工期保証ではない。
-- 1 sprint = 1 target semantic version = 1 release integration branch。
-- release branch: `release-<major>-<minor>-<patch>`（例: `release-0-1-0`）。
-- sprint 開始時に `main` から release branch を作成する。緊急 patch 等、release scope / date を明示的に decision する場合は 1 週間から外れてよい。patch release でも `main` を直接変更せず patch release branch からの release PR を使う。
+- release cadence は **deliverable-unit**（[`ADR-0015-deliverable-unit-release-cadence.md`](./architecture/decisions/ADR-0015-deliverable-unit-release-cadence.md)）。固定日程や巨大な機能セットを待たず、独立して利用可能な成果物が成立した単位で release を切る。
+- 1 release branch = `release-<major>-<minor>-<patch>`。前 release PR pending 中は frozen head から作成する（ADR-0015 §4）。
+- ticket PR は受入条件充足 + required checks green で release branch へ **追加承認なしに継続統合** する（ADR-0015 §2）。`release → main` のみ ADR-0012 の明示承認が必要。
+- freeze 宣言後は release-wide verification を frozen SHA に対して batch 実行する。ticket PR ごとに AE 実機・全体 E2E・配布物ビルドを要求しない。
 - 中長期 release / roadmap / milestone / capacity / agent 数による短縮見積もりは `agent-delivery-estimation` Skill を使う。主観的 calendar / linear agent scaling に依存しない。
 
-詳細: [`docs/release.md`](./release.md) + [`docs/architecture/ADR-0003-weekly-release-sprint.md`](./architecture/decisions/ADR-0003-weekly-release-sprint.md)。
+詳細: [`docs/release.md`](./release.md) + [`docs/architecture/ADR-0003-weekly-release-sprint.md`](./architecture/decisions/ADR-0003-weekly-release-sprint.md) + [`ADR-0015`](./architecture/decisions/ADR-0015-deliverable-unit-release-cadence.md)。
 
 ## Ticket / branch / Draft PR lifecycle
 
