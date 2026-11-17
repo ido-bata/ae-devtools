@@ -55,9 +55,13 @@ only when `assumeIdempotent: true`.
 
 **fake/mock only** — automated tests prove the loop mechanics and
 reply-identity handling. NOT proven: real AE dispatch, ExtendScript
-semantics, consent/catalog gates (PR #42), real diagnostics schema
-(Issue #37), real-host regression. The diagnostics records here mirror
-the #37 field names but do not import that module.
+semantics, consent/catalog gates (PR #42), real-host regression.
+Diagnostics records are canonical `ae-devtools.diagnostics/v1` built
+through `../diagnostics/schema.mjs`; `tests/joined.test.mjs` exercises
+the full fake-level chain — TS fixture → jsx-toolchain build → loop
+dispatch → diagnostic → `diagnostics/source-map.mjs` resolution back to
+the TS line → TS fix → rebuild → rerun → `regressionCheck` →
+`serializeLoopEvidence` — on one fixture and one evidence chain.
 
 ## Run
 
