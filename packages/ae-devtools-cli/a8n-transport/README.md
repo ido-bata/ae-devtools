@@ -40,6 +40,12 @@ runner.runScript(source)
   directory, so an installed package's `node_modules` is not mutated).
   This is a repo/operator tool: it is shipped in the tarball for
   completeness but has no `bin` entry; invoke it by path.
+- `launch-stages.mjs` — staged launch diagnostics (Issue #144): decomposes
+  the openSliceSession path into resolution → contract gates → host-script
+  build → launch → ownership → GUI/modal → dispatch-result, reporting
+  PASS/FAIL/BLOCKED/UNKNOWN per stage. GUI/modal and host-internal state
+  are UNOBSERVABLE from Node and always report UNKNOWN — never a
+  root-cause claim, never a workaround for Adobe bundled features.
 - `tests/` — dependency-free `node:test` suite (`node tests/run.mjs`).
 
 ## ae-a8n pin caveat
