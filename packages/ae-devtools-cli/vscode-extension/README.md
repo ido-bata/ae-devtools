@@ -70,6 +70,25 @@ only** — real AE acceptance is a release-candidate item
 ## Packaging status
 
 The manifest is VSCode-ready (`engines.vscode ^1.102.0`, ESM entry).
-`vsce package` / install verification is tracked under the release
-distribution work (#143 lane) — this directory ships inside the
-`@ido-bata/ae-devtools-cli` tarball via the parent `files` list.
+This directory ships inside the `@ido-bata/ae-devtools-cli` tarball
+via the parent `files` list.
+
+A standalone VSIX is **not** produced by running `vsce package` inside
+this directory: `controller.mjs` imports sibling runtime modules
+(`../mcp-server`, `../vscode-debugger`, `../dev-loop`, …) and the npm
+production dependencies (`jsonc-parser`, `@ido-bata/ae-a8n`, …), none of
+which live under `vscode-extension/`. Use the package-level script
+instead (Issue #166):
+
+```sh
+npm run package:vsix -- --out dist/ae-devtools.vsix
+```
+
+`scripts/package-vsix.mjs` assembles a stage tree containing the npm
+`files` set, the production `node_modules`, and this directory's
+manifest rewritten so `main` resolves to
+`./vscode-extension/extension.mjs`, then runs `vsce package` on it.
+Tests and recorded evidence are stripped from the bundle.
+`vscode-extension/tests/package-vsix.test.mjs` fails if a relative
+import reachable from the extension entry would not resolve inside the
+stage tree.
