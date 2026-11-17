@@ -1,7 +1,10 @@
 /**
  * session.mjs — real-host session assembly for the a8n-transport slice
- * (Issue #49). REAL AE ONLY — this module imports `@ido-bata/ae-a8n` and
- * must never be loaded by automated tests.
+ * (Issue #49). REAL AE ONLY — `openSliceSession` resolves
+ * `@ido-bata/ae-a8n` dynamically and launches After Effects. Automated
+ * tests may import this module only to exercise the contract gate with
+ * `--ae-a8n-root` fixture stubs (tests/compat.test.mjs); they must never
+ * reach `AfterEffects.launch`.
  *
  * What it does, in order:
  *   1. builds a host script with `ae-a8n extension build`, declaring the
@@ -34,6 +37,7 @@ import { promisify } from "node:util";
 
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
 import { createA8nTransport } from "./transport.mjs";
+import { missingContractExports, aeA8nContractError } from "./compat.mjs";
 
 const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +66,7 @@ async function loadAeA8n(aeA8nRoot) {
     const mod = await import(indexUrl);
     return {
       AfterEffects: mod.AfterEffects,
+      mod,
       cliPath: join(aeA8nRoot, "dist", "cli.js"),
       source: `local:${aeA8nRoot}`,
       head: await gitHead(aeA8nRoot),
@@ -69,7 +74,8 @@ async function loadAeA8n(aeA8nRoot) {
   }
   const { createRequire } = await import("node:module");
   const require = createRequire(import.meta.url);
-  const { AfterEffects } = await import("@ido-bata/ae-a8n");
+  const mod = await import("@ido-bata/ae-a8n");
+  const { AfterEffects } = mod;
   const entry = require.resolve("@ido-bata/ae-a8n");
   let version = null;
   try {
@@ -77,6 +83,7 @@ async function loadAeA8n(aeA8nRoot) {
   } catch { /* version stays null */ }
   return {
     AfterEffects,
+    mod,
     // dist/index.js and dist/cli.js are siblings.
     cliPath: join(dirname(entry), "cli.js"),
     source: "npm:@ido-bata/ae-a8n",
@@ -94,8 +101,20 @@ async function loadAeA8n(aeA8nRoot) {
  *   workdir        — scratch dir for the generated host script (default: tmp)
  */
 export async function openSliceSession(options = {}) {
-  const { AfterEffects, cliPath, source: aeA8nSource, head: aeA8nHead } =
+  const { AfterEffects, mod: aeA8nMod, cliPath, source: aeA8nSource, head: aeA8nHead } =
     await loadAeA8n(options.aeA8nRoot);
+  // Contract gate (Issue #138): refuse BEFORE extension build / launch when
+  // the resolved ae-a8n lacks the handshake exports that post-date the
+  // #103/#105 real-host fixes. Published 0.1.0-alpha.2 fails here with an
+  // actionable message instead of an obscure mid-run host error.
+  const missing = missingContractExports(aeA8nMod);
+  if (missing.length > 0) {
+    throw aeA8nContractError({
+      source: aeA8nSource,
+      version: aeA8nHead,
+      missing,
+    });
+  }
   const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-transport-"));
   // sessionRoot keeps ae-a8n's trace.jsonl + result files inside workdir so
   // launch-failure evidence survives instead of landing in an anonymous

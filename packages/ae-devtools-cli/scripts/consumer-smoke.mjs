@@ -98,10 +98,19 @@ try {
   // reused by the diagnostics round-trip below.
   let smokeMappedLine = null;
 
-  // 3. doctor (no AE contact)
+  // 3. doctor (no AE contact). Also asserts the ae-a8n contract probe
+  // ships in the tarball (Issue #138): the consumer install resolves the
+  // pinned ae-a8n, which currently predates the required contract, so
+  // contractOk must be an honest boolean — never absent, never faked.
   check("ae-devtools doctor", () => {
     const out = run(join(BIN, "ae-devtools"), ["doctor"]);
     assert(out.length > 0, "empty doctor output");
+    const json = JSON.parse(out);
+    assertNode.equal(json.schema, "ae-devtools.cli.doctor/v1");
+    assertNode.equal(typeof json.aeA8n?.contractOk, "boolean",
+      "doctor must report aeA8n.contractOk");
+    assertNode.ok(Array.isArray(json.aeA8n?.missing),
+      "doctor must report aeA8n.missing");
   });
 
   // 4. discover + inspect (fake evidence levels)
