@@ -86,17 +86,40 @@ function fail(code, message, extra = {}) {
   return 2;
 }
 
+const A8N_REQUIRED_EXPORTS = [
+  "MacGuiRecovery",
+  "MacHostRecovery",
+  "readUsername",
+  "assessGuiObservation",
+  "acquireGuiLease",
+  "inspectGuiLease",
+  "reapGuiLease",
+];
+
 async function loadA8n(root) {
-  const entry = root ? join(root, "dist", "index.js") : null;
-  if (!entry || !existsSync(entry)) {
+  if (root) {
+    const entry = join(root, "dist", "index.js");
+    if (!existsSync(entry)) {
+      const e = new Error(
+        "ae-a8n recovery surface requires --ae-a8n-root pointing at a built ae-a8n checkout " +
+          "(or the pinned @ido-bata/ae-a8n dependency, which ships the #109/#111 exports since 0.2.0)",
+      );
+      e.code = "AE_A8N_SURFACE_MISSING";
+      throw e;
+    }
+    return import(entry);
+  }
+  const mod = await import("@ido-bata/ae-a8n");
+  const missing = A8N_REQUIRED_EXPORTS.filter((name) => typeof mod[name] !== "function" && typeof mod[name] !== "object");
+  if (missing.length > 0) {
     const e = new Error(
-      "ae-a8n recovery surface requires --ae-a8n-root pointing at a built ae-a8n checkout " +
-        "(needs #109/#111 exports; npm package does not ship them yet)",
+      `resolved ae-a8n is missing recovery exports: ${missing.join(", ")} — ` +
+        "pass --ae-a8n-root pointing at a built ae-a8n checkout",
     );
     e.code = "AE_A8N_SURFACE_MISSING";
     throw e;
   }
-  return import(entry);
+  return mod;
 }
 
 function sessionFromFlags(a8n, flags) {

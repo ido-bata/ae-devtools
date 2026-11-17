@@ -1,0 +1,9 @@
+{
+  "schema": "ae-devtools.release-scope/v1",
+  "release": "0.3.0",
+  "supportedRelease": {
+    "state": "not-recorded"
+  },
+  "claimedCapabilities": [],
+  "notes": "Owner decision pending (plan.md §6.1 step 3): the supported-release set is not yet recorded, and no capability is claimed at verified-real-host. claimedCapabilities stays empty until a conformance evidence record under evidence/conformance/<runId>/ exists for the claim. Rows the catalog marks unsupported/UNVERIFIED are never listed here and never block the gate."
+}

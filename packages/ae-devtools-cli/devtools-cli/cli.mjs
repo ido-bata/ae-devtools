@@ -7,7 +7,7 @@
  * runOperation(), which is the only dispatch path (consent scope, gates,
  * trusted runner, quarantine).
  *
- *   node cli.mjs doctor [--runs]
+ *   node cli.mjs doctor [--runs] [--ae-a8n-root <dir>]
  *   node cli.mjs discover [--domain <d>]
  *   node cli.mjs inspect <opId>
  *   node cli.mjs execute <opId> [--args '<json>'] [--confirm-destructive]
@@ -32,7 +32,9 @@
  * Sessions:
  *   fake — codec-faithful vm host (FAKE/MOCK evidence only)
  *   a8n  — owned AE session via a8n-transport (Issue #49); requires that
- *          experiment present and --ae-a8n-root for unreleased builds
+ *          experiment present and an ae-a8n satisfying the contract gate
+ *          (a8n-transport/compat.mjs, Issue #138) — ae-a8n <=0.1.0-alpha.2
+ *          does NOT, use --ae-a8n-root
  *
  * Consent: --consent grant is REQUIRED for any dispatch; default is deny.
  * This is a local policy flag, not authenticated authorization
@@ -244,11 +246,18 @@ process.on("unhandledRejection", (reason) => {
 async function main() {
   switch (cmd) {
     case "doctor": {
-      let aeA8n = { resolvable: false };
+      // Read-only ae-a8n probe (Issue #138): resolves the same module
+      // openSliceSession would use — npm dependency or --ae-a8n-root —
+      // and reports contract status without launching AE.
+      let aeA8n = { resolvable: false, contractOk: false };
       try {
-        const entry = import.meta.resolve?.("@ido-bata/ae-a8n") ?? null;
-        aeA8n = { resolvable: entry !== null, entry };
-      } catch { /* not resolvable from here */ }
+        const { probeAeA8n } = await import("../a8n-transport/compat.mjs");
+        aeA8n = await probeAeA8n({
+          aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
+        });
+      } catch (e) {
+        aeA8n = { resolvable: false, contractOk: false, error: String(e?.message ?? e) };
+      }
       const runs = await listRuns({ dir: RUNS_DIR });
       emit({
         schema: "ae-devtools.cli.doctor/v1",

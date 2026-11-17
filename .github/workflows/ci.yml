@@ -176,7 +176,7 @@ jobs:
           set -uo pipefail
           fail=0
           ran=0
-          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension agent-loop; do
+          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension agent-loop vscode-extension vscode-debugger; do
             if [ ! -f "packages/ae-devtools-cli/$d/tests/run.mjs" ]; then
               echo "=== $d === (absent on this head; skipping)"
               continue
@@ -221,27 +221,3 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/runtime-bridge/cep-panel/tests/run.mjs
-  vscode-debugger:
-    name: vscode-debugger (launch.json contract, no AE)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Detect suite
-        id: detect
-        run: |
-          if [ -f experiments/vscode-debugger/tests/run.mjs ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "experiments/vscode-debugger not on this head; skipping"
-          fi
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - if: steps.detect.outputs.present == 'true'
-        working-directory: experiments/vscode-debugger
-        run: npm ci
-      - if: steps.detect.outputs.present == 'true'
-        run: node experiments/vscode-debugger/tests/run.mjs

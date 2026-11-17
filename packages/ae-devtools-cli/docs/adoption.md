@@ -5,25 +5,35 @@
 
 ## Install
 
-npm publish 前の現時点では tarball または git 依存で導入する。
+`@ido-bata/ae-devtools-cli` は npm に公開済み（latest `0.2.0`）。
+ローカルのソース checkout や開発者固有の設定は不要。
 
 ```sh
-# tarball（ae-devtools repo で `npm pack packages/ae-devtools-cli`）
-npm install ./ae-devtools-cli-<version>.tgz
-
-# または git: npm / bun は git repo 内の subdirectory を直接
-# install できない（repo root に package.json がなく、git URL に
-# path を含める記法も未サポート）。clone して package dir を
-# file: 依存として install する
-#   `npm install github:ido-bata/ae-devtools#release-0-2-0` は
-#   repo root を解決しに行き package.json 不在で失敗する
-git clone --depth 1 --branch release-0-2-0 \
-  https://github.com/ido-bata/ae-devtools.git
-npm install ./ae-devtools/packages/ae-devtools-cli
+npm install --save-dev @ido-bata/ae-devtools-cli
+# または bun / pnpm 等、プロジェクトの package manager で同等に
 ```
 
 提供される bin: `ae-devtools`, `jsx-toolchain`, `ae-devtools-mcp`,
 `ae-devtools-recover`, `ae-devtools-cep`, `ae-devtools-cep-lifecycle`。
+
+### real-host session (`--session a8n`) の ae-a8n 要件
+
+`--session a8n` は owned AE session を `@ido-bata/ae-a8n` 経由で使う。
+この経路が要求する ae-a8n contract（capability handshake export =
+ae-a8n#102。#103 extension prelude / #105 LaunchServices 修正を祖先に持つ）を
+満たすのは ae-a8n `release-0-2-0` 以降。npm pin は `@ido-bata/ae-a8n@0.2.0`
+（`next` dist-tag で公開済み）で、これを満たす。`<=0.1.0-alpha.2` を
+解決した場合のみ contract gate が launch 前に refuse する。
+
+- `ae-devtools doctor` が解決した ae-a8n の `contractOk` を報告する
+  （AE は起動しない）。
+- contract 未満の ae-a8n で `--session a8n` を実行すると、launch 前に
+  `AE_A8N_CONTRACT_UNSUPPORTED` で refuse される（fail-closed。
+  分かりにくい host error で途中失敗しない）。
+- 次回の `@ido-bata/ae-a8n` publish までは、ae-a8n の checkout
+  （`release-0-2-0` 以降、`dist/` build 済み）を `--ae-a8n-root <dir>`
+  で指定する。fake session（`--session fake`、既定）はこの要件に
+  関係なく動作し、evidence level は fake/mock のまま。
 
 ## What you get
 
@@ -64,8 +74,10 @@ client（Claude Desktop 等）の設定例:
 
 実機 AE に繋ぐ場合は `"args": ["--session", "a8n", "--ae-a8n-root",
 "/path/to/ae-a8n"]` を渡す（owned session のみ。attached/unknown は拒否）。
-`ae_execute` / `ae_verify` は CLI と同じ consent 契約で、`consent:"grant"`
-が無い呼び出しは session を開く前に refuse される。default の fake session
+`--ae-a8n-root` の ae-a8n は前述の contract を満たす build が必要で、
+満たさない場合は session open 前に refuse される。`ae_execute` /
+`ae_verify` は CLI と同じ consent 契約で、`consent:"grant"` が無い
+呼び出しは session を開く前に refuse される。default の fake session
 の結果は fake/mock evidence であり real-host 検証ではない。
 
 ## Coding agent からの dev loop 利用（agent-loop library）

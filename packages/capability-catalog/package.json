@@ -9,6 +9,7 @@
     "gate": "bun run scripts/gate.ts",
     "report": "bun run scripts/report.ts",
     "verify": "bun run scripts/verify.ts",
+    "conformance-gate": "bun run scripts/conformance-gate.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "discover": "bun run scripts/discover.ts",

@@ -47,12 +47,16 @@ export type RepoInputs = {
 
 export function loadRepoInputs(): RepoInputs {
   const ADAPTER_CLAIMS_PATH = "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json";
+  const REAL_HOST_CLAIMS_PATH = "packages/capability-catalog/real-host-claims.json";
   const scripting = importScripting({
     symbols: load(INPUT_PATHS.scriptingSymbols),
     summary: load(INPUT_PATHS.scriptingSummary),
     sourcesLock: load(INPUT_PATHS.scriptingLock),
     adapterClaims: existsSync(join(REPO_ROOT, ADAPTER_CLAIMS_PATH))
       ? (load(ADAPTER_CLAIMS_PATH) as Parameters<typeof importScripting>[0]["adapterClaims"])
+      : undefined,
+    realHostClaims: existsSync(join(REPO_ROOT, REAL_HOST_CLAIMS_PATH))
+      ? (load(REAL_HOST_CLAIMS_PATH) as Parameters<typeof importScripting>[0]["realHostClaims"])
       : undefined,
   });
   const operations = load<{ operations: Parameters<typeof importToolOperations>[0]["operations"]["operations"] }>(
@@ -80,6 +84,9 @@ export function loadRepoInputs(): RepoInputs {
   ) as Record<string, string>;
   if (existsSync(join(REPO_ROOT, ADAPTER_CLAIMS_PATH))) {
     files[ADAPTER_CLAIMS_PATH] = sha256(ADAPTER_CLAIMS_PATH);
+  }
+  if (existsSync(join(REPO_ROOT, REAL_HOST_CLAIMS_PATH))) {
+    files[REAL_HOST_CLAIMS_PATH] = sha256(REAL_HOST_CLAIMS_PATH);
   }
   return { scripting, tools, semantics, sdk, files };
 }

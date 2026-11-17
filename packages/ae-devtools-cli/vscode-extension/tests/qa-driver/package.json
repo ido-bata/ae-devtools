@@ -1,0 +1,9 @@
+{
+  "name": "ae-driver",
+  "publisher": "qa",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.102.0" },
+  "main": "./extension.mjs",
+  "activationEvents": ["onStartupFinished"],
+  "capabilities": { "untrustedWorkspaces": { "supported": true } }
+}

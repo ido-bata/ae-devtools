@@ -60,6 +60,21 @@ ae-devtools では `.github/workflows/ci.yml`（`pull_request` 対象、package 
 
 release gate 実施途中で中断した場合、途中までの green を full pass とみなさない。check result は code snapshot に bind し、stale success を再利用しない。
 
+### conformance gate（capability evidence、Issue #21 / CAP056）
+
+`release-x-y-z → main` の release-source check は `packages/capability-catalog` の conformance release gate（`bun run conformance-gate`、`.github/workflows/release-source-check.yml`）を必須 check として実行する。判定規則と release 受入との接続は次の通り。
+
+- **claim 集合** = catalog の `coverage.verification: verified-real-host` 行 ∪ `release-scope.json` の `claimedCapabilities`。宣言 claim は catalog row の存在と `compatibility.os` 宣言を cross-check され、catalog が宣言しない platform の claim は `platform-not-declared` で fail する。
+- **evidence record** は `evidence/conformance/<runId>/record.json` + cited artifacts として commit され、`artifactHashes` が release candidate と same-bytes で再計算できる場合のみ有効（`design/conformance-evidence.md` §3）。claim を満たせるのは `verified-real-host` の `PASS` record のみ。
+- **verdict の意味**:
+  - `pass` — 評価対象の全 claim に実機 evidence がある。
+  - `violations` — scope / claim 違反あり。check は fail する。
+  - `no-claims` — claim 集合が空。**verified conformance の pass ではなく、実用性の証明でもない**。`supportedRelease` 未記録のまま CI が green になる現状を「対応環境が検証済み」と読み替えない。
+- **`supportedRelease` の記録は owner decision**（`specs/ae-capability-coverage/plan.md` §6.1）。`not-recorded` は gate の diagnostic であり blocker ではないが、release 受入時には「どの AE build / SDK / OS を supported と主張し、何を範囲外とするか」を release PR 本文で明示する。
+- **未検証 platform を claim に追加して gate を阻止することもしない**。Windows が UNVERIFIED のままなら claim しないことが正直な状態であり、release notes / PR 本文に `UNVERIFIED` と明記する。逆に、検証済み evidence のない capability を `claimedCapabilities` に書いて通すこともできない（evidence record がなければ violation）。
+
+Release PR 本文は少なくとも (a) conformance gate verdict、(b) claimed capabilities と各々の evidence level、(c) UNVERIFIED platform・未対応 SDK の一覧、を明示する。`no-claims` を実機検証済みと表現しない。
+
 ### stack reconciliation gate（predecessor 変更時の再検証）
 
 stacked PR 構造を採用した場合、predecessor の rebase / update / merge の結果 downstream head SHA が変化するたびに、affected required validation を **新しい SHA に再実行** する（[AGENTS.md §12](../AGENTS.md) の False green 禁止 と整合）。

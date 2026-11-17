@@ -1,0 +1,94 @@
+# vscode-extension — VSCode dev-loop surface (Issues #152–#154, CAP050 slices 1–3)
+
+Thin VSCode wrapper over the **same** dev-loop core the MCP server and
+CLI use. It adds no dispatch path and no permission path of its own:
+
+- `controller.mjs` — vscode-free logic, unit-tested with `node:test`
+  against the codec-faithful fake session.
+- `diagnostics.mjs` — `ae-devtools.diagnostics/v1` records → Problems-panel
+  publish plan (Issue #153): severity mapping, sourcemap-resolved
+  original-TS positions via `diagnostics/source-map.mjs`, honest
+  `no-position`/`no-map`/`unmapped` handling (positions are never
+  fabricated), and collectors for execute outcomes
+  (`fromAeError`/`fromTransportOutcome`) and agent-loop reports.
+- `extension.mjs` — activation entry; adapts `vscode` UI (input boxes,
+  modal confirms, information messages) to the controller's injected
+  `ui` surface, and publishes diagnostics plans to the Problems panel.
+- `package.json` — VSCode extension manifest (`main`, `engines`,
+  contributed commands + `ae-devtools.*` configuration).
+
+## Commands
+
+| Command | Maps to | Consent |
+| --- | --- | --- |
+| `ae-devtools.discover` | `devloop.discover()` | none — registry metadata, never opens a session |
+| `ae-devtools.inspect` | `devloop.inspect(opId)` | none — metadata only, never executes |
+| `ae-devtools.execute` | `devloop.execute()` → `runOperation()` | modal confirms for destructive / render ops, then explicit consent → forwarded as `consent:"grant"` + confirm flags to the canonical gates. Failure outcomes emit a diagnostics publish plan → Problems panel |
+| `ae-devtools.verify` | `devloop.verify()` | explicit consent → `consent:"grant"`; read-back reports host-observed state only; same diagnostics collection |
+| `ae-devtools.debug.setup` | `vscode-debugger` `gen`+`validate` (Issue #154) | none — writes/merges attach-only `.vscode/launch.json` (JSONC-safe); `launch` requests are never emitted |
+| `ae-devtools.debug.attach` | `vscode-debugger` `preflight` (Issue #154) | none — fail closed: only `ready-owned-session` is attachable; every other verdict returns guidance, never an attach claim (`debugCompletionClaimed` always false) |
+
+Every result surfaces `session.evidenceLevel` verbatim — fake/mock
+results are never presented as real-host verification.
+
+## Sessions
+
+`ae-devtools.session` setting: `fake` (default, codec-faithful mock)
+or `a8n` (owned AE session via `ae-a8n`; set `ae-devtools.aeA8nRoot`,
+optional `ae-devtools.installDir`). The session is opened lazily on the
+first consented execute/verify and shared for the extension lifetime.
+
+`ae-devtools.debug.hostAppSpecifier` / `ae-devtools.debug.ownedPid`
+configure the debug commands (see Issue #53 contract notes — the
+authoritative specifier comes from the extension's app picker;
+`--owned-pid` is attestation-grade, never an attach target).
+
+## Safety contract (unchanged from MCP/CLI)
+
+- UI confirmation is collected in the extension layer and forwarded as
+  `consent:"grant"`; the core consent scope, `confirmDestructive` /
+  `confirmRender` gates, trusted runner and UNKNOWN quarantine in
+  `runOperation` are untouched.
+- A declined confirmation is a structured `DECLINED_BY_USER` refusal
+  and the session is never opened.
+- UNKNOWN outcomes are never retried.
+
+## Tests
+
+```sh
+node tests/run.mjs
+```
+
+Covers discover/inspect metadata, consent default-deny at the UI gate,
+destructive/render confirm ordering, execute→verify on the fake host,
+and session lifecycle, plus the diagnostics publish plan (mapped /
+unmapped / no-position / no-map records, execute-outcome and
+loop-report collectors, controller-attached plans). **Fake/mock level
+only** — real AE acceptance is a release-candidate item
+(Issues #152/#153 verification level).
+
+## Packaging status
+
+The manifest is VSCode-ready (`engines.vscode ^1.102.0`, ESM entry).
+This directory ships inside the `@ido-bata/ae-devtools-cli` tarball
+via the parent `files` list.
+
+A standalone VSIX is **not** produced by running `vsce package` inside
+this directory: `controller.mjs` imports sibling runtime modules
+(`../mcp-server`, `../vscode-debugger`, `../dev-loop`, …) and the npm
+production dependencies (`jsonc-parser`, `@ido-bata/ae-a8n`, …), none of
+which live under `vscode-extension/`. Use the package-level script
+instead (Issue #166):
+
+```sh
+npm run package:vsix -- --out dist/ae-devtools.vsix
+```
+
+`scripts/package-vsix.mjs` assembles a stage tree containing the npm
+`files` set, the production `node_modules`, and this directory's
+manifest rewritten so `main` resolves to
+`./vscode-extension/extension.mjs`, then runs `vsce package` on it.
+Tests and recorded evidence are stripped from the bundle.
+`vscode-extension/tests/package-vsix.test.mjs` fails if a relative
+import reachable from the extension entry would not resolve inside the
+stage tree.

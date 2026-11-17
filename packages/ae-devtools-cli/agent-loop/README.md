@@ -43,14 +43,25 @@ only when `assumeIdempotent: true`.
   UNKNOWN quarantine.
 - `fixtures/` — `broken.jsx` (two seeded bugs) and `clean.jsx` plus
   mutation fixtures used by the dirty-state tests.
+- `evidence.mjs` — `serializeLoopEvidence` / `serializeLoopEvidenceJson`
+  (Issue #150, CAP066): turns a loop report (+ optional `regressionCheck`
+  result) into a deterministic `ae-devtools.agent-loop-evidence/v1`
+  document — per-iteration request/result/diagnostics/regression data,
+  source sha256 pins, state-dirty flags. `evidenceLevel` accepts only
+  `"fake"`: real-host promotion goes through the #21 conformance
+  pipeline, never through this serializer.
 
 ## Evidence level
 
 **fake/mock only** — automated tests prove the loop mechanics and
 reply-identity handling. NOT proven: real AE dispatch, ExtendScript
-semantics, consent/catalog gates (PR #42), real diagnostics schema
-(Issue #37), real-host regression. The diagnostics records here mirror
-the #37 field names but do not import that module.
+semantics, consent/catalog gates (PR #42), real-host regression.
+Diagnostics records are canonical `ae-devtools.diagnostics/v1` built
+through `../diagnostics/schema.mjs`; `tests/joined.test.mjs` exercises
+the full fake-level chain — TS fixture → jsx-toolchain build → loop
+dispatch → diagnostic → `diagnostics/source-map.mjs` resolution back to
+the TS line → TS fix → rebuild → rerun → `regressionCheck` →
+`serializeLoopEvidence` — on one fixture and one evidence chain.
 
 ## Run
 

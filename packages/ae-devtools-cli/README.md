@@ -11,10 +11,24 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 ## Install
 
 ```sh
-npm install @ido-bata/ae-devtools-cli        # npm publish 後
-# または tarball / git から:
-npm install ./ae-devtools-cli-0.2.0.tgz
+npm install @ido-bata/ae-devtools-cli          # registry latest
+npm install @ido-bata/ae-devtools-cli@0.3.0    # this release, once published
+# tarball / local checkout からも可:
+npm install ./ae-devtools-cli-0.3.0.tgz
 ```
+
+### Migrating to 0.3.0
+
+- New dev-loop surface: `ae-devtools discover/inspect/execute/verify`,
+  `ae-devtools-mcp` (stdio MCP), and the VSCode extension
+  (`ae-devtools-vscode-extension`, packaged via `npm run package:vsix`).
+- `--session a8n` (real After Effects) now **requires an ae-a8n build
+  satisfying the capability contract** (#102 handshake exports +
+  #103/#105 fixes). ae-a8n `<=0.1.0-alpha.2` predates them and is refused
+  up front (`AE_A8N_CONTRACT_UNSUPPORTED`; check `ae-devtools doctor` →
+  `aeA8n.contractOk`). The pin is `@ido-bata/ae-a8n@0.2.0` (published
+  under the `next` dist-tag); override with `--ae-a8n-root <checkout>`.
+  The `fake` session is unaffected.
 
 Provides six bins:
 
@@ -63,12 +77,19 @@ ae-devtools verify --session fake --consent grant
 
 ```sh
 ae-devtools execute <opId> --session a8n --consent grant
-# unreleased ae-a8n 検証時のみ:
+# 別の ae-a8n build を使う場合:
 ae-devtools execute <opId> --session a8n --ae-a8n-root <local-a8n-checkout> --consent grant
 ```
 
-`--session a8n` は `@ido-bata/ae-a8n` (pinned `0.1.0-alpha.2`) の
-owned-session launch を使う。`attached`/`unknown` ownership は拒否される。
+`--session a8n` は `@ido-bata/ae-a8n` の owned-session launch を使う。
+解決される ae-a8n が必要 contract（#102 handshake export。#103/#105
+修正を祖先に持つ）を満たさない場合は launch 前に
+`AE_A8N_CONTRACT_UNSUPPORTED` で refuse される — `ae-devtools doctor`
+の `aeA8n.contractOk` で事前確認できる。npm pin は `@ido-bata/ae-a8n@0.2.0`
+（`next` dist-tag で公開）で contract を満たす。`<=0.1.0-alpha.2` を
+解決した場合は launch 前に refuse される。別 build を使う場合は
+`--ae-a8n-root <ae-a8n checkout>` で override できる。
+`attached`/`unknown` ownership は拒否される。
 consent の default は deny。destructive/render op は追加の confirm flag が必要。
 
 ## Crash recovery (`ae-devtools-recover`)
@@ -85,9 +106,10 @@ AE / GUI 不要で consumer 環境でも動く。
 
 `observe` / `recover` / `verify-exit` は real-host 前提:
 
-- `--ae-a8n-root <built-ae-a8n>` が必要。ae-a8n repo の #109（GUI 観測）/
-  #111（GUI lease + dialog class）の export を含む build が前提で、
-  現時点の npm 公開版 (`@ido-bata/ae-a8n@0.1.0-alpha.2`) には未搭載。
+- ae-a8n #109（GUI 観測）/#111（GUI lease + dialog class）の export を
+  含む ae-a8n が必要。npm pin の `@ido-bata/ae-a8n@0.2.0` はこれらを
+  同梱するため `--ae-a8n-root` なしで解決される。古い ae-a8n を
+  使う場合のみ `--ae-a8n-root <built-ae-a8n>` を指定する。
 - `recover` は devtools-cli の run marker
   (`ae-devtools.cli.run-guard/v1`) による認可が必須。self-declared
   flag では GUI mutation に到達しない。

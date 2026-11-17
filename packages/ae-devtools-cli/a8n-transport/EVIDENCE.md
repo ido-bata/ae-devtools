@@ -137,3 +137,112 @@ The flawed evidence files were discarded before rerun.
 - npm-published ae-a8n verification — separate gate after actual publish.
 - GUI observation, modal-dialog recovery, crash/log collection,
   session rebuild — tracked as ae-a8n #107/#108/#109.
+
+## Attempt 5 — release-0-3-0 QA at ae-devtools `4a06639` (2026-11-17)
+
+Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9`,
+AE 2027 = `27.0x78` (already running, non-owned — untouched).
+
+- `run-2026-a8n-4a06639.json` — **PASS (AE 2026)**. Owned session
+  (pid 86307, `ownership.kind:"owned"`), 6 transport sends, all 8 slice
+  steps in their expected outcome class (`error.capture` FAILED with a
+  real host `ReferenceError`, consent tamper BLOCKED, consent denial
+  REFUSED-BEFORE-SEND), handshake battery green, `contractViolations: []`,
+  close `{quit:true}`, no main AE executable left.
+- `run-2027-a8n-launch-blocked-4a06639.json` — **launch-blocked (AE
+  2027)**. `AfterEffects.launch` started AE (pid 4891) but the `app.info`
+  readiness probe never returned a parseable result within 180 s;
+  ae-a8n correctly left the process running (`HostLeftRunningError`,
+  ownership unproven → no quit). Consistent with the known AE 2027
+  modal/UXP launch-blocked issue; root cause unproven.
+
+### Provenance (verified 2026-11-17, Issue #169)
+
+- ae-devtools bytes under test: working tree whose runtime surface
+  (`a8n-transport/`, `jsx-toolchain/`, `mcp-server/`, dev-loop core) is
+  byte-identical to freeze SHA `4a0663990c2cf42fe48297f47c0118912c733e35`
+  (`git diff d2534cb..4a06639` touched only packaging/docs/tests;
+  `4a06639^{tree}` == `1725488^{tree}`). The runs themselves predate the
+  merge commit by minutes and do not embed a sourceSha — attribution
+  rests on this unchanged-surface check, not on an in-band field.
+- ae-a8n bytes under test: `--ae-a8n-root /tmp/ae-a8n-candidate`, a
+  snapshot **without `.git`** (`aeA8nHead: null` in the record). The
+  snapshot's full source tree was diffed against ae-a8n git objects and
+  matches commit `1dbd4de` on `release-0-2-0` (tree `e6003eab…`, merge of
+  PR #149; contains #102/#103/#105, predates #146/#147/#148 and the
+  `0.2.0` version bump). Its `dist/` is byte-identical to a clean
+  `npm ci && npm run build` of `1dbd4de`.
+- **Pre-RC caveat**: `1dbd4de` precedes the 0.2.0 RC freeze `9f340fa`;
+  `host/a8n-host.js`, `src/extensions/manifest.ts` and
+  `src/driver/dispatcher-transport.ts` changed between them, so these
+  runs are **not** same-bytes proof against the ae-a8n 0.2.0 RC or any
+  published tarball (conformance-evidence.md §3). They remain valid
+  real-host evidence for the ae-devtools slice against ae-a8n@`1dbd4de`.
+
+## Attempt 6 — ae-a8n `0.2.0-beta.1` publish-candidate tarball (2026-11-17)
+
+Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9`.
+
+- `run-2026-a8n-beta1.json` — **PASS (AE 2026)** against the actual
+  publish-candidate bytes: `npm pack` reproduced from ae-a8n freeze
+  commit `d895179` gave tarball sha1 `9ada37bce03d87998239ba8a2fdf02f83bdfe878`
+  / integrity `sha512-G3UHhl4i5YJTOb8xBoRZRCy+rrRYiURmK8xByMLRdT3IC+6HpgXN3T2jLBBDj+THK0hFAjxvsoqRHWYpBGgsGw==`
+  (matches `docs/evidence/release-0-2-0-rc/README.md`), installed into a
+  clean consumer (`npm install <tgz>` → `node_modules/@ido-bata/ae-a8n@0.2.0-beta.1`)
+  and passed as `--ae-a8n-root`. Owned session (pid 10068), 6 sends,
+  handshake `compatible`, all step outcomes as expected, consent gates
+  fired, close `{quit:true}`, `assertionViolations: []`,
+  `contractViolations: []`.
+- This is **candidate-bytes** evidence, not registry evidence: the tarball
+  is byte-identical to what `v0.2.0-beta.1` will publish only if the
+  registry `dist.shasum`/`dist.integrity` match after publish (verify
+  before treating as registry proof — Issue #173).
+
+## Attempt 7 — published `@ido-bata/ae-a8n@0.2.0` registry bytes (2026-11-17)
+
+Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9` (build 9).
+
+- Registry state at run time: `@ido-bata/ae-a8n@0.2.0` published
+  2026-11-17T15:38:28Z under the `next` dist-tag
+  (`latest` still resolves `0.1.0-alpha.0`), tarball
+  `https://registry.npmjs.org/@ido-bata/ae-a8n/-/ae-a8n-0.2.0.tgz`,
+  sha1 `3afeb68ba942daaf3451df80e3c0953c3ca6b96b`,
+  integrity `sha512-NyKmrKIlm7zT4yHWPwf8VGxiW2FRBm5Dqf/IJWg1Dh04ceuk5KWLWHAEgNE5cPXc/N8vF3lQG/ny7axm25+shA==`,
+  164 files — matches the ae-a8n `0.2.0` freeze record
+  (`b2c6321`). `0.2.0-beta.1` remains published but is not the
+  dist-tag target.
+- `package.json` pins `"@ido-bata/ae-a8n": "0.2.0"` exactly; a fresh
+  `npm install` resolved `node_modules/@ido-bata/ae-a8n@0.2.0` from
+  the registry tarball above (lockfile `resolved`/`integrity` match).
+- `ae-devtools doctor` (re-run: `node devtools-cli/cli.mjs doctor`) reports
+  `resolvable: true`, `source: npm:@ido-bata/ae-a8n`,
+  `version: 0.2.0`, `contractOk: true`, `missing: []`; the 21-check
+  handshake battery is green without contacting AE.
+- `run-2026-a8n-registry-020.json` — **PASS (AE 2026)**, owned session
+  (pid 10682), `aeA8nSource: npm:@ido-bata/ae-a8n`,
+  `aeA8nHead: 0.2.0`, 6 transport sends, all step outcomes as
+  expected, consent gates fired (`consent.tampered` BLOCKED,
+  `consent.denied` REFUSED-BEFORE-SEND), deliberate runtime error
+  captured FAILED then fix rerun COMPLETED with verify counters 1→2,
+  `close: {quit: true}`, `assertionViolations: []`,
+  `contractViolations: []`.
+- `jsx-toolchain/evidence/jsx-2026-registry-020.json` — **PASS
+  (AE 2026)**: build/dispatch/verify, sourcemap host-error→TS-source
+  mapping, deliberate runtime-error diagnose→fix→rerun→read-back;
+  session step records `aeA8nSource: npm:@ido-bata/ae-a8n`,
+  `aeA8nHead: 0.2.0`, ownership `owned`, AE `26.5.3x9`.
+- `mcp-server/evidence/mcp-real-registry-020-2026.json` — **PASS
+  (AE 2026)**: stdio MCP initialize → `ae_discover` → `ae_execute`
+  `item.addComp` COMPLETED → `ae_verify` `read.projectSummary`
+  COMPLETED; session records `ownership: owned`,
+  `aeVersion: 26.5.3x9`, `aeA8nHead: 0.2.0`. Honest side effect: the
+  added comp left the project dirty, so `session.close` refused
+  (`unsaved changes`) and the stderr line is preserved in the artifact;
+  no project was saved. AE is not running afterwards.
+
+This is **registry evidence**: every run resolved the published
+`@ido-bata/ae-a8n@0.2.0` tarball through npm, not a local checkout or
+candidate tarball. It is scoped to macOS arm64 + AE 2026 `26.5.3x9`
++ owned sessions; Windows, AE2027, VSCode+a8n real-host, Problems
+panel, and SDK/CEP/UXP surfaces remain unverified (Issue #21,
+`release-scope.json` stays `not-recorded` pending owner decision).

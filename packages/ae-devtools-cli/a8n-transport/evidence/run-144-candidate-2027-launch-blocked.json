@@ -1,0 +1,65 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/v1",
+  "issue": 49,
+  "startedAt": "2026-11-17T01:22:30.609Z",
+  "platform": "darwin/arm64",
+  "node": "v26.13.1",
+  "installDir": null,
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": 47808,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects -re"
+    },
+    {
+      "pid": 47814,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/9a06474c-84e0-4c19-76d7-67436ca3dbaf.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/9a06474c-84e0-4c19-76d7-67436ca3dbaf.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/9a06474c-84e0-4c19-76d7-67436ca3dbaf.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/external/617cdb4d-bc89-4812-dbcf-03d20044587a.envelope --report-id=617cdb4d-bc89-4812-dbcf-03d20044587a --handshake-fd=5"
+    },
+    {
+      "pid": 51014,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/dynamiclinkmanager --rogue"
+    },
+    {
+      "pid": 52659,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    }
+  ],
+  "steps": [],
+  "close": {
+    "attempted": false,
+    "note": "session open failed; this script never owned a session to close — see trace for ae-a8n's internal close behaviour"
+  },
+  "launchError": {
+    "name": "AfterEffectsError",
+    "message": "session.launch got an unreadable response from the After Effects bridge: result file for app.info (ddd5b1f4-4727-4295-9f46-3ca79e7ff4d5) was never parseable: Unexpected end of JSON input",
+    "causeChain": [
+      "ProtocolError"
+    ]
+  },
+  "failureStage": "openSliceSession",
+  "sessionRoot": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-UO2jPB/a8n-session",
+  "workdir": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-UO2jPB",
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-17T01:25:30.739Z\",\"op\":\"session.probe\",\"status\":\"error\",\"durationMs\":180012,\"args\":{\"method\":\"app.info\",\"timeoutMs\":179977,\"requestId\":\"ddd5b1f4-4727-4295-9f46-3ca79e7ff4d5\"},\"error\":{\"name\":\"ProtocolError\",\"message\":\"result file for app.info (ddd5b1f4-4727-4295-9f46-3ca79e7ff4d5) was never parseable: Unexpected end of JSON input\"}}\n{\"seq\":1,\"ts\":\"2026-11-17T01:25:30.740Z\",\"op\":\"session.probe\",\"status\":\"error\",\"durationMs\":180013,\"args\":{},\"error\":{\"name\":\"ProtocolError\",\"message\":\"result file for app.info (ddd5b1f4-4727-4295-9f46-3ca79e7ff4d5) was never parseable: Unexpected end of JSON input\"}}\n{\"seq\":2,\"ts\":\"2026-11-17T01:25:30.740Z\",\"op\":\"session.launch\",\"status\":\"error\",\"durationMs\":180036,\"args\":{\"transport\":\"script-invocation\"},\"error\":{\"name\":\"ProtocolError\",\"message\":\"result file for app.info (ddd5b1f4-4727-4295-9f46-3ca79e7ff4d5) was never parseable: Unexpected end of JSON input\"}}\n",
+  "aeProcessesAfterLaunchFailure": [
+    {
+      "pid": 3576,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    },
+    {
+      "pid": 6451,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects"
+    },
+    {
+      "pid": 6632,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/ee2b69e2-3ec8-4927-3bfa-9cffb8c6249e.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/ee2b69e2-3ec8-4927-3bfa-9cffb8c6249e.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/ee2b69e2-3ec8-4927-3bfa-9cffb8c6249e.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/external/ae86bd9d-f983-4063-2458-093d733462ff.envelope --report-id=ae86bd9d-f983-4063-2458-093d733462ff --handshake-fd=5"
+    },
+    {
+      "pid": 47814,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/9a06474c-84e0-4c19-76d7-67436ca3dbaf.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/9a06474c-84e0-4c19-76d7-67436ca3dbaf.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/9a06474c-84e0-4c19-76d7-67436ca3dbaf.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/external/617cdb4d-bc89-4812-dbcf-03d20044587a.envelope --report-id=617cdb4d-bc89-4812-dbcf-03d20044587a --handshake-fd=5"
+    },
+    {
+      "pid": 51014,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/dynamiclinkmanager --rogue"
+    }
+  ],
+  "finishedAt": "2026-11-17T01:25:30.765Z"
+}
