@@ -84,7 +84,7 @@ refusals, and no-retry-on-UNKNOWN.
 | implemented | yes — `server.mjs`, `tools.mjs`, `session.mjs` |
 | automated test | yes — `node tests/run.mjs` (node:test, in-process + spawned stdio) |
 | fake/mock only | yes — all current coverage runs against the codec-faithful fake host |
-| verified on real host | partial — `real-run.mjs` drove initialize → `ae_discover` → `ae_execute`(`item.addComp`) → `ae_verify`(`read.projectSummary`) against an **owned** AE 2026 (26.5.3x9) session on macOS arm64; see `evidence/mcp-real-4a06639-ae2026.json`. The same harness against AE 2027 (already running, non-owned target) failed closed with no dispatch — `evidence/mcp-real-4a06639-ae2027-blocked.json`. Not exercised in CI; requires a local ae-a8n build satisfying the contract gate (`--ae-a8n-root`) until a contract-conformant `@ido-bata/ae-a8n` is published |
+| verified on real host | yes (candidate bytes) — `real-run.mjs` drove initialize → `ae_discover` → `ae_execute`(`item.addComp`) → `ae_verify`(`read.projectSummary`) against an **owned** AE 2026 (26.5.3x9) session on macOS arm64, twice: `evidence/mcp-real-4a06639-ae2026.json` (pre-RC local build `1dbd4de`) and `evidence/mcp-real-beta1-2026.json` (**publish-candidate tarball** `0.2.0-beta.1`, freeze `d895179`, sha1 `9ada37bc…`, consumer-installed — not yet registry bytes). AE 2027 fail-closed run: `evidence/mcp-real-4a06639-ae2027-blocked.json`. Not exercised in CI |
 
 ## Real-host verification
 

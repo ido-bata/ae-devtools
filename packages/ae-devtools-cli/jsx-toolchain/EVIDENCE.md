@@ -117,3 +117,12 @@ check); ae-a8n bytes = commit `1dbd4de` (tree `e6003eab`, pre-0.2.0-rc),
 `dist/` verified byte-identical to a clean build of that commit. Same
 pre-RC caveat applies — not same-bytes proof against ae-a8n 0.2.0 RC or
 published tarballs.
+
+## Attempt at ae-a8n `0.2.0-beta.1` tarball (2026-11-17)
+
+`evidence/run-real-2026-beta1.json` — **PASS (AE 2026, 26.5.3x9)** on the
+publish-candidate tarball bytes (freeze `d895179`, sha1 `9ada37bc…`,
+consumer-installed): full single-file pipeline green including the
+reworked ES3 lint, sourcemap to TS source, fix/rerun/verify, owned
+session close. Same candidate-bytes (not registry) caveat as
+`a8n-transport/EVIDENCE.md` Attempt 6 — see Issue #173.

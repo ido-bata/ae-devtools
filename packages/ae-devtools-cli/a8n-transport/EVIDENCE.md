@@ -178,3 +178,22 @@ AE 2027 = `27.0x78` (already running, non-owned — untouched).
   runs are **not** same-bytes proof against the ae-a8n 0.2.0 RC or any
   published tarball (conformance-evidence.md §3). They remain valid
   real-host evidence for the ae-devtools slice against ae-a8n@`1dbd4de`.
+
+## Attempt 6 — ae-a8n `0.2.0-beta.1` publish-candidate tarball (2026-11-17)
+
+Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9`.
+
+- `run-2026-a8n-beta1.json` — **PASS (AE 2026)** against the actual
+  publish-candidate bytes: `npm pack` reproduced from ae-a8n freeze
+  commit `d895179` gave tarball sha1 `9ada37bce03d87998239ba8a2fdf02f83bdfe878`
+  / integrity `sha512-G3UHhl4i5YJTOb8xBoRZRCy+rrRYiURmK8xByMLRdT3IC+6HpgXN3T2jLBBDj+THK0hFAjxvsoqRHWYpBGgsGw==`
+  (matches `docs/evidence/release-0-2-0-rc/README.md`), installed into a
+  clean consumer (`npm install <tgz>` → `node_modules/@ido-bata/ae-a8n@0.2.0-beta.1`)
+  and passed as `--ae-a8n-root`. Owned session (pid 10068), 6 sends,
+  handshake `compatible`, all step outcomes as expected, consent gates
+  fired, close `{quit:true}`, `assertionViolations: []`,
+  `contractViolations: []`.
+- This is **candidate-bytes** evidence, not registry evidence: the tarball
+  is byte-identical to what `v0.2.0-beta.1` will publish only if the
+  registry `dist.shasum`/`dist.integrity` match after publish (verify
+  before treating as registry proof — Issue #173).
