@@ -1,4 +1,4 @@
-# vscode-extension — VSCode dev-loop surface (Issues #152/#153, CAP050 slices 1–2)
+# vscode-extension — VSCode dev-loop surface (Issues #152–#154, CAP050 slices 1–3)
 
 Thin VSCode wrapper over the **same** dev-loop core the MCP server and
 CLI use. It adds no dispatch path and no permission path of its own:
@@ -25,6 +25,8 @@ CLI use. It adds no dispatch path and no permission path of its own:
 | `ae-devtools.inspect` | `devloop.inspect(opId)` | none — metadata only, never executes |
 | `ae-devtools.execute` | `devloop.execute()` → `runOperation()` | modal confirms for destructive / render ops, then explicit consent → forwarded as `consent:"grant"` + confirm flags to the canonical gates. Failure outcomes emit a diagnostics publish plan → Problems panel |
 | `ae-devtools.verify` | `devloop.verify()` | explicit consent → `consent:"grant"`; read-back reports host-observed state only; same diagnostics collection |
+| `ae-devtools.debug.setup` | `vscode-debugger` `gen`+`validate` (Issue #154) | none — writes/merges attach-only `.vscode/launch.json` (JSONC-safe); `launch` requests are never emitted |
+| `ae-devtools.debug.attach` | `vscode-debugger` `preflight` (Issue #154) | none — fail closed: only `ready-owned-session` is attachable; every other verdict returns guidance, never an attach claim (`debugCompletionClaimed` always false) |
 
 Every result surfaces `session.evidenceLevel` verbatim — fake/mock
 results are never presented as real-host verification.
@@ -35,6 +37,11 @@ results are never presented as real-host verification.
 or `a8n` (owned AE session via `ae-a8n`; set `ae-devtools.aeA8nRoot`,
 optional `ae-devtools.installDir`). The session is opened lazily on the
 first consented execute/verify and shared for the extension lifetime.
+
+`ae-devtools.debug.hostAppSpecifier` / `ae-devtools.debug.ownedPid`
+configure the debug commands (see Issue #53 contract notes — the
+authoritative specifier comes from the extension's app picker;
+`--owned-pid` is attestation-grade, never an attach target).
 
 ## Safety contract (unchanged from MCP/CLI)
 

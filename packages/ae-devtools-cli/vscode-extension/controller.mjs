@@ -23,6 +23,9 @@
 import { callTool } from "../mcp-server/tools.mjs";
 import { openSession } from "../mcp-server/session.mjs";
 import { recordsFromExecuteResult, buildPublishPlan } from "./diagnostics.mjs";
+import { buildAttachConfig, writeLaunchJson } from "../vscode-debugger/src/gen.mjs";
+import { validateLaunchJson, hasErrors } from "../vscode-debugger/src/schema.mjs";
+import { runPreflight } from "../vscode-debugger/src/preflight.mjs";
 
 export const EXTENSION_SCHEMA = "ae-devtools.vscode-extension/v1";
 
@@ -199,6 +202,97 @@ export function createController(options = {}) {
         return uiDeclined("verify consent declined");
       }
       return withDiagnostics(await tool("ae_verify", { consent: "grant" }));
+    },
+
+    /**
+     * ae-devtools.debug.setup (Issue #154): generate/merge the
+     * attach-only launch.json via the packaged vscode-debugger (#53)
+     * and re-validate the document. Attach-only by contract — launch
+     * requests bypass the owned-session dispatch path and are never
+     * emitted.
+     */
+    debugSetup({ projectDir, hostAppSpecifier, engineName = "main" } = {}) {
+      if (typeof hostAppSpecifier !== "string" || hostAppSpecifier.length === 0) {
+        return {
+          schema: EXTENSION_SCHEMA,
+          command: "ae-devtools.debug.setup",
+          status: "refused",
+          stage: "usage",
+          reason: "USAGE",
+          detail: "debug.setup requires hostAppSpecifier (set ae-devtools.debug.hostAppSpecifier — the authoritative string is shown by the Adobe.extendscript-debug app picker)",
+          dispatched: false,
+        };
+      }
+      try {
+        const config = buildAttachConfig({ hostAppSpecifier, engineName });
+        const written = writeLaunchJson(projectDir ?? process.cwd(), config);
+        // writeLaunchJson already contract-validated the merged doc
+        // (fail-closed on our config); re-check the emitted config here
+        // so the command result carries the diagnostics explicitly.
+        const diagnostics = validateLaunchJson({
+          version: "0.2.0",
+          configurations: [written.config],
+        });
+        return {
+          schema: EXTENSION_SCHEMA,
+          command: "ae-devtools.debug.setup",
+          status: hasErrors(diagnostics) ? "failed" : "ok",
+          path: written.path,
+          merged: written.merged,
+          preservedComments: written.preservedComments,
+          config: written.config,
+          diagnostics,
+          note: "attach-only configuration; dispatch of the debugged script stays on the owned-session transport — the debugger attaches to breakpoints/errors in what the session evaluates",
+        };
+      } catch (e) {
+        return {
+          schema: EXTENSION_SCHEMA,
+          command: "ae-devtools.debug.setup",
+          status: "refused",
+          stage: "adapter",
+          reason: "WRITE_FAILED",
+          detail: e?.message ?? String(e),
+          dispatched: false,
+        };
+      }
+    },
+
+    /**
+     * ae-devtools.debug.attach (Issue #154): attach preflight via the
+     * packaged vscode-debugger. Fail closed — only
+     * `ready-owned-session` is attachable; every other verdict returns
+     * guidance, never an attach claim. `debugCompletionClaimed` is
+     * always false upstream.
+     */
+    debugAttach({ hostAppSpecifier, ownedPid, preflightDeps } = {}) {
+      const pid = ownedPid == null || ownedPid === ""
+        ? null
+        : Number(ownedPid);
+      if (pid !== null && !Number.isInteger(pid)) {
+        return {
+          schema: EXTENSION_SCHEMA,
+          command: "ae-devtools.debug.attach",
+          status: "refused",
+          stage: "usage",
+          reason: "USAGE",
+          detail: "ownedPid must be an integer pid or empty",
+          dispatched: false,
+        };
+      }
+      const preflight = runPreflight({
+        specifier: typeof hostAppSpecifier === "string" && hostAppSpecifier.length > 0 ? hostAppSpecifier : null,
+        ownedPid: pid,
+        deps: preflightDeps ?? {},
+      });
+      return {
+        schema: EXTENSION_SCHEMA,
+        command: "ae-devtools.debug.attach",
+        status: preflight.attachAttemptable ? "ok" : "blocked",
+        preflight,
+        guidance: preflight.attachAttemptable
+          ? "Preflight attests a single owned AE instance (attestation-grade). Start the Adobe.extendscript-debug attach session from the generated launch.json; real attach remains UNVERIFIED until observed."
+          : "Attach is not claimed. Resolve the preflight reasons (owned AE session via ae-a8n, single unambiguous instance, correct hostAppSpecifier), then re-run. Debugger attach never bypasses the owned-session dispatch path.",
+      };
     },
 
     /** Close the shared session if one was opened. Safe to call always. */
