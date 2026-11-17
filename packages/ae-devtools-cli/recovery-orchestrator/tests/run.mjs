@@ -24,6 +24,14 @@ import {
   runTimeoutRecovery,
   verifyHostExit,
 } from "../orchestrator.mjs";
+import {
+  crashEvidenceToDiagnostics,
+  exitVerificationToDiagnostics,
+  recoveryActionFor,
+  RECOVERY_VERDICTS,
+  timeoutRecoveryToDiagnostics,
+} from "../diagnostics.mjs";
+import { validateDiagnosticsRecord } from "../../diagnostics/schema.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "cli.mjs");
@@ -623,6 +631,120 @@ t("cli observe still requires the ae-a8n surface (read-only path unchanged)", ()
   const { code, body } = cliJson(["observe", "--pid", "1", "--session-uid", "501", "--session-asid", "1"]);
   assert.equal(code, 2);
   assert.equal(body.code, "AE_A8N_SURFACE_MISSING");
+});
+
+// ---- Issue #155: recovery verdicts -> diagnostics records ----
+
+const EXPECTED = {
+  "await-original": ["transport-outcome", "info"],
+  quarantined: ["transport-outcome", "error"],
+  refused: ["transport-outcome", "warning"],
+  residue: ["transport-outcome", "warning"],
+  clean: ["transport-outcome", "info"],
+  "crash-verified": ["native-crash", "error"],
+  "crash-suspect": ["native-crash", "error"],
+  "crash-unconfirmed": ["native-crash", "warning"],
+  unknown: ["transport-outcome", "error"],
+};
+
+t("every verdict maps to a valid diagnostics record with honest kind/severity", () => {
+  assert.deepEqual([...RECOVERY_VERDICTS].sort(), Object.keys(EXPECTED).sort());
+  for (const verdict of RECOVERY_VERDICTS) {
+    const [rec] = exitVerificationToDiagnostics(
+      { verdict, expectation: "exit", pid: 1, reasons: ["test reason"] },
+      { requestId: "req-x" },
+    );
+    const [kind, severity] = EXPECTED[verdict];
+    assert.equal(rec.kind, kind, `${verdict} kind`);
+    assert.equal(rec.severity, severity, `${verdict} severity`);
+    assert.equal(rec.outcome, verdict);
+    assert.equal(rec.requestId, "req-x");
+    assert.equal(rec.collector, "recovery-orchestrator");
+    validateDiagnosticsRecord(rec);
+    assert.equal(typeof recoveryActionFor(verdict), "string");
+  }
+});
+
+t("unknown verdict surfaces as error, never clean-looking", () => {
+  const [rec] = exitVerificationToDiagnostics(
+    { verdict: "unknown", expectation: "crash", pid: 1, reasons: ["census unavailable"] },
+    {},
+  );
+  assert.equal(rec.severity, "error");
+  assert.equal(rec.outcome, "unknown");
+  assert.match(rec.message, /census unavailable/);
+});
+
+t("crash verdicts become native-crash; exit verdicts stay transport-outcome", () => {
+  for (const verdict of ["crash-verified", "crash-suspect", "crash-unconfirmed"]) {
+    const [rec] = exitVerificationToDiagnostics({ verdict, expectation: "crash", pid: 1, reasons: [] }, {});
+    assert.equal(rec.kind, "native-crash");
+  }
+  const [rec] = exitVerificationToDiagnostics({ verdict: "clean", expectation: "exit", pid: 1, reasons: ["all channels clean"] }, {});
+  assert.equal(rec.kind, "transport-outcome");
+  assert.equal(rec.severity, "info");
+});
+
+t("timeout-recovery quarantined -> error and carries the no-resend rule", () => {
+  const result = {
+    verdict: "quarantined",
+    requestId: "req-9",
+    method: "op.x",
+    outcome: { recovered: false, outcome: "quarantined", code: "HUMAN_ONLY", evidence: "license dialog" },
+  };
+  const [rec] = timeoutRecoveryToDiagnostics(result, {});
+  assert.equal(rec.severity, "error");
+  assert.equal(rec.outcome, "quarantined");
+  assert.match(rec.message, /never resent/);
+  assert.match(rec.message, /HUMAN_ONLY/);
+  validateDiagnosticsRecord(rec);
+});
+
+t("timeout-recovery await-original -> info", () => {
+  const [rec] = timeoutRecoveryToDiagnostics(
+    { verdict: "await-original", requestId: "r", method: "m", outcome: { recovered: true, outcome: "dismissed" } },
+    {},
+  );
+  assert.equal(rec.severity, "info");
+});
+
+t("crashEvidenceToDiagnostics: correlated reports -> native-crash error with artifact hashes", () => {
+  const manifest = {
+    kind: "crash-evidence",
+    complete: true,
+    counts: { total: 2, correlated: 1, candidate: 1, unrelated: 0, unclassified: 0, copyErrors: 0 },
+    target: { pid: 4242 },
+    correlated: [{ sha256: "a".repeat(64), dest: "/ev/diagnostic-reports/x.ips" }],
+    incompleteReasons: [],
+  };
+  const records = crashEvidenceToDiagnostics(manifest, { requestId: "req-c" });
+  assert.equal(records.length, 1);
+  assert.equal(records[0].kind, "native-crash");
+  assert.equal(records[0].severity, "error");
+  assert.equal(records[0].artifactHashes["/ev/diagnostic-reports/x.ips"], "a".repeat(64));
+  validateDiagnosticsRecord(records[0]);
+});
+
+t("crashEvidenceToDiagnostics: incomplete collection -> warning, empty complete -> no records", () => {
+  const incomplete = crashEvidenceToDiagnostics(
+    { kind: "crash-evidence", complete: false, counts: { correlated: 0 }, incompleteReasons: ["unreadable dir"], target: {} },
+    {},
+  );
+  assert.equal(incomplete.length, 1);
+  assert.equal(incomplete[0].severity, "warning");
+  assert.equal(incomplete[0].outcome, "evidence-incomplete");
+
+  const empty = crashEvidenceToDiagnostics(
+    { kind: "crash-evidence", complete: true, counts: { correlated: 0, candidate: 0, unrelated: 0, unclassified: 0 }, target: {}, correlated: [] },
+    {},
+  );
+  assert.deepEqual(empty, []);
+});
+
+t("diagnostics converters refuse unknown verdicts instead of guessing", () => {
+  assert.throws(() => exitVerificationToDiagnostics({ verdict: "looks-fine", reasons: [] }, {}), /unknown verdict/);
+  assert.throws(() => recoveryActionFor("looks-fine"), /unknown verdict/);
+  assert.throws(() => crashEvidenceToDiagnostics({ kind: "other" }, {}), /crash-evidence manifest/);
 });
 
 console.log(`\n${passed} passed`);

@@ -60,6 +60,27 @@ lease + dialog classes).
 `crash-verified` | `crash-unconfirmed` | `crash-suspect` | `unknown` —
 see `orchestrator.mjs` header for semantics.
 
+## Diagnostics integration (Issue #155)
+
+`diagnostics.mjs` maps orchestrator results onto canonical
+`ae-devtools.diagnostics/v1` records so the dev loop (#38) and
+diagnostics surfaces (#20) consume one model:
+
+- `exitVerificationToDiagnostics(result, ctx)` — every verdict → one
+  record (`native-crash` for crash-*, `transport-outcome` otherwise);
+  `unknown` is always severity `error`, never clean-looking.
+- `timeoutRecoveryToDiagnostics(result, ctx)` — `await-original` → info,
+  `quarantined` → error (message carries the never-resend rule),
+  `refused` → warning, `unknown` → error.
+- `crashEvidenceToDiagnostics(manifest, ctx)` — correlated reports →
+  `native-crash` error with `artifactHashes` pinning the preserved
+  sha256; incomplete collection → warning (`evidence-incomplete`);
+  a complete collection with nothing correlated → `[]` (no finding,
+  not a clean bill).
+- `recoveryActionFor(verdict)` — verdict → required action
+  (`stop-human-inspect`, `wait-for-original-result-no-resend`,
+  `fix-prerequisite-no-retry`, `escalate-*`, `acceptance-satisfied`).
+
 ## Usage
 
 ```sh
