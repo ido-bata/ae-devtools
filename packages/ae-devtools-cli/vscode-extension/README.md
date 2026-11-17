@@ -1,13 +1,19 @@
-# vscode-extension — VSCode dev-loop surface (Issue #152, CAP050 slice 1)
+# vscode-extension — VSCode dev-loop surface (Issues #152/#153, CAP050 slices 1–2)
 
 Thin VSCode wrapper over the **same** dev-loop core the MCP server and
 CLI use. It adds no dispatch path and no permission path of its own:
 
 - `controller.mjs` — vscode-free logic, unit-tested with `node:test`
   against the codec-faithful fake session.
+- `diagnostics.mjs` — `ae-devtools.diagnostics/v1` records → Problems-panel
+  publish plan (Issue #153): severity mapping, sourcemap-resolved
+  original-TS positions via `diagnostics/source-map.mjs`, honest
+  `no-position`/`no-map`/`unmapped` handling (positions are never
+  fabricated), and collectors for execute outcomes
+  (`fromAeError`/`fromTransportOutcome`) and agent-loop reports.
 - `extension.mjs` — activation entry; adapts `vscode` UI (input boxes,
   modal confirms, information messages) to the controller's injected
-  `ui` surface.
+  `ui` surface, and publishes diagnostics plans to the Problems panel.
 - `package.json` — VSCode extension manifest (`main`, `engines`,
   contributed commands + `ae-devtools.*` configuration).
 
@@ -17,8 +23,8 @@ CLI use. It adds no dispatch path and no permission path of its own:
 | --- | --- | --- |
 | `ae-devtools.discover` | `devloop.discover()` | none — registry metadata, never opens a session |
 | `ae-devtools.inspect` | `devloop.inspect(opId)` | none — metadata only, never executes |
-| `ae-devtools.execute` | `devloop.execute()` → `runOperation()` | modal confirms for destructive / render ops, then explicit consent → forwarded as `consent:"grant"` + confirm flags to the canonical gates |
-| `ae-devtools.verify` | `devloop.verify()` | explicit consent → `consent:"grant"`; read-back reports host-observed state only |
+| `ae-devtools.execute` | `devloop.execute()` → `runOperation()` | modal confirms for destructive / render ops, then explicit consent → forwarded as `consent:"grant"` + confirm flags to the canonical gates. Failure outcomes emit a diagnostics publish plan → Problems panel |
+| `ae-devtools.verify` | `devloop.verify()` | explicit consent → `consent:"grant"`; read-back reports host-observed state only; same diagnostics collection |
 
 Every result surfaces `session.evidenceLevel` verbatim — fake/mock
 results are never presented as real-host verification.
@@ -48,8 +54,11 @@ node tests/run.mjs
 
 Covers discover/inspect metadata, consent default-deny at the UI gate,
 destructive/render confirm ordering, execute→verify on the fake host,
-and session lifecycle. **Fake/mock level only** — real AE acceptance is
-a release-candidate item (Issue #20 / #152 verification level).
+and session lifecycle, plus the diagnostics publish plan (mapped /
+unmapped / no-position / no-map records, execute-outcome and
+loop-report collectors, controller-attached plans). **Fake/mock level
+only** — real AE acceptance is a release-candidate item
+(Issues #152/#153 verification level).
 
 ## Packaging status
 

@@ -16,6 +16,78 @@ const COMMANDS = [
   "ae-devtools.verify",
 ];
 
+const SEVERITY_MAP = {
+  error: vscode.DiagnosticSeverity.Error,
+  warning: vscode.DiagnosticSeverity.Warning,
+  info: vscode.DiagnosticSeverity.Information,
+};
+
+let diagnosticCollection = null;
+const publishedUris = new Set();
+
+function uriForItem(item) {
+  const file = item.range?.file ?? item.file;
+  if (typeof file === "string" && file.length > 0) {
+    if (file.startsWith("/") || /^[A-Za-z]:[\\/]/.test(file)) {
+      return vscode.Uri.file(file);
+    }
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (folder) return vscode.Uri.joinPath(folder.uri, file);
+  }
+  // No usable file — publish on a dedicated scheme rather than
+  // inventing a workspace path. Problems panel still lists it.
+  return vscode.Uri.parse(`ae-devtools:diagnostics/${item.kind ?? "record"}`);
+}
+
+function rangeForItem(item) {
+  const r = item.range;
+  if (!r) return new vscode.Range(0, 0, 0, 0);
+  return new vscode.Range(r.start.line, r.start.character, r.end.line, r.end.character);
+}
+
+/**
+ * Publish a controller `diagnostics` publish plan (built by
+ * diagnostics.mjs) into the Problems panel. Positions come only from
+ * resolved maps or the record's own fields — unmapped/no-position
+ * records are shown with their mapping status, never a fabricated
+ * location.
+ */
+function publishDiagnostics(plan) {
+  if (!diagnosticCollection || !plan?.items?.length) return;
+  const byUri = new Map();
+  for (const item of plan.items) {
+    const uri = uriForItem(item);
+    if (!byUri.has(uri.toString())) byUri.set(uri.toString(), { uri, items: [] });
+    byUri.get(uri.toString()).items.push(item);
+  }
+  const nextUris = new Set(byUri.keys());
+  for (const key of publishedUris) {
+    if (!nextUris.has(key)) {
+      diagnosticCollection.delete(vscode.Uri.parse(key));
+      publishedUris.delete(key);
+    }
+  }
+  for (const { uri, items } of byUri.values()) {
+    const diags = items.map((item) => {
+      const d = new vscode.Diagnostic(
+        rangeForItem(item),
+        item.message,
+        SEVERITY_MAP[item.severity] ?? vscode.DiagnosticSeverity.Error,
+      );
+      d.source = `ae-devtools · ${item.kind}`;
+      d.code = item.collector;
+      // Surface mapping honesty in the Problems panel: an unmapped or
+      // absent position is stated, not hidden.
+      if (item.mappingStatus && item.mappingStatus !== "mapped" && item.mappingStatus !== "record-position") {
+        d.message = `${item.message} [source position: ${item.mappingStatus}]`;
+      }
+      return d;
+    });
+    diagnosticCollection.set(uri, diags);
+    publishedUris.add(uri.toString());
+  }
+}
+
 function realUi() {
   return {
     async confirm({ title, detail, modal }) {
@@ -95,10 +167,15 @@ export async function activate(context) {
     ui: realUi(),
   });
 
+  diagnosticCollection = vscode.languages.createDiagnosticCollection("ae-devtools");
+  context.subscriptions.push(diagnosticCollection);
+
   const reg = (id, fn) => context.subscriptions.push(
     vscode.commands.registerCommand(id, async () => {
       try {
-        await showResult(await fn());
+        const result = await fn();
+        publishDiagnostics(result?.diagnostics);
+        await showResult(result);
       } catch (e) {
         await vscode.window.showErrorMessage(`AE DevTools ${id} failed: ${e?.message ?? e}`);
       }
@@ -124,4 +201,7 @@ export async function activate(context) {
 export async function deactivate() {
   await controller?.close();
   controller = null;
+  diagnosticCollection?.dispose();
+  diagnosticCollection = null;
+  publishedUris.clear();
 }

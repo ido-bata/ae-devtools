@@ -22,6 +22,7 @@
  */
 import { callTool } from "../mcp-server/tools.mjs";
 import { openSession } from "../mcp-server/session.mjs";
+import { recordsFromExecuteResult, buildPublishPlan } from "./diagnostics.mjs";
 
 export const EXTENSION_SCHEMA = "ae-devtools.vscode-extension/v1";
 
@@ -83,6 +84,23 @@ export function createController(options = {}) {
       sourceSchema,
       ...rest,
     };
+  }
+
+  /**
+   * Attach a diagnostics publish plan (ae-devtools.diagnostics/v1
+   * records → Problems-panel items) to execute/verify payloads.
+   * Collection is read-only observation of the outcome — it never
+   * changes dispatch, consent, or retry behavior.
+   */
+  function withDiagnostics(payload) {
+    const inner = payload?.result;
+    if (!inner || typeof inner !== "object") return payload;
+    const records = recordsFromExecuteResult(inner, {
+      session: payload.session,
+      requestId: inner.requestId,
+    });
+    if (records.length === 0) return payload;
+    return { ...payload, diagnostics: buildPublishPlan(records) };
   }
 
   return {
@@ -160,13 +178,14 @@ export function createController(options = {}) {
         return uiDeclined(`consent declined for '${opId}'`);
       }
 
-      return tool("ae_execute", {
+      const res = await tool("ae_execute", {
         opId,
         args,
         consent: "grant",
         confirmDestructive,
         confirmRender,
       });
+      return withDiagnostics(res);
     },
 
     /** Post-execution read-back; same consent contract as execute. */
@@ -179,7 +198,7 @@ export function createController(options = {}) {
       if (!consent) {
         return uiDeclined("verify consent declined");
       }
-      return tool("ae_verify", { consent: "grant" });
+      return withDiagnostics(await tool("ae_verify", { consent: "grant" }));
     },
 
     /** Close the shared session if one was opened. Safe to call always. */
