@@ -43,6 +43,13 @@ only when `assumeIdempotent: true`.
   UNKNOWN quarantine.
 - `fixtures/` — `broken.jsx` (two seeded bugs) and `clean.jsx` plus
   mutation fixtures used by the dirty-state tests.
+- `evidence.mjs` — `serializeLoopEvidence` / `serializeLoopEvidenceJson`
+  (Issue #150, CAP066): turns a loop report (+ optional `regressionCheck`
+  result) into a deterministic `ae-devtools.agent-loop-evidence/v1`
+  document — per-iteration request/result/diagnostics/regression data,
+  source sha256 pins, state-dirty flags. `evidenceLevel` accepts only
+  `"fake"`: real-host promotion goes through the #21 conformance
+  pipeline, never through this serializer.
 
 ## Evidence level
 

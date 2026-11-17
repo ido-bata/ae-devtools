@@ -230,6 +230,7 @@ export async function runDevLoop({
     }
 
     const preFp = fp ? fp() : null;
+    const dispatchStart = Date.now();
     let auth;
     try {
       auth = await consentProvider(current, attempt);
@@ -247,6 +248,7 @@ export async function runDevLoop({
       attempt,
       requestId: out.requestId,
       outcome: out.outcome,
+      durationMs: Date.now() - dispatchStart,
       contractOutcome: out.contractOutcome ?? null,
       mayHaveMutated: out.mayHaveMutated ?? null,
       stateChanged,
@@ -355,6 +357,7 @@ export async function regressionCheck({ source, transport, session, consentProvi
       reason: err instanceof Error ? err.message : String(err),
     };
   }
+  const dispatchStart = Date.now();
   const out = await runner.runScript(runInput(source, session, auth ?? {}));
   const afterFp = fp ? fp() : null;
   // When a fingerprint is supplied, mutation is MEASURED, not assumed:
@@ -366,5 +369,6 @@ export async function regressionCheck({ source, transport, session, consentProvi
     outcome: out.outcome,
     result: out.result ?? null,
     mutationDetected,
+    durationMs: Date.now() - dispatchStart,
   };
 }
