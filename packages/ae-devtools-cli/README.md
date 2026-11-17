@@ -11,10 +11,24 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 ## Install
 
 ```sh
-npm install @ido-bata/ae-devtools-cli   # published: latest 0.2.0
+npm install @ido-bata/ae-devtools-cli          # registry latest
+npm install @ido-bata/ae-devtools-cli@0.3.0    # this release, once published
 # tarball / local checkout からも可:
-npm install ./ae-devtools-cli-0.2.0.tgz
+npm install ./ae-devtools-cli-0.3.0.tgz
 ```
+
+### Migrating to 0.3.0
+
+- New dev-loop surface: `ae-devtools discover/inspect/execute/verify`,
+  `ae-devtools-mcp` (stdio MCP), and the VSCode extension
+  (`ae-devtools-vscode-extension`, packaged via `npm run package:vsix`).
+- `--session a8n` (real After Effects) now **requires an ae-a8n build
+  satisfying the capability contract** (#102 handshake exports +
+  #103/#105 fixes). The published `@ido-bata/ae-a8n@0.1.0-alpha.2`
+  predates them and is refused up front (`AE_A8N_CONTRACT_UNSUPPORTED`;
+  check `ae-devtools doctor` → `aeA8n.contractOk`). Until a conformant
+  ae-a8n is published, pass `--ae-a8n-root <ae-a8n release-0-2-0+ build>`.
+  The `fake` session is unaffected.
 
 Provides six bins:
 
