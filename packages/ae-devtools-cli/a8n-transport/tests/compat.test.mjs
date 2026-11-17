@@ -10,7 +10,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   missingContractExports,
@@ -31,11 +32,12 @@ function fixtureRoot(exportsBlock) {
   return root;
 }
 
-const STUB_OK = `
-export function AfterEffects() {}
-export function negotiateCapabilities() {}
-export function assertDispatchAllowed() {}
-`;
+// Contract-conformant stub: re-exports the shared fixture so the export
+// probe AND the Issue #144 behavioral battery both pass. Empty function
+// stubs no longer satisfy contractOk — exports alone are not compatibility.
+const STUB_OK = `export * from ${JSON.stringify(
+  pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "handshake-ok.mjs")).href,
+)};\n`;
 const STUB_OLD = `
 export function AfterEffects() {}
 `;
