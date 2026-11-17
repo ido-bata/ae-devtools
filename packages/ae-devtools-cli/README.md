@@ -11,8 +11,8 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 ## Install
 
 ```sh
-npm install @ido-bata/ae-devtools-cli        # npm publish 後
-# または tarball / git から:
+npm install @ido-bata/ae-devtools-cli   # published: latest 0.2.0
+# tarball / local checkout からも可:
 npm install ./ae-devtools-cli-0.2.0.tgz
 ```
 
@@ -63,12 +63,18 @@ ae-devtools verify --session fake --consent grant
 
 ```sh
 ae-devtools execute <opId> --session a8n --consent grant
-# unreleased ae-a8n 検証時のみ:
+# ae-a8n contract を満たす build を明示する場合（現状はこちらが必要）:
 ae-devtools execute <opId> --session a8n --ae-a8n-root <local-a8n-checkout> --consent grant
 ```
 
-`--session a8n` は `@ido-bata/ae-a8n` (pinned `0.1.0-alpha.2`) の
-owned-session launch を使う。`attached`/`unknown` ownership は拒否される。
+`--session a8n` は `@ido-bata/ae-a8n` の owned-session launch を使う。
+解決される ae-a8n が必要 contract（#102 handshake export。#103/#105
+修正を祖先に持つ）を満たさない場合は launch 前に
+`AE_A8N_CONTRACT_UNSUPPORTED` で refuse される — `ae-devtools doctor`
+の `aeA8n.contractOk` で事前確認できる。現時点の npm 公開版
+`@ido-bata/ae-a8n@0.1.0-alpha.2` は未対応のため、real-host 利用は
+`--ae-a8n-root <ae-a8n release-0-2-0 以降の build>` が必要。
+`attached`/`unknown` ownership は拒否される。
 consent の default は deny。destructive/render op は追加の confirm flag が必要。
 
 ## Crash recovery (`ae-devtools-recover`)
