@@ -627,8 +627,11 @@ t("cli recover refuses when the recorded request is not timed out", () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-t("cli observe still requires the ae-a8n surface (read-only path unchanged)", () => {
-  const { code, body } = cliJson(["observe", "--pid", "1", "--session-uid", "501", "--session-asid", "1"]);
+t("cli observe refuses when the ae-a8n surface cannot be resolved", () => {
+  const { code, body } = cliJson([
+    "observe", "--pid", "1", "--session-uid", "501", "--session-asid", "1",
+    "--ae-a8n-root", "/nonexistent-ae-a8n-root",
+  ]);
   assert.equal(code, 2);
   assert.equal(body.code, "AE_A8N_SURFACE_MISSING");
 });

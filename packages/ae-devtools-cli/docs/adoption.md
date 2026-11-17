@@ -21,8 +21,9 @@ npm install --save-dev @ido-bata/ae-devtools-cli
 `--session a8n` は owned AE session を `@ido-bata/ae-a8n` 経由で使う。
 この経路が要求する ae-a8n contract（capability handshake export =
 ae-a8n#102。#103 extension prelude / #105 LaunchServices 修正を祖先に持つ）を
-満たすのは **現時点で ae-a8n `release-0-2-0` 以降の build のみ**。
-npm 公開版 `@ido-bata/ae-a8n@0.1.0-alpha.2` はこれを満たさない。
+満たすのは ae-a8n `release-0-2-0` 以降。npm pin は `@ido-bata/ae-a8n@0.2.0`
+（`next` dist-tag で公開済み）で、これを満たす。`<=0.1.0-alpha.2` を
+解決した場合のみ contract gate が launch 前に refuse する。
 
 - `ae-devtools doctor` が解決した ae-a8n の `contractOk` を報告する
   （AE は起動しない）。

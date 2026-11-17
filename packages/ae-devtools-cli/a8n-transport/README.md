@@ -48,20 +48,21 @@ runner.runScript(source)
   root-cause claim, never a workaround for Adobe bundled features.
 - `tests/` — dependency-free `node:test` suite (`node tests/run.mjs`).
 
-## ae-a8n pin caveat
+## ae-a8n pin
 
-`package.json` pins `@ido-bata/ae-a8n@0.1.0-alpha.2`, which predates the
-ae-a8n #103/#104 (+#105) host-context fixes — a real launch through the
-npm dependency fails (`EVIDENCE.md`, Attempt 1). Every green real-host
-run used a local ae-a8n checkout via `--ae-a8n-root`.
+`package.json` pins `@ido-bata/ae-a8n@0.2.0` — the first published
+version carrying the ae-a8n #102 handshake exports and #103/#104/#105
+host-context fixes (published under the `next` dist-tag; `latest`
+still resolves `0.1.0-alpha.0`). Earlier pins (`<=0.1.0-alpha.2`)
+predated those fixes — a real launch through them fails
+(`EVIDENCE.md`, Attempt 1); the contract gate in `compat.mjs`
+(Issue #138) refuses them with `AE_A8N_CONTRACT_UNSUPPORTED` before
+`extension build` or `AfterEffects.launch`, and `ae-devtools doctor`
+reports the same probe as `aeA8n.contractOk` without contacting AE.
 
-Until a fixed release is published, `real-run.mjs` and `--session a8n`
-require `--ae-a8n-root <local build>`; do not treat the npm default as
-verified. `openSliceSession` enforces this via the contract gate in
-`compat.mjs` (Issue #138): an ae-a8n missing the #102 handshake exports
-is refused with `AE_A8N_CONTRACT_UNSUPPORTED` before `extension build`
-or `AfterEffects.launch`, and `ae-devtools doctor` reports the same
-probe as `aeA8n.contractOk` without contacting AE.
+`--ae-a8n-root <local build>` remains available to override the pinned
+dependency (used by the pre-publish candidate rehearsals recorded in
+`evidence/`).
 
 ## Verification levels
 

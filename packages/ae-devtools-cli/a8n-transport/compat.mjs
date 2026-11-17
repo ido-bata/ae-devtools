@@ -6,8 +6,8 @@
  * tests. Everything here is a pure check or a dynamic import performed
  * only when a caller asks for a probe.
  *
- * Why a contract gate exists: the published `@ido-bata/ae-a8n@0.1.0-alpha.2`
- * predates the fixes this transport was verified against — ae-a8n#103
+ * Why a contract gate exists: `@ido-bata/ae-a8n@0.1.0-alpha.2` and earlier
+ * predate the fixes this transport was verified against — ae-a8n#103
  * (extension prelude must register from a named function; the IIFE form
  * reads `this.__a8n` as undefined on real ExtendScript), ae-a8n#105
  * (LaunchServices launch so AE 27 does not fork a second instance and
@@ -65,9 +65,9 @@ export function aeA8nContractError({ source, version, missing }) {
     `ae-a8n contract unsupported: ${source}` +
       (version ? `@${version}` : "") +
       ` is missing ${missing.join(", ")} — required: ${CONTRACT_DESCRIPTION}. ` +
-      "The published @ido-bata/ae-a8n@0.1.0-alpha.2 predates these fixes; " +
-      "pass --ae-a8n-root <ae-a8n checkout at release-0-2-0 or later> " +
-      "or wait for the next @ido-bata/ae-a8n publish.",
+      "ae-a8n@0.1.0-alpha.2 and earlier predate these fixes " +
+      "(@ido-bata/ae-a8n@0.2.0 under the `next` dist-tag satisfies them); " +
+      "pass --ae-a8n-root <ae-a8n checkout> to override the pinned dependency.",
   );
   error.code = "AE_A8N_CONTRACT_UNSUPPORTED";
   error.aeA8nSource = source;

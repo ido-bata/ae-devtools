@@ -110,7 +110,7 @@ export async function openSliceSession(options = {}) {
     await loadAeA8n(options.aeA8nRoot);
   // Contract gate (Issue #138): refuse BEFORE extension build / launch when
   // the resolved ae-a8n lacks the handshake exports that post-date the
-  // #103/#105 real-host fixes. Published 0.1.0-alpha.2 fails here with an
+  // #103/#105 real-host fixes. ae-a8n <=0.1.0-alpha.2 fails here with an
   // actionable message instead of an obscure mid-run host error.
   const missing = missingContractExports(aeA8nMod);
   if (missing.length > 0) {

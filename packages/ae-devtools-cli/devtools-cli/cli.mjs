@@ -33,8 +33,8 @@
  *   fake — codec-faithful vm host (FAKE/MOCK evidence only)
  *   a8n  — owned AE session via a8n-transport (Issue #49); requires that
  *          experiment present and an ae-a8n satisfying the contract gate
- *          (a8n-transport/compat.mjs, Issue #138) — published
- *          @ido-bata/ae-a8n@0.1.0-alpha.2 does NOT, use --ae-a8n-root
+ *          (a8n-transport/compat.mjs, Issue #138) — ae-a8n <=0.1.0-alpha.2
+ *          does NOT, use --ae-a8n-root
  *
  * Consent: --consent grant is REQUIRED for any dispatch; default is deny.
  * This is a local policy flag, not authenticated authorization
