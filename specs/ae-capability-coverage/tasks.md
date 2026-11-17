@@ -146,7 +146,7 @@ Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (
 
 ### [#21](https://github.com/ido-bata/ae-devtools/issues/21) — Conformance/evidence
 
-Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance record + layer-2 claim gate + release gate wiring merged** (`src/conformance.ts` PR #146, `src/release-gate.ts` + `release-scope.json` + `evidence/conformance/` PR #148, release-PR CI job PR #149; verdict `no-claims` honestly reported while zero verified-real-host claims exist). Real-host evidence records and the supportedRelease owner decision (plan §6.1) remain open; the real-host matrix depends on a contract-satisfying ae-a8n publish.
+Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance record + layer-2 claim gate + release gate wiring merged** (`src/conformance.ts` PR #146, `src/release-gate.ts` + `release-scope.json` + `evidence/conformance/` PR #148, release-PR CI job PR #149; verdict `no-claims` honestly reported while zero verified-real-host claims exist). Gate verdict semantics and release-acceptance connection are recorded in `docs/release.md` §conformance gate (no-claims ≠ pass ≠ usability proof; supportedRelease stays an owner decision; unverified platforms are never claimed to force a block). Real-host evidence records and the supportedRelease owner decision (plan §6.1) remain open; the real-host matrix depends on a contract-satisfying ae-a8n publish.
 
 - [ ] **CAP053** Define real-host fixture and immutable evidence manifest. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 - [ ] **CAP054** Run script/native/transport/security conformance. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
