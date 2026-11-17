@@ -9,7 +9,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { loadRepoInputs } from "../scripts/inputs.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { loadRepoInputs, REPO_ROOT } from "../scripts/inputs.ts";
 import { importSdkRows } from "../src/import-sdk.ts";
 import {
   assertDispatchAllowed,
@@ -69,15 +71,26 @@ describe("capability advertisement follows supplied inventories", () => {
     expect(diagnostic?.effect).toContain("not absent");
   });
 
-  test("evidence labels never claim verified on a real host", () => {
+  test("verified-real-host appears only for evidence-claimed capabilities", () => {
+    // Issue #177: real-host claims live in real-host-claims.json and are
+    // backed by a conformance record; the gate — not this advertisement —
+    // re-verifies the evidence. Here we only assert the advertisement
+    // never invents real-host proof beyond the declared claim set.
+    const claims = JSON.parse(
+      readFileSync(join(REPO_ROOT, "packages/capability-catalog/real-host-claims.json"), "utf8"),
+    ) as { claims: Record<string, unknown> };
+    const claimedIds = new Set(Object.keys(claims.claims));
     for (const capability of server.availableCapabilities) {
-      expect(["source-reviewed", "automated-test", "unverified"]).toContain(
-        capability.proofLevel,
-      );
-      expect(capability.proofLevel).not.toBe("verified-real-host");
+      if (capability.proofLevel === "verified-real-host") {
+        expect(claimedIds.has(capability.id)).toBe(true);
+      } else {
+        expect(["source-reviewed", "automated-test", "unverified"]).toContain(
+          capability.proofLevel,
+        );
+      }
     }
-    expect(server.provenance.evidenceLevel.realHost).toBe("not-run");
-    expect(server.diagnostics.some((d) => d.code === "no-real-host-evidence")).toBe(true);
+    expect(server.provenance.evidenceLevel.realHost).toBe("verified-real-host");
+    expect(server.diagnostics.some((d) => d.code === "no-real-host-evidence")).toBe(false);
   });
 
   test("an undetermined supported-release set is diagnosed", () => {

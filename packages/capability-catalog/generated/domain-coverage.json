@@ -38,6 +38,10 @@
       "sha256": "0e339352a4071ebb7e838124900dd18c78bda967434c344ea42541f5357d5e59"
     },
     {
+      "path": "packages/capability-catalog/real-host-claims.json",
+      "sha256": "11dcc1db89689278237e245c247bcf1e60ad68debbd7a261ceb18ddf9b7b4d09"
+    },
+    {
       "path": "specs/ae-capability-coverage/domains/animation-effects-render.json",
       "sha256": "c2a8b18a26a085ce55a5bff523bf14eb86545459d464deaa84ce00a8b2edf1a9"
     },
@@ -3307,8 +3311,8 @@
           "documented": 245,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 15,
-          "verified-on-real-host": 0,
+          "automated-fake-tested": 8,
+          "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
@@ -3321,8 +3325,8 @@
         },
         "verification": {
           "not-run": 245,
-          "automated-fake": 15,
-          "verified-real-host": 0
+          "automated-fake": 8,
+          "verified-real-host": 7
         }
       },
       "members": [
@@ -4418,9 +4422,9 @@
           "id": "ae.scripting.Item.id",
           "category": "item",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.Item.label",
@@ -4434,9 +4438,9 @@
           "id": "ae.scripting.Item.name",
           "category": "item",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.Item.parentFolder",
@@ -4450,9 +4454,9 @@
           "id": "ae.scripting.Item.remove",
           "category": "item",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.Item.removeGuide",
@@ -4482,17 +4486,17 @@
           "id": "ae.scripting.Item.typeName",
           "category": "item",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.ItemCollection.addComp",
           "category": "collection",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.ItemCollection.addFolder",
@@ -4922,9 +4926,9 @@
           "id": "ae.scripting.Project.activeItem",
           "category": "project",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.Project.autoFixExpressions",
@@ -5282,9 +5286,9 @@
           "id": "ae.scripting.Project.save",
           "category": "project",
           "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "verification": "verified-real-host",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "verified-on-real-host"
         },
         {
           "id": "ae.scripting.Project.saveWithDialog",

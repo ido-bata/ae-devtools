@@ -1,0 +1,1218 @@
+[
+  {
+    "t": "2026-11-17T16:53:35.449Z",
+    "step": "initialize",
+    "argv": [
+      "mcp-server/server.mjs",
+      "--session",
+      "a8n",
+      "--install-dir",
+      "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app"
+    ],
+    "fixturePath": "/tmp/ae-conf-177/mcp-fixture/Conformance-MCP-Disposable.aep"
+  },
+  {
+    "t": "2026-11-17T16:53:35.478Z",
+    "stderr": "mcp-server: ae-devtools-mcp@0.1.0 schema=ae-devtools.mcp/v1 session=a8n (stdio NDJSON; fake session = fake/mock evidence only)\n"
+  },
+  {
+    "t": "2026-11-17T16:53:35.479Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "serverInfo": {
+          "name": "ae-devtools-mcp",
+          "version": "0.1.0"
+        },
+        "instructions": "ae-devtools dev-loop tools. ae_execute/ae_verify require arguments.consent:\"grant\"; destructive ops need confirmDestructive:true, render ops confirmRender:true. Default session is the codec-faithful fake host — results are fake/mock evidence, not real AE."
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:35.479Z",
+    "step": "initialized",
+    "serverInfo": {
+      "name": "ae-devtools-mcp",
+      "version": "0.1.0"
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:35.479Z",
+    "step": "ae_discover"
+  },
+  {
+    "t": "2026-11-17T16:53:35.479Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.dev-loop/v1\",\n  \"evidenceLevel\": \"registry metadata — no dispatch\",\n  \"operationCount\": 20,\n  \"evidence\": {\n    \"implemented\": 20,\n    \"automatedTest\": 20,\n    \"fakeMockVerified\": 20,\n    \"realHostVerified\": 0,\n    \"level\": \"fake/mock only\"\n  },\n  \"operations\": [\n    {\n      \"id\": \"project.new\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.open\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.save\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.close\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.addComp\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"width\",\n        \"height\",\n        \"pixelAspect\",\n        \"duration\",\n        \"frameRate\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.addFolder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.remove\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"comp.addNullLayer\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.setTransformPosition\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"x\",\n        \"y\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.reorder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"to\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.setParent\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"parentName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.duplicate\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"read.projectSummary\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"anim.setValue\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setKeyframe\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"keyIndex\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setValueAtTime\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"time\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setExpression\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"expression\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"effect.add\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"effectMatchName\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.queueComp\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.renderQueued\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": \"render\",\n      \"args\": [],\n      \"memberCount\": 1\n    }\n  ]\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:35.479Z",
+    "stepResult": "ae_discover",
+    "isError": false,
+    "outcome": null,
+    "session": null,
+    "result": {
+      "schema": "ae-devtools.dev-loop/v1",
+      "evidenceLevel": "registry metadata — no dispatch",
+      "operationCount": 20,
+      "evidence": {
+        "implemented": 20,
+        "automatedTest": 20,
+        "fakeMockVerified": 20,
+        "realHostVerified": 0,
+        "level": "fake/mock only"
+      },
+      "operations": [
+        {
+          "id": "project.new",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 1
+        },
+        {
+          "id": "project.open",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [
+            "path"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "project.save",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "path"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "project.close",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 1
+        },
+        {
+          "id": "item.addComp",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "width",
+            "height",
+            "pixelAspect",
+            "duration",
+            "frameRate"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "item.addFolder",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "item.remove",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "type"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "comp.addNullLayer",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "layer.setTransformPosition",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "x",
+            "y"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.reorder",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "to"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.setParent",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "parentName"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "layer.duplicate",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "read.projectSummary",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 4
+        },
+        {
+          "id": "anim.setValue",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "value"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "anim.setKeyframe",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "keyIndex",
+            "value"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "anim.setValueAtTime",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "time",
+            "value"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "anim.setExpression",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "expression"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "effect.add",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "effectMatchName"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "render.queueComp",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "render.renderQueued",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": "render",
+          "args": [],
+          "memberCount": 1
+        }
+      ]
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:35.479Z",
+    "step": "ae_verify.pre-state"
+  },
+  {
+    "t": "2026-11-17T16:53:38.962Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-1\",\n    \"operationId\": \"read.projectSummary\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"count\": 0,\n      \"items\": [],\n      \"activeItem\": null\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"read.projectSummary\",\n    \"mutating\": false,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:38.962Z",
+    "stepResult": "ae_verify.pre",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-1",
+      "operationId": "read.projectSummary",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "count": 0,
+        "items": [],
+        "activeItem": null
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "read.projectSummary",
+      "mutating": false,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:38.963Z",
+    "step": "ae_execute.project.new (launches owned AE)"
+  },
+  {
+    "t": "2026-11-17T16:53:39.172Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-2\",\n    \"operationId\": \"project.new\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"project.new\",\n    \"mutating\": true,\n    \"destructive\": true\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.172Z",
+    "stepResult": "project.new",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-2",
+      "operationId": "project.new",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "project.new",
+      "mutating": true,
+      "destructive": true
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.173Z",
+    "step": "ae_execute.project.save"
+  },
+  {
+    "t": "2026-11-17T16:53:39.413Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 5,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-3\",\n    \"operationId\": \"project.save\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"project.save\",\n    \"mutating\": true,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.413Z",
+    "stepResult": "project.save",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-3",
+      "operationId": "project.save",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "project.save",
+      "mutating": true,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.413Z",
+    "step": "ae_execute.item.addComp"
+  },
+  {
+    "t": "2026-11-17T16:53:39.548Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 6,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-4\",\n    \"operationId\": \"item.addComp\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"id\": 1,\n      \"name\": \"MCP Conformance Comp\"\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"item.addComp\",\n    \"mutating\": true,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.550Z",
+    "stepResult": "item.addComp",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-4",
+      "operationId": "item.addComp",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "id": 1,
+        "name": "MCP Conformance Comp"
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "item.addComp",
+      "mutating": true,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.550Z",
+    "step": "ae_verify.readback"
+  },
+  {
+    "t": "2026-11-17T16:53:39.749Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 7,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-5\",\n    \"operationId\": \"read.projectSummary\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"count\": 1,\n      \"items\": [\n        {\n          \"name\": \"MCP Conformance Comp\",\n          \"typeName\": \"コンポジション\",\n          \"id\": 1\n        }\n      ],\n      \"activeItem\": null\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"read.projectSummary\",\n    \"mutating\": false,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.749Z",
+    "stepResult": "ae_verify.readback",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-5",
+      "operationId": "read.projectSummary",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "count": 1,
+        "items": [
+          {
+            "name": "MCP Conformance Comp",
+            "typeName": "コンポジション",
+            "id": 1
+          }
+        ],
+        "activeItem": null
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "read.projectSummary",
+      "mutating": false,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.750Z",
+    "step": "ae_execute.item.remove"
+  },
+  {
+    "t": "2026-11-17T16:53:39.882Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 8,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-6\",\n    \"operationId\": \"item.remove\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"removed\": \"MCP Conformance Comp\"\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"item.remove\",\n    \"mutating\": true,\n    \"destructive\": true\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.882Z",
+    "stepResult": "item.remove",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-6",
+      "operationId": "item.remove",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "removed": "MCP Conformance Comp"
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "item.remove",
+      "mutating": true,
+      "destructive": true
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:39.883Z",
+    "step": "ae_verify.final"
+  },
+  {
+    "t": "2026-11-17T16:53:40.024Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 9,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-7\",\n    \"operationId\": \"read.projectSummary\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"count\": 0,\n      \"items\": [],\n      \"activeItem\": null\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"read.projectSummary\",\n    \"mutating\": false,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:40.024Z",
+    "stepResult": "ae_verify.final",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-7",
+      "operationId": "read.projectSummary",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "count": 0,
+        "items": [],
+        "activeItem": null
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "read.projectSummary",
+      "mutating": false,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:40.025Z",
+    "step": "ae_execute.project.save.resave"
+  },
+  {
+    "t": "2026-11-17T16:53:40.188Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 10,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\",\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-8\",\n    \"operationId\": \"project.save\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"project.save\",\n    \"mutating\": true,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:40.188Z",
+    "stepResult": "project.save.resave",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)",
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0"
+    },
+    "result": {
+      "requestId": "req-mcp-8",
+      "operationId": "project.save",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "project.save",
+      "mutating": true,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-17T16:53:55.189Z",
+    "step": "server.stopped",
+    "fixturePath": "/tmp/ae-conf-177/mcp-fixture/Conformance-MCP-Disposable.aep",
+    "results": {
+      "ae_discover": {
+        "isError": false,
+        "outcome": null,
+        "session": null,
+        "result": {
+          "schema": "ae-devtools.dev-loop/v1",
+          "evidenceLevel": "registry metadata — no dispatch",
+          "operationCount": 20,
+          "evidence": {
+            "implemented": 20,
+            "automatedTest": 20,
+            "fakeMockVerified": 20,
+            "realHostVerified": 0,
+            "level": "fake/mock only"
+          },
+          "operations": [
+            {
+              "id": "project.new",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 1
+            },
+            {
+              "id": "project.open",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [
+                "path"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "project.save",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "path"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "project.close",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 1
+            },
+            {
+              "id": "item.addComp",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "width",
+                "height",
+                "pixelAspect",
+                "duration",
+                "frameRate"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "item.addFolder",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "item.remove",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "type"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "comp.addNullLayer",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "layer.setTransformPosition",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "x",
+                "y"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.reorder",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "to"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.setParent",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "parentName"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "layer.duplicate",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "read.projectSummary",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 4
+            },
+            {
+              "id": "anim.setValue",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "value"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "anim.setKeyframe",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "keyIndex",
+                "value"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "anim.setValueAtTime",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "time",
+                "value"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "anim.setExpression",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "expression"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "effect.add",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "effectMatchName"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "render.queueComp",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "render.renderQueued",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": "render",
+              "args": [],
+              "memberCount": 1
+            }
+          ]
+        }
+      },
+      "ae_verify.pre": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-1",
+          "operationId": "read.projectSummary",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "count": 0,
+            "items": [],
+            "activeItem": null
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "read.projectSummary",
+          "mutating": false,
+          "destructive": false
+        }
+      },
+      "project.new": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-2",
+          "operationId": "project.new",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "project.new",
+          "mutating": true,
+          "destructive": true
+        }
+      },
+      "project.save": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-3",
+          "operationId": "project.save",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "project.save",
+          "mutating": true,
+          "destructive": false
+        }
+      },
+      "item.addComp": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-4",
+          "operationId": "item.addComp",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "id": 1,
+            "name": "MCP Conformance Comp"
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "item.addComp",
+          "mutating": true,
+          "destructive": false
+        }
+      },
+      "ae_verify.readback": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-5",
+          "operationId": "read.projectSummary",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "count": 1,
+            "items": [
+              {
+                "name": "MCP Conformance Comp",
+                "typeName": "コンポジション",
+                "id": 1
+              }
+            ],
+            "activeItem": null
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "read.projectSummary",
+          "mutating": false,
+          "destructive": false
+        }
+      },
+      "item.remove": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-6",
+          "operationId": "item.remove",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "removed": "MCP Conformance Comp"
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "item.remove",
+          "mutating": true,
+          "destructive": true
+        }
+      },
+      "ae_verify.final": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-7",
+          "operationId": "read.projectSummary",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "count": 0,
+            "items": [],
+            "activeItem": null
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "read.projectSummary",
+          "mutating": false,
+          "destructive": false
+        }
+      },
+      "project.save.resave": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)",
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0"
+        },
+        "result": {
+          "requestId": "req-mcp-8",
+          "operationId": "project.save",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "project.save",
+          "mutating": true,
+          "destructive": false
+        }
+      }
+    }
+  }
+]

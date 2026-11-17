@@ -1,0 +1,50 @@
+{
+  "schema": "ae-devtools.conformance-provenance/v1",
+  "recordedAt": "2026-11-18T01:55:00+09:00",
+  "git": {
+    "head": "f6cfbdff3c0e856b254bfbc255b6eee90fed623b",
+    "dirty": true,
+    "note": "run executed at f6cfbdf with uncommitted capability-catalog claim-plumbing edits (inputs.ts, import-scripting.ts); tested runtime surface (ae-devtools-cli) is identical to f6cfbdf"
+  },
+  "aeA8n": {
+    "name": "@ido-bata/ae-a8n",
+    "version": "0.2.0",
+    "distTag": "next",
+    "latestDistTag": "0.1.0-alpha.0",
+    "tarball": "https://registry.npmjs.org/@ido-bata/ae-a8n/-/ae-a8n-0.2.0.tgz",
+    "integrity": "sha512-NyKmrKIlm7zT4yHWPwf8VGxiW2FRBm5Dqf/IJWg1Dh04ceuk5KWLWHAEgNE5cPXc/N8vF3lQG/ny7axm25+shA==",
+    "shasum": "3afeb68ba942daaf3451df80e3c0953c3ca6b96b",
+    "fileCount": 164
+  },
+  "aeDevtools": {
+    "package": "ae-devtools-cli",
+    "sourceSha": "f6cfbdff3c0e856b254bfbc255b6eee90fed623b",
+    "invocation": "node conformance/real-run.mjs + node conformance/mcp-real-run.mjs + node devtools-cli/cli.mjs (execute/doctor)"
+  },
+  "host": {
+    "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+    "aeVersion": "26.5.3x9",
+    "aeBuild": "9",
+    "os": "macOS 27.2.1",
+    "arch": "arm64",
+    "node": "v26.13.1"
+  },
+  "fixtures": {
+    "primary": "Conformance-Disposable.aep",
+    "mcp": "Conformance-MCP-Disposable.aep",
+    "note": "both created fresh inside owned sessions via project.new + project.save; starting project was unnamed, 0 items, dirty=false"
+  },
+  "artifactHashes": {
+    "session-a8n-jsx.json": "a5c7afb030748ef9039b3d919e9cfef2a816e39ca756d350b449341e23acf954",
+    "mcp-stdio.jsonl": "e8000c0ced488b52c4875750239796108c7bfeb147b397900ed95dcb3326d9a5",
+    "cli-doctor.json": "67dbc09a707fecbba887f9bbe025c386a15f3136959f6d41d7573fc40d01fbce",
+    "cli-project-open.json": "e9d0a976ae6014bbaec836beb5bf40b779bb1fff8655f51f14d46eff7a440104",
+    "a8n-host-ext.js": "d41a31991246b25af2e996e595151109d2bfe17693ff9f9924f38a4ca651b1b1",
+    "trace.jsonl": "f1546df2d7635a5adfe0220edac139e8d8e6e24ed5e62dd776dbc046413c7496",
+    "Conformance-Disposable.aep": "d43d76ecea8578c75d24ca39da1f98597f1250c1c49c93e5facc2836c2b1efac",
+    "Conformance-MCP-Disposable.aep": "fe96da2f8d9c52b993960c2eb2dc00bdf790f67303f45cd5cc3c1ecf46d7d17a",
+    "ae-a8n-0.2.0.tgz": "3c63588bb618106f4ee89716f840787b9da601977f01cca92547ba5700bda372",
+    "harness-real-run.mjs": "a6ea767bd897848b09744a0d4958dc5a7878151c1f68b0ed03a20a9acaaa8b9e",
+    "harness-mcp-real-run.mjs": "96bfdde1c1ed37e0d6f7f7649d5dde288708b6c784c80713ae4229216396878c"
+  }
+}

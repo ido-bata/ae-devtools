@@ -40,6 +40,10 @@
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
       "sha256": "0e339352a4071ebb7e838124900dd18c78bda967434c344ea42541f5357d5e59"
+    },
+    {
+      "path": "packages/capability-catalog/real-host-claims.json",
+      "sha256": "11dcc1db89689278237e245c247bcf1e60ad68debbd7a261ceb18ddf9b7b4d09"
     }
   ],
   "records": [
@@ -22183,7 +22187,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "none",
         "trust": "read-only",
@@ -22194,7 +22202,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -22203,6 +22211,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -22267,7 +22280,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "project-write",
         "trust": "named-operation",
@@ -22278,7 +22295,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -22287,6 +22304,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -22351,7 +22373,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "unknown",
         "trust": "named-operation",
@@ -22362,7 +22388,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -22371,6 +22397,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (item.remove)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -22515,7 +22546,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "none",
         "trust": "read-only",
@@ -22526,7 +22561,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -22535,6 +22570,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -22559,7 +22599,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "unknown",
         "trust": "named-operation",
@@ -22570,7 +22614,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -22579,6 +22623,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (item.addComp)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -26827,7 +26876,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "none",
         "trust": "read-only",
@@ -26838,7 +26891,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -26847,6 +26900,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -28639,7 +28697,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "unknown",
         "trust": "named-operation",
@@ -28650,7 +28712,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -28659,6 +28721,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (project.save)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -39651,7 +39718,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "unknown",
         "trust": "named-operation",
@@ -39662,7 +39733,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -39671,6 +39742,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (project.new)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
@@ -39735,7 +39811,11 @@
         "lifecycle": "AE scripting host",
         "canRemoteInvoke": null
       },
-      "compatibility": {},
+      "compatibility": {
+        "os": [
+          "darwin"
+        ]
+      },
       "risk": {
         "effect": "unknown",
         "trust": "named-operation",
@@ -39746,7 +39826,7 @@
         "inventory": "source-reviewed",
         "reachability": "unknown",
         "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "verification": "verified-real-host",
         "evidenceRefs": [
           {
             "kind": "source-doc",
@@ -39755,6 +39835,11 @@
           {
             "kind": "automated-test",
             "ref": "packages/ae-devtools-cli/scripting-adapters (project.open)"
+          },
+          {
+            "kind": "real-host",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "platform": "darwin"
           }
         ]
       }
