@@ -16,7 +16,9 @@
     "onCommand:ae-devtools.discover",
     "onCommand:ae-devtools.inspect",
     "onCommand:ae-devtools.execute",
-    "onCommand:ae-devtools.verify"
+    "onCommand:ae-devtools.verify",
+    "onCommand:ae-devtools.debug.setup",
+    "onCommand:ae-devtools.debug.attach"
   ],
   "contributes": {
     "commands": [
@@ -39,6 +41,16 @@
         "command": "ae-devtools.verify",
         "title": "AE DevTools: Verify State",
         "category": "AE DevTools"
+      },
+      {
+        "command": "ae-devtools.debug.setup",
+        "title": "AE DevTools: Debug Setup (launch.json)",
+        "category": "AE DevTools"
+      },
+      {
+        "command": "ae-devtools.debug.attach",
+        "title": "AE DevTools: Debug Attach Preflight",
+        "category": "AE DevTools"
       }
     ],
     "configuration": {
@@ -59,6 +71,16 @@
           "type": "string",
           "default": "",
           "description": "AE install directory forwarded to the a8n session opener (a8n session only)."
+        },
+        "ae-devtools.debug.hostAppSpecifier": {
+          "type": "string",
+          "default": "",
+          "description": "Host specifier for the Adobe.extendscript-debug attach configuration (e.g. aftereffects-27.0). The authoritative string is shown by the extension's app picker — offline checks only establish plausibility."
+        },
+        "ae-devtools.debug.ownedPid": {
+          "type": "string",
+          "default": "",
+          "description": "PID of the ae-a8n owned AE session used to attest attach preflight. Attestation-grade only — the debugger cannot be aimed at a PID."
         }
       }
     }

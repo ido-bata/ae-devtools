@@ -1,4 +1,4 @@
-# vscode-debugger — VSCode `extendscript-debug` integration (Issue #53)
+# vscode-debugger — VSCode `extendscript-debug` integration (Issue #53; packaged in Issue #154)
 
 Generates and contract-validates `.vscode/launch.json` configurations for
 Adobe's official **ExtendScript Debugger** VS Code extension
@@ -9,13 +9,14 @@ official extension only.
 
 | Command | Purpose |
 | --- | --- |
-| `vscode-debugger gen --host-app-specifier aftereffects-27.0 [--engine-name main] [--project-dir .]` | writes/merges `.vscode/launch.json` with an **attach** configuration pinned to the declared host specifier |
-| `vscode-debugger validate <launch.json>` | contract-checks a launch.json (real JSONC parse — comments/trailing commas legal, `//` inside strings is not a comment); exit 1 on errors, warnings reported |
-| `vscode-debugger preflight [--host-app-specifier …] [--owned-pid <pid>]` | attach precondition checks: installed-app plausibility, running-instance count, owned-session attestation. **Never claims debug completion** — see below |
+| `ae-devtools-debug gen --host-app-specifier aftereffects-27.0 [--engine-name main] [--project-dir .]` | writes/merges `.vscode/launch.json` with an **attach** configuration pinned to the declared host specifier |
+| `ae-devtools-debug validate <launch.json>` | contract-checks a launch.json (real JSONC parse — comments/trailing commas legal, `//` inside strings is not a comment); exit 1 on errors, warnings reported |
+| `ae-devtools-debug preflight [--host-app-specifier …] [--owned-pid <pid>]` | attach precondition checks: installed-app plausibility, running-instance count, owned-session attestation. **Never claims debug completion** — see below |
 
 Requires: VS Code ≥1.62 and the `Adobe.extendscript-debug` extension
-installed. One runtime dependency: `jsonc-parser` (JSONC tokenize +
-surgical edits).
+installed. Shipped inside `@ido-bata/ae-devtools-cli` (moved from
+`experiments/` for Issue #154); the CLI bin is `ae-devtools-debug`. One
+runtime dependency: `jsonc-parser` (JSONC tokenize + surgical edits).
 
 ## JSONC safety (launch.json read/update)
 

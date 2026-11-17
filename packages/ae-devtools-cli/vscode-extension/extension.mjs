@@ -196,6 +196,14 @@ export async function activate(context) {
     return controller.execute({ opId, args });
   });
   reg("ae-devtools.verify", () => controller.verify());
+  reg("ae-devtools.debug.setup", () => controller.debugSetup({
+    projectDir: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(),
+    hostAppSpecifier: config.get("debug.hostAppSpecifier", ""),
+  }));
+  reg("ae-devtools.debug.attach", () => controller.debugAttach({
+    hostAppSpecifier: config.get("debug.hostAppSpecifier", ""),
+    ownedPid: config.get("debug.ownedPid", ""),
+  }));
 }
 
 export async function deactivate() {
