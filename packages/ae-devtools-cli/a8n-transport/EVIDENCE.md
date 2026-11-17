@@ -137,3 +137,44 @@ The flawed evidence files were discarded before rerun.
 - npm-published ae-a8n verification — separate gate after actual publish.
 - GUI observation, modal-dialog recovery, crash/log collection,
   session rebuild — tracked as ae-a8n #107/#108/#109.
+
+## Attempt 5 — release-0-3-0 QA at ae-devtools `4a06639` (2026-11-17)
+
+Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9`,
+AE 2027 = `27.0x78` (already running, non-owned — untouched).
+
+- `run-2026-a8n-4a06639.json` — **PASS (AE 2026)**. Owned session
+  (pid 86307, `ownership.kind:"owned"`), 6 transport sends, all 8 slice
+  steps in their expected outcome class (`error.capture` FAILED with a
+  real host `ReferenceError`, consent tamper BLOCKED, consent denial
+  REFUSED-BEFORE-SEND), handshake battery green, `contractViolations: []`,
+  close `{quit:true}`, no main AE executable left.
+- `run-2027-a8n-launch-blocked-4a06639.json` — **launch-blocked (AE
+  2027)**. `AfterEffects.launch` started AE (pid 4891) but the `app.info`
+  readiness probe never returned a parseable result within 180 s;
+  ae-a8n correctly left the process running (`HostLeftRunningError`,
+  ownership unproven → no quit). Consistent with the known AE 2027
+  modal/UXP launch-blocked issue; root cause unproven.
+
+### Provenance (verified 2026-11-17, Issue #169)
+
+- ae-devtools bytes under test: working tree whose runtime surface
+  (`a8n-transport/`, `jsx-toolchain/`, `mcp-server/`, dev-loop core) is
+  byte-identical to freeze SHA `4a0663990c2cf42fe48297f47c0118912c733e35`
+  (`git diff d2534cb..4a06639` touched only packaging/docs/tests;
+  `4a06639^{tree}` == `1725488^{tree}`). The runs themselves predate the
+  merge commit by minutes and do not embed a sourceSha — attribution
+  rests on this unchanged-surface check, not on an in-band field.
+- ae-a8n bytes under test: `--ae-a8n-root /tmp/ae-a8n-candidate`, a
+  snapshot **without `.git`** (`aeA8nHead: null` in the record). The
+  snapshot's full source tree was diffed against ae-a8n git objects and
+  matches commit `1dbd4de` on `release-0-2-0` (tree `e6003eab…`, merge of
+  PR #149; contains #102/#103/#105, predates #146/#147/#148 and the
+  `0.2.0` version bump). Its `dist/` is byte-identical to a clean
+  `npm ci && npm run build` of `1dbd4de`.
+- **Pre-RC caveat**: `1dbd4de` precedes the 0.2.0 RC freeze `9f340fa`;
+  `host/a8n-host.js`, `src/extensions/manifest.ts` and
+  `src/driver/dispatcher-transport.ts` changed between them, so these
+  runs are **not** same-bytes proof against the ae-a8n 0.2.0 RC or any
+  published tarball (conformance-evidence.md §3). They remain valid
+  real-host evidence for the ae-devtools slice against ae-a8n@`1dbd4de`.

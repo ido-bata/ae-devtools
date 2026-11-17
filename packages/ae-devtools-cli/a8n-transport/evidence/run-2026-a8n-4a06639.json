@@ -1,0 +1,254 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/v1",
+  "issue": 49,
+  "startedAt": "2026-11-17T03:11:39.252Z",
+  "platform": "darwin/arm64",
+  "node": "v26.13.1",
+  "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": 86007,
+      "args": "bash -c cd /Users/rebui/work/ae-devtools/packages/ae-devtools-cli/a8n-transport && rm -f ae-a8n-real-run-1794885095818.json && mkdir -p /tmp/ae-qa-evidence && node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir \"/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app\" --out /tmp/ae-qa-evidence/run-2026-a8n.json 2>&1"
+    },
+    {
+      "pid": 86010,
+      "args": "node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir /Applications/Adobe After Effects 2026/Adobe After Effects 2026.app --out /tmp/ae-qa-evidence/run-2026-a8n.json"
+    }
+  ],
+  "steps": [
+    {
+      "label": "connect.state",
+      "source": "String(app.version)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "26.5.3x9",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 0,
+      "sendsAfter": 1
+    },
+    {
+      "label": "project.state",
+      "source": "String(app.project.numItems)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 1,
+      "sendsAfter": 2
+    },
+    {
+      "label": "error.capture",
+      "source": "__a8nSliceUndeclaredIdentifier;",
+      "outcome": "FAILED",
+      "contractOutcome": "failed",
+      "requestState": "ACKED",
+      "result": null,
+      "error": {
+        "name": "ReferenceError",
+        "message": "__a8nSliceUndeclaredIdentifierは未定義です。",
+        "line": 1,
+        "hostReported": true
+      },
+      "refusal": null,
+      "sendsBefore": 2,
+      "sendsAfter": 3
+    },
+    {
+      "label": "fix.rerun",
+      "source": "String(app.project.numItems + 0)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 3,
+      "sendsAfter": 4
+    },
+    {
+      "label": "verify.counter.1",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "1",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 4,
+      "sendsAfter": 5
+    },
+    {
+      "label": "verify.counter.2",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "2",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 5,
+      "sendsAfter": 6
+    },
+    {
+      "label": "consent.tampered",
+      "source": "String(app.version)",
+      "outcome": "BLOCKED",
+      "contractOutcome": "not-sent",
+      "requestState": "NOT_SENT",
+      "result": null,
+      "error": null,
+      "refusal": {
+        "code": "CONSENT_SCOPE_MISMATCH",
+        "message": "consent scope does not match this dispatch (session/operation/args/project)"
+      },
+      "sendsBefore": 6,
+      "sendsAfter": 6
+    },
+    {
+      "label": "consent.denied",
+      "source": "__DENY__ String(app.version)",
+      "outcome": "REFUSED-BEFORE-SEND",
+      "reason": "policy denied: source carries __DENY__ marker",
+      "sendsBefore": 6,
+      "sendsAfter": 6
+    }
+  ],
+  "close": {
+    "quit": true
+  },
+  "handshake": {
+    "schema": "ae-devtools.capability-handshake/v1",
+    "contractVersion": {
+      "major": 1,
+      "minor": 0
+    },
+    "hostId": "pid:86307",
+    "ownership": "owned",
+    "ownershipKind": "owned",
+    "advertisedCapabilities": 27,
+    "negotiation": {
+      "status": "compatible"
+    },
+    "dispatchCheck": {
+      "capabilityId": "ae.operation.app.version-info",
+      "status": "pass"
+    },
+    "unknownCapabilityCheck": {
+      "status": "refused",
+      "reason": "capability-unassessed",
+      "detail": "capability ae.operation.definitely.not.advertised is unassessed: its inventory was not supplied to this host; unassessed is not absence"
+    }
+  },
+  "contractViolations": [],
+  "pin": {
+    "sessionId": "a8n-slice-049d04ed-b4ea-4c24-a73a-51bdbc8766bb",
+    "aeVersion": "26.5.3x9",
+    "dispatchId": "disp-0d6579e5-ef9f-4c76-8920-01f63dc680ac"
+  },
+  "aeA8nSource": "local:/tmp/ae-a8n-candidate",
+  "aeA8nHead": null,
+  "hostInfo": {
+    "version": "26.5.3x9",
+    "build": "9"
+  },
+  "ownership": {
+    "kind": "owned",
+    "evidence": "pid 86307 is still the only instance"
+  },
+  "hostScript": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-Juri38/a8n-host-ext.js",
+  "sessionRoot": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-Juri38/a8n-session",
+  "tracePath": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-Juri38/a8n-session/trace.jsonl",
+  "artifactsNote": "hostScript/sessionRoot/workdir/tracePath identify session artifacts removed by session.close(); only `trace` survives inline",
+  "assertionViolations": [],
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-17T03:11:44.974Z\",\"op\":\"session.probe\",\"status\":\"ok\",\"durationMs\":5539,\"args\":{\"method\":\"app.info\"},\"result\":{\"version\":\"26.5.3x9\",\"build\":\"9\"}}\n{\"seq\":1,\"ts\":\"2026-11-17T03:11:45.109Z\",\"op\":\"session.launch\",\"status\":\"ok\",\"durationMs\":5717,\"args\":{\"transport\":\"script-invocation\"},\"result\":{\"version\":\"26.5.3x9\",\"build\":\"9\",\"ownership\":{\"kind\":\"owned\",\"evidence\":\"pid 86307 is still the only instance\"}}}\n{\"seq\":2,\"ts\":\"2026-11-17T03:11:45.187Z\",\"op\":\"session.authorization\",\"status\":\"ok\",\"durationMs\":0,\"result\":{\"ownership\":\"owned\",\"granted\":[\"extensionMethods\",\"hostEnvironment\",\"menuCommands\"]}}\n{\"seq\":3,\"ts\":\"2026-11-17T03:11:45.648Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":280,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"String(app.version)\",\"requestId\":\"req-262d239e37f069d9\"},\"result\":{\"requestId\":\"req-262d239e37f069d9\",\"ok\":true,\"resultJson\":\"\\\"26.5.3x9\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":4,\"ts\":\"2026-11-17T03:11:45.988Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":252,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"String(app.project.numItems)\",\"requestId\":\"req-c6e6fde95009a847\"},\"result\":{\"requestId\":\"req-c6e6fde95009a847\",\"ok\":true,\"resultJson\":\"\\\"0\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":5,\"ts\":\"2026-11-17T03:11:46.190Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":145,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"__a8nSliceUndeclaredIdentifier;\",\"requestId\":\"req-86cb2c8c499cfa6a\"},\"result\":{\"requestId\":\"req-86cb2c8c499cfa6a\",\"ok\":false,\"evalError\":\"{...}\"}}\n{\"seq\":6,\"ts\":\"2026-11-17T03:11:46.424Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":204,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"String(app.project.numItems + 0)\",\"requestId\":\"req-75f2659ff033ab33\"},\"result\":{\"requestId\":\"req-75f2659ff033ab33\",\"ok\":true,\"resultJson\":\"\\\"0\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":7,\"ts\":\"2026-11-17T03:11:46.586Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":130,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);\",\"requestId\":\"req-9cf6c60dd251ff83\"},\"result\":{\"requestId\":\"req-9cf6c60dd251ff83\",\"ok\":true,\"resultJson\":\"\\\"1\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n{\"seq\":8,\"ts\":\"2026-11-17T03:11:46.812Z\",\"op\":\"extension.call\",\"status\":\"ok\",\"durationMs\":170,\"args\":{\"method\":\"aeDevtools.trustedEval\",\"source\":\"$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);\",\"requestId\":\"req-5384096b71099ac0\"},\"result\":{\"requestId\":\"req-5384096b71099ac0\",\"ok\":true,\"resultJson\":\"\\\"2\\\"\",\"valueText\":null,\"valueType\":\"string\"}}\n",
+  "aeProcessesAfterClose": [
+    {
+      "pid": 86007,
+      "args": "bash -c cd /Users/rebui/work/ae-devtools/packages/ae-devtools-cli/a8n-transport && rm -f ae-a8n-real-run-1794885095818.json && mkdir -p /tmp/ae-qa-evidence && node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir \"/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app\" --out /tmp/ae-qa-evidence/run-2026-a8n.json 2>&1"
+    },
+    {
+      "pid": 86010,
+      "args": "node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir /Applications/Adobe After Effects 2026/Adobe After Effects 2026.app --out /tmp/ae-qa-evidence/run-2026-a8n.json"
+    },
+    {
+      "pid": 86676,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/16ce55ff-6fa8-4947-d154-ce1605f9c17f.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/16ce55ff-6fa8-4947-d154-ce1605f9c17f.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/16ce55ff-6fa8-4947-d154-ce1605f9c17f.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/external/c1567048-853b-4742-7937-a99a598e97df.envelope --report-id=c1567048-853b-4742-7937-a99a598e97df --handshake-fd=5"
+    },
+    {
+      "pid": 86689,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/dynamiclinkmanager --rogue"
+    },
+    {
+      "pid": 86690,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    },
+    {
+      "pid": 86771,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/MacOS/CEPHtmlEngine 072fef9b-9ead-47cf-8345-20f96dc94d7a 77e4cd00-28ef-4a62-a8c4-0e67f3232b5f AEFT 26.5.3 app.ty-plus.panel1 1 /Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus 1 WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= ja_JP 100 -14803426 0"
+    },
+    {
+      "pid": 87151,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper (GPU).app/Contents/MacOS/CEPHtmlEngine Helper (GPU) --type=gpu-process --no-sandbox --v=0 --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --lang=ja --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --gpu-preferences=UAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJgEAAAAAAAAmAQAAAAAAACIAQAAMAAAAIABAAAAAAAAiAEAAAAAAACQAQAAAAAAAJgBAAAAAAAAoAEAAAAAAACoAQAAAAAAALABAAAAAAAAuAEAAAAAAADAAQAAAAAAAMgBAAAAAAAA0AEAAAAAAADYAQAAAAAAAOABAAAAAAAA6AEAAAAAAADwAQAAAAAAAPgBAAAAAAAAAAIAAAAAAAAIAgAAAAAAABACAAAAAAAAGAIAAAAAAAAgAgAAAAAAACgCAAAAAAAAMAIAAAAAAAA4AgAAAAAAAEACAAAAAAAASAIAAAAAAABQAgAAAAAAAFgCAAAAAAAAYAIAAAAAAABoAgAAAAAAAHACAAAAAAAAeAIAAAAAAACAAgAAAAAAAIgCAAAAAAAAkAIAAAAAAACYAgAAAAAAAKACAAAAAAAAqAIAAAAAAACwAgAAAAAAALgCAAAAAAAAwAIAAAAAAADIAgAAAAAAANACAAAAAAAA2AIAAAAAAADgAgAAAAAAAOgCAAAAAAAA8AIAAAAAAAD4AgAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAHAAAAEAAAAAAAAAAAAAAACAAAABAAAAAAAAAAAAAAAAkAAAAQAAAAAAAAAAAAAAALAAAAEAAAAAAAAAAAAAAADAAAABAAAAAAAAAAAAAAAA4AAAAQAAAAAAAAAAAAAAAPAAAAEAAAAAAAAAABAAAAAAAAABAAAAAAAAAAAQAAAAcAAAAQAAAAAAAAAAEAAAAIAAAAEAAAAAAAAAABAAAACQAAABAAAAAAAAAAAQAAAAsAAAAQAAAAAAAAAAEAAAAMAAAAEAAAAAAAAAABAAAADgAAABAAAAAAAAAAAQAAAA8AAAAQAAAAAAAAAAQAAAAAAAAAEAAAAAAAAAAEAAAABwAAABAAAAAAAAAABAAAAAgAAAAQAAAAAAAAAAQAAAAJAAAAEAAAAAAAAAAEAAAACwAAABAAAAAAAAAABAAAAAwAAAAQAAAAAAAAAAQAAAAOAAAAEAAAAAAAAAAEAAAADwAAABAAAAAAAAAABwAAAAAAAAAQAAAAAAAAAAcAAAAHAAAAEAAAAAAAAAAHAAAACAAAABAAAAAAAAAABwAAAAkAAAAQAAAAAAAAAAcAAAALAAAAEAAAAAAAAAAHAAAADAAAABAAAAAAAAAABwAAAA4AAAAQAAAAAAAAAAcAAAAPAAAAEAAAAAAAAAAIAAAAAAAAABAAAAAAAAAACAAAAAcAAAAQAAAAAAAAAAgAAAAIAAAAEAAAAAAAAAAIAAAACQAAABAAAAAAAAAACAAAAAsAAAAQAAAAAAAAAAgAAAAMAAAAEAAAAAAAAAAIAAAADgAAABAAAAAAAAAACAAAAA8AAAAQAAAAAAAAAAoAAAAAAAAAEAAAAAAAAAAKAAAABwAAABAAAAAAAAAACgAAAAgAAAAQAAAAAAAAAAoAAAAJAAAAEAAAAAAAAAAKAAAACwAAABAAAAAAAAAACgAAAAwAAAAQAAAAAAAAAAoAAAAOAAAAEAAAAAAAAAAKAAAADwAAAAgAAAAAAAAACAAAAAAAAAA= --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --v=0 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87326,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper.app/Contents/MacOS/CEPHtmlEngine Helper --type=utility --utility-sub-type=storage.mojom.StorageService --lang=ja --service-sandbox-type=utility --no-sandbox --use-mock-keychain --v=0 --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --lang=ja --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --v=0 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87327,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper.app/Contents/MacOS/CEPHtmlEngine Helper --type=utility --utility-sub-type=network.mojom.NetworkService --lang=ja --service-sandbox-type=network --no-sandbox --use-mock-keychain --v=0 --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --lang=ja --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --v=0 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87328,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper (Renderer).app/Contents/MacOS/CEPHtmlEngine Helper (Renderer) --type=renderer --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --no-sandbox --enable-nodejs --mixed-context --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --remote-debugging-port=8970 --v=0 --lang=ja --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=6 --launch-time-ticks=40509219578 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87329,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper (Renderer).app/Contents/MacOS/CEPHtmlEngine Helper (Renderer) --type=renderer --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --no-sandbox --enable-nodejs --mixed-context --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --remote-debugging-port=8970 --v=0 --lang=ja --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=5 --launch-time-ticks=40509220808 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    }
+  ],
+  "aeHelpersAfterClose": [
+    {
+      "pid": 86676,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/16ce55ff-6fa8-4947-d154-ce1605f9c17f.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/16ce55ff-6fa8-4947-d154-ce1605f9c17f.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/16ce55ff-6fa8-4947-d154-ce1605f9c17f.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/external/c1567048-853b-4742-7937-a99a598e97df.envelope --report-id=c1567048-853b-4742-7937-a99a598e97df --handshake-fd=5"
+    },
+    {
+      "pid": 86689,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/dynamiclinkmanager --rogue"
+    },
+    {
+      "pid": 86690,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    },
+    {
+      "pid": 86771,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/MacOS/CEPHtmlEngine 072fef9b-9ead-47cf-8345-20f96dc94d7a 77e4cd00-28ef-4a62-a8c4-0e67f3232b5f AEFT 26.5.3 app.ty-plus.panel1 1 /Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus 1 WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= ja_JP 100 -14803426 0"
+    },
+    {
+      "pid": 87151,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper (GPU).app/Contents/MacOS/CEPHtmlEngine Helper (GPU) --type=gpu-process --no-sandbox --v=0 --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --lang=ja --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --gpu-preferences=UAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJgEAAAAAAAAmAQAAAAAAACIAQAAMAAAAIABAAAAAAAAiAEAAAAAAACQAQAAAAAAAJgBAAAAAAAAoAEAAAAAAACoAQAAAAAAALABAAAAAAAAuAEAAAAAAADAAQAAAAAAAMgBAAAAAAAA0AEAAAAAAADYAQAAAAAAAOABAAAAAAAA6AEAAAAAAADwAQAAAAAAAPgBAAAAAAAAAAIAAAAAAAAIAgAAAAAAABACAAAAAAAAGAIAAAAAAAAgAgAAAAAAACgCAAAAAAAAMAIAAAAAAAA4AgAAAAAAAEACAAAAAAAASAIAAAAAAABQAgAAAAAAAFgCAAAAAAAAYAIAAAAAAABoAgAAAAAAAHACAAAAAAAAeAIAAAAAAACAAgAAAAAAAIgCAAAAAAAAkAIAAAAAAACYAgAAAAAAAKACAAAAAAAAqAIAAAAAAACwAgAAAAAAALgCAAAAAAAAwAIAAAAAAADIAgAAAAAAANACAAAAAAAA2AIAAAAAAADgAgAAAAAAAOgCAAAAAAAA8AIAAAAAAAD4AgAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAHAAAAEAAAAAAAAAAAAAAACAAAABAAAAAAAAAAAAAAAAkAAAAQAAAAAAAAAAAAAAALAAAAEAAAAAAAAAAAAAAADAAAABAAAAAAAAAAAAAAAA4AAAAQAAAAAAAAAAAAAAAPAAAAEAAAAAAAAAABAAAAAAAAABAAAAAAAAAAAQAAAAcAAAAQAAAAAAAAAAEAAAAIAAAAEAAAAAAAAAABAAAACQAAABAAAAAAAAAAAQAAAAsAAAAQAAAAAAAAAAEAAAAMAAAAEAAAAAAAAAABAAAADgAAABAAAAAAAAAAAQAAAA8AAAAQAAAAAAAAAAQAAAAAAAAAEAAAAAAAAAAEAAAABwAAABAAAAAAAAAABAAAAAgAAAAQAAAAAAAAAAQAAAAJAAAAEAAAAAAAAAAEAAAACwAAABAAAAAAAAAABAAAAAwAAAAQAAAAAAAAAAQAAAAOAAAAEAAAAAAAAAAEAAAADwAAABAAAAAAAAAABwAAAAAAAAAQAAAAAAAAAAcAAAAHAAAAEAAAAAAAAAAHAAAACAAAABAAAAAAAAAABwAAAAkAAAAQAAAAAAAAAAcAAAALAAAAEAAAAAAAAAAHAAAADAAAABAAAAAAAAAABwAAAA4AAAAQAAAAAAAAAAcAAAAPAAAAEAAAAAAAAAAIAAAAAAAAABAAAAAAAAAACAAAAAcAAAAQAAAAAAAAAAgAAAAIAAAAEAAAAAAAAAAIAAAACQAAABAAAAAAAAAACAAAAAsAAAAQAAAAAAAAAAgAAAAMAAAAEAAAAAAAAAAIAAAADgAAABAAAAAAAAAACAAAAA8AAAAQAAAAAAAAAAoAAAAAAAAAEAAAAAAAAAAKAAAABwAAABAAAAAAAAAACgAAAAgAAAAQAAAAAAAAAAoAAAAJAAAAEAAAAAAAAAAKAAAACwAAABAAAAAAAAAACgAAAAwAAAAQAAAAAAAAAAoAAAAOAAAAEAAAAAAAAAAKAAAADwAAAAgAAAAAAAAACAAAAAAAAAA= --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --v=0 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87326,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper.app/Contents/MacOS/CEPHtmlEngine Helper --type=utility --utility-sub-type=storage.mojom.StorageService --lang=ja --service-sandbox-type=utility --no-sandbox --use-mock-keychain --v=0 --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --lang=ja --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --v=0 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87327,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper.app/Contents/MacOS/CEPHtmlEngine Helper --type=utility --utility-sub-type=network.mojom.NetworkService --lang=ja --service-sandbox-type=network --no-sandbox --use-mock-keychain --v=0 --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --lang=ja --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --v=0 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87328,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper (Renderer).app/Contents/MacOS/CEPHtmlEngine Helper (Renderer) --type=renderer --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --no-sandbox --enable-nodejs --mixed-context --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --remote-debugging-port=8970 --v=0 --lang=ja --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=6 --launch-time-ticks=40509219578 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    },
+    {
+      "pid": 87329,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/CEPHtmlEngine.app/Contents/Frameworks/CEPHtmlEngine Helper (Renderer).app/Contents/MacOS/CEPHtmlEngine Helper (Renderer) --type=renderer --log-severity=error --user-agent-product=Chrome/99.0.4844.84 AdobeCEP/12.0.1 --user-data-dir=/Users/rebui/Library/Application Support/CEF/User Data --params_ppid=AEFT --params_ppversion=26.5.3 --params_extensionid=app.ty-plus.panel1 --params_loglevel=1 --params_serverid=072fef9b-9ead-47cf-8345-20f96dc94d7a --params_clientid=77e4cd00-28ef-4a62-a8c4-0e67f3232b5f --node-module-dir=/Users/rebui/Library/Application Support/Adobe/CEP/extensions/app.ty-plus --params_commandline=WyItLXY9MCIsIi0tZW5hYmxlLW5vZGVqcyIsIi0tbWl4ZWQtY29udGV4dCIsIi0tYWxsb3ct^M\\012ZmlsZS1hY2Nlc3MtZnJvbS1maWxlcyIsIi0tYWxsb3ctZmlsZS1hY2Nlc3MiLCItLWVuYWJs^M\\012ZS12aWV3cG9ydC1tZXRhIl0= --no-sandbox --enable-nodejs --mixed-context --log-file=/Users/rebui/Library/Logs/CSXS/CEPHtmlEngine12-AEFT-26.5.3-app.ty-plus.panel1.log --remote-debugging-port=8970 --v=0 --lang=ja --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=5 --launch-time-ticks=40509220808 --shared-files --field-trial-handle=1718379636,r,331119886699246938,4798990758966593509,131072"
+    }
+  ],
+  "finishedAt": "2026-11-17T03:11:47.860Z",
+  "transportSends": 6
+}

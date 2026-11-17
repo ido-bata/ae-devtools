@@ -1,0 +1,102 @@
+{
+  "schema": "ae-devtools.jsx-toolchain.real-run/v1",
+  "issue": 52,
+  "startedAt": "2026-11-17T03:11:59.484Z",
+  "steps": [
+    {
+      "name": "session.launch",
+      "at": "2026-11-17T03:12:03.311Z",
+      "ok": true,
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nSource": "local:/tmp/ae-a8n-candidate",
+      "aeA8nHead": null
+    },
+    {
+      "name": "build.ok",
+      "at": "2026-11-17T03:12:03.353Z",
+      "ok": true,
+      "status": "ok",
+      "jsxBytes": 185
+    },
+    {
+      "name": "dispatch.ok",
+      "at": "2026-11-17T03:12:03.620Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "detail": null
+    },
+    {
+      "name": "verify.global-write",
+      "at": "2026-11-17T03:12:03.829Z",
+      "ok": true,
+      "observed": "hello ae 26.5.3x9",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "build.runtime-error",
+      "at": "2026-11-17T03:12:03.833Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "dispatch.runtime-error",
+      "at": "2026-11-17T03:12:04.013Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostError": "__toolchainUndeclaredIdentifierは未定義です。",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3
+    },
+    {
+      "name": "sourcemap.to-source",
+      "at": "2026-11-17T03:12:04.013Z",
+      "ok": true,
+      "mapped": {
+        "source": "runtime-error.ts",
+        "line": 3,
+        "column": 48,
+        "name": null,
+        "content": "// Deliberate runtime fault for real-host sourcemap verification.\nfunction boom(): void {\n  var missing = __toolchainUndeclaredIdentifier;\n  $.global.__toolchainBoom = missing;\n}\nboom();\n"
+      }
+    },
+    {
+      "name": "mystery.build",
+      "at": "2026-11-17T03:12:04.016Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "mystery.detect+diagnose",
+      "at": "2026-11-17T03:12:04.196Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3,
+      "mapped": {
+        "source": "mystery.ts",
+        "line": 3
+      }
+    },
+    {
+      "name": "mystery.fix+rerun",
+      "at": "2026-11-17T03:12:04.567Z",
+      "ok": true,
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "mystery.verify",
+      "at": "2026-11-17T03:12:04.890Z",
+      "ok": true,
+      "observed": "fixed",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "session.close",
+      "at": "2026-11-17T03:12:05.644Z",
+      "ok": true
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-11-17T03:12:05.644Z"
+}

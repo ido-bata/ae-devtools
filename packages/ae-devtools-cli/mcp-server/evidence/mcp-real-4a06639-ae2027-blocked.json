@@ -1,0 +1,99 @@
+[
+  {
+    "t": "2026-11-17T03:40:04.909Z",
+    "step": "initialize"
+  },
+  {
+    "t": "2026-11-17T03:40:04.936Z",
+    "stderr": "mcp-server: ae-devtools-mcp@0.1.0 schema=ae-devtools.mcp/v1 session=a8n (stdio NDJSON; fake session = fake/mock evidence only)\n"
+  },
+  {
+    "t": "2026-11-17T03:40:04.936Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "serverInfo": {
+          "name": "ae-devtools-mcp",
+          "version": "0.1.0"
+        },
+        "instructions": "ae-devtools dev-loop tools. ae_execute/ae_verify require arguments.consent:\"grant\"; destructive ops need confirmDestructive:true, render ops confirmRender:true. Default session is the codec-faithful fake host — results are fake/mock evidence, not real AE."
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T03:40:04.936Z",
+    "step": "initialized"
+  },
+  {
+    "t": "2026-11-17T03:40:04.936Z",
+    "step": "ae_discover"
+  },
+  {
+    "t": "2026-11-17T03:40:04.937Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.dev-loop/v1\",\n  \"evidenceLevel\": \"registry metadata — no dispatch\",\n  \"operationCount\": 20,\n  \"evidence\": {\n    \"implemented\": 20,\n    \"automatedTest\": 20,\n    \"fakeMockVerified\": 20,\n    \"realHostVerified\": 0,\n    \"level\": \"fake/mock only\"\n  },\n  \"operations\": [\n    {\n      \"id\": \"project.new\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.open\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.save\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.close\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.addComp\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"width\",\n        \"height\",\n        \"pixelAspect\",\n        \"duration\",\n        \"frameRate\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.addFolder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.remove\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"comp.addNullLayer\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.setTransformPosition\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"x\",\n        \"y\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.reorder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"to\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.setParent\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"parentName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.duplicate\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"read.projectSummary\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"anim.setValue\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setKeyframe\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"keyIndex\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setValueAtTime\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"time\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setExpression\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"expression\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"effect.add\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"effectMatchName\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.queueComp\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.renderQueued\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": \"render\",\n      \"args\": [],\n      \"memberCount\": 1\n    }\n  ]\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T03:40:04.937Z",
+    "step": "ae_discover-done"
+  },
+  {
+    "t": "2026-11-17T03:40:04.937Z",
+    "step": "ae_execute (launches owned AE)"
+  },
+  {
+    "t": "2026-11-17T03:43:05.100Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "error": {
+        "code": -32603,
+        "message": "session.launch got an unreadable response from the After Effects bridge: result file for app.info (3e65be7d-9844-4c58-9eb9-07ed8afa8ee1) was never parseable: Unexpected end of JSON input"
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T03:43:05.101Z",
+    "step": "ae_execute-done"
+  },
+  {
+    "t": "2026-11-17T03:43:05.101Z",
+    "step": "ae_verify"
+  },
+  {
+    "t": "2026-11-17T03:43:05.103Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "error": {
+        "code": -32603,
+        "message": "session.launch got an unreadable response from the After Effects bridge: result file for app.info (3e65be7d-9844-4c58-9eb9-07ed8afa8ee1) was never parseable: Unexpected end of JSON input"
+      }
+    }
+  },
+  {
+    "t": "2026-11-17T03:43:05.103Z",
+    "step": "ae_verify-done"
+  },
+  {
+    "t": "2026-11-17T03:43:05.104Z",
+    "stderr": "mcp-server: session close failed: session.launch got an unreadable response from the After Effects bridge: result file for app.info (3e65be7d-9844-4c58-9eb9-07ed8afa8ee1) was never parseable: Unexpected end of JSON input\n"
+  }
+]
