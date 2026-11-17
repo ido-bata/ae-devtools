@@ -197,3 +197,49 @@ Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9`.
   is byte-identical to what `v0.2.0-beta.1` will publish only if the
   registry `dist.shasum`/`dist.integrity` match after publish (verify
   before treating as registry proof — Issue #173).
+
+## Attempt 7 — published `@ido-bata/ae-a8n@0.2.0` registry bytes (2026-11-17)
+
+Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9` (build 9).
+
+- Registry state at run time: `@ido-bata/ae-a8n@0.2.0` published
+  2026-11-17T15:38:28Z under the `next` dist-tag
+  (`latest` still resolves `0.1.0-alpha.0`), tarball
+  `https://registry.npmjs.org/@ido-bata/ae-a8n/-/ae-a8n-0.2.0.tgz`,
+  sha1 `3afeb68ba942daaf3451df80e3c0953c3ca6b96b`,
+  integrity `sha512-NyKmrKIlm7zT4yHWPwf8VGxiW2FRBm5Dqf/IJWg1Dh04ceuk5KWLWHAEgNE5cPXc/N8vF3lQG/ny7axm25+shA==`,
+  164 files — matches the ae-a8n `0.2.0` freeze record
+  (`b2c6321`). `0.2.0-beta.1` remains published but is not the
+  dist-tag target.
+- `package.json` pins `"@ido-bata/ae-a8n": "0.2.0"` exactly; a fresh
+  `npm install` resolved `node_modules/@ido-bata/ae-a8n@0.2.0` from
+  the registry tarball above (lockfile `resolved`/`integrity` match).
+- `ae-devtools doctor` (re-run: `node devtools-cli/cli.mjs doctor`) reports
+  `resolvable: true`, `source: npm:@ido-bata/ae-a8n`,
+  `version: 0.2.0`, `contractOk: true`, `missing: []`; the 21-check
+  handshake battery is green without contacting AE.
+- `run-2026-a8n-registry-020.json` — **PASS (AE 2026)**, owned session
+  (pid 10682), `aeA8nSource: npm:@ido-bata/ae-a8n`,
+  `aeA8nHead: 0.2.0`, 6 transport sends, all step outcomes as
+  expected, consent gates fired (`consent.tampered` BLOCKED,
+  `consent.denied` REFUSED-BEFORE-SEND), deliberate runtime error
+  captured FAILED then fix rerun COMPLETED with verify counters 1→2,
+  `close: {quit: true}`, `assertionViolations: []`,
+  `contractViolations: []`.
+- `jsx-toolchain/evidence/jsx-2026-registry-020.json` — **PASS
+  (AE 2026)**: build/dispatch/verify, sourcemap host-error→TS-source
+  mapping, deliberate runtime-error diagnose→fix→rerun→read-back;
+  session step records `aeA8nSource: npm:@ido-bata/ae-a8n`,
+  `aeA8nHead: 0.2.0`, ownership `owned`, AE `26.5.3x9`.
+- `mcp-server/evidence/mcp-real-registry-020-2026.json` — **PASS
+  (AE 2026)**: stdio MCP initialize → `ae_discover` → `ae_execute`
+  `item.addComp` COMPLETED → `ae_verify` `read.projectSummary`
+  COMPLETED; session records `ownership: owned`,
+  `aeVersion: 26.5.3x9`, `aeA8nHead: 0.2.0`.
+
+This is **registry evidence**: every run resolved the published
+`@ido-bata/ae-a8n@0.2.0` tarball through npm, not a local checkout or
+candidate tarball. It is scoped to macOS arm64 + AE 2026 `26.5.3x9`
++ owned sessions; Windows, AE2027, VSCode+a8n real-host, Problems
+panel, and SDK/CEP/UXP surfaces remain unverified (Issue #21,
+`release-scope.json` stays `not-recorded` pending owner decision).
