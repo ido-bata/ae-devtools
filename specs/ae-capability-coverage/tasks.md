@@ -137,12 +137,12 @@ CAP047 is left **unchecked**: the decomposition exists and is tracked, but the c
 
 ### [#20](https://github.com/ido-bata/ae-devtools/issues/20) — VSCode/MCP developer interface
 
-Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (`dev-loop/`, `mcp-server/`; automated test + fake/mock, packaged in `@ido-bata/ae-devtools-cli`). CAP050 VSCode run/inspect/diagnostic surface not yet implemented — only extendscript-debug launch.json generation exists under #53.
+Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (`dev-loop/`, `mcp-server/`; automated test + fake/mock, packaged in `@ido-bata/ae-devtools-cli`). VSCode extension scaffold + diagnostics surface + debugger-attach commands merged (`vscode-extension/`; PRs #159–#161, fake level; `vsce package` produces an installable VSIX). Real-editor acceptance and a8n-session acceptance remain release-candidate items.
 
 - [ ] **CAP049** Expose shared discovery/session/API metadata. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
-- [ ] **CAP050** Implement VSCode run/inspect/diagnostic vertical slice. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
-- [ ] **CAP051** Define minimal MCP inspect/execute/verify interface. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
-- [ ] **CAP052** Audit explicit consent and privileged SDK/script operations. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
+- [x] **CAP050** Implement VSCode run/inspect/diagnostic vertical slice. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20)) — fake-level verified; real-editor acceptance pending
+- [x] **CAP051** Define minimal MCP inspect/execute/verify interface. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
+- [x] **CAP052** Audit explicit consent and privileged SDK/script operations. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
 
 ### [#21](https://github.com/ido-bata/ae-devtools/issues/21) — Conformance/evidence
 
@@ -151,7 +151,7 @@ Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — confor
 - [ ] **CAP053** Define real-host fixture and immutable evidence manifest. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 - [ ] **CAP054** Run script/native/transport/security conformance. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 - [ ] **CAP055** Bind ae-a8n/ae-test/farm evidence to exact SHA. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
-- [ ] **CAP056** Reject stale/fake-only/unknown coverage release claims. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
+- [x] **CAP056** Reject stale/fake-only/unknown coverage release claims. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21)) — gate semantics + acceptance rules in `docs/release.md` §conformance gate
 
 ### [#36](https://github.com/ido-bata/ae-devtools/issues/36) — CEP/UXP extension lifecycle
 
@@ -164,19 +164,19 @@ Dependencies: #11, #13. Status: **open — CEP scaffold/validate + lifecycle dev
 
 ### [#37](https://github.com/ido-bata/ae-devtools/issues/37) — Unified AE diagnostics
 
-Dependencies: #14, #15, #16, #17, #18, #36. Status: **open — schema + collector registry + sourcemap resolution merged** (`diagnostics/`; automated test + fake/mock, wired into CLI execute/verify evidence); recovery-orchestrator verdicts → diagnostics records merged (`recovery-orchestrator/diagnostics.mjs`, PR #156). native-crash / CEP-log collectors await the ae-a8n #107–#109 publish. Registered 2026-11-14.
+Dependencies: #14, #15, #16, #17, #18, #36. Status: **open — schema + collector registry + sourcemap resolution merged** (`diagnostics/`; automated test + fake/mock, wired into CLI execute/verify evidence and the VSCode Problems surface); recovery-orchestrator verdicts → diagnostics records merged (`recovery-orchestrator/diagnostics.mjs`, PR #156). native-crash / CEP-log collectors await the ae-a8n #107–#109 publish. Registered 2026-11-14.
 
-- [ ] **CAP061** Define the diagnostics record schema (source kind, severity, source position, session/target pin, artifact hash). ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
-- [ ] **CAP062** Connect ExtendScript exceptions, expression errors and render-queue failures to the host-side collection path via the trusted-execution codec. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+- [x] **CAP061** Define the diagnostics record schema (source kind, severity, source position, session/target pin, artifact hash). ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+- [x] **CAP062** Connect ExtendScript exceptions, expression errors and render-queue failures to the host-side collection path via the trusted-execution codec. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37)) — fake-level; real-host path rides the same codec
 - [ ] **CAP063** Investigate and adapt collection of CEP/UXP panel logs, AE plug-in load failures and OS crash reports; unreachable sources are `unsupported-with-reason`. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
-- [ ] **CAP064** Implement diagnostics→source-position mapping (generated JSX / panel asset / plugin binary) with fake-responder tests. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
+- [x] **CAP064** Implement diagnostics→source-position mapping (generated JSX / panel asset / plugin binary) with fake-responder tests. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
 
 ### [#38](https://github.com/ido-bata/ae-devtools/issues/38) — Agent development-loop E2E
 
-Dependencies: #14, #20, #21, #37. Status: **open — agent-loop merged + loop evidence serialization merged** (`agent-loop/`; fake/mock level, packaged library; `evidence.mjs` emits `ae-devtools.agent-loop-evidence/v1`, `evidenceLevel` accepts only `"fake"` — PR #151). Real-host promotion of error→fix→rerun→regression awaits a contract-satisfying ae-a8n publish. Registered 2026-11-14.
+Dependencies: #14, #20, #21, #37. Status: **open — agent-loop merged + loop evidence serialization merged** (`agent-loop/`; fake/mock level, packaged library; `evidence.mjs` emits `ae-devtools.agent-loop-evidence/v1`, `evidenceLevel` accepts only `"fake"` — PR #151). Joined TS→JSX→execute→diagnostics→source-map→fix→rerun→regression chain with boundary coverage (UNKNOWN, timeout, consent denial, state fingerprint regression) merged as one fake-level fixture + evidence chain (PR #162). Real-host promotion of error→fix→rerun→regression awaits a contract-satisfying ae-a8n publish and release-candidate real-device acceptance. Registered 2026-11-14.
 
-- [ ] **CAP065** Prove the minimal loop on an owned AE session: intentionally broken JSX fixture → execute → diagnostics with source position → fix → re-run → PASS, scripting only first. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
-- [ ] **CAP066** Bind loop evidence (per-iteration request/result/diagnostics/regression artifacts) to the #21 conformance evidence schema; fake-only success never promotes to real-host verified. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
+- [ ] **CAP065** Prove the minimal loop on an owned AE session: intentionally broken JSX fixture → execute → diagnostics with source position → fix → re-run → PASS, scripting only first. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38)) — fake-level chain proven (PR #162); owned-session proof pending
+- [x] **CAP066** Bind loop evidence (per-iteration request/result/diagnostics/regression artifacts) to the #21 conformance evidence schema; fake-only success never promotes to real-host verified. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
 
 ## Cross-repository integration tasks (not duplicated in ae-devtools)
 
