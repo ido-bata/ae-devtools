@@ -1,0 +1,34 @@
+{
+  "schema": "ae-devtools.real-host-claims/v1",
+  "issue": 177,
+  "note": "Real-host evidence claims. Each ref points at the conformance evidence run directory whose record.json binds the claim to measured operations on an owned AE session. Claims are only as strong as that record; the conformance gate re-verifies artifact hashes.",
+  "claims": {
+    "ae.scripting.app.newProject": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.app.open": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.Project.save": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.ItemCollection.addComp": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.Item.remove": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.Project.activeItem": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.Item.name": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.Item.id": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    },
+    "ae.scripting.Item.typeName": {
+      "darwin": { "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020" }
+    }
+  }
+}

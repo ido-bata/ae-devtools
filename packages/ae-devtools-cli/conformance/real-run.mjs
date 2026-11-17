@@ -365,6 +365,15 @@ export async function main() {
       outcome: finalSummary.outcome,
       items: finalSummary.result?.items ?? null,
     });
+    // Content is back at the saved state but AE's dirty flag stays set
+    // once the project was edited — re-save so close({unsavedChanges:
+    // "refuse"}) can quit. The fixture is disposable, so this is safe.
+    const rResave = await op("project.save", { path: fixturePath });
+    step("op.project.save.resave", {
+      ok: rResave.outcome === "COMPLETED",
+      outcome: rResave.outcome,
+      result: rResave.result ?? null,
+    });
     evidence.projectOps = {
       baseline: baseline.result ?? null,
       addComp: add1.result ?? null,

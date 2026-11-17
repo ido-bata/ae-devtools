@@ -123,6 +123,22 @@ export type AdapterClaims = {
   claims: Record<string, { ops: string[]; evidence: string }>;
 };
 
+/**
+ * Real-host evidence claims (Issue #177): catalogId -> per-OS evidence
+ * binding. Each entry asserts `coverage.verification:
+ * "verified-real-host"` for the named OS and attaches a `real-host`
+ * evidenceRef — the drift gate's promotion checks then require that
+ * ref for every claimed platform. Claims are only as strong as the
+ * conformance record the ref points at; the generator does not verify
+ * the record itself (that is the conformance gate's job).
+ */
+export type RealHostClaims = {
+  claims: Record<
+    string,
+    Partial<Record<"win32" | "darwin", { ref: string }>>
+  >;
+};
+
 export function importScripting(input: {
   symbols: ScriptingSymbolsFile;
   summary: ScriptingSummaryFile;
@@ -131,6 +147,12 @@ export function importScripting(input: {
    *  claimed members are marked adapter-present + automated-fake —
    *  never verified-real-host. */
   adapterClaims?: AdapterClaims;
+  /** Optional real-host evidence claims (Issue #177). When present,
+   *  named members are promoted to verified-real-host for the claimed
+   *  OS cells with a real-host evidenceRef. Applied AFTER adapterClaims
+   *  so a row can carry both the fake-level adapter ref and the
+   *  real-host ref. */
+  realHostClaims?: RealHostClaims;
 }): ImportedSource {
   const lockByKey = new Map(input.sourcesLock.sources.map((s) => [s.key, s]));
   const level = input.summary.evidenceLevel;
@@ -165,6 +187,42 @@ export function importScripting(input: {
     if (applied > 0) {
       // surface the applied count for provenance honesty
       (records as unknown as { __adapterClaimsApplied?: number }).__adapterClaimsApplied = applied;
+    }
+  }
+  // Real-host evidence claims (Issue #177): promote named members to
+  // verified-real-host per claimed OS cell. Fail closed on unknown ids
+  // and unsupported OS keys — a claim that cannot bind to a catalog row
+  // is a generation error, never silently dropped.
+  if (input.realHostClaims) {
+    const OS_ORDER = ["win32", "darwin"] as const;
+    const byId = new Map(records.map((r) => [r.id, r]));
+    for (const [id, perOs] of Object.entries(input.realHostClaims.claims)) {
+      const record = byId.get(id);
+      if (!record) {
+        throw new Error(`real-host claim names unknown capability id: ${id}`);
+      }
+      const claimedOs: Array<"win32" | "darwin"> = [];
+      for (const [os, ev] of Object.entries(perOs)) {
+        if (os !== "win32" && os !== "darwin") {
+          throw new Error(`real-host claim for ${id}: unsupported os '${os}'`);
+        }
+        if (!ev || typeof ev.ref !== "string" || ev.ref.length === 0) {
+          throw new Error(`real-host claim for ${id}/${os}: evidence ref is required`);
+        }
+        claimedOs.push(os);
+        record.coverage.evidenceRefs.push({
+          kind: "real-host",
+          ref: ev.ref,
+          platform: os,
+        });
+      }
+      if (claimedOs.length === 0) {
+        throw new Error(`real-host claim for ${id}: no OS cells declared`);
+      }
+      record.compatibility.os = [
+        ...new Set([...(record.compatibility.os ?? []), ...claimedOs]),
+      ].sort((a, b) => OS_ORDER.indexOf(a) - OS_ORDER.indexOf(b));
+      record.coverage.verification = "verified-real-host";
     }
   }
 

@@ -175,6 +175,15 @@ try {
 
   rec({ step: "ae_verify.final" });
   recordToolResult("ae_verify.final", await timeout(call("ae_verify", { consent: "grant" }), 120000, "verify-final"));
+
+  // item.remove leaves AE's dirty flag set even though content matches
+  // the saved fixture — re-save so session close can quit cleanly.
+  rec({ step: "ae_execute.project.save.resave" });
+  recordToolResult("project.save.resave", await timeout(
+    call("ae_execute", { opId: "project.save", args: { path: fixturePath }, consent: "grant" }),
+    120000,
+    "project.save.resave",
+  ));
 } catch (e) {
   rec({ fatal: String(e?.message ?? e) });
 } finally {

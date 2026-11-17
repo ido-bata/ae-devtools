@@ -6,7 +6,9 @@
 
 import { test } from "bun:test";
 import assert from "node:assert/strict";
-import { loadRepoInputs } from "../scripts/inputs.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { loadRepoInputs, REPO_ROOT } from "../scripts/inputs.ts";
 import { buildDiscoveryHandshake } from "../src/discover.ts";
 
 const inputs = loadRepoInputs();
@@ -58,19 +60,28 @@ test("diagnostics surface unsupplied SDK inventory and unrecorded release set", 
   const codes = res.diagnostics.map((d) => d.code);
   assert.ok(codes.includes("inventory-not-supplied"));
   assert.ok(codes.includes("supported-release-set-not-recorded"));
-  assert.ok(codes.includes("no-real-host-evidence"));
+  // Issue #177: real-host claims now exist (backed by a conformance
+  // record), so the no-real-host-evidence diagnostic must be absent.
+  assert.ok(!codes.includes("no-real-host-evidence"));
 });
 
 test("available capabilities are advertised with honest proof levels", () => {
   const res = discovery();
   assert.ok(res.availableCapabilities.length > 0);
+  // verified-real-host is legitimate only for the capabilities named in
+  // real-host-claims.json — the conformance gate re-verifies the record.
+  const claims = JSON.parse(
+    readFileSync(join(REPO_ROOT, "packages/capability-catalog/real-host-claims.json"), "utf8"),
+  ) as { claims: Record<string, unknown> };
+  const claimedIds = new Set(Object.keys(claims.claims));
   for (const cap of res.availableCapabilities) {
     assert.ok(
       ["verified-real-host", "automated-test", "source-reviewed", "unverified"].includes(cap.proofLevel),
       `unexpected proofLevel ${cap.proofLevel} on ${cap.id}`,
     );
-    // Nothing in the repository holds real-host proof today.
-    assert.notEqual(cap.proofLevel, "verified-real-host");
+    if (cap.proofLevel === "verified-real-host") {
+      assert.ok(claimedIds.has(cap.id), `unclaimed real-host proof on ${cap.id}`);
+    }
   }
   const ids = res.availableCapabilities.map((c) => c.id);
   assert.deepEqual(ids, [...ids].sort());
