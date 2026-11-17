@@ -12,9 +12,9 @@
  * never a pass.
  *
  * Scope note: `evaluateConformanceClaims` takes the claim set explicitly.
- * Deriving "the release's claimed capability set" from the catalog /
- * supportedRelease declaration is a later ticket; this module only judges
- * the claims it is given.
+ * The release's claimed capability set is derived by `release-gate.ts`
+ * (release-scope declaration ∪ catalog verified-real-host rows); this
+ * module only judges the claims it is given.
  */
 
 import { createHash } from "node:crypto";
@@ -221,13 +221,13 @@ export function parseConformanceRecord(
 /* Same-bytes verification (§3)                                        */
 /* ------------------------------------------------------------------ */
 
-export type ArtifactHashChecker = (path: string) => string | null;
+export type ArtifactHashChecker = (path: string) => Uint8Array | string | null;
 
 /**
  */
 export function recomputeArtifactHashes(
   record: ConformanceRecord,
-  readArtifact: (path: string) => Uint8Array | null,
+  readArtifact: ArtifactHashChecker,
 ): { ok: boolean; mismatches: string[]; missing: string[] } {
   const mismatches: string[] = [];
   const missing: string[] = [];
@@ -251,6 +251,17 @@ export type ConformanceClaim = {
   capabilityId: string;
   /** Catalog compatibility.os value the claim covers. */
   os: "win32" | "darwin";
+};
+
+/**
+ * A record bundled with the artifact resolver for ITS OWN evidence root.
+ * Conformance artifacts are stored per run (`evidence/conformance/<runId>/`),
+ * so a shared path->bytes resolver cannot express same-bytes verification;
+ * each source carries the reader bound to its run directory.
+ */
+export type ConformanceRecordSource = {
+  record: unknown;
+  readArtifact: ArtifactHashChecker;
 };
 
 export type ConformanceViolation = {
@@ -279,20 +290,36 @@ export function evaluateConformanceClaims(
   records: readonly unknown[],
   readArtifact: (path: string) => Uint8Array | null,
 ): { ok: boolean; violations: ConformanceViolation[] } {
+  return evaluateConformanceClaimSources(
+    claims,
+    records.map((record) => ({ record, readArtifact })),
+  );
+}
+
+/**
+ * Same evaluation as `evaluateConformanceClaims`, but each record source
+ * supplies its own `readArtifact` — used by the release gate where every
+ * record's artifacts live under that record's run directory.
+ */
+export function evaluateConformanceClaimSources(
+  claims: readonly ConformanceClaim[],
+  sources: readonly ConformanceRecordSource[],
+): { ok: boolean; violations: ConformanceViolation[] } {
   const violations: ConformanceViolation[] = [];
-  const parsed = records.map((r) => parseConformanceRecord(r));
+  const parsed = sources.map((s) => ({
+    result: parseConformanceRecord(s.record),
+    readArtifact: s.readArtifact,
+  }));
 
   for (const claim of claims) {
-    const covering = parsed
-      .map((p, i) => ({ p, i }))
-      .filter(
-        ({ p }) =>
-          p.ok &&
-          p.record.capabilityIds.includes(claim.capabilityId) &&
-          p.record.platform.os === claim.os &&
-          (p.record.catalogBinding.platform === undefined ||
-            p.record.catalogBinding.platform === claim.os),
-      );
+    const covering = parsed.filter(
+      ({ result }) =>
+        result.ok &&
+        result.record.capabilityIds.includes(claim.capabilityId) &&
+        result.record.platform.os === claim.os &&
+        (result.record.catalogBinding.platform === undefined ||
+          result.record.catalogBinding.platform === claim.os),
+    );
 
     if (covering.length === 0) {
       violations.push({
@@ -305,8 +332,9 @@ export function evaluateConformanceClaims(
 
     let passed = false;
     const seenReasons = new Set<string>();
-    for (const { p } of covering) {
-      const rec = (p as { ok: true; record: ConformanceRecord }).record;
+    for (const { result, readArtifact } of covering) {
+      if (!result.ok) continue; // filtered above; narrows the type
+      const rec = result.record;
       if (rec.result !== "PASS") {
         seenReasons.add(`non-pass-result:${rec.result}`);
         continue;

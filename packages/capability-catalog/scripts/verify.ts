@@ -10,6 +10,7 @@ import { REPO_ROOT, loadRepoInputs } from "./inputs.ts";
 import { buildCatalog, serializeCatalog, type CatalogManifest } from "../src/generate.ts";
 import { runDriftGate } from "../src/drift.ts";
 import { generateDomainCoverage } from "./domain-coverage.ts";
+import { runConformanceGate } from "./conformance-gate.ts";
 
 const manifestPath = join(REPO_ROOT, "packages/capability-catalog/generated/catalog.json");
 const inputs = loadRepoInputs();
@@ -44,3 +45,22 @@ if (existsSync(domainsDir)) {
   }
   console.error("domain-coverage report byte-identical to a fresh build");
 }
+
+// Conformance release gate (Issue #147, CAP056): derives the claim set
+// from release-scope.json ∪ catalog verified-real-host rows and demands
+// same-bytes evidence per claim. `no-claims` is reported honestly — it
+// is not a conformance pass and must not be read as one.
+const gate = runConformanceGate();
+if (!gate.ok) {
+  console.error(`conformance gate FAILED: ${gate.fatalError}`);
+  process.exit(1);
+}
+console.log(JSON.stringify(gate.report, null, 2));
+if (!gate.report.ok) {
+  console.error(
+    `conformance gate FAILED: verdict=${gate.report.verdict}, ` +
+      `${gate.report.scopeViolations.length} scope violation(s), ${gate.report.violations.length} claim violation(s)`,
+  );
+  process.exit(1);
+}
+console.error(`conformance gate: verdict=${gate.report.verdict}, ${gate.report.claimsEvaluated} claim(s) evaluated`);
