@@ -27,6 +27,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { runHandshakeContractChecks } from "./contract.mjs";
+
 /** Exports the resolved ae-a8n module must provide for this transport. */
 export const REQUIRED_AE_A8N_CONTRACT = {
   AfterEffects: "function",
@@ -74,6 +76,30 @@ export function aeA8nContractError({ source, version, missing }) {
   return error;
 }
 
+/**
+ * Structured refusal for an ae-a8n whose handshake exports exist but whose
+ * negotiation/dispatch semantics fail the behavioral contract battery
+ * (Issue #144). Distinct code from AE_A8N_CONTRACT_UNSUPPORTED: the
+ * exports are present, the behavior is wrong.
+ */
+export function aeA8nHandshakeError({ source, version, failures }) {
+  const error = new Error(
+    `ae-a8n handshake contract incompatible: ${source}` +
+      (version ? `@${version}` : "") +
+      ` failed ${failures.length} contract check(s): ` +
+      failures.map((f) => f.id).join(", ") +
+      ". The handshake exports exist but do not honor " +
+      "ae-devtools.capability-handshake/v1 — pass --ae-a8n-root " +
+      "<ae-a8n checkout at release-0-2-0 or later> or wait for the next " +
+      "@ido-bata/ae-a8n publish.",
+  );
+  error.code = "AE_A8N_CONTRACT_INCOMPATIBLE";
+  error.aeA8nSource = source;
+  error.aeA8nVersion = version ?? null;
+  error.contractFailures = failures;
+  return error;
+}
+
 function packageVersion(dir) {
   try {
     const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
@@ -100,12 +126,18 @@ export async function probeAeA8n(options = {}) {
       const indexUrl = pathToFileURL(join(root, "dist", "index.js")).href;
       const mod = await import(indexUrl);
       const missing = missingContractExports(mod);
+      // Export presence is necessary, not sufficient (Issue #144): when the
+      // required exports exist, the handshake battery verifies the actual
+      // negotiation/refusal/ownership/dispatch semantics before the probe
+      // reports contractOk. Pure functions — no AE is contacted.
+      const battery = missing.length === 0 ? runHandshakeContractChecks(mod) : null;
       return {
         resolvable: true,
         source: `local:${root}`,
         version: packageVersion(root),
-        contractOk: missing.length === 0,
+        contractOk: missing.length === 0 && battery.ok,
         missing,
+        checks: battery?.checks ?? null,
         required: CONTRACT_DESCRIPTION,
       };
     } catch (e) {
@@ -125,6 +157,7 @@ export async function probeAeA8n(options = {}) {
     const entry = require.resolve("@ido-bata/ae-a8n");
     const mod = await import("@ido-bata/ae-a8n");
     const missing = missingContractExports(mod);
+    const battery = missing.length === 0 ? runHandshakeContractChecks(mod) : null;
     let version = null;
     try {
       version = packageVersion(dirname(dirname(entry)));
@@ -133,8 +166,9 @@ export async function probeAeA8n(options = {}) {
       resolvable: true,
       source: "npm:@ido-bata/ae-a8n",
       version,
-      contractOk: missing.length === 0,
+      contractOk: missing.length === 0 && battery.ok,
       missing,
+      checks: battery?.checks ?? null,
       required: CONTRACT_DESCRIPTION,
     };
   } catch (e) {

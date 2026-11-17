@@ -21,9 +21,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const EVIDENCE_DIR = join(HERE, "..", "evidence");
 
 // Keys real-run.mjs always emits on the success path (v1). Failure-path
-// artifacts legitimately differ (launchError/close shape), so the check
-// is: every v1 artifact has the envelope keys; artifacts with
-// `steps` also carry the assertion/process-snapshot fields.
+// artifacts legitimately differ (launchError/close shape, no pin/hostInfo
+// because no session ever opened), so the check is: every v1 artifact has
+// the envelope keys; artifacts with `steps` AND no `launchError` also
+// carry the assertion/process-snapshot fields.
 const ENVELOPE_KEYS = ["schema", "issue", "startedAt", "finishedAt"];
 const SUCCESS_KEYS = [
   "pin", "aeA8nSource", "aeA8nHead", "hostInfo", "ownership",
@@ -52,7 +53,9 @@ test("v1 artifacts carry the full producer key set", () => {
   for (const f of files) {
     const doc = JSON.parse(readFileSync(join(EVIDENCE_DIR, f), "utf8"));
     if (doc.schema !== "ae-devtools.a8n-transport.real-run/v1") continue;
-    if (!Array.isArray(doc.steps)) continue; // launch-failure artifacts have no steps
+    // Launch-failure artifacts keep `steps: []` but legitimately lack the
+    // success-path keys — `launchError` is their discriminator.
+    if (!Array.isArray(doc.steps) || doc.launchError) continue;
     for (const k of SUCCESS_KEYS) {
       assert.ok(doc[k] !== undefined, `${f}: v1 artifact missing key ${k}`);
     }

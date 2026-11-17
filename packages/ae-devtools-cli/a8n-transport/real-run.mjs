@@ -130,6 +130,10 @@ async function main() {
     aeProcessesBeforeLaunch: await aeProcessSnapshot(processFragment),
     steps: [],
     close: null,
+    // Present from the start so the evidence schema is stable across the
+    // launch-failure early return and the success path.
+    handshake: null,
+    contractViolations: [],
   };
 
   let session = null;
@@ -191,6 +195,74 @@ async function main() {
     artifactsNote: "hostScript/sessionRoot/workdir/tracePath identify session artifacts removed by session.close(); only `trace` survives inline",
   });
 
+  // Live handshake contract evidence (Issue #144): the owned session's own
+  // capabilities() response, negotiated and dispatch-gated through the
+  // resolved ae-a8n functions. This is the real-host counterpart of the
+  // pre-launch battery — export presence plus live semantics, recorded.
+  try {
+    if (
+      typeof session.ae?.capabilities === "function" &&
+      typeof session.negotiateCapabilities === "function" &&
+      typeof session.assertDispatchAllowed === "function"
+    ) {
+      const hs = await session.ae.capabilities();
+      const caps = Array.isArray(hs?.availableCapabilities) ? hs.availableCapabilities : [];
+      const negotiation = session.negotiateCapabilities(hs, {
+        contractVersion: { major: 1, minor: 0 },
+      });
+      const candidate = caps.find(
+        (c) =>
+          c?.implementation === "implemented" &&
+          c?.verification !== "not-run" &&
+          c?.execution?.canRemoteInvoke === true &&
+          Array.isArray(c?.permissions) &&
+          c.permissions.includes("read"),
+      );
+      const dispatch = candidate
+        ? session.assertDispatchAllowed({
+            response: hs,
+            capabilityId: candidate.id,
+            permission: "read",
+          })
+        : { status: "refused", reason: "no-candidate", detail: "no implemented+verified read capability advertised" };
+      const unknownCheck = candidate
+        ? session.assertDispatchAllowed({
+            response: hs,
+            capabilityId: "ae.operation.definitely.not.advertised",
+            permission: "read",
+          })
+        : null;
+      evidence.handshake = {
+        schema: hs?.schema ?? null,
+        contractVersion: hs?.contractVersion ?? null,
+        hostId: hs?.hostId ?? null,
+        ownership: hs?.target?.ownership ?? null,
+        ownershipKind: hs?.target?.ownershipKind ?? null,
+        advertisedCapabilities: caps.length,
+        negotiation,
+        dispatchCheck: candidate ? { capabilityId: candidate.id, ...dispatch } : dispatch,
+        unknownCapabilityCheck: unknownCheck,
+      };
+      if (negotiation?.status !== "compatible") {
+        evidence.contractViolations.push(`negotiation refused: ${JSON.stringify(negotiation)}`);
+      }
+      if (dispatch?.status !== "pass") {
+        evidence.contractViolations.push(`dispatch gate did not pass: ${JSON.stringify(dispatch)}`);
+      }
+      if (unknownCheck && unknownCheck.status !== "refused") {
+        evidence.contractViolations.push(`unknown capability was not refused: ${JSON.stringify(unknownCheck)}`);
+      }
+    } else {
+      evidence.handshake = {
+        skipped: "session does not expose capabilities()/handshake functions",
+      };
+      evidence.contractViolations.push("live handshake contract check skipped: session lacks capabilities()/handshake functions");
+    }
+  } catch (error) {
+    evidence.handshake = { error: errorInfo(error) };
+    evidence.contractViolations.push(`capabilities() threw: ${errorInfo(error).message}`);
+  }
+
   let sliceError = null;
   try {
     const { steps } = await runVerticalSlice({
@@ -250,6 +322,11 @@ async function main() {
   if (Array.isArray(evidence.assertionViolations) && evidence.assertionViolations.length > 0) {
     console.error(`slice assertions failed:`);
     for (const v of evidence.assertionViolations) console.error(`  - ${v}`);
+    process.exitCode = 1;
+  }
+  if (Array.isArray(evidence.contractViolations) && evidence.contractViolations.length > 0) {
+    console.error(`handshake contract violations:`);
+    for (const v of evidence.contractViolations) console.error(`  - ${v}`);
     process.exitCode = 1;
   }
   if (sliceError !== null) {
