@@ -235,7 +235,10 @@ Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9` (build 9).
   (AE 2026)**: stdio MCP initialize → `ae_discover` → `ae_execute`
   `item.addComp` COMPLETED → `ae_verify` `read.projectSummary`
   COMPLETED; session records `ownership: owned`,
-  `aeVersion: 26.5.3x9`, `aeA8nHead: 0.2.0`.
+  `aeVersion: 26.5.3x9`, `aeA8nHead: 0.2.0`. Honest side effect: the
+  added comp left the project dirty, so `session.close` refused
+  (`unsaved changes`) and the stderr line is preserved in the artifact;
+  no project was saved. AE is not running afterwards.
 
 This is **registry evidence**: every run resolved the published
 `@ido-bata/ae-a8n@0.2.0` tarball through npm, not a local checkout or
