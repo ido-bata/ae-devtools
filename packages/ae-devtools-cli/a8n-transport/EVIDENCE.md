@@ -214,7 +214,7 @@ Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9` (build 9).
 - `package.json` pins `"@ido-bata/ae-a8n": "0.2.0"` exactly; a fresh
   `npm install` resolved `node_modules/@ido-bata/ae-a8n@0.2.0` from
   the registry tarball above (lockfile `resolved`/`integrity` match).
-- `doctor-registry-020.json` — `ae-devtools doctor` reports
+- `ae-devtools doctor` (re-run: `node devtools-cli/cli.mjs doctor`) reports
   `resolvable: true`, `source: npm:@ido-bata/ae-a8n`,
   `version: 0.2.0`, `contractOk: true`, `missing: []`; the 21-check
   handshake battery is green without contacting AE.
@@ -226,7 +226,7 @@ Environment: macOS arm64, Node v26.13.1, AE 2026 = `26.5.3x9` (build 9).
   captured FAILED then fix rerun COMPLETED with verify counters 1→2,
   `close: {quit: true}`, `assertionViolations: []`,
   `contractViolations: []`.
-- `jsx-toolchain/evidence/run-real-2026-registry-020.json` — **PASS
+- `jsx-toolchain/evidence/jsx-2026-registry-020.json` — **PASS
   (AE 2026)**: build/dispatch/verify, sourcemap host-error→TS-source
   mapping, deliberate runtime-error diagnose→fix→rerun→read-back;
   session step records `aeA8nSource: npm:@ido-bata/ae-a8n`,
