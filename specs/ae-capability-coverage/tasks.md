@@ -2,42 +2,44 @@
 
 - Parent: [ae-devtools #6](https://github.com/ido-bata/ae-devtools/issues/6); draft plan [PR #7](https://github.com/ido-bata/ae-devtools/pull/7).
 - Canonical requirements: [spec.md](spec.md). Architecture and gates: [plan.md](plan.md). Catalog shape: [contracts/capability-catalog.md](contracts/capability-catalog.md).
-- **This is a planning inventory.** Every task is unchecked; creating an Issue is not implementation. Child Issue owns exact acceptance, affected files, dependencies and evidence. Task IDs are stable within this feature; do not reuse ae-a8n's existing T001–T108.
+- **This is a planning inventory.** Creating an Issue is not implementation; checkboxes record evidence-backed completion (see Delivery rule). Child Issue owns exact acceptance, affected files, dependencies and evidence. Task IDs are stable within this feature; do not reuse ae-a8n's existing T001–T108.
 
 ## Delivery rule
 
 One independently reviewable Issue/PR per implementation slice. No speculative native bridge before #17/#18 proof. For SDK suite families not implementable in one slice, #19 creates additional tracked Issues, preserving the full public SDK denominator. Fake tests do not satisfy real-host gates.
 
+Checkboxes track evidence-backed completion: a CAP is checked only when its Issue's deliverable exists and the Issue is closed; partial progress stays unchecked with the gap noted in the section Status line. Section Status lines mirror the linked GitHub Issue state — they are not a substitute for it.
+
 ### [#8](https://github.com/ido-bata/ae-devtools/issues/8) — Tool parity research
 
-Dependencies: none. Status: **open / not verified**.
+Dependencies: none. Status: **closed — research delivered** (`inventories/tools/` snapshot + generated parity data; Issue closed). Ongoing parity deltas are handled by inventory regeneration, not by this Issue staying open.
 
-- [ ] **CAP001** Discover and snapshot AE control tools with commit/license. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
-- [ ] **CAP002** Extract real implemented operations from source. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
-- [ ] **CAP003** Normalize operation IDs and compare existing repo surfaces. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
-- [ ] **CAP004** Record ongoing discovery and parity delta process. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
+- [x] **CAP001** Discover and snapshot AE control tools with commit/license. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
+- [x] **CAP002** Extract real implemented operations from source. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
+- [x] **CAP003** Normalize operation IDs and compare existing repo surfaces. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
+- [x] **CAP004** Record ongoing discovery and parity delta process. ([Issue #8](https://github.com/ido-bata/ae-devtools/issues/8))
 
 ### [#9](https://github.com/ido-bata/ae-devtools/issues/9) — Scripting inventory
 
-Dependencies: none. Status: **open / not verified**.
+Dependencies: none. Status: **closed — research delivered** (`inventories/scripting/` generated typings + `sources.lock.json`; Issue closed). Unsupported/unknown symbols continue under #70 triage.
 
-- [ ] **CAP005** Extract public scripting classes/methods/properties/enums. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
-- [ ] **CAP006** Record AE/ExtendScript version and OS deltas. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
-- [ ] **CAP007** Classify ES3/handle/undo/UI/permission constraints. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
-- [ ] **CAP008** Cross-check Adobe references vs community docs and live AE. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
+- [x] **CAP005** Extract public scripting classes/methods/properties/enums. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
+- [x] **CAP006** Record AE/ExtendScript version and OS deltas. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
+- [x] **CAP007** Classify ES3/handle/undo/UI/permission constraints. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
+- [x] **CAP008** Cross-check Adobe references vs community docs and live AE. ([Issue #9](https://github.com/ido-bata/ae-devtools/issues/9))
 
 ### [#10](https://github.com/ido-bata/ae-devtools/issues/10) — SDK inventory
 
-Dependencies: none. Status: **open / not verified**.
+Dependencies: none. Status: **closed — research delivered** (`inventories/sdk/` header extraction + `constraints.md` + coverage matrix; Issue closed). SDK redistribution rules keep per-symbol detail build-time derived.
 
-- [ ] **CAP009** Record SDK releases, headers, samples, hashes and license. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
-- [ ] **CAP010** Extract suites, functions, selectors, callbacks and types. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
-- [ ] **CAP011** Classify external command vs host lifecycle vs unsupported. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
-- [ ] **CAP012** Record ABI, MFR, GPU, thread, signing and OS constraints. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
+- [x] **CAP009** Record SDK releases, headers, samples, hashes and license. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
+- [x] **CAP010** Extract suites, functions, selectors, callbacks and types. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
+- [x] **CAP011** Classify external command vs host lifecycle vs unsupported. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
+- [x] **CAP012** Record ABI, MFR, GPU, thread, signing and OS constraints. ([Issue #10](https://github.com/ido-bata/ae-devtools/issues/10))
 
 ### [#11](https://github.com/ido-bata/ae-devtools/issues/11) — Catalog and schema
 
-Dependencies: #8, #9, #10. Status: **open / not verified**.
+Dependencies: #8, #9, #10. Status: **closed — catalog + drift gate merged** (`packages/capability-catalog`, automated test).
 
 - [x] **CAP013** Define stable IDs, provenance, execution and evidence schema, distinguishing rows persisted in the repository from rows supplied at build time (SDK symbols). ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
 - [x] **CAP014** Import and dedupe scripting/SDK/tool inventories. ([Issue #11](https://github.com/ido-bata/ae-devtools/issues/11))
@@ -46,16 +48,16 @@ Dependencies: #8, #9, #10. Status: **open / not verified**.
 
 ### [#12](https://github.com/ido-bata/ae-devtools/issues/12) — Cross-repo ADR
 
-Dependencies: #8–#10 initial; ae-a8n #97–#99. Status: **open / not verified**.
+Dependencies: #8–#10 initial; ae-a8n #97–#99. Status: **closed — ADR-0005 recorded as Proposed** (`docs/architecture/decisions/ADR-0005-*.md`); promotion gates (real-host evidence, ae-a8n #97–#99) remain open upstream.
 
-- [ ] **CAP017** Reconcile ae-devtools ADR-0001 with ae-a8n ADR-0003. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
-- [ ] **CAP018** Compare CEP, in-AE JSX, UXP, native and CLI routes. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
-- [ ] **CAP019** Define trust, serialization, lifecycle and repo ownership. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
-- [ ] **CAP020** Record decision/evidence/owner gates and alternatives. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
+- [x] **CAP017** Reconcile ae-devtools ADR-0001 with ae-a8n ADR-0003. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
+- [x] **CAP018** Compare CEP, in-AE JSX, UXP, native and CLI routes. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
+- [x] **CAP019** Define trust, serialization, lifecycle and repo ownership. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
+- [x] **CAP020** Record decision/evidence/owner gates and alternatives. ([Issue #12](https://github.com/ido-bata/ae-devtools/issues/12))
 
 ### [#13](https://github.com/ido-bata/ae-devtools/issues/13) — Read-only AE probe
 
-Dependencies: #12; ae-a8n #98. Status: **open / not verified**.
+Dependencies: #12; ae-a8n #98. Status: **closed — read-only probe merged** (`experiments/read-only-probe`; verified on real host for read-only ops).
 
 - [x] **CAP021** Prove AE host version/ping and target identity. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
 - [x] **CAP022** Define runtime snapshot and handle invalidation rules. ([Issue #13](https://github.com/ido-bata/ae-devtools/issues/13))
@@ -64,7 +66,7 @@ Dependencies: #12; ae-a8n #98. Status: **open / not verified**.
 
 ### [#14](https://github.com/ido-bata/ae-devtools/issues/14) — Script runtime
 
-Dependencies: #11, #12, #13. Status: **open / not verified**.
+Dependencies: #11, #12, #13. Status: **open — pipeline merged, coverage expansion pending** (`packages/ae-devtools-cli/trusted-execution`: codec/permissions/outcomes/mutation-guard/runner, automated test + fake/mock). Real-host dispatch itself is verified via the #49/#52 runs; remaining work is broader real-host coverage, not the pipeline.
 
 - [ ] **CAP025** Separate read-only/write/trusted-dev-script permissions. ([Issue #14](https://github.com/ido-bata/ae-devtools/issues/14))
 - [ ] **CAP026** Implement ES3 codec, values, errors and source map. ([Issue #14](https://github.com/ido-bata/ae-devtools/issues/14))
@@ -73,7 +75,7 @@ Dependencies: #11, #12, #13. Status: **open / not verified**.
 
 ### [#15](https://github.com/ido-bata/ae-devtools/issues/15) — Scripting DOM A
 
-Dependencies: #9, #11, #14. Status: **open / not verified**.
+Dependencies: #9, #11, #14. Status: **open — metadata + registry merged** (domain coverage metadata, automated test + fake/mock). Adapter breadth beyond registered ops is UNVERIFIED on real host.
 
 - [ ] **CAP029** Map project/item/footage/import/save symbols to adapters. ([Issue #15](https://github.com/ido-bata/ae-devtools/issues/15))
 - [ ] **CAP030** Map comp/layer/parent/selection/timing symbols. ([Issue #15](https://github.com/ido-bata/ae-devtools/issues/15))
@@ -82,7 +84,7 @@ Dependencies: #9, #11, #14. Status: **open / not verified**.
 
 ### [#16](https://github.com/ido-bata/ae-devtools/issues/16) — Scripting DOM B
 
-Dependencies: #9, #11, #14, #15. Status: **open / not verified**.
+Dependencies: #9, #11, #14, #15. Status: **open — domain coverage metadata merged** (animation/effects/render, automated test + fake/mock). Real-host execution UNVERIFIED.
 
 - [ ] **CAP033** Map property/keyframe/expression/text/shape/mask. ([Issue #16](https://github.com/ido-bata/ae-devtools/issues/16))
 - [ ] **CAP034** Map effects/parameters and plugin availability. ([Issue #16](https://github.com/ido-bata/ae-devtools/issues/16))
@@ -91,7 +93,7 @@ Dependencies: #9, #11, #14, #15. Status: **open / not verified**.
 
 ### [#17](https://github.com/ido-bata/ae-devtools/issues/17) — AEGP native proof
 
-Dependencies: #10, #11, #12, #13. Status: **open / not verified**.
+Dependencies: #10, #11, #12, #13. Status: **open — SDK facts + minimal read-only AEGP build probe merged** (macOS build probe only). Plugin load/lifecycle proof pending; host-process ownership boundary stays ADR-0005 R3 Open.
 
 - [ ] **CAP037** Select reproducible SDK/ABI/toolchain/license. ([Issue #17](https://github.com/ido-bata/ae-devtools/issues/17))
 - [ ] **CAP038** Build and load minimal read-only AEGP plugin. ([Issue #17](https://github.com/ido-bata/ae-devtools/issues/17))
@@ -100,7 +102,7 @@ Dependencies: #10, #11, #12, #13. Status: **open / not verified**.
 
 ### [#18](https://github.com/ido-bata/ae-devtools/issues/18) — Effect SDK proof
 
-Dependencies: #10, #11, #12, #17. Status: **open / not verified**.
+Dependencies: #10, #11, #12, #17. Status: **open — spike.** Effect/SmartFX/MFR/GPU callback execution path not proven; GPU work blocked on GPU SDK addendum + Boost (see Issue comments for the AE 27.0 SDK delta survey).
 
 - [ ] **CAP041** Map PF selectors, UI, sequence/arbitrary data. ([Issue #18](https://github.com/ido-bata/ae-devtools/issues/18))
 - [ ] **CAP042** Build/load/render one real Effect SDK plugin. ([Issue #18](https://github.com/ido-bata/ae-devtools/issues/18))
@@ -109,7 +111,7 @@ Dependencies: #10, #11, #12, #17. Status: **open / not verified**.
 
 ### [#19](https://github.com/ido-bata/ae-devtools/issues/19) — Native SDK expansion
 
-Dependencies: #10, #11, #17, #18. Status: **open / not verified**.
+Dependencies: #10, #11, #17, #18. Status: **open — coverage matrix + adapter negotiation contract merged** (`packages/native-adapter`, automated test). CAP047 decomposition registered as #63–#70 — open deliverables, not completed coverage.
 
 - [ ] **CAP045** Generate suite-family host lifecycle coverage matrix. ([Issue #19](https://github.com/ido-bata/ae-devtools/issues/19))
 - [ ] **CAP046** Build adapter/fixture/build-test templates. ([Issue #19](https://github.com/ido-bata/ae-devtools/issues/19))
@@ -135,7 +137,7 @@ CAP047 is left **unchecked**: the decomposition exists and is tracked, but the c
 
 ### [#20](https://github.com/ido-bata/ae-devtools/issues/20) — VSCode/MCP developer interface
 
-Dependencies: #11–#15. Status: **open / not verified**.
+Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (`dev-loop/`, `mcp-server/`; automated test + fake/mock, packaged in `@ido-bata/ae-devtools-cli`). CAP050 VSCode run/inspect/diagnostic surface not yet implemented — only extendscript-debug launch.json generation exists under #53.
 
 - [ ] **CAP049** Expose shared discovery/session/API metadata. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
 - [ ] **CAP050** Implement VSCode run/inspect/diagnostic vertical slice. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
@@ -144,7 +146,7 @@ Dependencies: #11–#15. Status: **open / not verified**.
 
 ### [#21](https://github.com/ido-bata/ae-devtools/issues/21) — Conformance/evidence
 
-Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open / not verified**.
+Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance/evidence design note merged** (`design/conformance-evidence.md`). Release gate not run; the real-host matrix depends on a contract-satisfying ae-a8n publish.
 
 - [ ] **CAP053** Define real-host fixture and immutable evidence manifest. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 - [ ] **CAP054** Run script/native/transport/security conformance. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
@@ -153,7 +155,7 @@ Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open / not veri
 
 ### [#36](https://github.com/ido-bata/ae-devtools/issues/36) — CEP/UXP extension lifecycle
 
-Dependencies: #11, #13. Status: **open / not verified**. Registered 2026-11-14; extension *development* lifecycle is a distinct axis from transport selection (ADR-0005 D5).
+Dependencies: #11, #13. Status: **open — CEP scaffold/validate + lifecycle devkit merged** (`cep-extension/`; static/fake level, `loadProof` always NOT RUN). Real panel load → evalScript → reload → unload proof (CAP059) pending an owned-session run; UXP stays BLOCKED/UNVERIFIED per ADR-0005 D5. Registered 2026-11-14; extension *development* lifecycle is a distinct axis from transport selection (ADR-0005 D5).
 
 - [ ] **CAP057** Generate CEP extension scaffolds (manifest.xml, CSXS version, host version range, debug-load configuration) from inventory and Adobe-official specs. ([Issue #36](https://github.com/ido-bata/ae-devtools/issues/36))
 - [ ] **CAP058** Mechanize CEP panel build/install/reload/unload/cleanup per OS; record `.zxp` signing, `PlayerDebugMode` and registry/plist handling. ([Issue #36](https://github.com/ido-bata/ae-devtools/issues/36))
@@ -162,7 +164,7 @@ Dependencies: #11, #13. Status: **open / not verified**. Registered 2026-11-14; 
 
 ### [#37](https://github.com/ido-bata/ae-devtools/issues/37) — Unified AE diagnostics
 
-Dependencies: #14, #15, #16, #17, #18, #36. Status: **open / not verified**. Registered 2026-11-14.
+Dependencies: #14, #15, #16, #17, #18, #36. Status: **open — schema + collector registry + sourcemap resolution merged** (`diagnostics/`; automated test + fake/mock, wired into CLI execute/verify evidence). native-crash / CEP-log collectors await the ae-a8n #107–#109 publish. Registered 2026-11-14.
 
 - [ ] **CAP061** Define the diagnostics record schema (source kind, severity, source position, session/target pin, artifact hash). ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
 - [ ] **CAP062** Connect ExtendScript exceptions, expression errors and render-queue failures to the host-side collection path via the trusted-execution codec. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
@@ -171,7 +173,7 @@ Dependencies: #14, #15, #16, #17, #18, #36. Status: **open / not verified**. Reg
 
 ### [#38](https://github.com/ido-bata/ae-devtools/issues/38) — Agent development-loop E2E
 
-Dependencies: #14, #20, #21, #37. Status: **open / not verified**. Registered 2026-11-14.
+Dependencies: #14, #20, #21, #37. Status: **open — agent-loop merged** (`agent-loop/`; fake/mock level, packaged library). Real-host promotion of error→fix→rerun→regression awaits a contract-satisfying ae-a8n publish. Registered 2026-11-14.
 
 - [ ] **CAP065** Prove the minimal loop on an owned AE session: intentionally broken JSX fixture → execute → diagnostics with source position → fix → re-run → PASS, scripting only first. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
 - [ ] **CAP066** Bind loop evidence (per-iteration request/result/diagnostics/regression artifacts) to the #21 conformance evidence schema; fake-only success never promotes to real-host verified. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
