@@ -1,0 +1,65 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/v1",
+  "issue": 49,
+  "startedAt": "2026-11-17T03:13:13.385Z",
+  "platform": "darwin/arm64",
+  "node": "v26.13.1",
+  "installDir": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": 4461,
+      "args": "bash -c cd /Users/rebui/work/ae-devtools/packages/ae-devtools-cli/a8n-transport && node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir \"/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app\" --out /tmp/ae-qa-evidence/run-2027-a8n.json 2>&1"
+    },
+    {
+      "pid": 4481,
+      "args": "node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app --out /tmp/ae-qa-evidence/run-2027-a8n.json"
+    }
+  ],
+  "steps": [],
+  "close": {
+    "attempted": false,
+    "note": "session open failed; this script never owned a session to close — see trace for ae-a8n's internal close behaviour"
+  },
+  "handshake": null,
+  "contractViolations": [],
+  "launchError": {
+    "name": "AfterEffectsError",
+    "message": "After Effects was started (pid 4891, started 2026-11-17T03:13:13.000Z, /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects in the session of rebui (uid 501, asid 100021)) but did not answer the readiness probe: result file for app.info (6fb7ffbc-58ec-418a-99d7-fb671432ca94) was never parseable: Unexpected end of JSON input. It is still running, and this session cannot prove it may quit it, so it was left running: quit it by hand before running again.",
+    "code": "A8N-AE-005",
+    "causeChain": [
+      "HostLeftRunningError",
+      "ProtocolError"
+    ]
+  },
+  "failureStage": "openSliceSession",
+  "sessionRoot": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-5QzW2B/a8n-session",
+  "workdir": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/a8n-transport-5QzW2B",
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-17T03:16:13.497Z\",\"op\":\"session.probe\",\"status\":\"error\",\"durationMs\":179845,\"args\":{\"method\":\"app.info\",\"timeoutMs\":179841,\"requestId\":\"6fb7ffbc-58ec-418a-99d7-fb671432ca94\"},\"error\":{\"name\":\"ProtocolError\",\"message\":\"result file for app.info (6fb7ffbc-58ec-418a-99d7-fb671432ca94) was never parseable: Unexpected end of JSON input\"}}\n{\"seq\":1,\"ts\":\"2026-11-17T03:16:13.497Z\",\"op\":\"session.probe\",\"status\":\"error\",\"durationMs\":179845,\"args\":{},\"error\":{\"name\":\"ProtocolError\",\"message\":\"result file for app.info (6fb7ffbc-58ec-418a-99d7-fb671432ca94) was never parseable: Unexpected end of JSON input\"}}\n{\"seq\":2,\"ts\":\"2026-11-17T03:16:13.518Z\",\"op\":\"session.launch\",\"status\":\"error\",\"durationMs\":180025,\"args\":{\"transport\":\"script-invocation\"},\"result\":{\"pendingLaunch\":{\"pid\":4891,\"startedAt\":1794885193000,\"executable\":\"/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects\",\"presentAtLastLookup\":true,\"sessionUid\":501,\"sessionUser\":\"rebui\",\"sessionAsid\":100021},\"ownership\":{\"kind\":\"unknown\",\"evidence\":\"not launched\"}},\"error\":{\"name\":\"ProtocolError\",\"message\":\"result file for app.info (6fb7ffbc-58ec-418a-99d7-fb671432ca94) was never parseable: Unexpected end of JSON input\"}}\n",
+  "aeProcessesAfterLaunchFailure": [
+    {
+      "pid": 4461,
+      "args": "bash -c cd /Users/rebui/work/ae-devtools/packages/ae-devtools-cli/a8n-transport && node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir \"/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app\" --out /tmp/ae-qa-evidence/run-2027-a8n.json 2>&1"
+    },
+    {
+      "pid": 4481,
+      "args": "node real-run.mjs --ae-a8n-root /tmp/ae-a8n-candidate --install-dir /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app --out /tmp/ae-qa-evidence/run-2027-a8n.json"
+    },
+    {
+      "pid": 4891,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects"
+    },
+    {
+      "pid": 5148,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/f16d8eee-6467-41c7-93f4-af6e6c1e4651.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/f16d8eee-6467-41c7-93f4-af6e6c1e4651.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/f16d8eee-6467-41c7-93f4-af6e6c1e4651.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/27.0/SentryIO-db/external/542b63bb-a6f6-44fd-fe9b-910c57282ff7.envelope --report-id=542b63bb-a6f6-44fd-fe9b-910c57282ff7 --handshake-fd=5"
+    },
+    {
+      "pid": 5150,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/dynamiclinkmanager --rogue"
+    },
+    {
+      "pid": 5151,
+      "args": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    }
+  ],
+  "finishedAt": "2026-11-17T03:16:13.541Z"
+}

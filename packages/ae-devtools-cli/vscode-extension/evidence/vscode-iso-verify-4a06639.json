@@ -1,0 +1,29 @@
+{
+  "startedAt": "2026-11-17T03:38:52.258Z",
+  "steps": [
+    {
+      "step": "driver-activated",
+      "at": "2026-11-17T03:38:52.265Z"
+    },
+    {
+      "step": "mode",
+      "at": "2026-11-17T03:38:52.265Z",
+      "mode": "verify"
+    },
+    {
+      "step": "verify-triggered",
+      "at": "2026-11-17T03:38:52.265Z"
+    },
+    {
+      "step": "verify",
+      "at": "2026-11-17T03:39:27.104Z",
+      "settled": true
+    },
+    {
+      "step": "done",
+      "at": "2026-11-17T03:39:27.160Z"
+    }
+  ],
+  "notes": [],
+  "problems": []
+}

@@ -92,3 +92,28 @@ internals themselves are automated-test only — they have NOT been
 exercised against real AE (launch/GUI freeze remains in effect). The
 project pipeline would need a new real-host run (frozen) before it can
 be claimed verified.
+
+## Attempt at ae-devtools `4a06639` (2026-11-17)
+
+`evidence/run-real-2026-4a06639.json` — **PASS (AE 2026, 26.5.3x9)**,
+single-file pipeline on an owned session: TS build → dispatch COMPLETED
+→ `$.global` write verified → deliberate runtime fault FAILED with host
+`ReferenceError` → sourcemap to `runtime-error.ts:3` → fix → rebuild →
+re-dispatch COMPLETED → `mystery.ts` diagnose/fix/verify loop COMPLETED →
+session close. `aeA8nSource: local:/tmp/ae-a8n-candidate`,
+`aeA8nHead: null` (snapshot without `.git`).
+
+This run exercises the **current** `buildFile` path, which includes the
+reworked ES3 lint (`es3-syntax.mjs` grammar parse + `es3-api.mjs` curated
+table) — so the single-file lint/build/dispatch/sourcemap surface is now
+real-host exercised, upgrading that part of the earlier
+"automated-test only" caveat. The multi-file project pipeline
+(`build-project` / `check`) remains automated-test only — it was not
+part of this run.
+
+Provenance: ae-devtools runtime surface byte-identical to `4a06639`
+(see a8n-transport/EVIDENCE.md "Attempt 5" for the unchanged-surface
+check); ae-a8n bytes = commit `1dbd4de` (tree `e6003eab`, pre-0.2.0-rc),
+`dist/` verified byte-identical to a clean build of that commit. Same
+pre-RC caveat applies — not same-bytes proof against ae-a8n 0.2.0 RC or
+published tarballs.

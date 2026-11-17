@@ -84,7 +84,26 @@ refusals, and no-retry-on-UNKNOWN.
 | implemented | yes — `server.mjs`, `tools.mjs`, `session.mjs` |
 | automated test | yes — `node tests/run.mjs` (node:test, in-process + spawned stdio) |
 | fake/mock only | yes — all current coverage runs against the codec-faithful fake host |
-| verified on real host | **no** — requires `--session a8n` on an owned AE session; not exercised in CI |
+| verified on real host | partial — `real-run.mjs` drove initialize → `ae_discover` → `ae_execute`(`item.addComp`) → `ae_verify`(`read.projectSummary`) against an **owned** AE 2026 (26.5.3x9) session on macOS arm64; see `evidence/mcp-real-4a06639-ae2026.json`. The same harness against AE 2027 (already running, non-owned target) failed closed with no dispatch — `evidence/mcp-real-4a06639-ae2027-blocked.json`. Not exercised in CI; requires a local ae-a8n build satisfying the contract gate (`--ae-a8n-root`) until a contract-conformant `@ido-bata/ae-a8n` is published |
+
+## Real-host verification
+
+`real-run.mjs` is the opt-in real-AE harness (REAL AE ONLY — never
+present its output as anything but real-host evidence):
+
+```sh
+node real-run.mjs --session a8n \
+  --ae-a8n-root /path/to/ae-a8n-checkout \
+  --install-dir "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app" \
+  --out evidence/mcp-real-<label>.json
+```
+
+It records every NDJSON frame (requests, responses, stderr) to the `--out`
+JSON. `AE_DEVTOOLS_CLI` / `A8N_ROOT` / `AE_INSTALL_DIR` / `MCP_OUT` env
+vars override the corresponding flags. Committed runs live under
+`evidence/` together with their provenance notes in the release record —
+the ae-a8n bytes used were a **pre-0.2.0-rc local build** (`release-0-2-0`
+commit `1dbd4de`, tree `e6003eab`), not the published package.
 
 Known limitations: single shared session per server process; no
 `resources`/`prompts` surfaces; no run-guard residue markers (the CLI's
