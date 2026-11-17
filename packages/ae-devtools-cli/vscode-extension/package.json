@@ -1,0 +1,69 @@
+{
+  "name": "ae-devtools-vscode-extension",
+  "displayName": "AE DevTools",
+  "description": "After Effects development loop for VSCode — discover/inspect/execute/verify over the shared ae-devtools core (fake and a8n sessions)",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "ae-devtools",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.102.0",
+    "node": ">=22"
+  },
+  "main": "./extension.mjs",
+  "activationEvents": [
+    "onCommand:ae-devtools.discover",
+    "onCommand:ae-devtools.inspect",
+    "onCommand:ae-devtools.execute",
+    "onCommand:ae-devtools.verify"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "ae-devtools.discover",
+        "title": "AE DevTools: Discover Operations",
+        "category": "AE DevTools"
+      },
+      {
+        "command": "ae-devtools.inspect",
+        "title": "AE DevTools: Inspect Operation",
+        "category": "AE DevTools"
+      },
+      {
+        "command": "ae-devtools.execute",
+        "title": "AE DevTools: Execute Operation",
+        "category": "AE DevTools"
+      },
+      {
+        "command": "ae-devtools.verify",
+        "title": "AE DevTools: Verify State",
+        "category": "AE DevTools"
+      }
+    ],
+    "configuration": {
+      "title": "AE DevTools",
+      "properties": {
+        "ae-devtools.session": {
+          "type": "string",
+          "enum": ["fake", "a8n"],
+          "default": "fake",
+          "description": "Session backend for dev-loop commands. 'fake' is codec-faithful mock evidence only; 'a8n' opens an owned AE session via ae-a8n (requires ae-devtools.aeA8nRoot)."
+        },
+        "ae-devtools.aeA8nRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Path to an ae-a8n checkout used when ae-devtools.session is 'a8n'."
+        },
+        "ae-devtools.installDir": {
+          "type": "string",
+          "default": "",
+          "description": "AE install directory forwarded to the a8n session opener (a8n session only)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node tests/run.mjs"
+  }
+}

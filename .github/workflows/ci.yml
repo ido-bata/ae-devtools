@@ -176,7 +176,7 @@ jobs:
           set -uo pipefail
           fail=0
           ran=0
-          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension agent-loop; do
+          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension agent-loop vscode-extension; do
             if [ ! -f "packages/ae-devtools-cli/$d/tests/run.mjs" ]; then
               echo "=== $d === (absent on this head; skipping)"
               continue
