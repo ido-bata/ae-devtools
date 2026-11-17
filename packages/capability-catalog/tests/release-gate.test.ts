@@ -1,0 +1,255 @@
+import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+
+import {
+  parseReleaseScope,
+  resolveReleaseClaims,
+  evaluateReleaseGate,
+  RELEASE_SCOPE_SCHEMA,
+  type ReleaseScope,
+} from "../src/release-gate.ts";
+import {
+  CONFORMANCE_SCHEMA,
+  CONFORMANCE_RECORD_VERSION,
+} from "../src/conformance.ts";
+import type { CapabilityRecord } from "../src/schema.ts";
+import type { CatalogManifest } from "../src/generate.ts";
+
+const ARTIFACT_BYTES = new TextEncoder().encode("artifact-bytes");
+const ARTIFACT_SHA = createHash("sha256").update(ARTIFACT_BYTES).digest("hex");
+const readOk = () => ARTIFACT_BYTES;
+
+function catalogRecord(over: Record<string, unknown> = {}): CapabilityRecord {
+  return {
+    id: "ae.operation.app.version-info",
+    kind: "semantic-operation",
+    persistence: "repository",
+    source: { publisher: "adobe", uri: "u", version: "1", observedAt: "2026-01-01", authority: "primary" },
+    category: "app",
+    access: "read",
+    execution: { class: "extendscript", lifecycle: "x", canRemoteInvoke: true },
+    compatibility: { os: ["darwin"] },
+    risk: { effect: "none", trust: "read-only", undoable: null, retrySafety: "unknown" },
+    coverage: {
+      inventory: "source-reviewed",
+      reachability: "reachable",
+      implementation: "implemented",
+      verification: "automated-fake",
+      evidenceRefs: [],
+    },
+    ...over,
+  } as CapabilityRecord;
+}
+
+function manifest(records: CapabilityRecord[]): CatalogManifest {
+  return { records } as unknown as CatalogManifest;
+}
+
+function scope(over: Record<string, unknown> = {}): ReleaseScope {
+  const parsed = parseReleaseScope({
+    schema: RELEASE_SCOPE_SCHEMA,
+    release: "0.3.0",
+    supportedRelease: { state: "not-recorded" },
+    claimedCapabilities: [],
+    ...over,
+  });
+  if (!parsed.ok) throw new Error(`bad scope fixture: ${parsed.errors}`);
+  return parsed.scope;
+}
+
+function conformanceRecord(over: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    schema: CONFORMANCE_SCHEMA,
+    recordVersion: CONFORMANCE_RECORD_VERSION,
+    capabilityIds: ["ae.operation.app.version-info"],
+    platform: { os: "darwin", osVersion: "15.0", arch: "arm64" },
+    aeVersion: { version: "27.0", build: "78" },
+    sdkBuild: null,
+    sdkBuildStatus: "not-applicable",
+    verification: "verified-real-host",
+    result: "PASS",
+    catalogBinding: { kind: "real-host", ref: "run-1", platform: "darwin" },
+    sourceSha: "af1389203ef9ce9dca560274ee0514031bb332c2",
+    runId: "run-1",
+    artifactHashes: { "out/result.json": ARTIFACT_SHA },
+    environment: { disposableProject: true, sideEffects: "none-observed" },
+    recordedAt: "2026-11-17T00:00:00Z",
+    ...over,
+  };
+}
+
+const source = (record: unknown, readArtifact = readOk) => ({
+  runId: "run-1",
+  record,
+  readArtifact: () => readArtifact(),
+});
+
+describe("parseReleaseScope", () => {
+  test("accepts a minimal honest scope", () => {
+    const r = parseReleaseScope({
+      schema: RELEASE_SCOPE_SCHEMA,
+      release: "0.3.0",
+      supportedRelease: { state: "not-recorded" },
+      claimedCapabilities: [],
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  test("rejects bad schema, missing release, malformed claims", () => {
+    expect(parseReleaseScope({}).ok).toBe(false);
+    expect(
+      parseReleaseScope({
+        schema: RELEASE_SCOPE_SCHEMA,
+        release: "0.3.0",
+        supportedRelease: { state: "not-recorded" },
+        claimedCapabilities: [{ capabilityId: "x" }],
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseReleaseScope({
+        schema: RELEASE_SCOPE_SCHEMA,
+        release: "0.3.0",
+        supportedRelease: { state: "recorded", releases: [] },
+        claimedCapabilities: [],
+      }).ok,
+    ).toBe(false);
+  });
+});
+
+describe("resolveReleaseClaims", () => {
+  test("empty scope + no verified catalog rows -> empty claim set", () => {
+    const r = resolveReleaseClaims(scope(), manifest([catalogRecord()]));
+    expect(r.claims).toEqual([]);
+    expect(r.violations).toEqual([]);
+  });
+
+  test("catalog verified-real-host rows become claims per declared os", () => {
+    const row = catalogRecord({
+      compatibility: { os: ["darwin", "win32"] },
+      coverage: {
+        inventory: "source-reviewed",
+        reachability: "reachable",
+        implementation: "implemented",
+        verification: "verified-real-host",
+        evidenceRefs: [],
+      },
+    });
+    const r = resolveReleaseClaims(scope(), manifest([row]));
+    expect(r.claims).toEqual([
+      { capabilityId: "ae.operation.app.version-info", os: "darwin" },
+      { capabilityId: "ae.operation.app.version-info", os: "win32" },
+    ]);
+    expect(r.fromCatalog).toBe(2);
+  });
+
+  test("declared claim for unknown capability is a scope violation", () => {
+    const r = resolveReleaseClaims(
+      scope({ claimedCapabilities: [{ capabilityId: "ae.operation.nope.x", os: "darwin" }] }),
+      manifest([catalogRecord()]),
+    );
+    expect(r.violations[0]?.reason).toBe("unknown-capability");
+    expect(r.claims).toEqual([]);
+  });
+
+  test("declared claim for undeclared platform is a scope violation", () => {
+    const r = resolveReleaseClaims(
+      scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "win32" }] }),
+      manifest([catalogRecord()]), // compatibility.os = ["darwin"] only
+    );
+    expect(r.violations[0]?.reason).toBe("platform-not-declared");
+    expect(r.claims).toEqual([]);
+  });
+
+  test("valid declared claim joins the set; duplicates collapse", () => {
+    const r = resolveReleaseClaims(
+      scope({
+        claimedCapabilities: [
+          { capabilityId: "ae.operation.app.version-info", os: "darwin" },
+          { capabilityId: "ae.operation.app.version-info", os: "darwin" },
+        ],
+      }),
+      manifest([catalogRecord()]),
+    );
+    expect(r.claims).toEqual([{ capabilityId: "ae.operation.app.version-info", os: "darwin" }]);
+    expect(r.declared).toBe(2);
+  });
+});
+
+describe("evaluateReleaseGate", () => {
+  test("empty claim set -> verdict no-claims, ok but explicitly not a pass", () => {
+    const report = evaluateReleaseGate({
+      scope: scope(),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [],
+    });
+    expect(report.verdict).toBe("no-claims");
+    expect(report.ok).toBe(true);
+    expect(report.claimsEvaluated).toBe(0);
+    expect(report.diagnostics).toContain("claim-set-empty");
+    expect(report.diagnostics).toContain("supported-release-set-not-recorded");
+  });
+
+  test("recorded supportedRelease drops that diagnostic", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ supportedRelease: { state: "recorded", releases: ["ae-2027", "ae-2026"] } }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [],
+    });
+    expect(report.diagnostics).not.toContain("supported-release-set-not-recorded");
+  });
+
+  test("declared claim without evidence -> violations verdict, not ok", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [],
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.ok).toBe(false);
+    expect(report.violations[0]?.reason).toBe("no-evidence");
+  });
+
+  test("declared claim satisfied by PASS record with recomputing artifacts", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord())],
+    });
+    expect(report.verdict).toBe("pass");
+    expect(report.ok).toBe(true);
+    expect(report.claimsEvaluated).toBe(1);
+  });
+
+  test("artifact mismatch fails the claim", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord(), () => new TextEncoder().encode("tampered"))],
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.violations[0]?.reason).toBe("artifact-mismatch");
+  });
+
+  test("structurally invalid records are rejected, not used as evidence", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord({ recordVersion: 42 }))],
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.rejectedRecords).toHaveLength(1);
+    expect(report.rejectedRecords[0]?.runId).toBe("run-1");
+  });
+
+  test("scope violations fail the gate even with zero claims evaluated", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.nope.x", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [],
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.ok).toBe(false);
+    expect(report.scopeViolations[0]?.reason).toBe("unknown-capability");
+    expect(report.claimsEvaluated).toBe(0);
+  });
+});
