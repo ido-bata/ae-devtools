@@ -130,6 +130,10 @@ async function main() {
     aeProcessesBeforeLaunch: await aeProcessSnapshot(processFragment),
     steps: [],
     close: null,
+    // Present from the start so the evidence schema is stable across the
+    // launch-failure early return and the success path.
+    handshake: null,
+    contractViolations: [],
   };
 
   let session = null;
@@ -195,7 +199,6 @@ async function main() {
   // capabilities() response, negotiated and dispatch-gated through the
   // resolved ae-a8n functions. This is the real-host counterpart of the
   // pre-launch battery — export presence plus live semantics, recorded.
-  evidence.contractViolations = [];
   try {
     if (
       typeof session.ae?.capabilities === "function" &&
