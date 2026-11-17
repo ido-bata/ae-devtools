@@ -14,7 +14,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "latest"
+    "tag": "next"
   },
   "bin": {
     "ae-devtools": "./devtools-cli/cli.mjs",

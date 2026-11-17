@@ -77,7 +77,7 @@ ae-devtools verify --session fake --consent grant
 
 ```sh
 ae-devtools execute <opId> --session a8n --consent grant
-# ae-a8n contract を満たす build を明示する場合（現状はこちらが必要）:
+# 別の ae-a8n build を使う場合:
 ae-devtools execute <opId> --session a8n --ae-a8n-root <local-a8n-checkout> --consent grant
 ```
 
