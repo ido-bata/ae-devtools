@@ -146,7 +146,7 @@ Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (
 
 ### [#21](https://github.com/ido-bata/ae-devtools/issues/21) — Conformance/evidence
 
-Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance/evidence design note merged** (`design/conformance-evidence.md`). Release gate not run; the real-host matrix depends on a contract-satisfying ae-a8n publish.
+Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance record + layer-2 claim gate + release gate wiring merged** (`src/conformance.ts` PR #146, `src/release-gate.ts` + `release-scope.json` + `evidence/conformance/` PR #148, release-PR CI job PR #149; verdict `no-claims` honestly reported while zero verified-real-host claims exist). Real-host evidence records and the supportedRelease owner decision (plan §6.1) remain open; the real-host matrix depends on a contract-satisfying ae-a8n publish.
 
 - [ ] **CAP053** Define real-host fixture and immutable evidence manifest. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
 - [ ] **CAP054** Run script/native/transport/security conformance. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
@@ -164,7 +164,7 @@ Dependencies: #11, #13. Status: **open — CEP scaffold/validate + lifecycle dev
 
 ### [#37](https://github.com/ido-bata/ae-devtools/issues/37) — Unified AE diagnostics
 
-Dependencies: #14, #15, #16, #17, #18, #36. Status: **open — schema + collector registry + sourcemap resolution merged** (`diagnostics/`; automated test + fake/mock, wired into CLI execute/verify evidence). native-crash / CEP-log collectors await the ae-a8n #107–#109 publish. Registered 2026-11-14.
+Dependencies: #14, #15, #16, #17, #18, #36. Status: **open — schema + collector registry + sourcemap resolution merged** (`diagnostics/`; automated test + fake/mock, wired into CLI execute/verify evidence); recovery-orchestrator verdicts → diagnostics records merged (`recovery-orchestrator/diagnostics.mjs`, PR #156). native-crash / CEP-log collectors await the ae-a8n #107–#109 publish. Registered 2026-11-14.
 
 - [ ] **CAP061** Define the diagnostics record schema (source kind, severity, source position, session/target pin, artifact hash). ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
 - [ ] **CAP062** Connect ExtendScript exceptions, expression errors and render-queue failures to the host-side collection path via the trusted-execution codec. ([Issue #37](https://github.com/ido-bata/ae-devtools/issues/37))
@@ -173,7 +173,7 @@ Dependencies: #14, #15, #16, #17, #18, #36. Status: **open — schema + collecto
 
 ### [#38](https://github.com/ido-bata/ae-devtools/issues/38) — Agent development-loop E2E
 
-Dependencies: #14, #20, #21, #37. Status: **open — agent-loop merged** (`agent-loop/`; fake/mock level, packaged library). Real-host promotion of error→fix→rerun→regression awaits a contract-satisfying ae-a8n publish. Registered 2026-11-14.
+Dependencies: #14, #20, #21, #37. Status: **open — agent-loop merged + loop evidence serialization merged** (`agent-loop/`; fake/mock level, packaged library; `evidence.mjs` emits `ae-devtools.agent-loop-evidence/v1`, `evidenceLevel` accepts only `"fake"` — PR #151). Real-host promotion of error→fix→rerun→regression awaits a contract-satisfying ae-a8n publish. Registered 2026-11-14.
 
 - [ ] **CAP065** Prove the minimal loop on an owned AE session: intentionally broken JSX fixture → execute → diagnostics with source position → fix → re-run → PASS, scripting only first. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
 - [ ] **CAP066** Bind loop evidence (per-iteration request/result/diagnostics/regression artifacts) to the #21 conformance evidence schema; fake-only success never promotes to real-host verified. ([Issue #38](https://github.com/ido-bata/ae-devtools/issues/38))
