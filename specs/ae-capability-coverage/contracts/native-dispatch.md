@@ -16,7 +16,7 @@ After `negotiate()` returns `compatible` for a set of operation ids, an adapter 
 | `requestId` | non-empty client-generated correlation key; echoed verbatim in the result. Re-issues after `not-sent`/`refused` use a **new** `requestId` — requests are never resent under the same id |
 | `session` | session pin `{sessionId, aeVersion, sdkRelease?}` — the read-only probe pinning semantics. All fields non-empty strings; `sdkRelease` carries `{identifier, distribution}` when present. Semantic equality with the host-attested session is enforced host-side |
 | `operationId` | `"<Suite>.<member>"` registry id from `operations.ts`. Must exist **and** derive `dispatchable` at resolution time — see §4 |
-| `args` | optional; must satisfy the ES3-serializable set (trusted-execution.md §2): `null`, boolean, finite number, string, array, plain object — recursively. `undefined`, functions, symbols, non-finite numbers, and non-plain objects are malformed. Host objects are never arguments; identity descriptors are CAP027 scope |
+| `args` | optional; must satisfy the ES3-serializable set (trusted-execution.md §2): `null`, boolean, finite number, string, array, plain object — recursively. `undefined`, functions, symbols, non-finite numbers, and non-plain objects are malformed. Host objects are never arguments; identity descriptors are CAP027 scope. Inspection is hostile-input safe: cycles reject, depth is bounded at 64, total nodes at 100,000, and any exception while inspecting (throwing getter, revoked Proxy) rejects rather than propagates |
 | `authorizationRef` | optional opaque reference to an authorization grant issued by the owning runtime. This contract never defines, stores, or validates grant contents |
 
 ## 3. Result — same schema id
@@ -50,7 +50,7 @@ A `compatible` handshake result is point-in-time availability, never per-operati
 - `refused` is terminal pre-execution; retrying requires changing the cause (pin, consent, arguments), again as a new request.
 - `failed` with `mayHaveMutated=false` is unambiguous; with `true` it joins `unknown` in requiring reconciliation.
 
-`outcomeRequiresReconciliation(outcome)` encodes the `unknown` case; callers must additionally treat `failed && mayHaveMutated` as reconciliation-required.
+`outcomeRequiresReconciliation(outcome, mayHaveMutated)` encodes both cases: `unknown` always, and `failed` when `mayHaveMutated === true`. Callers pass the result's flag through; for `unknown` the flag is advisory since reconciliation is required regardless.
 
 ## 6. Evidence level — what a passing validator means
 
