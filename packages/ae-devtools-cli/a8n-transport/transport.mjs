@@ -27,12 +27,15 @@
  *                              the response cannot be attributed to this
  *                              request, so it must not complete it)
  *
- * Pin check: when the request envelope carries `pin.aeVersion`, the live
- * `ae.info().version` must match BEFORE `ae.call` is invoked; a mismatch is
- * answered with a `SESSION_PIN_MISMATCH` refusal and nothing is dispatched.
- * `sessionId`/`dispatchId` are client-side consent-scope values — ae-a8n
- * does not expose a host session id, so they bind to the launch instance
- * that created this transport (see session.mjs), not to a host attestation.
+ * Pin check: when the request envelope carries a `pin` object, the live
+ * `ae.info().version` must match `pin.aeVersion` BEFORE `ae.call` is
+ * invoked. A mismatch is answered with `SESSION_PIN_MISMATCH`; a pin with
+ * no usable aeVersion or a live version that cannot be read is answered
+ * with `SESSION_PIN_UNVERIFIED` — both refuse and nothing is dispatched
+ * (fail-closed). `sessionId`/`dispatchId` are client-side consent-scope
+ * values — ae-a8n does not expose a host session id, so they bind to the
+ * launch instance that created this transport (see session.mjs), not to
+ * a host attestation.
  *
  * Evidence level: the transport itself is dependency-free and fully covered
  * by fake-`ae` tests; real-AE behavior is proven only by real-run.mjs.
@@ -173,34 +176,46 @@ export function createA8nTransport({ ae, method, callTimeoutMs, checkPin } = {})
       });
     }
 
-    if (pinCheck && envelope.pin !== null && typeof envelope.pin === "object" &&
-        typeof envelope.pin.aeVersion === "string" && envelope.pin.aeVersion.length > 0) {
+    if (pinCheck && envelope.pin !== null && typeof envelope.pin === "object") {
+      const pinnedVersion =
+        typeof envelope.pin.aeVersion === "string" && envelope.pin.aeVersion.length > 0
+          ? envelope.pin.aeVersion
+          : null;
       let liveVersion = null;
+      let probeError = null;
       try {
         const info = typeof ae.info === "function" ? ae.info() : null;
-        if (info !== null && typeof info === "object" && typeof info.version === "string") {
+        if (info !== null && typeof info === "object" &&
+            typeof info.version === "string" && info.version.length > 0) {
           liveVersion = info.version;
         }
-      } catch {
-        liveVersion = null;
+      } catch (error) {
+        probeError = error instanceof Error ? error.message : String(error);
       }
       // A pinned aeVersion that cannot be checked against the live host
       // is NOT a pass — the pin is the session's only host-attestable
       // drift check, so an unreadable version refuses rather than
-      // silently dispatching (fail-closed, Issue #219).
-      if (liveVersion === null) {
+      // silently dispatching (fail-closed, Issue #219). The same applies
+      // to a pin that carries NO usable aeVersion: skipping the check
+      // entirely would dispatch with no drift protection at all
+      // (Issue #248). An empty live version string is as unverifiable
+      // as a missing one.
+      if (pinnedVersion === null || liveVersion === null) {
+        const why = pinnedVersion === null
+          ? "pin carries no usable aeVersion"
+          : `live host version unreadable${probeError !== null ? ` (${probeError})` : ""}`;
         return reply(requestId, {
           refusal: {
             code: "SESSION_PIN_UNVERIFIED",
-            message: `pin aeVersion ${envelope.pin.aeVersion} cannot be verified: live host version unreadable; nothing was dispatched`,
+            message: `pin aeVersion cannot be verified: ${why}; nothing was dispatched`,
           },
         });
       }
-      if (liveVersion !== envelope.pin.aeVersion) {
+      if (liveVersion !== pinnedVersion) {
         return reply(requestId, {
           refusal: {
             code: "SESSION_PIN_MISMATCH",
-            message: `pin aeVersion ${envelope.pin.aeVersion} does not match live ${liveVersion}; nothing was dispatched`,
+            message: `pin aeVersion ${pinnedVersion} does not match live ${liveVersion}; nothing was dispatched`,
           },
         });
       }

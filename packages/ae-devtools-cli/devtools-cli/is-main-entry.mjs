@@ -11,7 +11,13 @@ import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export function isMainEntry(moduleUrl = import.meta.url) {
+export function isMainEntry(moduleUrl) {
+  // Required on purpose: the default would resolve to THIS module's URL,
+  // so a caller that forgets the argument would silently never match and
+  // the CLI would exit 0 doing nothing (Issue #248).
+  if (typeof moduleUrl !== "string") {
+    throw new Error("isMainEntry(moduleUrl) requires the caller's import.meta.url");
+  }
   const entry = process.argv[1];
   if (!entry) return false;
   try {
