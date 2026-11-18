@@ -106,6 +106,30 @@ describe("parseReleaseScope", () => {
     expect(r.ok).toBe(true);
   });
 
+  test("supportedRelease.scope is validated when present", () => {
+    const base = {
+      schema: RELEASE_SCOPE_SCHEMA,
+      release: "0.4.0",
+      claimedCapabilities: [],
+    };
+    expect(parseReleaseScope({
+      ...base,
+      supportedRelease: { state: "recorded", releases: ["26.5"], scope: { os: ["darwin"], arch: ["arm64"], verification: "verified-real-host", note: "bounded" } },
+    }).ok).toBe(true);
+    expect(parseReleaseScope({
+      ...base,
+      supportedRelease: { state: "recorded", releases: ["26.5"], scope: "darwin" },
+    }).ok).toBe(false);
+    expect(parseReleaseScope({
+      ...base,
+      supportedRelease: { state: "recorded", releases: ["26.5"], scope: { os: "darwin" } },
+    }).ok).toBe(false);
+    expect(parseReleaseScope({
+      ...base,
+      supportedRelease: { state: "recorded", releases: ["26.5"], scope: { verification: 42 } },
+    }).ok).toBe(false);
+  });
+
   test("rejects bad schema, missing release, malformed claims", () => {
     expect(parseReleaseScope({}).ok).toBe(false);
     expect(
@@ -320,10 +344,14 @@ describe("evaluateReleaseGate", () => {
     expect(isEvidenceScopePath("packages/ae-devtools-cli/dev-loop/outcomes.mjs")).toBe(true);
     expect(isEvidenceScopePath("packages/ae-devtools-cli/package.json")).toBe(true);
     expect(isEvidenceScopePath("inventories/scripting/ops.json")).toBe(true);
+    expect(isEvidenceScopePath("inventories/tools/generated/operations.json")).toBe(true);
     expect(isEvidenceScopePath("packages/ae-devtools-cli/dev-loop/tests/run.mjs")).toBe(false);
     expect(isEvidenceScopePath("packages/ae-devtools-cli/docs/adoption.md")).toBe(false);
     expect(isEvidenceScopePath("packages/capability-catalog/evidence/conformance/x/record.json")).toBe(false);
     expect(isEvidenceScopePath("packages/capability-catalog/generated/catalog.json")).toBe(false);
+    // Gate/claim definitions are re-evaluated every run — not measured bytes.
+    expect(isEvidenceScopePath("packages/capability-catalog/release-scope.json")).toBe(false);
+    expect(isEvidenceScopePath("packages/capability-catalog/src/release-gate.ts")).toBe(false);
     expect(isEvidenceScopePath("README.md")).toBe(false);
   });
 });

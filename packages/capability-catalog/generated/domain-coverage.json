@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
-      "sha256": "11dcc1db89689278237e245c247bcf1e60ad68debbd7a261ceb18ddf9b7b4d09"
+      "sha256": "15f2fdb4a61f068d3e8b53afeb05123626e857e2551dd6d64dc512e8a0e7c014"
     },
     {
       "path": "specs/ae-capability-coverage/domains/animation-effects-render.json",

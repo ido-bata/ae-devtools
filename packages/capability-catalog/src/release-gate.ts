@@ -56,23 +56,24 @@ export type DeclaredCapabilityClaim = {
 
 /**
  * Repo-relative path prefixes whose modification invalidates real-host
- * evidence: the exercised runtime, the claim/scope definitions, and the
- * operation registry the claims are measured against. Tests, docs,
- * evidence trees, harness snapshots, packaging metadata and generated
- * catalogs are excluded — they neither implement nor redefine what was
- * verified (the harness bytes are already pinned by artifactHashes).
+ * evidence: the exercised runtime and the operation inventories whose
+ * semantics the claims are measured against. Gate/claim definitions
+ * (release-scope.json, real-host-claims.json, catalog sources, the gate
+ * itself) are NOT in scope — they are re-evaluated on every gate run
+ * and do not change what was measured. Tests, docs, evidence trees,
+ * packaging metadata and generated catalogs are excluded — they
+ * neither implement nor redefine what was verified (harness bytes are
+ * already pinned by artifactHashes). Generated inventory files ARE in
+ * scope: they are the runtime op semantics, not build artifacts.
  */
 export const CONFORMANCE_EVIDENCE_SCOPE: readonly string[] = [
   "packages/ae-devtools-cli/",
-  "packages/capability-catalog/src/",
-  "packages/capability-catalog/scripts/",
-  "packages/capability-catalog/release-scope.json",
-  "packages/capability-catalog/real-host-claims.json",
   "inventories/scripting/",
+  "inventories/tools/",
 ];
 
 const EVIDENCE_SCOPE_EXCLUDE =
-  /(?:^|\/)(?:tests?|__tests__|docs?|evidence|fixtures?|generated)\/|\.(?:test|spec)\.[^/]+$|(?:^|\/)[^/]*\.md$|(?:^|\/)package-lock\.json$|(?:^|\/)node_modules\//;
+  /(?:^|\/)(?:tests?|__tests__|docs?|evidence)\/|\.(?:test|spec)\.[^/]+$|(?:^|\/)[^/]*\.md$|(?:^|\/)package-lock\.json$|(?:^|\/)node_modules\//;
 
 /** True when `path` is inside the evidence scope (change ⇒ stale). */
 export function isEvidenceScopePath(path: string): boolean {
@@ -144,6 +145,24 @@ export function parseReleaseScope(json: unknown): ReleaseScopeParse {
       !sr.releases.every(nonEmptyString)
     ) {
       bad("supportedRelease.state='recorded' requires a non-empty releases string array");
+    }
+    if (sr.scope !== undefined) {
+      if (!isPlainObject(sr.scope)) {
+        bad("supportedRelease.scope must be an object when present");
+      } else {
+        for (const key of ["os", "arch"] as const) {
+          const v = sr.scope[key];
+          if (v !== undefined && (!Array.isArray(v) || !v.every(nonEmptyString))) {
+            bad(`supportedRelease.scope.${key} must be a string array when present`);
+          }
+        }
+        for (const key of ["verification", "note"] as const) {
+          const v = sr.scope[key];
+          if (v !== undefined && typeof v !== "string") {
+            bad(`supportedRelease.scope.${key} must be a string when present`);
+          }
+        }
+      }
     }
   }
 
