@@ -19,7 +19,7 @@
     },
     {
       "path": "inventories/sdk/generated/aggregate.json",
-      "sha256": "7a945eacc27eb50830c15774e65b4a87916b38aea2a5ff5c57ae7adf42370bc5"
+      "sha256": "122790f4d42669edfb85f37340e47021033dfa72a5ef9af1958f0de8a3141d9f"
     },
     {
       "path": "inventories/sdk/generated/provenance.json",
@@ -62714,12 +62714,12 @@
       "committedContent": "Aggregate counts, per-header hashes and provenance only. No symbol identifiers, no header text, no struct layouts."
     },
     "totals": {
-      "symbols": 4677,
+      "symbols": 4660,
       "unknown": 552,
       "byClass": {
         "build-test-lifecycle": 74,
-        "external-command": 3766,
-        "host-callback": 154,
+        "external-command": 3750,
+        "host-callback": 153,
         "in-host-plugin-command": 131,
         "unsupported-or-unknown": 552
       }
@@ -62729,6 +62729,7 @@
       "unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.",
       "Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.",
       "Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.",
+      "Struct member extraction is hierarchy-aware: only function-pointer declarators at struct depth-1 count as suite/callback slots. Callback parameters nested inside a member's own parameter list (e.g. per-pixel iterator arguments) are arguments the caller supplies, not struct members, and are not counted.",
       "No behavioural claim about any AE build is implied. Nothing here was executed against After Effects."
     ],
     "evidenceLevel": {
