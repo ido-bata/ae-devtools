@@ -75,3 +75,32 @@ export function failureOutcome(result, outcome) {
 export function isFailureResult(result, outcome) {
   return failureOutcome(result, outcome) !== null;
 }
+
+/**
+ * Normalized outcome spelling for evidence/payload surfaces (Issue #226).
+ * Surfaces used to emit `result.outcome ?? result.status` verbatim, so
+ * the same state could appear as "FAILED" on one surface and "failed"
+ * on another. This returns the first non-empty spelling — `outcome`
+ * argument wins, then result.outcome, then result.status — normalized
+ * through wireState, or null when nothing was reported.
+ */
+export function normalizedOutcome(result, outcome) {
+  let raw = outcome;
+  if ((typeof raw !== "string" || raw.length === 0) &&
+      result !== null && typeof result === "object") {
+    raw = result.outcome ?? result.status;
+  }
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  return wireState(raw);
+}
+
+/**
+ * Whether the dispatch is in the recoverable UNKNOWN state. Uses the
+ * same normalization as every other surface so a lowercase adapter
+ * spelling ("unknown") is not misread as a settled request by run-guard
+ * markers (Issue #226). A missing/null result is NOT unknown — it is
+ * no evidence of an in-flight request.
+ */
+export function isUnknownOutcome(result, outcome) {
+  return normalizedOutcome(result, outcome) === "UNKNOWN";
+}

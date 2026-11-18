@@ -240,7 +240,7 @@ test("ae_execute destructive op without confirmDestructive is refused by the can
     arguments: { opId: "project.new", consent: "grant" },
   }));
   assert.equal(isError, true);
-  assert.equal(payload.outcome, "refused");
+  assert.equal(payload.outcome, "REFUSED");
   assert.equal(payload.result.reason, "DESTRUCTIVE_CONFIRMATION_REQUIRED");
   assert.equal(payload.session.kind, "fake");
   assert.equal(payload.session.evidenceLevel, "fake/mock only");
@@ -382,7 +382,7 @@ test("ae_execute unknown op is a typed refusal, not a crash", async () => {
     arguments: { opId: "no.such.op", consent: "grant" },
   }));
   assert.equal(isError, true);
-  assert.equal(payload.outcome, "refused");
+  assert.equal(payload.outcome, "REFUSED");
   assert.equal(payload.result.reason, "UNKNOWN_OPERATION");
   await c.server.close();
 });
@@ -585,4 +585,63 @@ test("spawned server over real stdio: initialize → tools → execute → verif
   } finally {
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
   }
+});
+
+// ---- outcome normalization consistency (Issue #226) ----
+
+test("lowercase adapter outcome spellings normalize on MCP surface; session meta cannot spoof kind/evidenceLevel", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const inner = openFakeSession();
+    const session = {
+      ...inner,
+      kind: "a8n",
+      evidenceLevel: "verified on real host (macOS)",
+      // meta must not override the honest top-level fields.
+      meta: { aeVersion: "26.5-fake", ownership: "owned", kind: "fake", evidenceLevel: "spoofed" },
+      runner: { runScript: async () => ({ outcome: "unknown", result: null }) },
+      pin: { sessionId: "sess-lower-unknown" },
+    };
+    const c = makeClient({ sessionKind: "a8n", sessionFactory: async () => session, runsDir });
+    const { payload, isError } = toolPayload(await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    }));
+    assert.equal(isError, true);
+    // Raw "unknown" is normalized to the wire spelling — consumers
+    // comparing "UNKNOWN" must not miss it.
+    assert.equal(payload.outcome, "UNKNOWN");
+    assert.equal(payload.session.kind, "a8n");
+    assert.equal(payload.session.evidenceLevel, "verified on real host (macOS)");
+    // The run-guard event uses the same normalization: lowercase
+    // "unknown" is the recoverable in-flight state → "timeout", never
+    // "resolved".
+    const marker = readOnlyMarker(runsDir);
+    const events = marker.requests.map((r) => r.event);
+    assert.ok(events.includes("timeout"), `expected timeout event, got ${JSON.stringify(events)}`);
+    assert.ok(!events.includes("resolved"));
+    await c.server.close();
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("runner returning null produces a structured payload, not a throw (Issue #226)", async () => {
+  const c = makeClient({
+    sessionFactory: async () => ({
+      kind: "fake",
+      evidenceLevel: "fake/mock only",
+      runner: { runScript: async () => null },
+      pin: { sessionId: "sess-null-runner" },
+      close: async () => {},
+    }),
+  });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(isError, true);
+  assert.equal(payload.outcome, "FAILED");
+  assert.equal(payload.result.reason, "EMPTY_RUNNER_RESULT");
+  await c.server.close();
 });
