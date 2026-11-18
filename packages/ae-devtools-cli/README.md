@@ -153,6 +153,20 @@ import { createFakeHost, createFakeApp }
   from "@ido-bata/ae-devtools-cli/agent-loop/fake-host";
 ```
 
+supported subpath は `exports` map で列挙された以下のみ（Issue #184）:
+
+| subpath | 用途 |
+| --- | --- |
+| `@ido-bata/ae-devtools-cli/agent-loop` | dev loop library（`runDevLoop` 等） |
+| `@ido-bata/ae-devtools-cli/agent-loop/fake-host` | fake host / fake app |
+| `@ido-bata/ae-devtools-cli/trusted-execution/runner.mjs` | `loadTrustedCodec`（custom host を組む consumer 向け） |
+| `@ido-bata/ae-devtools-cli/trusted-execution/permissions.mjs` | `consentScopeFor`（同上） |
+
+上記以外の deep import（`dev-loop/`・`tests/`・その他内部 module を含む）は
+`ERR_PACKAGE_PATH_NOT_EXPORTED` で拒否される unsupported surface であり、
+予告なく変更され得る。consumer-smoke がこの境界を packed tarball 上で
+検証する。
+
 `runDevLoop` は dispatch→diagnose→fix→rerun→regression の dev loop
 （Issue #38）。silent retry なし、fix budget は bounded、consent は
 attempt ごとに注入 provider が評価、dirty FAILED 後の rerun は
