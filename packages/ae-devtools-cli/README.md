@@ -30,7 +30,7 @@ npm install ./ae-devtools-cli-0.3.0.tgz
   under the `next` dist-tag); override with `--ae-a8n-root <checkout>`.
   The `fake` session is unaffected.
 
-Provides six bins:
+Provides seven bins:
 
 - `ae-devtools` — developer CLI (`doctor`, `discover`, `inspect`,
   `execute`, `verify`, `runs`, `reap`, `diagnose`)
@@ -42,6 +42,8 @@ Provides six bins:
 - `ae-devtools-cep` — CEP extension devkit (`scaffold` / `validate`)
 - `ae-devtools-cep-lifecycle` — CEP panel install/uninstall/status/
   cleanup/logs/`playerdebugmode` (machine-level only; never launches AE)
+- `ae-devtools-debug` — `extendscript-debug` launch.json generation /
+  contract validation / attach preflight
 
 ## MCP server
 

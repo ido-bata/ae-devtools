@@ -28,7 +28,7 @@
  * session via ../a8n-transport.
  */
 import { createInterface } from "node:readline";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,7 +36,11 @@ import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
-export const SERVER_VERSION = "0.1.0";
+// Single source of truth for the published version — avoids the drift
+// a hardcoded constant produced when the package moved to 0.3.0.
+export const SERVER_VERSION = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 // MCP revisions this server understands. The client proposes a version
 // in `initialize`; we answer with the newest mutually supported one.

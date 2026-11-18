@@ -196,6 +196,15 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         working-directory: packages/ae-devtools-cli
         run: npm run smoke:consumer
+      # Committed generated files must match their generators — same
+      # freshness contract as capability-catalog's `verify` byte-compare.
+      - if: steps.detect.outputs.present == 'true'
+        run: |
+          node packages/ae-devtools-cli/scripting-adapters/scripts/coverage-claims.mjs
+          node packages/ae-devtools-cli/jsx-toolchain/src/gen-ae-types.mjs
+          git diff --exit-code -- \
+            packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json \
+            packages/ae-devtools-cli/jsx-toolchain/src/ae-api.d.ts
 
   cep-panel-contract:
     runs-on: ubuntu-latest
