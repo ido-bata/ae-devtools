@@ -25,14 +25,11 @@ import { fileURLToPath } from "node:url";
 
 import { buildFile } from "./src/build.mjs";
 import { lookup } from "./src/sourcemap.mjs";
+import { arg } from "../devtools-cli/argv.mjs";
+import { createEvalDispatch } from "../devtools-cli/real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, "fixtures");
-
-function arg(flag) {
-  const i = process.argv.indexOf(flag);
-  return i >= 0 ? process.argv[i + 1] : undefined;
-}
 
 const TRANSPORT_DIR = join(HERE, "..", "a8n-transport");
 const TRUSTED_DIR = join(HERE, "..", "trusted-execution");
@@ -41,7 +38,6 @@ if (!existsSync(join(TRANSPORT_DIR, "session.mjs")) || !existsSync(join(TRUSTED_
   process.exit(2);
 }
 const { openSliceSession } = await import(join(TRANSPORT_DIR, "session.mjs"));
-const { consentScopeFor } = await import(join(TRUSTED_DIR, "permissions.mjs"));
 
 const OPERATION_ID = "op.a8n-transport.eval";
 const PROJECT_IDENTITY = "jsx-toolchain-real-run";
@@ -59,34 +55,23 @@ function step(name, data) {
   console.log(`${data.ok === false ? "FAIL" : "ok"} ${name}`);
 }
 
-function scopeFor(source, pin) {
-  return consentScopeFor({
-    pin,
-    operationId: OPERATION_ID,
-    args: { source, dispatchArgs: null },
-    projectIdentity: PROJECT_IDENTITY,
-  });
-}
-
-async function dispatch(session, source, requestId) {
-  return session.runner.runScript({
-    source,
-    pin: session.pin,
-    operationId: OPERATION_ID,
-    args: null,
-    projectIdentity: PROJECT_IDENTITY,
-    consent: { scope: scopeFor(source, session.pin) },
-    trustedScriptOptIn: true,
-    scriptProvenance: "jsx-toolchain-real-run",
-    requestId,
-  });
-}
-
 let session;
+// Eval dispatch goes through the shared wrapper (Issue #197): the
+// consent scope and the runner.runScript args shape are hashed
+// together inside runner.mjs — rebuilding them per call site is how
+// they silently drift.
+let dispatch;
 try {
   session = await openSliceSession({
     aeA8nRoot: arg("--ae-a8n-root"),
     installDir: arg("--install-dir"),
+  });
+  dispatch = createEvalDispatch({
+    runner: session.runner,
+    pin: session.pin,
+    projectIdentity: PROJECT_IDENTITY,
+    operationId: OPERATION_ID,
+    scriptProvenance: "jsx-toolchain-real-run",
   });
   step("session.launch", {
     ok: true,
@@ -101,10 +86,10 @@ try {
   step("build.ok", { ok: okBuild.status === "ok", status: okBuild.status, jsxBytes: okBuild.output?.length ?? 0 });
   if (okBuild.status !== "ok") throw new Error(`build failed: ${okBuild.status}`);
 
-  const run1 = await dispatch(session, okBuild.output, `tc-ok-${Date.now()}`);
+  const run1 = await dispatch(okBuild.output, `tc-ok-${Date.now()}`);
   step("dispatch.ok", { ok: run1.outcome === "COMPLETED", outcome: run1.outcome, detail: run1.error?.message ?? null });
 
-  const run2 = await dispatch(session, '"" + $.global.__toolchainProbe', `tc-read-${Date.now()}`);
+  const run2 = await dispatch('"" + $.global.__toolchainProbe', `tc-read-${Date.now()}`);
   step("verify.global-write", {
     ok: run2.outcome === "COMPLETED" && typeof run2.result === "string" && run2.result.includes("hello ae"),
     observed: run2.result ?? null,
@@ -116,7 +101,7 @@ try {
   step("build.runtime-error", { ok: badBuild.status === "ok", status: badBuild.status });
   if (badBuild.status !== "ok") throw new Error(`build failed: ${badBuild.status}`);
 
-  const run3 = await dispatch(session, badBuild.output, `tc-bad-${Date.now()}`);
+  const run3 = await dispatch(badBuild.output, `tc-bad-${Date.now()}`);
   const hostLine = run3.error?.line ?? null;
   // ExtendScript reports a line but no column; column 0 can precede the
   // first mapping segment, so query past the line end — every segment on
@@ -154,7 +139,7 @@ try {
 
   const mBuild = buildFile(mysteryPath);
   step("mystery.build", { ok: mBuild.status === "ok", status: mBuild.status });
-  const mRun = await dispatch(session, mBuild.output, `tc-mystery-${Date.now()}`);
+  const mRun = await dispatch(mBuild.output, `tc-mystery-${Date.now()}`);
   const mLine = mRun.error?.line ?? null;
   const mMapped = mLine != null ? lookup(mBuild.map, mLine, 1e9) : null;
   const diagnosed =
@@ -174,10 +159,10 @@ try {
   const fixedTs = mysteryTs.replace(`var missing = ${badId};`, `var ${badId} = "fixed"; var missing = ${badId};`);
   writeFileSync(mysteryPath, fixedTs);
   const fBuild = buildFile(mysteryPath);
-  const fRun = await dispatch(session, fBuild.output, `tc-fixed-${Date.now()}`);
+  const fRun = await dispatch(fBuild.output, `tc-fixed-${Date.now()}`);
   step("mystery.fix+rerun", { ok: fRun.outcome === "COMPLETED", outcome: fRun.outcome });
 
-  const vRun = await dispatch(session, '"" + $.global.__toolchainMystery', `tc-verify-${Date.now()}`);
+  const vRun = await dispatch('"" + $.global.__toolchainMystery', `tc-verify-${Date.now()}`);
   step("mystery.verify", {
     ok: vRun.outcome === "COMPLETED" && vRun.result === "fixed",
     observed: vRun.result ?? null,

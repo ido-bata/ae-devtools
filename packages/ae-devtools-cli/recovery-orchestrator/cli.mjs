@@ -59,23 +59,10 @@ import {
   verifyHostExit,
 } from "./orchestrator.mjs";
 import { RUNS_DIR } from "../devtools-cli/session-guard.mjs";
+import { parseArgs } from "../devtools-cli/argv.mjs";
 
-function parseArgs(argv) {
-  const pos = [];
-  const flags = {};
-  const multi = { "reports-dir": [], "sentry-dir": [] };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      const eq = a.indexOf("=");
-      const key = a.slice(2, eq >= 0 ? eq : undefined);
-      const val = eq >= 0 ? a.slice(eq + 1) : (i + 1 < argv.length && !argv[i + 1].startsWith("--") ? argv[++i] : true);
-      if (key in multi) multi[key].push(val);
-      else flags[key] = val;
-    } else pos.push(a);
-  }
-  return { pos, flags, multi };
-}
+// --reports-dir/--sentry-dir are repeatable (Issue #197 shared parser).
+const MULTI_FLAGS = ["reports-dir", "sentry-dir"];
 
 function emit(obj) {
   process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
@@ -272,7 +259,7 @@ function targetFromFlags(flags) {
 }
 
 async function main() {
-  const { pos, flags, multi } = parseArgs(process.argv.slice(2));
+  const { pos, flags, multi } = parseArgs(process.argv.slice(2), { multi: MULTI_FLAGS });
   const [cmd] = pos;
 
   if (cmd === "evidence") {

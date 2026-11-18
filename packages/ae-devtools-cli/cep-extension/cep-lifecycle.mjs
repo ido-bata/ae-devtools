@@ -10,10 +10,17 @@
  *   node cep-lifecycle.mjs logs [--log-dir <dir>]
  */
 import { install, uninstall, status, cleanup, collectLogs, playerDebugModeStatus } from "./lifecycle.mjs";
+import { parseArgs } from "../devtools-cli/argv.mjs";
 
 const [cmd, ...rest] = process.argv.slice(2);
+// Shared parser (Issue #197): the old i+=2 pairs loop could not parse
+// --flag=value or boolean flags and silently consumed the next token.
+// Only string values are kept — a bare boolean flag is not an option value.
+const { flags } = parseArgs(rest);
 const args = {};
-for (let i = 0; i < rest.length; i += 2) args[rest[i].replace(/^--/, "")] = rest[i + 1];
+for (const [k, v] of Object.entries(flags)) {
+  if (typeof v === "string") args[k] = v;
+}
 
 const need = (k) => { if (!args[k]) { console.error(`missing --${k}`); process.exit(2); } };
 

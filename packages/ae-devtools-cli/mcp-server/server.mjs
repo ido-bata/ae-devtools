@@ -34,6 +34,7 @@ import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
+import { parseArgs } from "../devtools-cli/argv.mjs";
 import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
@@ -194,20 +195,6 @@ export function createServer(opts = {}) {
 
 // ---- CLI entry ----
 
-function parseArgs(argv) {
-  const flags = {};
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      const eq = a.indexOf("=");
-      if (eq >= 0) flags[a.slice(2, eq)] = a.slice(eq + 1);
-      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) flags[a.slice(2)] = argv[++i];
-      else flags[a.slice(2)] = true;
-    }
-  }
-  return flags;
-}
-
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Installed bins are symlinks into node_modules/.bin, so argv[1] is the
 // shim path while import.meta.url is already realpath-resolved by Node.
@@ -225,7 +212,7 @@ function isMainEntry() {
 const isMain = isMainEntry();
 
 if (isMain) {
-  const flags = parseArgs(process.argv.slice(2));
+  const { flags } = parseArgs(process.argv.slice(2));
   const sessionKind = flags.session ?? "fake";
   if (!["fake", "a8n"].includes(sessionKind)) {
     process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");

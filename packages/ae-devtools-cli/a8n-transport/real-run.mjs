@@ -28,56 +28,19 @@
  *   - close failure or a surviving AE process matching the install is
  *     recorded and exits nonzero.
  */
-import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
 
 import { assertSliceOutcomes, runVerticalSlice } from "./scenario.mjs";
 import { openSliceSession } from "./session.mjs";
-
-const execFileAsync = promisify(execFile);
+import { arg } from "../devtools-cli/argv.mjs";
+import { ADOBE_HELPER, MAIN_EXE, aeProcessSnapshot } from "../devtools-cli/real-run-kit.mjs";
 
 /** Serialize evidence, creating the parent dir if needed. A missing
  *  --out directory must not silently drop the run record. */
 function writeEvidence(out, evidence) {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(evidence, null, 2) + "\n", "utf8");
-}
-
-function arg(flag) {
-  const i = process.argv.indexOf(flag);
-  return i >= 0 ? process.argv[i + 1] : undefined;
-}
-
-/** The main AE executable — helpers (crashpad_handler, CEPHtmlEngine,
- *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it. */
-const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)/;
-/** Known Adobe helper executables — used to classify
- *  aeHelpersAfterClose. Anything else matching the install fragment
- *  (e.g. this node's own harness) is NOT an Adobe helper. */
-const ADOBE_HELPER = /crashpad_handler|CEPHtmlEngine|dynamiclinkmanager|TeamProjectsLocalHub|AdobeCrashReport/i;
-
-/**
- * Snapshot `ps` rows whose command line mentions the AE install. With no
- * --install-dir the fragment is the generic bundle directory name, which
- * matches every installed AE version — the evidence records all of them so
- * a leftover is never hidden by an over-narrow filter.
- */
-async function aeProcessSnapshot(fragment) {
-  try {
-    const { stdout } = await execFileAsync("ps", ["-axo", "pid=,args="], { timeout: 10_000 });
-    return stdout
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && line.includes(fragment))
-      .map((line) => {
-        const m = /^(\d+)\s+(.*)$/.exec(line);
-        return m ? { pid: Number(m[1]), args: m[2] } : { pid: null, args: line };
-      });
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
 }
 
 function errorInfo(error) {
