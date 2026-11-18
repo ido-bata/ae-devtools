@@ -67,6 +67,7 @@ import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/s
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
+import { aeDevtoolsSourceRef } from "./real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
@@ -338,10 +339,16 @@ async function main() {
         // refuses markers without it, which is the intended fail-closed
         // state until the owned-session path supplies proof.
         noteSessionProcess(RUNS_DIR, guard.runId, state.session.processEvidence ?? {});
+        // Commit binding when running from the repo checkout (Issue #235
+        // / ADR-0017); nulls for installed-package runs — those records
+        // are informational, not commit-bound verification.
+        const sourceRef = await aeDevtoolsSourceRef(HERE);
         const evidence = {
           schema: "ae-devtools.cli.run/v1",
           runId: guard.runId,
           command: cmd,
+          sourceSha: sourceRef.head,
+          sourceDirty: sourceRef.dirty,
           opId: opId ?? null,
           requestId: null, // filled below once minted
           session: {

@@ -151,6 +151,7 @@ domain 実装（CLI / JSX toolchain / MCP / VSCode / CEP devkit）は開始済�
 - release → full applicable integration + critical E2E/smoke + release checks
 
 unit だけで smoke / integration correctness を証明した扱いにしない。
+- real-host evidence の commit binding は ADR-0017 に従う: real-run driver が emit する record は `sourceSha`/`sourceDirty` を持ち、非 null のみ commit-bound。`sourceSha` を持たない既存 record は informational/unbound であり、commit-bound verification として引用しない
 
 ## GitHub Project / Kanban（planning control plane）
 

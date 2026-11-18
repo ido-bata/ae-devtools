@@ -404,6 +404,7 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - [`ADR-0014-linear-profile.md`](docs/architecture/decisions/ADR-0014-linear-profile.md) — Linear profile（任意採用時）の併用契約
 - [`ADR-0015-deliverable-unit-release-cadence.md`](docs/architecture/decisions/ADR-0015-deliverable-unit-release-cadence.md) — deliverable-unit release cadence
 - [`ADR-0016-session-open-and-fake-host-boundary.md`](docs/architecture/decisions/ADR-0016-session-open-and-fake-host-boundary.md) — session open / fake-host boundary
+- [`ADR-0017-evidence-source-binding.md`](docs/architecture/decisions/ADR-0017-evidence-source-binding.md) — real-host evidence sourceSha binding（bound vs informational）
 
 ### docs / onboarding
 

@@ -30,11 +30,14 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { assertSliceOutcomes, runVerticalSlice } from "./scenario.mjs";
 import { openSliceSession } from "./session.mjs";
 import { arg } from "../devtools-cli/argv.mjs";
-import { ADOBE_HELPER, MAIN_EXE, aeProcessSnapshot } from "../devtools-cli/real-run-kit.mjs";
+import { ADOBE_HELPER, MAIN_EXE, aeProcessSnapshot, aeDevtoolsSourceRef } from "../devtools-cli/real-run-kit.mjs";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** Serialize evidence, creating the parent dir if needed. A missing
  *  --out directory must not silently drop the run record. */
@@ -82,11 +85,17 @@ async function main() {
   const out = arg("--out") ?? join(process.cwd(), `ae-a8n-real-run-${Date.now()}.json`);
   const startedAt = new Date().toISOString();
   const processFragment = installDir ?? "Adobe After Effects";
+  // Commit binding for this run (Issue #235 / ADR-0017): nulls when the
+  // driver is not inside the ae-devtools checkout — never the consumer's
+  // HEAD. Records without a non-null sourceSha are informational only.
+  const sourceRef = await aeDevtoolsSourceRef(HERE);
 
   const evidence = {
     schema: "ae-devtools.a8n-transport.real-run/v1",
     issue: 49,
     startedAt,
+    sourceSha: sourceRef.head,
+    sourceDirty: sourceRef.dirty,
     platform: `${process.platform}/${process.arch}`,
     node: process.version,
     installDir: installDir ?? null,

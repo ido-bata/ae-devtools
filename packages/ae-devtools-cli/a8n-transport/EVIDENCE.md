@@ -165,6 +165,8 @@ AE 2027 = `27.0x78` (already running, non-owned — untouched).
   `4a06639^{tree}` == `1725488^{tree}`). The runs themselves predate the
   merge commit by minutes and do not embed a sourceSha — attribution
   rests on this unchanged-surface check, not on an in-band field.
+  Per ADR-0017 these records are **informational, unbound**; runs
+  produced after that ADR carry `sourceSha`/`sourceDirty` in-band.
 - ae-a8n bytes under test: `--ae-a8n-root /tmp/ae-a8n-candidate`, a
   snapshot **without `.git`** (`aeA8nHead: null` in the record). The
   snapshot's full source tree was diffed against ae-a8n git objects and

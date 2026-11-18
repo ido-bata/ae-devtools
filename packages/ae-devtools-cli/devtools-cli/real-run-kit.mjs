@@ -28,6 +28,8 @@
  * a static import here would break that guard on branches without it.
  */
 import { execFile, spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -70,6 +72,43 @@ export async function gitHead(root) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Provenance of the ae-devtools checkout these drivers run from, or
+ * nulls when the module is NOT inside the repo checkout.
+ *
+ * Installed-from-npm layouts resolve `../../..` to the consumer's
+ * project root, where `git rev-parse` would report the CONSUMER's HEAD —
+ * recording that as our sourceSha would fabricate binding (Issue #235 /
+ * ADR-0017). The marker check fails closed outside the real checkout:
+ * `<root>/packages/ae-devtools-cli/package.json` must exist AND carry
+ * the expected package name.
+ *
+ * @param {string} fromDir directory of the calling driver module
+ * @returns {Promise<{head: string|null, dirty: boolean|null}>}
+ */
+const sourceRefCache = new Map();
+
+export async function aeDevtoolsSourceRef(fromDir) {
+  const root = resolve(fromDir, "..", "..", "..");
+  if (sourceRefCache.has(root)) return sourceRefCache.get(root);
+  try {
+    const pkg = JSON.parse(
+      readFileSync(resolve(root, "packages", "ae-devtools-cli", "package.json"), "utf8"));
+    if (pkg.name !== "@ido-bata/ae-devtools-cli") {
+      const unbound = { head: null, dirty: null };
+      sourceRefCache.set(root, unbound);
+      return unbound;
+    }
+  } catch {
+    const unbound = { head: null, dirty: null };
+    sourceRefCache.set(root, unbound);
+    return unbound;
+  }
+  const ref = await gitHeadAndDirty(root);
+  sourceRefCache.set(root, ref);
+  return ref;
 }
 
 /** git HEAD + dirty flag of a local checkout; both null on failure. */
