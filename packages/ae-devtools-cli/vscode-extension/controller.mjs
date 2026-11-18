@@ -22,6 +22,7 @@
  */
 import { callTool } from "../mcp-server/tools.mjs";
 import { openSession } from "../mcp-server/session.mjs";
+import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
 import { recordsFromExecuteResult, buildPublishPlan } from "./diagnostics.mjs";
 import { buildAttachConfig, writeLaunchJson } from "../vscode-debugger/src/gen.mjs";
 import { validateLaunchJson, hasErrors } from "../vscode-debugger/src/schema.mjs";
@@ -55,6 +56,8 @@ function uiDeclined(detail) {
  * @param {{confirm:Function, info?:Function, error?:Function}} [options.ui]
  * @param {Function} [options.sessionFactory] — (kind, opts) => session;
  *   defaults to mcp-server/session.mjs openSession. Injected by tests.
+ * @param {number} [options.closeTimeoutMs] — bound for session.close()
+ *   (default: the shared dev-loop close timeout, Issue #196)
  */
 export function createController(options = {}) {
   const {
@@ -63,6 +66,7 @@ export function createController(options = {}) {
     installDir,
     ui = DENY_ALL_UI,
     sessionFactory = openSession,
+    closeTimeoutMs,
   } = options;
 
   let sessionPromise = null;
@@ -295,13 +299,16 @@ export function createController(options = {}) {
       };
     },
 
-    /** Close the shared session if one was opened. Safe to call always. */
+    /** Close the shared session if one was opened. Safe to call always.
+     *  Bounded by the shared dev-loop close timeout (Issue #196) — a
+     *  hung close reports {closed:false, error} instead of pinning
+     *  deactivate() forever. */
     async close() {
       if (sessionPromise === null) return { closed: false };
       try {
         const s = await sessionPromise;
-        await s.close?.();
-        return { closed: true };
+        const r = await closeSessionWithTimeout(s, { timeoutMs: closeTimeoutMs });
+        return r.ok === false ? { closed: false, error: r.error } : { closed: true };
       } catch {
         return { closed: false, error: "session close failed" };
       } finally {

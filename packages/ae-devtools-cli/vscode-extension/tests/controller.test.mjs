@@ -143,3 +143,51 @@ test("close is safe before and after a session opens", async () => {
   await c.execute({ opId: "read.projectSummary" });
   assert.deepEqual(await c.close(), { closed: true });
 });
+
+test("adapter payload failure reports FAILED outcome, never COMPLETED (Issue #196)", async () => {
+  // Wire COMPLETED + adapter ok:false payload — the reported outcome
+  // must be normalized so summarize()/payload consumers never show
+  // "COMPLETED" for a failed dispatch.
+  const prev = process.env.AE_DEVTOOLS_CLI_FAKE_REPLY;
+  process.env.AE_DEVTOOLS_CLI_FAKE_REPLY = JSON.stringify({
+    ok: true,
+    result: JSON.stringify({ ok: false, error: { message: "adapter boom" } }),
+  });
+  try {
+    const c = createController({
+      sessionFactory: async () => openFakeSession(),
+      ui: recordingUi(),
+    });
+    const res = await c.execute({ opId: "read.projectSummary" });
+    assert.equal(res.isError, true);
+    assert.equal(res.outcome, "FAILED");
+    assert.equal(res.result?.status, "failed");
+    await c.close();
+  } finally {
+    if (prev === undefined) delete process.env.AE_DEVTOOLS_CLI_FAKE_REPLY;
+    else process.env.AE_DEVTOOLS_CLI_FAKE_REPLY = prev;
+  }
+});
+
+test("close is bounded when session.close hangs (Issue #196)", async () => {
+  // AE_DEVTOOLS_CLI_FAKE_CLOSE=hang makes the fake session's close()
+  // never resolve; the shared bounded close must report failure fast.
+  const prev = process.env.AE_DEVTOOLS_CLI_FAKE_CLOSE;
+  process.env.AE_DEVTOOLS_CLI_FAKE_CLOSE = "hang";
+  try {
+    const c = createController({
+      sessionFactory: async () => openFakeSession(),
+      ui: recordingUi(),
+      closeTimeoutMs: 80,
+    });
+    await c.execute({ opId: "read.projectSummary" });
+    const started = Date.now();
+    const res = await c.close();
+    assert.ok(Date.now() - started < 10_000, "session close was not bounded");
+    assert.equal(res.closed, false);
+    assert.match(res.error, /timed out/);
+  } finally {
+    if (prev === undefined) delete process.env.AE_DEVTOOLS_CLI_FAKE_CLOSE;
+    else process.env.AE_DEVTOOLS_CLI_FAKE_CLOSE = prev;
+  }
+});

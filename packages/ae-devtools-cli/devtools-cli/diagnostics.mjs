@@ -28,13 +28,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { RUNS_DIR, GUARD_SCHEMA } from "./session-guard.mjs";
-import { failureOutcome, isFailureResult } from "../dev-loop/outcomes.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
-
-// Outcome normalization + failure-record construction live in
-// dev-loop/ (Issue #181) so the CLI, MCP and VSCode consumers share one
-// implementation; re-exported here for existing import sites.
-export { failureOutcome, isFailureResult };
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // packages/ae-devtools-cli/devtools-cli → packaged diagnostics/
@@ -43,7 +37,6 @@ const DIAG_DIR = join(HERE, "..", "diagnostics");
 export const DIAGNOSTICS_BLOCK_SCHEMA = "ae-devtools.cli.diagnostics/v1";
 export const DIAGNOSE_SCHEMA = "ae-devtools.cli.diagnose/v1";
 export const DIAGNOSTICS_RECORD_VERSION = "ae-devtools.diagnostics/v1";
-export const RUN_GUARD_SCHEMA = GUARD_SCHEMA;
 
 let libsPromise = null;
 /**
@@ -164,7 +157,7 @@ function recordsFromDocument(parsed, { recordVersion = DIAGNOSTICS_RECORD_VERSIO
     notes.push("evidence record carries no diagnostics block (outcome was not a failure, or diagnostics were unavailable at run time)");
     return { records: [], source: "cli-run-evidence", notes, followUp: null };
   }
-  if (parsed.schema === RUN_GUARD_SCHEMA) {
+  if (parsed.schema === GUARD_SCHEMA) {
     if (typeof parsed.evidenceFile === "string" && existsSync(parsed.evidenceFile)) {
       return {
         records: [], source: "run-marker",

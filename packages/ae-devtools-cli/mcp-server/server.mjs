@@ -34,6 +34,7 @@ import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
+import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
 // Single source of truth for the published version — avoids the drift
@@ -70,6 +71,9 @@ function rpcError(id, code, message, data) {
  *   sessionFactory — async (kind, options) => session (default openSession)
  *   sessionKind    — "fake" (default) | "a8n"
  *   sessionOptions — { aeA8nRoot, installDir } forwarded to the factory
+ *   closeTimeoutMs — bound for session.close() (default: the shared
+ *                    dev-loop close timeout); a hung close is reported,
+ *                    never awaited forever (Issue #196)
  * @returns {{close: () => Promise<void>}}
  */
 export function createServer(opts = {}) {
@@ -78,6 +82,7 @@ export function createServer(opts = {}) {
   const sessionFactory = opts.sessionFactory ?? openSession;
   const sessionKind = opts.sessionKind ?? "fake";
   const sessionOptions = opts.sessionOptions ?? {};
+  const closeTimeoutMs = opts.closeTimeoutMs;
 
   // Lazy single-flight session: opened on first dispatch-capable call,
   // shared by every later call, closed by close().
@@ -96,7 +101,15 @@ export function createServer(opts = {}) {
     if (!sessionPromise) return;
     try {
       const s = await sessionPromise;
-      if (s && typeof s.close === "function") await s.close();
+      // Bounded close — shared with CLI/VSCode
+      // (dev-loop/session-close.mjs, Issue #196). A hung or failing
+      // close is reported on stderr, never swallowed, never unbounded.
+      if (s) {
+        const r = await closeSessionWithTimeout(s, { timeoutMs: closeTimeoutMs });
+        if (r.ok === false) {
+          process.stderr.write(`mcp-server: session close failed: ${r.error}\n`);
+        }
+      }
     } catch (e) {
       process.stderr.write(`mcp-server: session close failed: ${e?.message ?? e}\n`);
     }
@@ -224,6 +237,7 @@ if (isMain) {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     },
+    closeTimeoutMs: typeof flags["close-timeout-ms"] === "string" ? Number(flags["close-timeout-ms"]) : undefined,
   });
   process.stderr.write(
     `mcp-server: ${SERVER_NAME}@${SERVER_VERSION} schema=${MCP_SCHEMA} session=${sessionKind} ` +

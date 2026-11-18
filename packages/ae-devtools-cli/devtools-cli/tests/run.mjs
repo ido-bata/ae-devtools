@@ -12,7 +12,7 @@ import {
   beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
   attachEvidence, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
-import { failureOutcome, isFailureResult } from "../diagnostics.mjs";
+import { failureOutcome, isFailureResult } from "../../dev-loop/outcomes.mjs";
 import { t, at, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -469,15 +469,18 @@ t("wire REFUSED outcome exits 1 and carries a diagnostics block", () => {
   assert.match(rec?.message ?? "", /host reported busy\/modal/);
 });
 
-t("adapter payload failure (wire COMPLETED + status failed) exits 1 with FAILED record", () => {
+t("adapter payload failure reports FAILED outcome, exits 1 with FAILED record", () => {
   const reply = JSON.stringify({
     ok: true,
     result: JSON.stringify({ ok: false, error: { message: "adapter boom" } }),
   });
   const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"],
     { AE_DEVTOOLS_CLI_FAKE_REPLY: reply });
-  assert.equal(r.body.outcome, "COMPLETED"); // wire level
+  // Issue #196: the reported outcome is normalized at the adapter —
+  // a failure-bearing dispatch must never read COMPLETED on any surface.
+  assert.equal(r.body.outcome, "FAILED");
   assert.equal(r.body.result?.status, "failed"); // adapter level
+  assert.equal(r.body.result?.outcome, "FAILED");
   assert.equal(r.code, 1, "failure-bearing status must drive the exit code");
   const rec = r.body.diagnostics?.records?.[0];
   assert.equal(rec?.kind, "transport-outcome");
