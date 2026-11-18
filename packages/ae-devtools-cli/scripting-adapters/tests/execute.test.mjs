@@ -30,6 +30,7 @@ function makeHostTransport(app) {
         File: class File { constructor(p) { this.fsName = p; this.exists = true; } },
         CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
         CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
+        AVItem: app.AVItem,
       });
       let result;
       try {
@@ -180,6 +181,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "item.addComp") args.name = "C";
     if (op.id === "item.addFolder") args.name = "F";
     if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
+    if (op.id === "read.itemDetail") args.name = "C";
     if (op.id === "layer.setParent") args.parentName = null;
     if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate"].includes(op.id)) args.compName = "C";
     // setKeyframe needs an existing key: seed one via setValueAtTime first.

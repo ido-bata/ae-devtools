@@ -541,6 +541,202 @@ app.project.renderQueue.render();
 return __adp_json({ ok: true, rendered: true });
 `,
   },
+  // ---- Issue #254: read-side inspection ops (non-mutating) ----
+  // These let the dev loop observe project state without mutating.
+  // Claims list only symbol ids verified present in
+  // inventories/scripting/generated/symbols.json; host properties the
+  // source reads but the inventory does not yet carry (e.g. layer.name,
+  // comp.width — owned by AVItem in the docs model) are read without a
+  // claim rather than over-claiming.
+  {
+    id: "read.compLayers",
+    title: "List layers of a comp (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "254",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("CompItem", "layers"),
+      S("Layer", "index"), S("Layer", "inPoint"), S("Layer", "outPoint"),
+      S("Layer", "parent"), S("Layer", "locked"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layers = comp.layers;
+var list = [];
+for (var i = 1; i <= layers.length; i++) {
+  var l = layers[i];
+  list.push({
+    name: String(l.name),
+    index: l.index,
+    enabled: l.enabled !== false,
+    inPoint: l.inPoint,
+    outPoint: l.outPoint,
+    locked: l.locked === true,
+    parent: l.parent === null || l.parent === undefined ? null : String(l.parent.name)
+  });
+}
+return __adp_json({ ok: true, comp: comp.name, count: layers.length, layers: list });
+`,
+  },
+  {
+    id: "read.layerDetail",
+    title: "Single layer summary incl. transform position (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "254",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Layer", "index"), S("Layer", "inPoint"), S("Layer", "outPoint"),
+      S("Layer", "parent"), S("Layer", "locked"),
+      S("PropertyGroup", "property"), S("Property", "value"),
+    ],
+    args: ["compName", "layerName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var pos = null;
+try {
+  pos = layer.property("ADBE Transform Group").property("ADBE Position").value;
+} catch (e) { pos = null; }
+return __adp_json({
+  ok: true,
+  comp: comp.name,
+  layer: {
+    name: String(layer.name),
+    index: layer.index,
+    enabled: layer.enabled !== false,
+    inPoint: layer.inPoint,
+    outPoint: layer.outPoint,
+    locked: layer.locked === true,
+    parent: layer.parent === null || layer.parent === undefined ? null : String(layer.parent.name),
+    position: pos
+  }
+});
+`,
+  },
+  {
+    id: "read.propertyValue",
+    title: "Read a property value by matchName path (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "254",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("PropertyGroup", "property"),
+      S("Property", "value"), S("Property", "numKeys"), S("Property", "isTimeVarying"),
+    ],
+    args: ["compName", "layerName", "propertyPath"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath"]);
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+return __adp_json({
+  ok: true,
+  value: prop.value,
+  numKeys: prop.numKeys,
+  isTimeVarying: prop.isTimeVarying === true
+});
+`,
+  },
+  {
+    id: "read.keyframes",
+    title: "List keyframes of a property by matchName path (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "254",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("PropertyGroup", "property"),
+      S("Property", "numKeys"), S("Property", "keyTime"), S("Property", "keyValue"),
+    ],
+    args: ["compName", "layerName", "propertyPath"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath"]);
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+var keys = [];
+var n = prop.numKeys;
+for (var i = 1; i <= n; i++) {
+  keys.push({ index: i, time: prop.keyTime(i), value: prop.keyValue(i) });
+}
+return __adp_json({ ok: true, numKeys: n, keyframes: keys });
+`,
+  },
+  {
+    id: "read.renderQueueStatus",
+    title: "Render queue items + rendering flag (non-mutating)",
+    domain: "animation-effects-render",
+    issue: "254",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Project", "renderQueue"),
+      S("RenderQueue", "items"), S("RenderQueue", "rendering"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "status"),
+      S("RenderQueueItem", "timeSpanStart"), S("RenderQueueItem", "timeSpanDuration"),
+    ],
+    args: [],
+    source: () => `${PRELUDE}
+var rq = app.project.renderQueue;
+var items = rq.items;
+var list = [];
+for (var i = 1; i <= items.length; i++) {
+  var it = items[i];
+  list.push({
+    index: it.index,
+    comp: it.comp === null ? null : String(it.comp.name),
+    status: it.status,
+    timeSpanStart: it.timeSpanStart,
+    timeSpanDuration: it.timeSpanDuration
+  });
+}
+return __adp_json({ ok: true, rendering: rq.rendering === true, count: items.length, items: list });
+`,
+  },
+  {
+    id: "read.itemDetail",
+    title: "Single project item detail (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "254",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Item", "name"), S("Item", "id"), S("Item", "typeName"),
+      S("AVItem", "duration"), S("AVItem", "width"), S("AVItem", "height"),
+      S("AVItem", "pixelAspect"), S("AVItem", "frameRate"),
+      S("CompItem", "numLayers"), S("CompItem", "resolutionFactor"),
+    ],
+    args: ["name"],
+    validate: (a) => requireArgs(a, ["name"]),
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, null);
+var detail = {
+  name: String(it.name),
+  id: it.id,
+  typeName: String(it.typeName) // display-only (localized); never branch on it
+};
+// Media-bearing items (CompItem/FootageItem) expose AVItem fields;
+// folders and other items do not — discriminate by instanceof.
+if (it instanceof AVItem) {
+  detail.duration = it.duration;
+  detail.width = it.width;
+  detail.height = it.height;
+  detail.pixelAspect = it.pixelAspect;
+  detail.frameRate = it.frameRate;
+}
+if (it instanceof CompItem) {
+  detail.numLayers = it.numLayers;
+  detail.resolutionFactor = it.resolutionFactor;
+}
+return __adp_json({ ok: true, item: detail });
+`,
+  },
 ];
 
 const BY_ID = new Map(OPERATIONS.map((op) => [op.id, op]));
