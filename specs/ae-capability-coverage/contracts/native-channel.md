@@ -64,13 +64,13 @@ POSIX privacy is enforced per tick, fail-closed: root/`inbox`/`outbox`/`channel.
 | --- | --- |
 | `v` | `1` |
 | `token` | must equal `channel.json`'s token |
-| `timeoutMs` | finite number; deadline = request-file mtime + `timeoutMs` (same convention as the ae-a8n dispatcher). Already-expired requests are refused **before execution** |
+| `timeoutMs` | finite number in `[0, 3600000]` (1 h ceiling); deadline = request-file mtime + `timeoutMs` (same convention as the ae-a8n dispatcher). Out-of-bounds values refuse `MALFORMED_REQUEST`; already-expired requests refuse `STALE_REQUEST` **before execution**; an unreadable mtime yields `not-sent` (freshness unproven) |
 | `target` | optional instance binding. A request naming a different instance is **not claimed** (left for its instance); the plug-in's instance id is reported in `state.json` |
 | `request` | the `native-dispatch/v1` envelope, unchanged. `requestId` must equal the file-name stem and, on this file channel, must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` (the semantic envelope keeps "non-empty string"; the file channel narrows it so names are path-safe and JSON-escape-free) |
 | `args` | Slice A accepts only absent/`null` — every allowlisted operation is zero-argument. Any other value refuses `MALFORMED_REQUEST` |
 | `authorizationRef` | accepted and ignored; grant issuance/verification is ae-a8n-owned |
 
-Parser bounds (file-channel implementation limits, stricter than the semantic envelope's): input ≤ 64 KiB, JSON depth ≤ 32, ≤ 8192 nodes, duplicate object keys rejected, trailing garbage rejected, non-finite numbers rejected.
+Parser bounds (file-channel implementation limits, stricter than the semantic envelope's): input ≤ 64 KiB, JSON depth ≤ 32, ≤ 8192 nodes, duplicate object keys rejected, trailing garbage rejected, non-finite numbers rejected. The parser is a self-contained unit (`src/native_json.{h,cpp}`, libc only) separate from channel logic for auditability.
 
 ## 4. Validation and refusal order
 
@@ -88,7 +88,7 @@ After claim (`*.request.json` → `*.claimed` rename; one request per idle dispa
 10. session attestation: `AEGP_GetDriverImplementationVersion` must succeed (`not-sent` otherwise — environment-proven non-dispatch), `session.aeVersion` must equal the observed `"M.m"` and any `channel.json` pin → `refused` `WRONG_TARGET`
 11. execute the allowlisted getter → `completed` (`err==0`) or `failed` (`err!=0`, `mayHaveMutated:false` — allowlisted ops are read-only getters)
 
-`not-sent` is the only outcome the client may re-issue (as a **new** request). `unknown` is never emitted by the plug-in: a crashed/interrupted claim leaves `*.claimed` behind and the client times out `UNKNOWN` — claimed requests are never replayed. The plug-in removes `*.claimed` only after a verdict has been published (or attempted); a crash mid-request leaves it as evidence, never re-executed.
+`not-sent` is the only outcome the client may re-issue (as a **new** request). `unknown` is never emitted by the plug-in: a crashed/interrupted claim leaves `*.claimed` behind and the client times out `UNKNOWN` — claimed requests are never replayed. The plug-in removes `*.claimed` only after a verdict has been published (or attempted); a crash mid-request leaves it as evidence, never re-executed. The duplicate `requestId` seen-ring is per plug-in session: after a plug-in restart the ring resets, so dedup across restarts relies on client-side requestId uniqueness (read-only allowlisted ops make a replay benign but it is still refused within a session).
 
 ## 5. Result — `<requestId>.result.json`
 
@@ -104,7 +104,8 @@ After claim (`*.request.json` → `*.claimed` rename; one request per idle dispa
 - `result` is a pure `DispatchResult` — `validateDispatchResult` applies unchanged.
 - `host` is the session-binding attestation: plug-in identity, numeric plugin id, and the driver implementation version `"M.m"` the session pin was checked against. **Process identity is explicitly not claimed** — this mirrors the ae-a8n instance-pinning guarantee ("same engine that answered", not "which process").
 - The channel token is **never** written to result files or the debug log.
-- Publish is atomic: write `*.result.json.part`, rename to final (retried); the `*.claimed` file is removed afterwards whether or not publish succeeded — a publish failure leaves the caller at `UNKNOWN`, never a resend.
+- Publish is atomic or fails: write `*.result.json.part` (`O_NOFOLLOW`, `0600`, fsync), rename to final (retried); **there is no non-atomic fallback** — if no atomic publish succeeds the caller sees `UNKNOWN`, never a partial result, and the request is never resent. The `*.claimed` file is removed afterwards whether or not publish succeeded.
+- File safety: only regular files are claimable (a symlink/FIFO/device with a request-shaped name is left untouched → client `UNKNOWN`); all channel reads use `O_NOFOLLOW` + `fstat` regular-file checks; the staging `.part` path refuses symlinks so a pre-planted link can never be written through.
 - `state.json` is refreshed on the first tick and every 8th tick thereafter (`{v, instance, pluginId, lastTick, aeVersion?, allowlist}`); outbox results older than 1 h are swept as unread deliveries.
 
 ## 6. Evidence

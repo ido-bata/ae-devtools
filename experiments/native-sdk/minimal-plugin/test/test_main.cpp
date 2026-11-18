@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -1413,12 +1414,99 @@ static void TestIntakeStaleDeadline()
     auto h = MakeFakeHost();
     TmpChan c;
     IntakeEntry(*h, c);
-    WriteReq0600(c.Path("inbox/s.request.json"),
-                 ReqJson("s", kTok, -5000,
+    std::string p = c.Path("inbox/s.request.json");
+    WriteReq0600(p,
+                 ReqJson("s", kTok, 1000,
                          "AEGP_ProjSuite6.AEGP_GetNumProjects", "26.5", NULL, NULL));
+    /* age the file 60 s into the past: deadline = mtime + 1 s is past */
+    struct timespec ts[2];
+    ts[0].tv_sec = ts[1].tv_sec = time(NULL) - 60;
+    ts[0].tv_nsec = ts[1].tv_nsec = 0;
+    CHECK(utimensat(AT_FDCWD, p.c_str(), ts, 0) == 0);
     CHECK(CallIdle(*h) == A_Err_NONE);
     std::string r = Slurp(ResultPath(c, "s"));
     CHECK(r.find("STALE_REQUEST") != std::string::npos);
+}
+
+static void TestIntakeDeadlineBounds()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    /* negative and absurd deadlines are malformed, never executed */
+    WriteReq0600(c.Path("inbox/dn.request.json"),
+                 ReqJson("dn", kTok, -1,
+                         "AEGP_ProjSuite6.AEGP_GetNumProjects", "26.5", NULL, NULL));
+    {
+        char b[2048];
+        snprintf(b, sizeof(b),
+            "{\"v\":1,\"token\":\"%s\",\"timeoutMs\":1e300,\"request\":{"
+            "\"schema\":\"ae-devtools/native-dispatch/v1\",\"requestId\":\"dh\","
+            "\"session\":{\"sessionId\":\"sess-1\",\"aeVersion\":\"26.5\"},"
+            "\"operationId\":\"AEGP_ProjSuite6.AEGP_GetNumProjects\","
+            "\"args\":null,\"authorizationRef\":\"o\"}}",
+            kTok);
+        WriteReq0600(c.Path("inbox/dh.request.json"), b);
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE); /* dn processed (name-sorted first) */
+    CHECK(CallIdle(*h) == A_Err_NONE); /* dh next tick */
+    CHECK(Slurp(ResultPath(c, "dn")).find("MALFORMED_REQUEST") != std::string::npos);
+    CHECK(Slurp(ResultPath(c, "dh")).find("MALFORMED_REQUEST") != std::string::npos);
+}
+
+static void TestIntakeSymlinkRequestNotClaimed()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    /* a symlink with a request-shaped name must never be claimed or read */
+    std::string target = c.Path("secret.txt");
+    WriteReq0600(target, "top secret payload");
+    std::string link = c.Path("inbox/l.request.json");
+    CHECK(symlink(target.c_str(), link.c_str()) == 0);
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(Exists(link)); /* untouched */
+    CHECK(!Exists(ResultPath(c, "l")));
+    CHECK(!h->LogContains("native.request id=l"));
+}
+
+static void TestIntakePartSymlinkNeverWrittenThrough()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    /* pre-plant a symlink at the staging path: O_NOFOLLOW must refuse to
+       write through it — the victim file is never touched */
+    std::string victim = c.Path("victim.txt");
+    WriteReq0600(victim, "do not overwrite");
+    std::string part = c.Path("outbox/y.result.json.part");
+    CHECK(symlink(victim.c_str(), part.c_str()) == 0);
+    WriteReq0600(c.Path("inbox/y.request.json"),
+                 ReqJson("y", kTok, 30000,
+                         "AEGP_ProjSuite6.AEGP_GetNumProjects", "26.5", NULL, NULL));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(Slurp(victim) == "do not overwrite");
+    /* the planted link is dropped and the retry publishes atomically —
+       or, if it keeps failing, the caller sees UNKNOWN, never a partial
+       result. Either way no non-atomic write ever occurred. */
+    std::string r = Slurp(ResultPath(c, "y"));
+    CHECK(r.empty() || r.find("\"outcome\"") != std::string::npos);
+    CHECK(!Exists(part));
+}
+
+static void TestIntakeClaimedLeftoverIgnored()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    /* a *.claimed leftover from a crashed earlier run is evidence only */
+    WriteReq0600(c.Path("inbox/stale.claimed"), "{\"v\":1}");
+    WriteReq0600(c.Path("inbox/q.request.json"),
+                 ReqJson("q", kTok, 30000,
+                         "AEGP_ProjSuite6.AEGP_GetNumProjects", "26.5", NULL, NULL));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(Exists(c.Path("inbox/stale.claimed")));
+    CHECK(Slurp(ResultPath(c, "q")).find("completed") != std::string::npos);
 }
 
 static void TestIntakeTokenMismatch()
@@ -1661,6 +1749,10 @@ int main()
     TestIntakeVersionOp();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
+    TestIntakeDeadlineBounds();
+    TestIntakeSymlinkRequestNotClaimed();
+    TestIntakePartSymlinkNeverWrittenThrough();
+    TestIntakeClaimedLeftoverIgnored();
     TestIntakeTokenMismatch();
     TestIntakeSessionMismatch();
     TestIntakeTargetMismatchSkipped();

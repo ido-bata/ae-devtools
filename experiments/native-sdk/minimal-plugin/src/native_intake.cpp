@@ -31,10 +31,13 @@
 
 #include "native_intake.h"
 
+#include "native_json.h"
+
 #if !defined(_WIN32)
 
 #include <ctype.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <math.h>
 #include <stdarg.h>
@@ -51,10 +54,9 @@
 
 /* ---- bounds (file-channel implementation limits; see contract §3) */
 #define IN_MAX_INPUT 65536        /* request file bytes */
-#define IN_MAX_DEPTH 32
-#define IN_MAX_NODES 8192
 #define CHAN_JSON_MAX 16384        /* channel.json bytes */
 #define REQ_ID_MAX 128
+#define REQ_TIMEOUT_MAX_MS 3600000L /* 1 h ceiling on request deadline */
 #define SEEN_IDS 64
 #define SEEN_ID_LEN (REQ_ID_MAX + 1)
 #define PATH_MAX_LOCAL 4096
@@ -63,420 +65,6 @@
 #define STATE_EVERY_TICKS 8
 #define PUBLISH_ATTEMPTS 3
 #define PUBLISH_RETRY_US 50000     /* 50 ms */
-
-/* ---- tiny JSON DOM ------------------------------------------------
-   One document at a time; every allocation is freed before return.
-   Bounds mirror the contract: depth/nodes/input caps, duplicate keys
-   rejected, trailing garbage rejected, non-finite numbers rejected. */
-
-typedef enum
-{
-    JK_NULL = 0,
-    JK_FALSE,
-    JK_TRUE,
-    JK_NUM,
-    JK_STR,
-    JK_ARR,
-    JK_OBJ
-} JKind;
-
-typedef struct JVal JVal;
-typedef struct
-{
-    char* key;
-    size_t klen;
-    JVal* val;
-} JPair;
-
-struct JVal
-{
-    JKind kind;
-    double num;
-    char* str;   /* JK_STR: malloc'd, slen bytes (not NUL-required) */
-    size_t slen;
-    JVal** items; /* JK_ARR */
-    size_t nitems;
-    JPair* pairs; /* JK_OBJ */
-    size_t npairs;
-};
-
-typedef struct
-{
-    const char* cur;
-    const char* end;
-    int nodes;
-    int failed;
-} JParser;
-
-static void JFree(JVal* v)
-{
-    size_t i;
-    if (!v) return;
-    if (v->kind == JK_ARR)
-    {
-        for (i = 0; i < v->nitems; i++) JFree(v->items[i]);
-        free(v->items);
-    }
-    else if (v->kind == JK_OBJ)
-    {
-        for (i = 0; i < v->npairs; i++)
-        {
-            JFree(v->pairs[i].val);
-            free(v->pairs[i].key);
-        }
-        free(v->pairs);
-    }
-    free(v->str);
-    free(v);
-}
-
-static JVal* JNew(JParser* p, JKind kind)
-{
-    JVal* v;
-    if (p->failed || p->nodes >= IN_MAX_NODES) { p->failed = 1; return NULL; }
-    p->nodes++;
-    v = (JVal*)calloc(1, sizeof(JVal));
-    if (!v) { p->failed = 1; return NULL; }
-    v->kind = kind;
-    return v;
-}
-
-static void JSkipWs(JParser* p)
-{
-    while (p->cur < p->end &&
-           (*p->cur == ' ' || *p->cur == '\t' || *p->cur == '\n' || *p->cur == '\r'))
-        p->cur++;
-}
-
-static int JHex4(JParser* p, unsigned int* cp)
-{
-    unsigned int v = 0;
-    int i;
-    if (p->end - p->cur < 4) return 0;
-    for (i = 0; i < 4; i++)
-    {
-        char c = p->cur[i];
-        v <<= 4;
-        if (c >= '0' && c <= '9') v |= (unsigned)(c - '0');
-        else if (c >= 'a' && c <= 'f') v |= (unsigned)(c - 'a' + 10);
-        else if (c >= 'A' && c <= 'F') v |= (unsigned)(c - 'A' + 10);
-        else return 0;
-    }
-    p->cur += 4;
-    *cp = v;
-    return 1;
-}
-
-/* Parse a JSON string body (opening quote already consumed). Returns
-   malloc'd bytes or NULL on malformed input / arena overflow. */
-static char* JParseString(JParser* p, size_t* outLen)
-{
-    size_t cap = 256, len = 0;
-    char* buf = (char*)malloc(cap);
-    char* w;
-    if (!buf) { p->failed = 1; return NULL; }
-    w = buf;
-    for (;;)
-    {
-        char c;
-        if (p->cur >= p->end) { free(buf); p->failed = 1; return NULL; }
-        c = *p->cur++;
-        if (c == '"') break;
-        if ((unsigned char)c < 0x20) { free(buf); p->failed = 1; return NULL; }
-        if (c == '\\')
-        {
-            char e;
-            if (p->cur >= p->end) { free(buf); p->failed = 1; return NULL; }
-            e = *p->cur++;
-            switch (e)
-            {
-                case '"': case '\\': case '/':
-                    if (len + 2 > cap) goto grow;
-                    *w++ = e; len++; break;
-                case 'b': if (len + 2 > cap) goto grow; *w++ = '\b'; len++; break;
-                case 'f': if (len + 2 > cap) goto grow; *w++ = '\f'; len++; break;
-                case 'n': if (len + 2 > cap) goto grow; *w++ = '\n'; len++; break;
-                case 'r': if (len + 2 > cap) goto grow; *w++ = '\r'; len++; break;
-                case 't': if (len + 2 > cap) goto grow; *w++ = '\t'; len++; break;
-                case 'u':
-                {
-                    unsigned int cp;
-                    if (!JHex4(p, &cp)) { free(buf); p->failed = 1; return NULL; }
-                    if (cp >= 0xD800 && cp <= 0xDBFF)
-                    {
-                        unsigned int lo;
-                        if (p->end - p->cur >= 6 && p->cur[0] == '\\' && p->cur[1] == 'u')
-                        {
-                            p->cur += 2;
-                            if (JHex4(p, &lo) && lo >= 0xDC00 && lo <= 0xDFFF)
-                            {
-                                cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
-                            }
-                            else
-                            {
-                                cp = 0xFFFD; /* lone high surrogate */
-                            }
-                        }
-                        else cp = 0xFFFD;
-                    }
-                    else if (cp >= 0xDC00 && cp <= 0xDFFF) cp = 0xFFFD;
-                    if (len + 5 > cap) goto grow;
-                    {
-                        /* inline UTF-8 emit (bounded) */
-                        size_t need = (cp < 0x80) ? 1 : (cp < 0x800) ? 2 : (cp < 0x10000) ? 3 : 4;
-                        if (len + need > cap)
-                        {
-                            char* nb = (char*)realloc(buf, cap * 2);
-                            if (!nb) { free(buf); p->failed = 1; return NULL; }
-                            buf = nb; cap *= 2; w = buf + len;
-                            if (len + need > cap) { free(buf); p->failed = 1; return NULL; }
-                        }
-                        if (cp < 0x80) { *w++ = (char)cp; }
-                        else if (cp < 0x800)
-                        {
-                            *w++ = (char)(0xC0 | (cp >> 6));
-                            *w++ = (char)(0x80 | (cp & 0x3F));
-                        }
-                        else if (cp < 0x10000)
-                        {
-                            *w++ = (char)(0xE0 | (cp >> 12));
-                            *w++ = (char)(0x80 | ((cp >> 6) & 0x3F));
-                            *w++ = (char)(0x80 | (cp & 0x3F));
-                        }
-                        else
-                        {
-                            *w++ = (char)(0xF0 | (cp >> 18));
-                            *w++ = (char)(0x80 | ((cp >> 12) & 0x3F));
-                            *w++ = (char)(0x80 | ((cp >> 6) & 0x3F));
-                            *w++ = (char)(0x80 | (cp & 0x3F));
-                        }
-                        len += need;
-                    }
-                    break;
-                }
-                default:
-                    free(buf); p->failed = 1; return NULL;
-            }
-        }
-        else
-        {
-            if (len + 2 > cap) goto grow;
-            *w++ = c; len++;
-        }
-        continue;
-    grow:
-        {
-            char* nb = (char*)realloc(buf, cap * 2);
-            if (!nb) { free(buf); p->failed = 1; return NULL; }
-            w = nb + len;
-            buf = nb; cap *= 2;
-        }
-    }
-    *outLen = len;
-    return buf;
-}
-
-static JVal* JParseValue(JParser* p, int depth);
-
-static JVal* JParseArray(JParser* p, int depth)
-{
-    JVal* v = JNew(p, JK_ARR);
-    size_t cap = 0;
-    if (!v) return NULL;
-    JSkipWs(p);
-    if (p->cur < p->end && *p->cur == ']') { p->cur++; return v; }
-    for (;;)
-    {
-        JVal* item;
-        if (depth + 1 > IN_MAX_DEPTH) { p->failed = 1; JFree(v); return NULL; }
-        JSkipWs(p);
-        item = JParseValue(p, depth + 1);
-        if (!item) { JFree(v); return NULL; }
-        if (v->nitems >= 1024) { JFree(item); JFree(v); p->failed = 1; return NULL; }
-        if (v->nitems == cap)
-        {
-            size_t ncap = cap ? cap * 2 : 8;
-            JVal** ni = (JVal**)realloc(v->items, ncap * sizeof(JVal*));
-            if (!ni) { JFree(item); JFree(v); p->failed = 1; return NULL; }
-            v->items = ni; cap = ncap;
-        }
-        v->items[v->nitems++] = item;
-        JSkipWs(p);
-        if (p->cur >= p->end) { JFree(v); p->failed = 1; return NULL; }
-        if (*p->cur == ',') { p->cur++; continue; }
-        if (*p->cur == ']') { p->cur++; return v; }
-        JFree(v); p->failed = 1; return NULL;
-    }
-}
-
-static JVal* JParseObject(JParser* p, int depth)
-{
-    JVal* v = JNew(p, JK_OBJ);
-    size_t cap = 0;
-    if (!v) return NULL;
-    JSkipWs(p);
-    if (p->cur < p->end && *p->cur == '}') { p->cur++; return v; }
-    for (;;)
-    {
-        char* key;
-        size_t klen;
-        JVal* val;
-        size_t i;
-        if (depth + 1 > IN_MAX_DEPTH) { p->failed = 1; JFree(v); return NULL; }
-        JSkipWs(p);
-        if (p->cur >= p->end || *p->cur != '"') { JFree(v); p->failed = 1; return NULL; }
-        p->cur++;
-        key = JParseString(p, &klen);
-        if (!key) { JFree(v); return NULL; }
-        /* duplicate keys rejected */
-        for (i = 0; i < v->npairs; i++)
-        {
-            if (v->pairs[i].klen == klen && memcmp(v->pairs[i].key, key, klen) == 0)
-            {
-                free(key); JFree(v); p->failed = 1; return NULL;
-            }
-        }
-        JSkipWs(p);
-        if (p->cur >= p->end || *p->cur != ':') { free(key); JFree(v); p->failed = 1; return NULL; }
-        p->cur++;
-        val = JParseValue(p, depth + 1);
-        if (!val) { free(key); JFree(v); return NULL; }
-        if (v->npairs >= 64) { free(key); JFree(val); JFree(v); p->failed = 1; return NULL; }
-        if (v->npairs == cap)
-        {
-            size_t ncap = cap ? cap * 2 : 8;
-            JPair* np = (JPair*)realloc(v->pairs, ncap * sizeof(JPair));
-            if (!np) { free(key); JFree(val); JFree(v); p->failed = 1; return NULL; }
-            v->pairs = np; cap = ncap;
-        }
-        v->pairs[v->npairs].key = key;
-        v->pairs[v->npairs].klen = klen;
-        v->pairs[v->npairs].val = val;
-        v->npairs++;
-        JSkipWs(p);
-        if (p->cur >= p->end) { JFree(v); p->failed = 1; return NULL; }
-        if (*p->cur == ',') { p->cur++; continue; }
-        if (*p->cur == '}') { p->cur++; return v; }
-        JFree(v); p->failed = 1; return NULL;
-    }
-}
-
-static JVal* JParseValue(JParser* p, int depth)
-{
-    JVal* v;
-    JSkipWs(p);
-    if (p->cur >= p->end || p->failed) { p->failed = 1; return NULL; }
-    if (depth > IN_MAX_DEPTH) { p->failed = 1; return NULL; }
-    switch (*p->cur)
-    {
-        case 'n':
-            if (p->end - p->cur >= 4 && memcmp(p->cur, "null", 4) == 0)
-            { p->cur += 4; return JNew(p, JK_NULL); }
-            break;
-        case 't':
-            if (p->end - p->cur >= 4 && memcmp(p->cur, "true", 4) == 0)
-            { p->cur += 4; return JNew(p, JK_TRUE); }
-            break;
-        case 'f':
-            if (p->end - p->cur >= 5 && memcmp(p->cur, "false", 5) == 0)
-            { p->cur += 5; return JNew(p, JK_FALSE); }
-            break;
-        case '"':
-        {
-            size_t slen;
-            char* s;
-            p->cur++;
-            s = JParseString(p, &slen);
-            if (!s) return NULL;
-            v = JNew(p, JK_STR);
-            if (!v) { free(s); return NULL; }
-            v->str = s; v->slen = slen;
-            return v;
-        }
-        case '[': p->cur++; return JParseArray(p, depth);
-        case '{': p->cur++; return JParseObject(p, depth);
-        default:
-            if (*p->cur == '-' || (*p->cur >= '0' && *p->cur <= '9'))
-            {
-                char* e = NULL;
-                double d;
-                /* strict JSON number: -?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)? */
-                const char* save = p->cur;
-                if (*p->cur == '-') p->cur++;
-                if (p->cur >= p->end) { p->failed = 1; return NULL; }
-                if (*p->cur == '0') p->cur++;
-                else if (*p->cur >= '1' && *p->cur <= '9') { while (p->cur < p->end && isdigit((unsigned char)*p->cur)) p->cur++; }
-                else { p->cur = save; break; }
-                if (p->cur < p->end && *p->cur == '.')
-                {
-                    p->cur++;
-                    if (p->cur >= p->end || !isdigit((unsigned char)*p->cur)) { p->failed = 1; return NULL; }
-                    while (p->cur < p->end && isdigit((unsigned char)*p->cur)) p->cur++;
-                }
-                if (p->cur < p->end && (*p->cur == 'e' || *p->cur == 'E'))
-                {
-                    p->cur++;
-                    if (p->cur < p->end && (*p->cur == '+' || *p->cur == '-')) p->cur++;
-                    if (p->cur >= p->end || !isdigit((unsigned char)*p->cur)) { p->failed = 1; return NULL; }
-                    while (p->cur < p->end && isdigit((unsigned char)*p->cur)) p->cur++;
-                }
-                /* strtod over the consumed span */
-                {
-                    size_t n = (size_t)(p->cur - save);
-                    char tmp[64];
-                    if (n >= sizeof(tmp)) { p->failed = 1; return NULL; }
-                    memcpy(tmp, save, n); tmp[n] = '\0';
-                    d = strtod(tmp, &e);
-                    if (e != tmp + n || !isfinite(d)) { p->failed = 1; return NULL; }
-                }
-                v = JNew(p, JK_NUM);
-                if (!v) return NULL;
-                v->num = d;
-                return v;
-            }
-            break;
-    }
-    p->failed = 1;
-    return NULL;
-}
-
-/* Parse a whole document; *outLen bytes at text. Returns DOM or NULL. */
-static JVal* JParseDoc(const char* text, size_t len)
-{
-    JParser p;
-    JVal* v;
-    memset(&p, 0, sizeof(p));
-    p.cur = text;
-    p.end = text + len;
-    v = JParseValue(&p, 0);
-    if (!v || p.failed) { if (v) JFree(v); return NULL; }
-    JSkipWs(&p);
-    if (p.cur != p.end) { JFree(v); return NULL; }
-    return v;
-}
-
-static JVal* JGet(JVal* obj, const char* key)
-{
-    size_t i, klen = strlen(key);
-    if (!obj || obj->kind != JK_OBJ) return NULL;
-    for (i = 0; i < obj->npairs; i++)
-    {
-        if (obj->pairs[i].klen == klen && memcmp(obj->pairs[i].key, key, klen) == 0)
-            return obj->pairs[i].val;
-    }
-    return NULL;
-}
-
-static int JStrEq(JVal* v, const char* s)
-{
-    size_t n = strlen(s);
-    return v && v->kind == JK_STR && v->slen == n && memcmp(v->str, s, n) == 0;
-}
-
-static int JNonEmptyStr(JVal* v)
-{
-    return v && v->kind == JK_STR && v->slen > 0;
-}
 
 /* ---- channel state ------------------------------------------------- */
 
@@ -548,24 +136,35 @@ static void JoinPath(char* out, size_t cap, const char* a, const char* b)
     out[cap - 1] = '\0';
 }
 
-/* Read a whole file, bounded. Returns length or -1. */
+/* Read a whole regular file, bounded. O_NOFOLLOW refuses symlinks at
+   open time; fstat confirms a regular file and caps the read so a
+   swapped or grown file is refused rather than truncated. Returns
+   length or -1. */
 static long ReadFileBounded(const char* pathZ, char* buf, size_t cap)
 {
-    FILE* f = fopen(pathZ, "rb");
+    int fd = open(pathZ, O_RDONLY | O_NOFOLLOW);
+    struct stat st;
     long n;
-    if (!f) return -1;
-    n = (long)fread(buf, 1, cap, f);
-    fclose(f);
-    if (n < 0) return -1;
-    if ((size_t)n >= cap) return -1; /* too large: refuse rather than truncate */
+    if (fd < 0) return -1;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) { close(fd); return -1; }
+    if (st.st_size < 0 || (unsigned long long)st.st_size >= (unsigned long long)cap) { close(fd); return -1; }
+    n = (long)read(fd, buf, (size_t)st.st_size);
+    close(fd);
+    if (n != st.st_size) return -1;
     buf[n] = '\0';
     return n;
 }
 
+/* Publish `textZ` at `finalPathZ` atomically or fail explicitly.
+   Contract (native-channel.md §5): the result must never appear
+   partially — there is NO non-atomic fallback. The staging file is
+   opened O_NOFOLLOW with owner-only perms (a pre-planted symlink
+   fails the open), fully written + fsynced, then rename(2)'d into
+   place. Any failure removes the staging file and returns -1: the
+   caller's outcome is UNKNOWN and the request is never resent. */
 static int WriteFileAtomic(const char* finalPathZ, const char* textZ, size_t len)
 {
     char part[PATH_MAX_LOCAL];
-    FILE* f;
     size_t base = strlen(finalPathZ);
     int attempt;
     if (base + 6 >= sizeof(part)) return -1;
@@ -575,31 +174,27 @@ static int WriteFileAtomic(const char* finalPathZ, const char* textZ, size_t len
 
     for (attempt = 0; attempt < PUBLISH_ATTEMPTS; attempt++)
     {
-        f = fopen(part, "wb");
-        if (f)
+        int fd = open(part, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+        if (fd >= 0)
         {
-            size_t w = fwrite(textZ, 1, len, f);
-            fclose(f);
-            if (w == len && rename(part, finalPathZ) == 0)
+            size_t off = 0;
+            int wok = 1;
+            while (off < len)
+            {
+                ssize_t w = write(fd, textZ + off, len - off);
+                if (w <= 0) { wok = 0; break; }
+                off += (size_t)w;
+            }
+            if (fsync(fd) != 0) wok = 0;
+            close(fd);
+            if (wok && rename(part, finalPathZ) == 0)
                 return 0;
         }
+        /* staging write/rename failed: drop the partial staging file so
+           it cannot be mistaken for a published result */
+        remove(part);
         if (attempt + 1 < PUBLISH_ATTEMPTS) usleep(PUBLISH_RETRY_US);
     }
-    /* Every atomic attempt failed: write in place rather than lose the
-       result (same posture as the ae-a8n publishResult fallback), then
-       drop the staging copy. */
-    f = fopen(finalPathZ, "wb");
-    if (f)
-    {
-        size_t w = fwrite(textZ, 1, len, f);
-        fclose(f);
-        if (w == len)
-        {
-            remove(part);
-            return 0;
-        }
-    }
-    remove(part);
     return -1;
 }
 
@@ -618,7 +213,7 @@ static int PrivatePathOk(const char* pathZ, int wantDir)
 static long long FileMtimeMs(const char* pathZ)
 {
     struct stat st;
-    if (stat(pathZ, &st) != 0) return -1;
+    if (lstat(pathZ, &st) != 0) return -1;
 #if defined(__APPLE__)
     return (long long)st.st_mtimespec.tv_sec * 1000LL +
            (long long)st.st_mtimespec.tv_nsec / 1000000LL;
@@ -998,13 +593,25 @@ static void ProcessClaimed(
             VerdictRefuse(&v, "WRONG_TARGET", "request targets a different native instance");
             goto verdict;
         }
-        /* deadline: mtime + timeoutMs (ae-a8n dispatcher convention) */
-        if (!tmo || tmo->kind != JK_NUM || !isfinite(tmo->num))
+        /* deadline: mtime + timeoutMs (ae-a8n dispatcher convention).
+           timeoutMs must be a finite number in [0, REQ_TIMEOUT_MAX_MS];
+           the claimed file's mtime must be readable — if it is not,
+           the request was never provably fresh, so it is not-sent
+           (environment-proven non-dispatch), never executed. */
+        if (!tmo || tmo->kind != JK_NUM || !isfinite(tmo->num) ||
+            tmo->num < 0.0 || tmo->num > (double)REQ_TIMEOUT_MAX_MS)
         {
-            VerdictRefuse(&v, "MALFORMED_REQUEST", "request carries no usable deadline");
+            VerdictRefuse(&v, "MALFORMED_REQUEST", "request deadline out of bounds");
             goto verdict;
         }
-        if (mtimeMs >= 0 && NowMs() > mtimeMs + (long long)tmo->num)
+        if (mtimeMs < 0)
+        {
+            snprintf(v.outcome, sizeof(v.outcome), "not-sent");
+            snprintf(v.detail, sizeof(v.detail), "request mtime unavailable");
+            v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
+            goto verdict;
+        }
+        if (NowMs() > mtimeMs + (long long)tmo->num)
         {
             VerdictRefuse(&v, "STALE_REQUEST", "request expired before it was claimed");
             goto verdict;
@@ -1324,8 +931,16 @@ void NativeIntakeTick(
         memcpy(stem, fname, nl - sl);
         stem[nl - sl] = '\0';
 
-        /* pre-claim target filter: leave requests for other instances */
+        /* only regular files are claimable: a symlink/FIFO/device with a
+           request-shaped name is left untouched (client times out
+           UNKNOWN — malformed channel usage is never executed) */
         JoinPath(reqPath, sizeof(reqPath), inboxDir, fname);
+        {
+            struct stat rst;
+            if (lstat(reqPath, &rst) != 0 || !S_ISREG(rst.st_mode)) continue;
+        }
+
+        /* pre-claim target filter: leave requests for other instances */
         pn = ReadFileBounded(reqPath, peek, sizeof(peek) - 1);
         if (pn > 0)
         {
@@ -1349,6 +964,14 @@ void NativeIntakeTick(
             snprintf(claimedRel, sizeof(claimedRel), "%s.claimed", stem);
             JoinPath(claimedPath, sizeof(claimedPath), inboxDir, claimedRel);
             if (rename(reqPath, claimedPath) != 0) continue;
+            {
+                struct stat cst;
+                if (lstat(claimedPath, &cst) != 0 || !S_ISREG(cst.st_mode))
+                {
+                    remove(claimedPath);
+                    continue;
+                }
+            }
 
             ProcessClaimed(utilP, projP, plugin_id, claimedPath, stem,
                            outboxDir, token, pin,
