@@ -135,6 +135,79 @@ jobs:
         working-directory: packages/native-adapter
         run: bun run verify
 
+  inventories:
+    # inventories/* feed capability-catalog's committed inputs; without
+    # this job a stale generated/*.json or broken extractor flowed
+    # through every downstream gate undetected (Issue #231).
+    name: inventories (bun test / typecheck / verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Detect inventories
+        id: detect
+        run: |
+          any=false
+          for d in tools scripting sdk; do
+            if [ -d "inventories/$d" ]; then
+              echo "$d=true" >> "$GITHUB_OUTPUT"
+              any=true
+            else
+              echo "$d=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+          echo "any=$any" >> "$GITHUB_OUTPUT"
+      - if: steps.detect.outputs.any == 'true'
+        uses: oven-sh/setup-bun@v2
+      - if: steps.detect.outputs.tools == 'true'
+        working-directory: inventories/tools
+        run: |
+          bun install --frozen-lockfile
+          bun test
+          bunx tsc --noEmit
+      - if: steps.detect.outputs.scripting == 'true'
+        working-directory: inventories/scripting
+        run: |
+          bun install --frozen-lockfile
+          bun test
+          bunx tsc --noEmit
+      # scripting `verify` rebuilds from the git-ignored .cache/ payloads
+      # and falls back to fetching Adobe helpx when they are absent — the
+      # CDN 403s CI runners, so this is an explicit, annotated skip where
+      # the cache is not provisioned (never silent; Issue #231).
+      - if: steps.detect.outputs.scripting == 'true'
+        working-directory: inventories/scripting
+        run: |
+          if [ -f .cache/adobe-scripts.payload ]; then
+            bun run verify
+          else
+            echo "::notice::inventories/scripting verify skipped: .cache payloads not provisioned (byte-identical rebuild deferred to a provisioned host)"
+          fi
+      # tools `verify` needs the git-ignored .reference clones
+      # (network-provisioned); CI has none, so this is an explicit,
+      # annotated skip — never silent. On a host with clones provisioned
+      # the same command runs citation + byte-identity verification.
+      - if: steps.detect.outputs.tools == 'true'
+        working-directory: inventories/tools
+        run: |
+          if [ -d ../../.reference/ae-a8n ]; then
+            bun run verify
+          else
+            echo "::notice::inventories/tools verify skipped: .reference clones not provisioned (citation + byte-identity checks deferred to a provisioned host)"
+          fi
+      # inventories/sdk has no package.json by design (generated data +
+      # scripts only); its two test files are wired here explicitly —
+      # the .ts extractor test under bun, the .mjs matrix test under
+      # node:test (Issue #231).
+      - if: steps.detect.outputs.sdk == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.sdk == 'true'
+        run: |
+          bun test inventories/sdk/scripts/extract-sdk-inventory.test.ts
+          node --test inventories/sdk/scripts/coverage-matrix.test.mjs
+
   read-only-probe:
     name: read-only-probe (node:test, fake responder)
     runs-on: ubuntu-latest

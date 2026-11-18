@@ -128,7 +128,7 @@ ae-devtools は vision.md で多数を「未確定」と記録する design / re
 
 - **ae-devtools-cli**: 全 `*/tests/run.mjs` suite を filesystem discovery で実行（fake-level）+ `scripts/check-syntax.mjs`（package.json `files` 由来 scope の `node --check`）+ `npm run smoke:consumer`（tarball → 外部 install → fake session CLI）
 - **capability-catalog / native-adapter**: `bun install --frozen-lockfile` + `bun test` + `bunx tsc --noEmit` + `bun run verify`（catalog verify は conformance gate を含む）
-- **inventories**: `inventories/tools` / `inventories/scripting` は `bun test` + `bunx tsc --noEmit`（scripting は clone 不要の `bun run verify` も）。`inventories/tools` の `verify` は git-ignore された `.reference/` clone が必要なため CI では明示 skip。`inventories/sdk` は package.json を持たず、CI job が 2 つの test file を個別実行する（Issue #231）
+- **inventories**: CI `inventories` job が `inventories/tools` / `inventories/scripting` に `bun install --frozen-lockfile` + `bun test` + `bunx tsc --noEmit` を実行し、capability-catalog の入力となる generated JSON の staleness を検出する。両者の `bun run verify`（byte-identical rebuild / citation integrity）は git-ignore された `.reference/` clone・`.cache/` payload が必要で、未 provision 時は明示 skip（`::notice::`、CI runner は Adobe CDN に 403 される）。`inventories/sdk` は package.json を持たず、CI job が `extract-sdk-inventory.test.ts`（bun test）と `coverage-matrix.test.mjs`（node:test）を個別に実行する（Issue #231）
 - **experiments**: read-only-probe は `node:test`（fake responder）。runtime-bridge / native-sdk は host 依存のため CI 対象外、`EVIDENCE.md` が証跡 ledger
 - **静的・衛生系**: `node scripts/verify-skills-lock.mjs`（vendored skills hash + 依存解決）、workflow YAML parse、`xmllint` による CEP manifest XSD 検証（`AE_DEVTOOLS_REQUIRE_XMLLINT=1` で CI hard-fail）
 
