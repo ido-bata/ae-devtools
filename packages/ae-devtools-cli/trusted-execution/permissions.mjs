@@ -2,11 +2,17 @@
  * permissions.mjs — CAP025 permission classes + consent scope (Issue #14).
  *
  * Reference implementation of design note §1–§3, transport-independent:
- * pure functions over plain data. It assumes the catalog dispatch gate
- * (`assertDispatchAllowed` in packages/capability-catalog) has already
- * passed — this module adds the *class* layer on top: which consent a
- * dispatch owes, and whether the presented consent covers exactly this
- * dispatch.
+ * pure functions over plain data.
+ *
+ * Dispatch-gate reality (Issue #184): this module IS the effective
+ * dispatch authorization for the trusted-eval path. The catalog's
+ * `assertDispatchAllowed` (packages/capability-catalog, mirrored by
+ * ae-a8n's handshake exports) gates *advertised capability ids* in the
+ * handshake layer — it is exercised as pre-launch/real-run contract
+ * evidence (a8n-transport/contract.mjs, real-run.mjs), not invoked per
+ * dispatch, because raw ExtendScript eval has no catalog capability
+ * row. The `advertisement` input below is therefore a caller-supplied
+ * descriptor of the dispatch's class axes, not a live catalog lookup.
  *
  * Evidence level: automated-test / fake only. No transport, no token
  * issuance, no AE.
@@ -189,7 +195,8 @@ function sameScope(a, b) {
 }
 
 // ---------------------------------------------------------------------
-// Dispatch authorization (post-catalog-gate layer)
+// Dispatch authorization — the effective gate for trusted-eval dispatch
+// (see the header note on catalog-gate scope, Issue #184)
 // ---------------------------------------------------------------------
 
 /**
