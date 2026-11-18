@@ -29,6 +29,28 @@ function discovery() {
   });
 }
 
+test("discovery reports the recorded supportedRelease, not a hardcoded not-recorded (Issue #230)", () => {
+  const res = buildDiscoveryHandshake({
+    scripting: inputs.scripting,
+    tools: inputs.tools,
+    semantics: inputs.semantics,
+    sdk: inputs.sdk,
+    supportedRelease: { state: "recorded", releases: ["26.5"], scope: { os: ["darwin"] } },
+    meta: {
+      catalogRevision: "catalog.json@sha256:test",
+      hostId: "ae-devtools-repo@test",
+      os: "test-os",
+      arch: "test-arch",
+      generatedAt: "2026-11-14T00:00:00.000Z",
+    },
+  });
+  // The recorded state must NOT emit the not-recorded diagnostic —
+  // the handshake response does not echo the declaration itself, only
+  // its effect on diagnostics.
+  const codes = (res.diagnostics ?? []).map((d) => d.code);
+  assert.ok(!codes.includes("supported-release-set-not-recorded"));
+});
+
 test("discovery response carries the handshake schema and contract version", () => {
   const res = discovery();
   assert.equal(res.schema, "ae-devtools.capability-handshake/v1");

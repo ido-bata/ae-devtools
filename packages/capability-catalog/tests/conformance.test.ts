@@ -68,6 +68,19 @@ describe("parseConformanceRecord", () => {
     ).toBe(false);
   });
 
+  test("rejects platform.os outside the win32|darwin claim vocabulary (Issue #230)", () => {
+    expect(parseConformanceRecord(record({ platform: { os: "linux", osVersion: "1", arch: "x64" } })).ok).toBe(false);
+  });
+
+  test("rejects unparseable recordedAt and duplicate capabilityIds (Issue #230)", () => {
+    expect(parseConformanceRecord(record({ recordedAt: "not-a-date" })).ok).toBe(false);
+    expect(
+      parseConformanceRecord(
+        record({ capabilityIds: ["ae.a.b.c", "ae.a.b.c"] }),
+      ).ok,
+    ).toBe(false);
+  });
+
   test("rejects malformed artifact hashes", () => {
     expect(
       parseConformanceRecord(record({ artifactHashes: { "a.json": "deadbeef" } })).ok,

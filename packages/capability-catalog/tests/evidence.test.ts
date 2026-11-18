@@ -85,6 +85,23 @@ describe("FR-05 mapping keeps the axes separate", () => {
     expect(earnedFr05State(windowsRow)).not.toBe("verified-on-real-host");
   });
 
+  test("verified-real-host with empty compatibility.os is a promotion violation (Issue #230)", () => {
+    const noPlatforms = makeRecord({
+      id: "ae.scripting.fixture.no-platforms",
+      compatibility: { os: [] },
+      coverage: {
+        inventory: "source-reviewed",
+        implementation: "implemented",
+        verification: "verified-real-host",
+        evidenceRefs: [
+          { kind: "real-host", ref: "evidence/run-1" },
+        ],
+      },
+    });
+    const codes = promotionViolations(noPlatforms).map((v) => v.code);
+    expect(codes).toContain("platform-unverified");
+  });
+
   test("the seven FR-05 states are exactly the spec's set", () => {
     const expected: Fr05State[] = [
       "automated-fake-tested",

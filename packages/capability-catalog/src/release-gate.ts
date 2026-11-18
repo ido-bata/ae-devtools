@@ -73,8 +73,19 @@ export const CONFORMANCE_EVIDENCE_SCOPE: readonly string[] = [
   "inventories/tools/",
 ];
 
+// Non-runtime exclusions, anchored (Issue #230):
+//  - test dirs / *.test.* / *.spec.* — never runtime, any depth
+//  - markdown — prose, never runtime
+//  - node_modules — vendored, never measured source
+//  - docs/ and evidence/ dirs are excluded ONLY inside the exercised
+//    CLI package tree, where they are known artifact/doc locations.
+//    Under inventories/ every file is potential op semantics — a
+//    docs/- or evidence/-named dir there stays IN scope so a semantic
+//    input cannot hide behind a convenient directory name.
+// package-lock.json is deliberately NOT excluded: it pins dependency
+// code that the exercised runtime loads, so a bump must stale evidence.
 const EVIDENCE_SCOPE_EXCLUDE =
-  /(?:^|\/)(?:tests?|__tests__|docs?|evidence)\/|\.(?:test|spec)\.[^/]+$|(?:^|\/)[^/]*\.md$|(?:^|\/)package-lock\.json$|(?:^|\/)node_modules\//;
+  /(?:^|\/)(?:tests?|__tests__)\/|\.(?:test|spec)\.[^/]+$|(?:^|\/)[^/]*\.md$|(?:^|\/)node_modules\/|^packages\/ae-devtools-cli\/(?:[^/]+\/)*(?:docs?|evidence)\//;
 
 /** True when `path` is inside the evidence scope (change ⇒ stale). */
 export function isEvidenceScopePath(path: string): boolean {
