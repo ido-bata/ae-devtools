@@ -56,6 +56,13 @@ ADR は [`docs/architecture/decisions/`](../docs/architecture/decisions/) にあ
 （例: skill 内の release merge authorization は本リポジトリでは
 `ADR-0012-release-merge-authorization.md` が対応する）。
 
+従って Skill 本文中の `organization/execution-placement.md`、
+`docs/adr/ADR-0036.md` 等への relative link は **このリポジトリ内では
+解決されない（404 相当）のが正常** であり、vendored hash を壊さないため
+local 側での link 修正は行わない。参照先を確認する場合は配布元
+`rebuildup/project-init` の同 path を見る。upstream 側の link 修正が
+必要な場合は project-init で直してから re-vendor する。
+
 ## Sync / freshness
 
 - source: `rebuildup/project-init`（floating。freeze が必要なら ADR で明示する）

@@ -12,12 +12,12 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 
 ```sh
 npm install @ido-bata/ae-devtools-cli          # registry latest
-npm install @ido-bata/ae-devtools-cli@0.3.0    # this release, once published
+npm install @ido-bata/ae-devtools-cli@0.4.0    # this release, once published
 # tarball / local checkout からも可:
-npm install ./ae-devtools-cli-0.3.0.tgz
+npm install ./ae-devtools-cli-0.4.0.tgz
 ```
 
-### Migrating to 0.3.0
+### Migrating to 0.4.0
 
 - New dev-loop surface: `ae-devtools discover/inspect/execute/verify`,
   `ae-devtools-mcp` (stdio MCP), and the VSCode extension
@@ -200,6 +200,8 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 | `cep-extension/` | CEP extension scaffold + validate devkit (`ae-devtools-cep`, `ae-devtools-cep-lifecycle` bins) |
 | `agent-loop/` | agent dev loop library (`@ido-bata/ae-devtools-cli/agent-loop`; bin なし、fake-level) |
+| `vscode-extension/` | VSCode extension scaffold (`vsce package` → installable VSIX; fake level) |
+| `vscode-debugger/` | debugger attach-config generator + host preflight (`ae-devtools-debug` bin) |
 
 ## Verification
 

@@ -28,21 +28,26 @@ After Effects の **スクリプト／エクステンション開発そのもの
 
 ## 現在の状態
 
-このリポジトリはまだ **初期設計段階** にある。
+`packages/ae-devtools-cli`（`@ido-bata/ae-devtools-cli@0.4.0`）として CLI + JSX toolchain +
+capability catalog + conformance gate が shipped 済み（fake-level 検証 +
+macOS arm64 / AE 26.5 の verified-real-host 証跡あり。Windows・配布・
+実 editor 受入は未検証）。shipped 済みの範囲を超えて **未確定 / 未検証** のままの領域:
 
-以下は **未確定**:
-
-- MCP Tool の詳細仕様
-- VSCode Extension の本格実装
+- MCP Tool の詳細仕様の拡張（最小 inspect/execute/verify は実装済み）
+- VSCode Extension の実 editor 受入（scaffold + fake-level は shipped）
 - Language Server 実装
-- ExtendScript 実行 bridge
-- CEP / UXP 対応
-- After Effects との通信方式
-- Adobe API metadata 生成
-- TypeScript 型定義生成
+- CEP / UXP 対応の実機 load proof（scaffold/devkit は shipped、loadProof は NOT RUN）
+- Windows 実機検証（macOS arm64 のみ verified-real-host 証跡あり）
+- npm 公開・配布パイプラインの完了
 - frame capture、visual verification
 - AI による After Effects 自動操作機能
 - 製品名／ブランド名
+
+なお ExtendScript 実行 bridge（trusted-execution + a8n-transport）、
+After Effects との通信方式（ae-a8n file-envelope transport、ADR-0005）、
+Scripting API metadata / TypeScript 型定義（`inventories/scripting` +
+jsx-toolchain 同梱 `ae-api.d.ts`）は初期形が実装済みであり、詳細は
+[docs/vision.md](./docs/vision.md) と各 package README を参照。
 
 詳細は [docs/vision.md](./docs/vision.md) を参照。
 
