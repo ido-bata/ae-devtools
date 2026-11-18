@@ -46,6 +46,9 @@ jobs:
     # blocker by itself); any scope/claim violation fails the check.
     name: "Conformance release gate (CAP056)"
     runs-on: ubuntu-latest
+    # Same event guard as source-check: pull_request_review events must
+    # not re-run (and re-spend) the gate — it only gates release PRs.
+    if: github.event_name == 'pull_request'
     timeout-minutes: 20
     steps:
       # Full history: the gate binds evidence sourceSha ancestry and

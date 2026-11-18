@@ -26,6 +26,15 @@ export function runTestDir(dir) {
     .filter((f) => f.endsWith(".test.mjs"))
     .sort();
 
+  // Vacuous-pass guard (Issue #232): a suite dir with zero *.test.mjs
+  // files used to print "0/0 green" and exit 0 — an emptied test file
+  // must fail loudly, not pass silently.
+  if (files.length === 0) {
+    console.error(`test-harness: no *.test.mjs files in ${dir}`);
+    process.exitCode = 1;
+    return 1;
+  }
+
   let failed = 0;
   for (const file of files) {
     console.log(`\n=== ${file} ===`);

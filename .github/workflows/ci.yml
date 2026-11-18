@@ -192,6 +192,10 @@ jobs:
       # would be unverified.
       - if: steps.detect.outputs.present == 'true'
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      # The XSD contract test hard-fails without xmllint when this is
+      # set — a silent skip in CI would leave the contract unverified.
+      - if: steps.detect.outputs.present == 'true'
+        run: echo "AE_DEVTOOLS_REQUIRE_XMLLINT=1" >> "$GITHUB_ENV"
       # Static syntax gate over the shipped .mjs surface (Issue #185) —
       # the package has no typecheck step, so node --check is the
       # minimal honest static check wired into CI.
@@ -208,14 +212,15 @@ jobs:
           set -uo pipefail
           fail=0
           ran=0
-          for d in trusted-execution scripting-adapters dev-loop devtools-cli a8n-transport mcp-server recovery-orchestrator diagnostics jsx-toolchain cep-extension agent-loop vscode-extension vscode-debugger; do
-            if [ ! -f "packages/ae-devtools-cli/$d/tests/run.mjs" ]; then
-              echo "=== $d === (absent on this head; skipping)"
-              continue
-            fi
+          # Discover suites from the filesystem — a hardcoded list here
+          # and in package.json "test" would drift, letting a new suite
+          # silently never run in CI (Issue #232).
+          for runner in packages/ae-devtools-cli/*/tests/run.mjs; do
+            [ -f "$runner" ] || continue
+            d=$(echo "$runner" | cut -d/ -f3)
             ran=$((ran + 1))
             echo "=== $d ==="
-            if ! node "packages/ae-devtools-cli/$d/tests/run.mjs"; then
+            if ! node "$runner"; then
               echo "::error::suite $d failed"
               fail=1
             fi
@@ -260,5 +265,9 @@ jobs:
       # test would silently skip and the contract would be unverified.
       - if: steps.detect.outputs.present == 'true'
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      # The XSD contract test hard-fails without xmllint when this is
+      # set — a silent skip in CI would leave the contract unverified.
+      - if: steps.detect.outputs.present == 'true'
+        run: echo "AE_DEVTOOLS_REQUIRE_XMLLINT=1" >> "$GITHUB_ENV"
       - if: steps.detect.outputs.present == 'true'
         run: node experiments/runtime-bridge/cep-panel/tests/run.mjs
