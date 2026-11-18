@@ -83,7 +83,7 @@ meaningful advisory は GitHub Issue へ変換し target release を割り当て
 
 ## Reviewer separation
 
-- reviewer / CODEOWNERS が意味のある separation を提供する場合、それを使う（[AGENTS.md §26](../AGENTS.md) + [`docs/development.md`](./development.md) §PR metadata）
+- reviewer / CODEOWNERS が意味のある separation を提供する場合、それを使う（[`docs/development.md`](./development.md) §PR metadata）
 - 自 reviewer だけで完了としない
 - 意味のある reviewer が不在の場合、configured review automation / CI / explicit final review 等の代替 path を PR body に明記する。恒常的な self-approval serialization は禁止
 

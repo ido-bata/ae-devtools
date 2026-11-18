@@ -42,6 +42,8 @@
 ### 5. Experiment / probe の現状
 
 - [`experiments/runtime-bridge/`](../../experiments/runtime-bridge/) §READ ME: experiments / probes は **未検証**。各 Probe の Actual は `Not executed` のまま
+- [`experiments/read-only-probe/`](../../experiments/read-only-probe/): read-only probe — fake-responder tests + 実機 evidence（`evidence/run-20261113-{2,3}/`、owned AE 2026 / macOS、read-only のみ verified）
+- [`experiments/native-sdk/`](../../experiments/native-sdk/): native SDK probe — SDK sample / own-plugin build + mock-host tests（563 checks, fake host）まで verified。plugin load/実行・Windows は UNVERIFIED（`EVIDENCE.md` 参照）
 - [`docs/architecture/research/07-real-ae-validation.md`](./architecture/research/07-real-ae-validation.md): 本 environment (Linux on WSL2, AE 不在) で検証できない理由
 
 ### 6. Recovery / security

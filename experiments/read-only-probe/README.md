@@ -84,7 +84,8 @@ experiments/read-only-probe/
 ├── snapshot-schema.md         # CAP022: runtime snapshot schema, invalidation, invariants
 ├── probe.mjs                  # Node client: prepare/identify/ping/snapshot/sysinfo/diagnose
 ├── host/
-│   └── probe-dispatcher.jsx   # ES3 dispatcher template (read-only, activated by a human)
+│   ├── probe-dispatcher.jsx   # ES3 dispatcher template (read-only, activated by a human)
+│   └── probe-json.js          # minimal ES3 JSON codec for the host side (no JSON in ExtendScript)
 ├── tests/
 │   ├── run.mjs                # test runner (node:test, zero deps)
 │   └── *.test.mjs             # fake-responder tests incl. no-resend regression

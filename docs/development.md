@@ -103,6 +103,19 @@ native stacked PR では contiguous stack landing で target release trunk に�
 
 non-default branch への merge では closing keyword だけに依存しない。
 
+## Verification
+
+verification level の責務境界（AGENTS.md §12 の taxonomy に対応）:
+
+- **Unit** — 局所 logic / component behavior。fake responder / fixture で完結する検証であり、real-host 挙動を主張しない
+- **Smoke / connectivity** — startup / wiring / 起動経路の最小成立確認
+- **Integration** — 複数 component 間の data flow / persistence / 連携確認
+- **Contract / schema** — API / event / generated interface の互換性確認（inventory verify、catalog conformance gate 等）
+- **E2E / system** — release-like boundary での user / system critical flow
+- **Manual / visual** — automation が困難な AE 本体 / パネル UI / native addon 経路に限定
+
+各 level は上位 level の正しさを下位 level の結果で代替しない。fake-level green を real-host verified と読み替えない（evidence level は各 record / docs に明記する）。
+
 ## Quality profile（adaptive）
 
 ガバナンスの固定 bundle を盲信しない。framework / runtime / SDK の **current official guidance** から project 固有 profile を compile する。
@@ -111,15 +124,15 @@ non-default branch への merge では closing keyword だけに依存しない�
 
 ae-devtools は vision.md で多数を「未確定」と記録する design / research 段階である。language / framework / SDK の selection が固まっていない以上、generic な固定 Linter / test bundle を入れると未確定領域を前提の上で固定化してしまう。
 
-当面:
+実装済み package の現行 gate（CI `ci.yml` が各 surface を detect-and-skip で実行）:
 
-- **Node.js syntax check**: `experiments/runtime-bridge/node-server/server.js` を `node --check` で syntax check する（researcher 環境でも回せる)
-- **ADR link / status 一貫性**: `docs/architecture/*.md` 内の `Status:` 行とリンクが壊れていないかを simple grep / 派生 check で担保する
-- **citation access date**: research / ADR / docs 内の URL 引用に access date が付与されているか spot check
-- **manifest / XML well-formed**: `experiments/runtime-bridge/cep-panel/CSXS/manifest.xml` を `xmllint --noout` で検証（optional）
-- **vendored skills integrity**: `node scripts/verify-skills-lock.mjs` で `skills-lock.json` の content hash と `skills/` 実体、`metadata.requires-skills` の依存解決を照合する（CI `skills-lock` job）
+- **ae-devtools-cli**: 全 `*/tests/run.mjs` suite を filesystem discovery で実行（fake-level）+ `scripts/check-syntax.mjs`（package.json `files` 由来 scope の `node --check`）+ `npm run smoke:consumer`（tarball → 外部 install → fake session CLI）
+- **capability-catalog / native-adapter**: `bun install --frozen-lockfile` + `bun test` + `bunx tsc --noEmit` + `bun run verify`（catalog verify は conformance gate を含む）
+- **inventories**: `inventories/tools` / `inventories/scripting` は `bun test` + `bunx tsc --noEmit`（scripting は clone 不要の `bun run verify` も）。`inventories/tools` の `verify` は git-ignore された `.reference/` clone が必要なため CI では明示 skip。`inventories/sdk` は package.json を持たず、CI job が 2 つの test file を個別実行する（Issue #231）
+- **experiments**: read-only-probe は `node:test`（fake responder）。runtime-bridge / native-sdk は host 依存のため CI 対象外、`EVIDENCE.md` が証跡 ledger
+- **静的・衛生系**: `node scripts/verify-skills-lock.mjs`（vendored skills hash + 依存解決）、workflow YAML parse、`xmllint` による CEP manifest XSD 検証（`AE_DEVTOOLS_REQUIRE_XMLLINT=1` で CI hard-fail）
 
-domain 実装（CEP panel ExtendScript / VSCode Extension / MCP Server いずれか）が始まった時点で、framework / runtime / SDK 別の公式 guidance から **language-specific quality gate** を別途起票し ADR で固定する。
+domain 実装（CLI / JSX toolchain / MCP / VSCode / CEP devkit）は開始済みであり、上記 gate は各 package の現行 toolchain（Node.js ESM + bun）に対応する。framework / runtime / SDK の選定が変わる領域（例: UXP、native plugin）では、current official guidance から **language-specific quality gate** を別途起票し ADR で固定する。
 
 ### False green 禁止（再掲）
 

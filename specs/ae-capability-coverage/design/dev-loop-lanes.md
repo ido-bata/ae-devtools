@@ -10,7 +10,7 @@
   implementation method and real-host acceptance criteria for each, and
   register only the work that had no owner.
 
-## 0. Verified baseline (what already exists)
+## 0. Verified baseline (what already exists — snapshot as of this design note, not current state)
 
 | Capability | State | Evidence |
 | --- | --- | --- |

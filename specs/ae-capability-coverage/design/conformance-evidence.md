@@ -108,7 +108,7 @@ not a per-record flag.
   A per-record `release-blocking` marker would be a `CapabilityRecord`
   schema change and is deliberately **not** assumed here — it requires
   the contract §7 compatibility rules if ever proposed.
-- Windows is a first-class gate input: `release-0-1-0` claims Windows
+- Windows is a first-class gate input: a release claims Windows
   support only when Windows rows carry real evidence; until then the
   honest gate output is `BLOCKED (windows: UNVERIFIED)`, matching Issue
   #21's standing constraint.

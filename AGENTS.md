@@ -400,7 +400,10 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - [`ADR-0003-weekly-release-sprint.md`](docs/architecture/decisions/ADR-0003-weekly-release-sprint.md) — weekly release sprint / branch naming / Draft PR / stack / release PR
 - [`ADR-0004-recovery-checkpoint-model.md`](docs/architecture/decisions/ADR-0004-recovery-checkpoint-model.md) — durable checkpoint / soft-hard / recovery algorithm
 - [`ADR-0012-release-merge-authorization.md`](docs/architecture/decisions/ADR-0012-release-merge-authorization.md) — explicit user authorization for release PR merge
+- [`ADR-0005-ae-execution-boundaries-and-cross-repo-ownership.md`](docs/architecture/decisions/ADR-0005-ae-execution-boundaries-and-cross-repo-ownership.md) — AE execution boundaries / cross-repo ownership
 - [`ADR-0014-linear-profile.md`](docs/architecture/decisions/ADR-0014-linear-profile.md) — Linear profile（任意採用時）の併用契約
+- [`ADR-0015-deliverable-unit-release-cadence.md`](docs/architecture/decisions/ADR-0015-deliverable-unit-release-cadence.md) — deliverable-unit release cadence
+- [`ADR-0016-session-open-and-fake-host-boundary.md`](docs/architecture/decisions/ADR-0016-session-open-and-fake-host-boundary.md) — session open / fake-host boundary
 
 ### docs / onboarding
 
