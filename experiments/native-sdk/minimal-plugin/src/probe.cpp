@@ -543,12 +543,278 @@ static void ProbeRootFolderName(
     }
 }
 
+/* Read-only view-detail getters for one open item view (Issue #63).
+   itemViewP is the AEGP_ItemViewSuite2 table; item_viewP is the
+   opaque view handle returned by AEGP_GetItemMRUView. Every call is
+   op-recorded; failures are logged and skipped. */
+static void ProbeItemViewDetails(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ItemViewSuite2* itemViewP,
+    AEGP_ItemViewP item_viewP,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    {
+        A_Boolean previewingB = FALSE;
+        A_Time t = {0, 0};
+        err = itemViewP->AEGP_GetItemViewPlaybackTime(item_viewP, &previewingB, &t);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewPlaybackTime",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.previewing=%d playback=%ld/%lu",
+                         item_indexL, (int)previewingB, (long)t.value,
+                         (unsigned long)t.scale);
+        }
+    }
+    {
+        A_Boolean visibleB = FALSE;
+        err = itemViewP->AEGP_GetItemViewGuidesVisible(item_viewP, &visibleB);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesVisible",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.guidesVisible=%d",
+                         item_indexL, (int)visibleB);
+        }
+    }
+    {
+        A_Boolean snapB = FALSE;
+        err = itemViewP->AEGP_GetItemViewGuidesSnap(item_viewP, &snapB);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesSnap",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.guidesSnap=%d",
+                         item_indexL, (int)snapB);
+        }
+    }
+    {
+        A_Boolean lockedB = FALSE;
+        err = itemViewP->AEGP_GetItemViewGuidesLocked(item_viewP, &lockedB);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesLocked",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.guidesLocked=%d",
+                         item_indexL, (int)lockedB);
+        }
+    }
+}
+
+/* Extended read-only metadata for one top-level item (Issue #63):
+   type, name, id, flags, selection, label, duration/current time,
+   dimensions, pixel aspect, parent folder, comment, and — when the
+   Item View suite is available — the MRU view's read-only getters.
+   Every call is op-recorded; per-call failures are logged and
+   skipped, never aborting the walk. */
+static void ProbeNamedItem(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ItemSuite9* itemP,
+    const AEGP_MemorySuite1* memP,
+    const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
+    AEGP_PluginID plugin_id,
+    AEGP_ItemH itemH,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    AEGP_ItemType type = AEGP_ItemType_NONE;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    err = itemP->AEGP_GetItemType(itemH, &type);
+    {
+        char extra[48];
+        if (err == A_Err_NONE)
+        {
+            snprintf(extra, sizeof(extra), " i=%ld value=%d", item_indexL, (int)type);
+        }
+        else
+        {
+            snprintf(extra, sizeof(extra), "%s", idx);
+        }
+        extra[sizeof(extra) - 1] = '\0';
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemType", (long)err, extra);
+    }
+    if (err == A_Err_NONE)
+    {
+        LogFormatted(utilP, "project.items[%ld].type=%d", item_indexL, (int)type);
+        if (item_indexL == 0)
+        {
+            LogFormatted(utilP, "project.items.firstType=%d", (int)type);
+        }
+
+        /* Type name is only meaningful for a successfully queried
+           type; AEGP_ItemType_NONE is not a valid GetTypeName input. */
+        {
+            char type_nameZ[AEGP_MAX_TYPE_NAME_SIZE + 1];
+            memset(type_nameZ, 0, sizeof(type_nameZ));
+            err = itemP->AEGP_GetTypeName(type, type_nameZ);
+            OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetTypeName", (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "project.items[%ld].typeName=%s", item_indexL, type_nameZ);
+            }
+        }
+    }
+
+    {
+        AEGP_MemHandle nameH = NULL;
+        A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr, NULL);
+        if (nerr == A_Err_NONE)
+        {
+            char label[64];
+            snprintf(label, sizeof(label), "project.items[%ld].name", item_indexL);
+            label[sizeof(label) - 1] = '\0';
+            LogMemHandleUtf16(utilP, memP, label, nameH);
+        }
+    }
+
+    {
+        A_long item_idL = 0;
+        err = itemP->AEGP_GetItemID(itemH, &item_idL);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemID", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].id=%ld", item_indexL, (long)item_idL);
+        }
+    }
+    {
+        AEGP_ItemFlags flags = 0;
+        err = itemP->AEGP_GetItemFlags(itemH, &flags);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemFlags", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].flags=%ld", item_indexL, (long)flags);
+        }
+    }
+    {
+        A_Boolean selectedB = FALSE;
+        err = itemP->AEGP_IsItemSelected(itemH, &selectedB);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_IsItemSelected", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].selected=%d", item_indexL, (int)selectedB);
+        }
+    }
+    {
+        AEGP_LabelID label = AEGP_Label_NO_LABEL;
+        err = itemP->AEGP_GetItemLabel(itemH, &label);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemLabel", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].label=%d", item_indexL, (int)label);
+        }
+    }
+    {
+        A_Time duration = {0, 0};
+        err = itemP->AEGP_GetItemDuration(itemH, &duration);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemDuration", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].duration=%ld/%lu",
+                         item_indexL, (long)duration.value, (unsigned long)duration.scale);
+        }
+    }
+    {
+        A_Time current = {0, 0};
+        err = itemP->AEGP_GetItemCurrentTime(itemH, &current);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].currentTime=%ld/%lu",
+                         item_indexL, (long)current.value, (unsigned long)current.scale);
+        }
+    }
+    {
+        A_long widthL = 0, heightL = 0;
+        err = itemP->AEGP_GetItemDimensions(itemH, &widthL, &heightL);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemDimensions", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].dimensions=%ldx%ld",
+                         item_indexL, (long)widthL, (long)heightL);
+        }
+    }
+    {
+        A_Ratio par = {0, 0};
+        err = itemP->AEGP_GetItemPixelAspectRatio(itemH, &par);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].pixelAspect=%ld/%lu",
+                         item_indexL, (long)par.num, (unsigned long)par.den);
+        }
+    }
+    {
+        AEGP_ItemH parentH = NULL;
+        err = itemP->AEGP_GetItemParentFolder(itemH, &parentH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemParentFolder", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].parentFolder=%s",
+                         item_indexL, parentH ? "present" : "none");
+        }
+    }
+    {
+        AEGP_MemHandle commentH = NULL;
+        err = itemP->AEGP_GetItemComment(itemH, &commentH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemComment", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            char label[64];
+            snprintf(label, sizeof(label), "project.items[%ld].comment", item_indexL);
+            label[sizeof(label) - 1] = '\0';
+            LogMemHandleUtf16(utilP, memP, label, commentH); /* consumes handle */
+        }
+    }
+
+    /* MRU view slice: only when the Item View suite was acquired and
+       its entries validated. A NULL view is a normal state (item has
+       no open viewer), not an error. */
+    if (itemViewP != NULL)
+    {
+        AEGP_ItemViewP viewP = NULL;
+        err = itemP->AEGP_GetItemMRUView(itemH, &viewP);
+        {
+            char extra[48];
+            if (err == A_Err_NONE)
+            {
+                snprintf(extra, sizeof(extra), "%s hasView=%d", idx, viewP ? 1 : 0);
+            }
+            else
+            {
+                snprintf(extra, sizeof(extra), "%s", idx);
+            }
+            extra[sizeof(extra) - 1] = '\0';
+            OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemMRUView", (long)err, extra);
+        }
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].mruView=%d",
+                         item_indexL, viewP ? 1 : 0);
+            if (viewP)
+            {
+                ProbeItemViewDetails(utilP, itemViewP, viewP, item_indexL);
+            }
+        }
+    }
+}
+
 /* Walk the top-level project item list read-only: count items, log the
-   type and (up to MAX_ITEM_NAMES) names of the first items. */
+   type and (up to MAX_ITEM_NAMES) names plus extended metadata of
+   the first items. */
 static void ProbeProjectItems(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ItemSuite9* itemP,
     const AEGP_MemorySuite1* memP,
+    const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     AEGP_ProjectH projectH)
 {
@@ -567,30 +833,9 @@ static void ProbeProjectItems(
 
     while (itemH && count < MAX_ITEMS_SCANNED)
     {
-        AEGP_ItemType type = AEGP_ItemType_NONE;
-
-        if (named == 0)
-        {
-            A_Err terr = itemP->AEGP_GetItemType(itemH, &type);
-            {
-                char extra[32];
-                snprintf(extra, sizeof(extra), " value=%d", (int)type);
-                extra[sizeof(extra) - 1] = '\0';
-                OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemType", (long)terr, extra);
-            }
-            LogFormatted(utilP, "project.items.firstType=%d", (int)type);
-        }
         if (named < MAX_ITEM_NAMES)
         {
-            AEGP_MemHandle nameH = NULL;
-            A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
-            OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr, NULL);
-            if (nerr == A_Err_NONE)
-            {
-                char label[64];
-                snprintf(label, sizeof(label), "project.items[%ld].name", (long)named);
-                LogMemHandleUtf16(utilP, memP, label, nameH);
-            }
+            ProbeNamedItem(utilP, itemP, memP, itemViewP, plugin_id, itemH, named);
             named++;
         }
         count++;
@@ -610,6 +855,41 @@ static void ProbeProjectItems(
                  (count >= MAX_ITEMS_SCANNED) ? " (capped)" : "");
 }
 
+/* Active-item query, once per probe run (app-level, not per-project).
+   A NULL item is a normal state. When present, its name is resolved
+   through the same bounded mem-handle plumbing as item names. */
+static void ProbeActiveItem(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ItemSuite9* itemP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id)
+{
+    AEGP_ItemH itemH = NULL;
+    A_Err err = itemP->AEGP_GetActiveItem(&itemH);
+    OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetActiveItem", (long)err,
+              err == A_Err_NONE ? (itemH ? " hasItem=1" : " hasItem=0") : NULL);
+    if (err != A_Err_NONE)
+    {
+        LogFormatted(utilP, "AEGP_GetActiveItem err=%ld", (long)err);
+        return;
+    }
+    if (!itemH)
+    {
+        LogFormatted(utilP, "app.activeItem=none");
+        return;
+    }
+    LogFormatted(utilP, "app.activeItem=present");
+    {
+        AEGP_MemHandle nameH = NULL;
+        A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr, NULL);
+        if (nerr == A_Err_NONE)
+        {
+            LogMemHandleUtf16(utilP, memP, "app.activeItem.name", nameH);
+        }
+    }
+}
+
 /* Per-project read-only queries. num_projectsL comes from the caller's
    single AEGP_GetNumProjects call so the count and the iteration agree. */
 static void ProbeProject(
@@ -617,6 +897,7 @@ static void ProbeProject(
     const AEGP_ProjSuite6* projP,
     const AEGP_ItemSuite9* itemP,
     const AEGP_MemorySuite1* memP,
+    const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     A_long num_projectsL)
 {
@@ -693,6 +974,28 @@ static void ProbeProject(
             LogFormatted(utilP, "project[%ld].bitDepth=%d", i, (int)bit_depth);
         }
 
+        /* Project time display: read-only snapshot of the project's
+           timecode/frames display settings (Issue #63). */
+        {
+            AEGP_TimeDisplay3 time_display;
+            memset(&time_display, 0, sizeof(time_display));
+            err = projP->AEGP_GetProjectTimeDisplay(projectH, &time_display);
+            OpRecordV(utilP, "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", (long)err, NULL);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project[%ld].timeDisplay displayMode=%d footageMode=%d "
+                             "dropFrame=%d feetFrames=%d timebase=%d framesPerFoot=%d framesMode=%d",
+                             i, (int)time_display.display_mode,
+                             (int)time_display.footage_display_mode,
+                             (int)time_display.display_dropframeB,
+                             (int)time_display.use_feet_framesB,
+                             (int)time_display.timebaseC,
+                             (int)time_display.frames_per_footC,
+                             (int)time_display.frames_display_mode);
+            }
+        }
+
         /* Project path: empty string for untitled projects; disposed
            through the shared mem-handle plumbing. */
         {
@@ -713,7 +1016,7 @@ static void ProbeProject(
         }
 
         ProbeRootFolderName(utilP, projP, itemP, memP, plugin_id, projectH);
-        ProbeProjectItems(utilP, itemP, memP, plugin_id, projectH);
+        ProbeProjectItems(utilP, itemP, memP, itemViewP, plugin_id, projectH);
     }
 }
 
@@ -782,13 +1085,20 @@ static A_Boolean ProjEntriesOk(const AEGP_ProjSuite6* p)
     return p && p->AEGP_GetNumProjects && p->AEGP_GetProjectByIndex &&
            p->AEGP_GetProjectName && p->AEGP_GetProjectPath &&
            p->AEGP_ProjectIsDirty && p->AEGP_GetProjectBitDepth &&
-           p->AEGP_GetProjectRootFolder;
+           p->AEGP_GetProjectRootFolder && p->AEGP_GetProjectTimeDisplay;
 }
 
 static A_Boolean ItemEntriesOk(const AEGP_ItemSuite9* i)
 {
     return i && i->AEGP_GetFirstProjItem && i->AEGP_GetNextProjItem &&
-           i->AEGP_GetItemType && i->AEGP_GetItemName;
+           i->AEGP_GetItemType && i->AEGP_GetItemName &&
+           i->AEGP_GetActiveItem && i->AEGP_IsItemSelected &&
+           i->AEGP_GetTypeName && i->AEGP_GetItemID &&
+           i->AEGP_GetItemFlags && i->AEGP_GetItemParentFolder &&
+           i->AEGP_GetItemDuration && i->AEGP_GetItemCurrentTime &&
+           i->AEGP_GetItemDimensions && i->AEGP_GetItemPixelAspectRatio &&
+           i->AEGP_GetItemComment && i->AEGP_GetItemLabel &&
+           i->AEGP_GetItemMRUView;
 }
 
 static A_Boolean MemoryEntriesOk(const AEGP_MemorySuite1* m)
@@ -812,6 +1122,16 @@ static A_Boolean RQItemEntriesOk(const AEGP_RQItemSuite4* r)
            r->AEGP_GetElapsedTime && r->AEGP_GetLogType &&
            r->AEGP_GetNumOutputModulesForRQItem && r->AEGP_GetComment &&
            r->AEGP_GetCompFromRQItem;
+}
+
+/* Item-view slice (Issue #63): only the read-only getters the probe
+   calls are required; like the render-queue slice this is auxiliary
+   evidence — a missing entry degrades the section, not the run. */
+static A_Boolean ItemViewEntriesOk(const AEGP_ItemViewSuite2* v)
+{
+    return v && v->AEGP_GetItemViewPlaybackTime &&
+           v->AEGP_GetItemViewGuidesVisible && v->AEGP_GetItemViewGuidesSnap &&
+           v->AEGP_GetItemViewGuidesLocked;
 }
 
 /* Read-only render-queue observation. Every call is op-recorded; the
@@ -968,6 +1288,8 @@ static A_Err ProbeIdleHook(
     const AEGP_MemorySuite1* memP = NULL;
     const AEGP_RenderQueueSuite1* rqP = NULL;
     const AEGP_RQItemSuite4* rqItemP = NULL;
+    const AEGP_ItemViewSuite2* itemViewP = NULL;
+    const AEGP_ItemViewSuite2* usableItemViewP = NULL;
     A_Err first_err = A_Err_NONE;
     A_long num_projectsL = 0;
     const char* reasonZ = NULL;
@@ -1223,10 +1545,28 @@ static A_Err ProbeIdleHook(
             LogLine(utilP, "probe.error: AEGP Render Queue suite unavailable");
         }
 
+        /* Item-view slice (Issue #63): auxiliary viewer-state getters.
+           Acquisition/entry failure is NON-fatal like the render-queue
+           slice — the acquired table is still released in done:. */
+        if (AcquireSuite(s_basicP, utilP, kAEGPItemViewSuite,
+                         kAEGPItemViewSuiteVersion2,
+                         (const void**)&itemViewP) == A_Err_NONE &&
+            ItemViewEntriesOk(itemViewP))
+        {
+            usableItemViewP = itemViewP;
+        }
+        else
+        {
+            LogLine(utilP, "probe.error: AEGP Item View suite unavailable");
+        }
+
+        ProbeActiveItem(utilP, itemP, memP, s_aegp_plugin_id);
+
         /* num_projectsL == 0 is a NORMAL host state (no project open),
            not an error: ProbeProject logs app.numProjects=0 and skips
            per-project queries. */
-        ProbeProject(utilP, projP, itemP, memP, s_aegp_plugin_id, num_projectsL);
+        ProbeProject(utilP, projP, itemP, memP, usableItemViewP,
+                     s_aegp_plugin_id, num_projectsL);
 
         LogLine(utilP, "probe.end");
     }
@@ -1237,6 +1577,10 @@ done:
     /* Suite releases are op-recorded too: on probe ticks the mode is
        still DIRECT so they land inside this execution's evidence;
        on quiet ticks they stay buffered and are discarded. */
+    if (itemViewP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPItemViewSuite, kAEGPItemViewSuiteVersion2);
+    }
     if (rqItemP)
     {
         ReleaseSuiteSafe(s_basicP, utilP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);

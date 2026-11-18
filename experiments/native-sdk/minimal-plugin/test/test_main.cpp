@@ -178,12 +178,34 @@ static void TestProbeHappyPathOneProject()
     CHECK(h->LogContains("driver.pluginInitVersion=1.0"));
     CHECK(h->LogContains("driver.implementationVersion=26.5"));
     CHECK(h->LogContains("host.isActivated=1"));
+    /* Issue #63 extended read-only evidence */
+    CHECK(h->LogContains("project[0].timeDisplay displayMode=0"));
+    CHECK(h->LogContains("app.activeItem=none"));
+    CHECK(h->LogContains("project.items[0].type=2"));
+    CHECK(h->LogContains("project.items[0].typeName=fake-type-2"));
+    CHECK(h->LogContains("project.items[0].id=1000"));
+    CHECK(h->LogContains("project.items[0].selected=0"));
+    CHECK(h->LogContains("project.items[0].label=0"));
+    CHECK(h->LogContains("project.items[0].duration=90/30"));
+    CHECK(h->LogContains("project.items[0].currentTime=0/30"));
+    CHECK(h->LogContains("project.items[0].dimensions=640x360"));
+    CHECK(h->LogContains("project.items[0].pixelAspect=1/1"));
+    CHECK(h->LogContains("project.items[0].parentFolder=present"));
+    CHECK(h->LogContains("project.items[0].comment:"));
+    CHECK(h->LogContains("project.items[0].mruView=0"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay err=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetActiveItem err=0 hasItem=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemID err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemComment err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemMRUView err=0 i=0 hasView=0"));
+    CHECK(h->LogContains("op SPBasicSuite.AcquireSuite err=0 suite=\"AEGP Item View Suite\" version=2"));
+    CHECK(h->LogContains("op SPBasicSuite.ReleaseSuite err=0 suite=\"AEGP Item View Suite\" version=2"));
 
     /* every AE-allocated mem handle disposed: fingerprint path +
-       probe path + root-folder name + 3 item names */
+       probe path + root-folder name + 3 item names + 3 item comments */
     CHECK(AllMemFreed(*h) == 0);
     CHECK(h->memHandlesFreed == (int)h->memRecs.size());
-    CHECK(h->memHandlesFreed == 6);
+    CHECK(h->memHandlesFreed == 9);
     CHECK(h->lastGetItemNamePluginId == 4242); /* id from RegisterWithAEGP */
     /* per-call op records: trigger-phase calls flushed into the run,
        probe-phase calls recorded live */
@@ -196,7 +218,7 @@ static void TestProbeHappyPathOneProject()
     CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectRootFolder err=0"));
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetFirstProjItem err=0"));
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemName err=0"));
-    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemType err=0 value=2")); /* AEGP_ItemType_COMP */
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemType err=0 i=0 value=2")); /* AEGP_ItemType_COMP */
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetNextProjItem err=0"));
     CHECK(h->LogContains("op AEGP_MemorySuite1.AEGP_GetMemHandleSize err=0"));
     CHECK(h->LogContains("op AEGP_MemorySuite1.AEGP_LockMemHandle err=0"));
@@ -516,9 +538,10 @@ static void TestNullHandleFromGetItemName()
     CHECK(CallIdle(*h) == A_Err_NONE);
     CHECK(h->LogContains("<null handle>"));
     /* NULL name handles produce nothing to free; the two project-path
-       handles (fingerprint + probe) are still disposed. */
+       handles (fingerprint + probe) plus the item comment handle are
+       still disposed. */
     CHECK(h->memHandlesFreed == (int)h->memRecs.size());
-    CHECK(h->memHandlesFreed == 2);
+    CHECK(h->memHandlesFreed == 3);
     CHECK(h->StartCount() == 1);
     SuitesBalanced(*h);
 }
@@ -711,6 +734,182 @@ static void TestSilentTickEmitsNoOpRecords()
     SuitesBalanced(*h);
 }
 
+/* Issue #63: extended item metadata + configured MRU view slice. */
+static void TestProbeItemMetadataAndViewSlice()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("Meta");
+    h->numProjects = 1;
+    h->SetItemNames(0, {
+        h->MakeNameSpec(FakeHost::U16("First")),
+        h->MakeNameSpec(FakeHost::U16("Second")),
+    });
+    p.itemMeta.resize(2);
+    p.itemMeta[0].id = 42;
+    p.itemMeta[0].flags = 0x10;
+    p.itemMeta[0].selected = TRUE;
+    p.itemMeta[0].label = 5;
+    p.itemMeta[0].duration = {300, 30};
+    p.itemMeta[0].currentTime = {15, 30};
+    p.itemMeta[0].width = 1920;
+    p.itemMeta[0].height = 1080;
+    p.itemMeta[0].par = {2, 1};
+    p.itemMeta[0].hasView = true;
+    p.itemMeta[0].comment = h->MakeNameSpec(FakeHost::U16("note"));
+    p.timeDisplay.display_mode = 1;
+    p.timeDisplay.timebaseC = 24;
+    h->activeItemProject = 0;
+    h->activeItemIndex = 1;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("project[0].timeDisplay displayMode=1"));
+    CHECK(h->LogContains("timebase=24"));
+    CHECK(h->LogContains("app.activeItem=present"));
+    CHECK(h->LogContains("app.activeItem.name: Second"));
+    CHECK(h->LogContains("project.items[0].type=2"));
+    CHECK(h->LogContains("project.items[0].typeName=fake-type-2"));
+    CHECK(h->LogContains("project.items[0].id=42"));
+    CHECK(h->LogContains("project.items[0].flags=16"));
+    CHECK(h->LogContains("project.items[0].selected=1"));
+    CHECK(h->LogContains("project.items[0].label=5"));
+    CHECK(h->LogContains("project.items[0].duration=300/30"));
+    CHECK(h->LogContains("project.items[0].currentTime=15/30"));
+    CHECK(h->LogContains("project.items[0].dimensions=1920x1080"));
+    CHECK(h->LogContains("project.items[0].pixelAspect=2/1"));
+    CHECK(h->LogContains("project.items[0].parentFolder=present"));
+    CHECK(h->LogContains("project.items[0].comment: note"));
+    CHECK(h->LogContains("project.items[0].mruView=1"));
+    CHECK(h->LogContains("project.items[0].view.previewing=1 playback=12/30"));
+    CHECK(h->LogContains("project.items[0].view.guidesVisible=1"));
+    CHECK(h->LogContains("project.items[0].view.guidesSnap=0"));
+    CHECK(h->LogContains("project.items[0].view.guidesLocked=1"));
+    CHECK(h->LogContains("project.items[1].mruView=0"));
+    CHECK(!h->LogContains("project.items[1].view."));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemMRUView err=0 i=0 hasView=1"));
+    CHECK(h->LogContains("op AEGP_ItemViewSuite2.AEGP_GetItemViewPlaybackTime err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesLocked err=0 i=0"));
+    CHECK(AllMemFreed(*h) == 0);
+    for (const auto& rec : h->memRecs)
+    {
+        CHECK(rec->lockCount == 0);
+    }
+    SuitesBalanced(*h);
+}
+
+/* Issue #63: Item View suite acquisition failure is non-fatal — the
+   core probe still completes and the view slice stays silent. */
+static void TestProbeItemViewSuiteUnavailable_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("N"))});
+    h->projects[0].itemMeta.resize(1);
+    h->projects[0].itemMeta[0].hasView = true;
+    h->failAcquireItemView = true;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("probe.error: AEGP Item View suite unavailable"));
+    CHECK(!h->LogContains("mruView"));
+    CHECK(!h->LogContains("AEGP_ItemViewSuite2.AEGP_GetItemViewPlaybackTime"));
+    /* core item metadata still ran */
+    CHECK(h->LogContains("project.items[0].id=1000"));
+    SuitesBalanced(*h);
+}
+
+/* Issue #63: acquired Item View suite with a missing entry degrades
+   the slice (suite still released), never the run. */
+static void TestProbeItemViewEntriesMissing_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("N"))});
+    h->projects[0].itemMeta.resize(1);
+    h->projects[0].itemMeta[0].hasView = true;
+    h->nullItemViewEntry = 2; /* GuidesVisible NULL */
+    h->PopulateSuites();
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.error: AEGP Item View suite unavailable"));
+    CHECK(!h->LogContains("mruView"));
+    SuitesBalanced(*h);
+    CHECK(h->acquireCount[7] == h->releaseCount[7]);
+    CHECK(h->acquireCount[7] == 1);
+}
+
+/* Issue #63: extended-metadata getter failures are per-call — the
+   walk, names and probe completion are unaffected. */
+static void TestProbeItemMetaFailuresNonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("N"))});
+    h->itemMetaErr = A_Err_GENERIC;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("project.items[0].name: N")); /* core path intact */
+    CHECK(h->LogContains("project.items[0].type=2"));
+    CHECK(!h->LogContains("project.items[0].typeName="));
+    CHECK(!h->LogContains("project.items[0].id="));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemID err=1 i=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemComment err=1 i=0"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemMRUView err=1 i=0"));
+    CHECK(!h->LogContains("mruView="));
+    CHECK(AllMemFreed(*h) == 0);
+    SuitesBalanced(*h);
+}
+
+/* Issue #63: project time-display and active-item query failures are
+   logged per-call and never abort the run. */
+static void TestProbeProjectLevelQueryFailures()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->projectTimeDisplayErr = A_Err_GENERIC;
+    h->activeItemErr = A_Err_GENERIC;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("AEGP_GetActiveItem err=1"));
+    CHECK(!h->LogContains("timeDisplay displayMode"));
+    CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay err=1"));
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetActiveItem err=1"));
+    SuitesBalanced(*h);
+}
+
+/* Issue #63: a missing required ItemSuite9 detail entry fails closed
+   like any other missing suite entry; a missing ItemViewSuite2 entry
+   is non-fatal (covered above). */
+static void TestIdleNullItemEntryFailsClosed()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->nullItemEntry = 1; /* AEGP_GetItemMRUView == NULL */
+    h->PopulateSuites();
+    h->numProjects = 1;
+    h->AddProject("P");
+    CHECK(CallIdle(*h) == A_Err_STRUCT);
+    CHECK(h->StartCount() == 0);
+    CHECK(h->LogContains("probe.aborted"));
+    SuitesBalanced(*h);
+}
+
 /* ------------------------------------------------------------------ */
 
 int main()
@@ -745,6 +944,12 @@ int main()
     TestIdleFingerprintFailsOnMissingProject();
     TestIdlePathQueryFailureFailsFingerprint();
     TestSilentTickEmitsNoOpRecords();
+    TestProbeItemMetadataAndViewSlice();
+    TestProbeItemViewSuiteUnavailable_NonFatal();
+    TestProbeItemViewEntriesMissing_NonFatal();
+    TestProbeItemMetaFailuresNonFatal();
+    TestProbeProjectLevelQueryFailures();
+    TestIdleNullItemEntryFailsClosed();
 
     printf("----\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
