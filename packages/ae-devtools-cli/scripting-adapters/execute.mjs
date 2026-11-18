@@ -129,6 +129,16 @@ export async function runOperation(input = {}) {
     scriptProvenance: input.scriptProvenance,
     requestId: input.requestId,
   });
+  // A runner that replies with no outcome object is a transport-level
+  // failure, not a completed dispatch — report it structurally instead
+  // of dereferencing `outcome.result` into a TypeError (Issue #226).
+  if (outcome === null || typeof outcome !== "object") {
+    return {
+      status: "failed", stage: "transport", reason: "EMPTY_RUNNER_RESULT",
+      detail: `runner.runScript returned ${outcome === null ? "null" : typeof outcome} for '${opId}'`,
+      opId,
+    };
+  }
 
   // Decode the host's JSON-string result for callers. A non-JSON or
   // absent result is reported verbatim — never fabricated.
@@ -139,6 +149,9 @@ export async function runOperation(input = {}) {
   // Adapter payload contract: __adp_json emits {ok:true,...} on success.
   // An explicit ok:false is a host-level logical failure even though the
   // dispatch itself completed — surface it, never report bare COMPLETED.
+  // The reported `outcome` is normalized to FAILED here (Issue #196) so
+  // every consumer (CLI evidence, MCP payload, VSCode summary) agrees;
+  // the wire-level truth stays visible via status/adapterError/result.
   const adapterFailed = result !== null && typeof result === "object" && result.ok === false;
   if (adapterFailed) {
     return {
@@ -146,6 +159,7 @@ export async function runOperation(input = {}) {
       opId,
       mutating: op.mutating === true,
       destructive: op.destructive === true,
+      outcome: "FAILED",
       status: "failed",
       adapterError: result.error ?? result,
       result,

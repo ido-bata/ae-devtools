@@ -10,6 +10,7 @@
  */
 
 import { buildHandshake, type HandshakeResponse } from "./handshake.ts";
+import type { SupportedRelease as CatalogSupportedRelease } from "./coverage.ts";
 import type { ImportedSource } from "./schema.ts";
 import type { SdkAggregateImport as SdkImport } from "./import-sdk.ts";
 
@@ -29,6 +30,10 @@ export function buildDiscoveryHandshake(input: {
   semantics: ImportedSource;
   sdk: SdkImport;
   meta: DiscoveryMeta;
+  /** The recorded supported-release declaration (release-scope.json).
+   *  Defaults to not-recorded — discovery must never imply a supported
+   *  set the owner has not declared (Issue #230). */
+  supportedRelease?: CatalogSupportedRelease;
 }): HandshakeResponse {
   return buildHandshake({
     scripting: input.scripting,
@@ -44,7 +49,7 @@ export function buildDiscoveryHandshake(input: {
     executionMode: "catalog-only",
     transport: "none",
     generatedAt: input.meta.generatedAt,
-    supportedRelease: { state: "not-recorded" },
+    supportedRelease: input.supportedRelease ?? { state: "not-recorded" },
     // No AE session exists here: target identity/ownership/non-interference
     // remain unattested (defaults: null / unknown / unproven).
   });

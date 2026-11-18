@@ -13,15 +13,11 @@ import { validateLaunchJson, hasErrors } from "../src/schema.mjs";
 import { buildAttachConfig, writeLaunchJson, DEFAULT_NAME } from "../src/gen.mjs";
 import { evaluatePreflight, versionPlausible, parseSpecifier } from "../src/preflight.mjs";
 import { parseJsonc } from "../src/jsonc.mjs";
+import { t, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = join(HERE, "..", "fixtures");
 const CLI = join(HERE, "..", "src", "cli.mjs");
-let passed = 0;
-function t(name, fn) {
-  try { fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
 
 function loadFixture(f) {
   return JSON.parse(readFileSync(join(FIX, f), "utf8"));
@@ -369,4 +365,4 @@ t("cli preflight produces the schema and a verdict on any host", () => {
   assert.equal(j.debugCompletionClaimed, false);
 });
 
-console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);
+await finish("tests passed");

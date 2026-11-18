@@ -30,6 +30,13 @@ test("platform dirs: darwin/win32 paths, others refused", () => {
   assert.match(cepExtensionsDir({ platform: "win32", appData: "C:\\AppData\\Roaming" }), /CEP.*extensions$/);
   assert.throws(() => cepExtensionsDir({ platform: "linux" }), /unsupported/);
   assert.match(cepLogDir({ platform: "darwin", home: "/h" }), /Library.*Logs.*CSXS$/);
+  // win32: Adobe CEP Debugging Handbook documents the logs folder as
+  // %temp% directly (not %APPDATA%\Adobe\CEP\logs). Modeled path only.
+  assert.equal(
+    cepLogDir({ platform: "win32", temp: "C:\\Users\\u\\AppData\\Local\\Temp" }),
+    "C:\\Users\\u\\AppData\\Local\\Temp");
+  assert.throws(() => cepLogDir({ platform: "win32", temp: null }), /TEMP/);
+  assert.equal(cepLogDir({ platform: "linux", temp: "/tmp" }), null);
 });
 
 test("install → status → idempotent reinstall → drift reinstall", async () => {
@@ -106,6 +113,18 @@ test("collectLogs lists CEPHtmlEngine logs with sizes; empty dir ok", async () =
   assert.deepEqual(empty.logs, []);
 });
 
+test("collectLogs resolves the modeled win32 log dir via platform/temp", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "cep-logs-win-"));
+  await writeFile(join(dir, "CEPHtmlEngine12-AEFT-26.5.3-com.example.panel.log"), "x");
+  const r = await collectLogs({ platform: "win32", temp: dir });
+  assert.equal(r.dir, dir);
+  assert.equal(r.logs.length, 1);
+  // unsupported platform → no dir, empty result, no throw
+  const none = await collectLogs({ platform: "linux", temp: dir });
+  assert.equal(none.dir, null);
+  assert.deepEqual(none.logs, []);
+});
+
 test("playerDebugModeStatus reports set/unset per CSXS domain without writing", async () => {
   const { playerDebugModeStatus } = await import("../lifecycle.mjs");
   const calls = [];
@@ -127,4 +146,20 @@ test("playerDebugModeStatus is honest off-darwin", async () => {
   const r = await playerDebugModeStatus({ platform: "linux" });
   assert.equal(r.supported, false);
   assert.match(r.note, /UNVERIFIED/);
+});
+
+test("extension id path traversal is refused on every entry point (Issue #227)", async () => {
+  const src = await makeExt();
+  const target = await makeTarget();
+  // Hostile manifest Id escapes the extensions dir.
+  const evil = await makeExt("../../escape");
+  await assert.rejects(() => install({ sourceDir: evil, targetDir: target }), /invalid extension id/);
+  // Caller-supplied ids on uninstall/status get the same guard.
+  await assert.rejects(() => uninstall({ extensionId: "../x", targetDir: target }), /invalid extension id/);
+  await assert.rejects(() => status({ extensionId: "..", targetDir: target }), /escapes|invalid extension id/);
+  await assert.rejects(() => status({ extensionId: "/abs", targetDir: target }), /invalid extension id/);
+  await assert.rejects(() => uninstall({ extensionId: "a/b", targetDir: target }), /invalid extension id/);
+  // Nothing was created outside (or inside) the target.
+  const { readdir } = await import("node:fs/promises");
+  assert.deepEqual(await readdir(target), []);
 });

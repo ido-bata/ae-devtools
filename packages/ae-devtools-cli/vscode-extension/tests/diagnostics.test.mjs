@@ -102,6 +102,31 @@ test("non-COMPLETED outcome without error becomes a transport-outcome record", (
   assert.equal(records[0].severity, "warning");
 });
 
+test("adapter-level refusal without wire outcome still yields a record (Issue #181)", () => {
+  // status:"refused" with no `outcome` field — the shape that used to
+  // produce zero Problems-panel records.
+  const records = recordsFromExecuteResult(
+    { status: "refused", stage: "adapter", reason: "UNKNOWN_OPERATION", detail: "no such op" },
+    { session: { kind: "fake" } },
+  );
+  assert.equal(records.length, 1);
+  assert.equal(records[0].kind, "transport-outcome");
+  assert.equal(records[0].outcome, "REFUSED");
+  assert.equal(records[0].severity, "warning");
+});
+
+test("adapter ok:false payload beats COMPLETED wire outcome (Issue #181)", () => {
+  const records = recordsFromExecuteResult({
+    outcome: "COMPLETED",
+    status: "failed",
+    adapterError: { message: "adapter boom" },
+    result: { ok: false },
+  });
+  assert.equal(records.length, 1);
+  assert.equal(records[0].outcome, "FAILED");
+  assert.equal(records[0].severity, "error");
+});
+
 test("COMPLETED outcome produces no diagnostic records", () => {
   assert.deepEqual(recordsFromExecuteResult({ outcome: "COMPLETED", result: { ok: true } }), []);
   assert.deepEqual(recordsFromExecuteResult(null), []);

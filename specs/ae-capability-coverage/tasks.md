@@ -8,7 +8,7 @@
 
 One independently reviewable Issue/PR per implementation slice. No speculative native bridge before #17/#18 proof. For SDK suite families not implementable in one slice, #19 creates additional tracked Issues, preserving the full public SDK denominator. Fake tests do not satisfy real-host gates.
 
-Checkboxes track evidence-backed completion: a CAP is checked only when its Issue's deliverable exists and the Issue is closed; partial progress stays unchecked with the gap noted in the section Status line. Section Status lines mirror the linked GitHub Issue state — they are not a substitute for it.
+Checkboxes track evidence-backed completion at the level recorded inline next to each CAP: a CAP is checked when its deliverable exists and its declared evidence level (fake / real-host / etc.) is met, with any residual acceptance noted inline. A checked CAP under an Issue that stays open for other CAPs or higher-level acceptance is **not** real-host or release verified — the inline note and the section Status line carry that distinction. Section Status lines mirror the linked GitHub Issue state — they are not a substitute for it.
 
 ### [#8](https://github.com/ido-bata/ae-devtools/issues/8) — Tool parity research
 
@@ -137,7 +137,7 @@ CAP047 is left **unchecked**: the decomposition exists and is tracked, but the c
 
 ### [#20](https://github.com/ido-bata/ae-devtools/issues/20) — VSCode/MCP developer interface
 
-Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (`dev-loop/`, `mcp-server/`; automated test + fake/mock, packaged in `@ido-bata/ae-devtools-cli`). VSCode extension scaffold + diagnostics surface + debugger-attach commands merged (`vscode-extension/`; PRs #159–#161, fake level; `vsce package` produces an installable VSIX). Real-editor acceptance and a8n-session acceptance remain release-candidate items.
+Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (`dev-loop/`, `mcp-server/`; automated test + fake/mock, packaged in `@ido-bata/ae-devtools-cli`). VSCode extension scaffold + diagnostics surface + debugger-attach commands merged (`vscode-extension/`; PRs #159–#161, fake level; `vsce package` produces an installable VSIX), plus the `vscode-debugger/` attach-config generator and preflight checks (fake level). Real-editor acceptance and a8n-session acceptance remain release-candidate items.
 
 - [ ] **CAP049** Expose shared discovery/session/API metadata. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
 - [x] **CAP050** Implement VSCode run/inspect/diagnostic vertical slice. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20)) — fake-level verified; real-editor acceptance pending
@@ -146,11 +146,11 @@ Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (
 
 ### [#21](https://github.com/ido-bata/ae-devtools/issues/21) — Conformance/evidence
 
-Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance record + layer-2 claim gate + release gate wiring merged** (`src/conformance.ts` PR #146, `src/release-gate.ts` + `release-scope.json` + `evidence/conformance/` PR #148, release-PR CI job PR #149; verdict `no-claims` honestly reported while zero verified-real-host claims exist). Gate verdict semantics and release-acceptance connection are recorded in `docs/release.md` §conformance gate (no-claims ≠ pass ≠ usability proof; supportedRelease stays an owner decision; unverified platforms are never claimed to force a block). Real-host evidence records and the supportedRelease owner decision (plan §6.1) remain open; the real-host matrix depends on a contract-satisfying ae-a8n publish.
+Dependencies: #8–#20; ae-a8n #97–#99; ae-test #19. Status: **open — conformance record + layer-2 claim gate + release gate wiring merged** (`src/conformance.ts` PR #146, `src/release-gate.ts` + `release-scope.json` + `evidence/conformance/` PR #148, release-PR CI job PR #149). Gate verdict semantics and release-acceptance connection are recorded in `docs/release.md` §conformance gate (no-claims ≠ pass ≠ usability proof; supportedRelease stays an owner decision; unverified platforms are never claimed to force a block). First verified-real-host evidence recorded: `evidence/conformance/run-2026-11-18-ae2026-a8n-020/` and `run-2026-11-18-ae2026-a8n-021/` — 9 scripting claims PASS on macOS arm64 / AE 26.5.3x9 / ae-a8n 0.2.0 tarball each (020 via the direct a8n-transport harness, 021 additionally exercising the MCP stdio + CLI doctor paths), sourceSha `f6cfbdff` (Issue #177, PR #178); `real-host-claims.json` feeds the release gate claim set. Remaining: native/security conformance lanes, Windows matrix (UNVERIFIED), ae-test/farm binding, and the supportedRelease owner decision (plan §6.1).
 
-- [ ] **CAP053** Define real-host fixture and immutable evidence manifest. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
-- [ ] **CAP054** Run script/native/transport/security conformance. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
-- [ ] **CAP055** Bind ae-a8n/ae-test/farm evidence to exact SHA. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21))
+- [x] **CAP053** Define real-host fixture and immutable evidence manifest. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21)) — disposable-project harnesses (`conformance/real-run.mjs`, `mcp-real-run.mjs`, PR #177) + `ae-devtools.conformance-record/v1` with `artifactHashes` same-bytes verification
+- [ ] **CAP054** Run script/native/transport/security conformance. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21)) — partial: 9 scripting claims verified-real-host PASS (darwin/AE2026, run-2026-11-18); native / transport / security lanes and non-darwin platforms not yet run
+- [ ] **CAP055** Bind ae-a8n/ae-test/farm evidence to exact SHA. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21)) — partial: record binds `sourceSha` + ae-a8n 0.2.0 tarball hash; ae-test / farm evidence not yet bound
 - [x] **CAP056** Reject stale/fake-only/unknown coverage release claims. ([Issue #21](https://github.com/ido-bata/ae-devtools/issues/21)) — gate semantics + acceptance rules in `docs/release.md` §conformance gate
 
 ### [#36](https://github.com/ido-bata/ae-devtools/issues/36) — CEP/UXP extension lifecycle

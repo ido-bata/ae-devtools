@@ -16,9 +16,34 @@ import { fileURLToPath } from "node:url";
 
 import { createServer, SERVER_NAME } from "../server.mjs";
 import { loadTrustedCodec, createJsxRunner } from "../../trusted-execution/runner.mjs";
+import { openFakeSession } from "../../devtools-cli/fake-session.mjs";
+import { reapRun } from "../../devtools-cli/session-guard.mjs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = join(HERE, "..", "server.mjs");
+
+function tempRunsDir() {
+  return mkdtempSync(join(tmpdir(), "ae-devtools-mcp-runs-"));
+}
+
+function readOnlyMarker(runsDir) {
+  const files = readdirSync(runsDir).filter((f) => f.endsWith(".json"));
+  assert.equal(files.length, 1, `expected exactly one run marker, got ${files.join(",")}`);
+  return JSON.parse(readFileSync(join(runsDir, files[0]), "utf8"));
+}
+
+/** Session shaped like the stripped a8n session mcp-server/session.mjs returns. */
+function fakeA8nSession() {
+  const s = openFakeSession();
+  return {
+    ...s,
+    kind: "a8n",
+    evidenceLevel: "verified on real host (macOS)",
+    meta: { aeVersion: "26.5-fake", ownership: "owned", aeA8nHead: "deadbeef" },
+  };
+}
 
 /** In-process MCP client over PassThrough streams. */
 function makeClient(serverOpts = {}) {
@@ -130,6 +155,24 @@ test("unknown method → JSON-RPC method-not-found; bad JSON → parse error", a
   await c.server.close();
 });
 
+test("id-less tools/call is a notification: no dispatch, no response (Issue #219)", async () => {
+  const { factory, calls } = countingSessionFactory();
+  const c = makeClient({ sessionFactory: factory });
+  await c.request("initialize", { protocolVersion: "2025-06-18", capabilities: {} });
+  c.notify("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  await new Promise((r) => setTimeout(r, 200));
+  // No response may be written for a notification, and the session
+  // factory must never have been invoked.
+  assert.equal(c.inbox.length, 0);
+  assert.equal(calls.count, 0);
+  const ping = await c.request("ping");
+  assert.deepEqual(ping.result, {});
+  await c.server.close();
+});
+
 test("ae_discover lists ops with honest evidence; opens no session", async () => {
   const { factory, calls } = countingSessionFactory();
   const c = makeClient({ sessionFactory: factory });
@@ -197,7 +240,7 @@ test("ae_execute destructive op without confirmDestructive is refused by the can
     arguments: { opId: "project.new", consent: "grant" },
   }));
   assert.equal(isError, true);
-  assert.equal(payload.outcome, "refused");
+  assert.equal(payload.outcome, "REFUSED");
   assert.equal(payload.result.reason, "DESTRUCTIVE_CONFIRMATION_REQUIRED");
   assert.equal(payload.session.kind, "fake");
   assert.equal(payload.session.evidenceLevel, "fake/mock only");
@@ -229,6 +272,109 @@ test("developer-loop vertical over MCP: discover→inspect→execute→verify on
   await c.server.close();
 });
 
+test("ae_execute adapter-level failure is isError even when wire outcome is COMPLETED (Issue #181)", async () => {
+  // Session whose runner reports a wire COMPLETED dispatch carrying an
+  // adapter ok:false payload — the false-green shape the shared
+  // outcome normalization (dev-loop/outcomes.mjs) now catches.
+  const factory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-adapter-fail" },
+    runner: {
+      runScript: async () => ({
+        outcome: "COMPLETED",
+        result: JSON.stringify({ ok: false, error: { message: "adapter boom" } }),
+      }),
+    },
+  });
+  const c = makeClient({ sessionFactory: factory });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(isError, true, "adapter-level failure must not report isError:false");
+  // Issue #196: the reported outcome is normalized — never COMPLETED.
+  assert.equal(payload.outcome, "FAILED");
+  assert.equal(payload.result.status, "failed");
+  assert.equal(payload.result.adapterError.message, "adapter boom");
+  // Issue #196: the failure payload carries the canonical
+  // ae-devtools.diagnostics/v1 record — same mapping as CLI/VSCode.
+  assert.equal(payload.diagnostics?.status, "ok");
+  const rec = payload.diagnostics?.records?.[0];
+  assert.equal(rec?.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(rec?.kind, "transport-outcome");
+  assert.equal(rec?.outcome, "FAILED");
+  assert.equal(rec?.evidence, "fake");
+  await c.server.close();
+});
+
+test("ae_execute failure payload carries diagnostics record; success payload does not (Issue #196)", async () => {
+  const c = makeClient();
+  // Adapter-level refusal (destructive confirm missing) is a dispatch
+  // failure → record present.
+  const refused = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "project.new", consent: "grant" },
+  }));
+  assert.equal(refused.isError, true);
+  assert.equal(refused.payload.diagnostics?.records?.[0]?.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(refused.payload.diagnostics.records[0].outcome, "REFUSED");
+
+  // Clean completion → no diagnostics block at all.
+  const ok = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(ok.isError, false);
+  assert.equal(ok.payload.diagnostics, undefined);
+  await c.server.close();
+});
+
+test("ae_execute result with error:null is NOT a failure — unified error rule (Issue #196)", async () => {
+  // The old MCP-local `error !== undefined` patch reported error:null
+  // as failure; the shared rule in dev-loop/outcomes.mjs does not.
+  const factory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-null-error" },
+    runner: {
+      runScript: async () => ({
+        outcome: "COMPLETED",
+        error: null,
+        result: JSON.stringify({ ok: true, result: "fine" }),
+      }),
+    },
+  });
+  const c = makeClient({ sessionFactory: factory });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(isError, false);
+  assert.equal(payload.outcome, "COMPLETED");
+  assert.equal(payload.diagnostics, undefined);
+  await c.server.close();
+});
+
+test("server close is bounded when session.close hangs (Issue #196)", async () => {
+  const factory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-hang" },
+    runner: { runScript: async () => ({ outcome: "COMPLETED", result: null }) },
+    close: () => new Promise(() => {}), // never resolves
+  });
+  const c = makeClient({ sessionFactory: factory, closeTimeoutMs: 80 });
+  // Open the session via a dispatch, then close — must settle fast.
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const started = Date.now();
+  await c.server.close();
+  assert.ok(Date.now() - started < 10_000, "session close was not bounded");
+});
+
 test("ae_execute unknown op is a typed refusal, not a crash", async () => {
   const c = makeClient();
   const { payload, isError } = toolPayload(await c.request("tools/call", {
@@ -236,7 +382,7 @@ test("ae_execute unknown op is a typed refusal, not a crash", async () => {
     arguments: { opId: "no.such.op", consent: "grant" },
   }));
   assert.equal(isError, true);
-  assert.equal(payload.outcome, "refused");
+  assert.equal(payload.outcome, "REFUSED");
   assert.equal(payload.result.reason, "UNKNOWN_OPERATION");
   await c.server.close();
 });
@@ -278,6 +424,102 @@ test("UNKNOWN outcome is never retried — exactly one transport send", async ()
   assert.equal(payload.outcome, "UNKNOWN");
   assert.equal(sends, 1, "UNKNOWN must not be retried — one dispatch, one send");
   await c.server.close();
+});
+
+// ---- run-guard residue markers for a8n sessions (Issue #198, 案 C) ----
+
+test("a8n session open writes a run-guard marker (surface mcp) with request events and NO attestation", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = makeClient({
+      sessionKind: "a8n",
+      sessionFactory: async () => fakeA8nSession(),
+      runsDir,
+    });
+    const { payload, isError } = toolPayload(await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    }));
+    assert.equal(isError, false);
+    assert.equal(payload.outcome, "COMPLETED");
+
+    const marker = readOnlyMarker(runsDir);
+    assert.equal(marker.schema, "ae-devtools.cli.run-guard/v1");
+    assert.equal(marker.surface, "mcp");
+    assert.equal(marker.sessionKind, "a8n");
+    assert.equal(marker.status, "open");
+    // Ownership KIND is recorded (it is what the stripped session
+    // actually reports via meta) — but as a bare claim, no evidence.
+    assert.equal(marker.session.ownership?.kind, "owned");
+    assert.equal(marker.session.ownership?.evidence ?? null, null);
+    // Fail-closed: no process attestation was recorded — the slice
+    // handle never reaches this surface.
+    assert.equal(marker.session.process, undefined);
+    // Request lifecycle: dispatched then resolved for the dispatch.
+    const dispatched = marker.requests.filter((r) => r.event === "dispatched");
+    const resolved = marker.requests.filter((r) => r.event === "resolved");
+    assert.equal(dispatched.length, 1);
+    assert.equal(resolved.length, 1);
+    assert.equal(dispatched[0].requestId, resolved[0].requestId);
+    assert.match(dispatched[0].requestId, /^req-mcp-/);
+    assert.equal(dispatched[0].method, "read.projectSummary");
+
+    // The marker is residue-visible but NOT recoverable: reap must
+    // refuse at the missing-attestation gate even though the runner
+    // pid is dead and ownership claims "owned".
+    const verdict = await reapRun(marker.runId, {
+      dir: runsDir, aliveFn: () => false,
+    });
+    assert.equal(verdict.verdict, "REFUSED");
+    assert.equal(verdict.reason, "NO_A8N_ATTESTATION");
+
+    // Clean close removes the marker — no residue on the happy path.
+    await c.server.close();
+    assert.equal(existsSync(join(runsDir, `${marker.runId}.json`)), false);
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("fake session opens write NO run-guard marker (no AE residue possible)", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = makeClient({ sessionKind: "fake", runsDir });
+    const { isError } = toolPayload(await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    }));
+    assert.equal(isError, false);
+    assert.deepEqual(readdirSync(runsDir), []);
+    await c.server.close();
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("a8n session open failure leaves an open-failed marker", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = makeClient({
+      sessionKind: "a8n",
+      sessionFactory: async () => { throw new Error("open boom"); },
+      runsDir,
+    });
+    const res = await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    });
+    assert.equal(res.error?.code, -32603);
+    const marker = readOnlyMarker(runsDir);
+    assert.equal(marker.surface, "mcp");
+    assert.equal(marker.status, "open-failed");
+    assert.equal(marker.session, null);
+    // close() must not rewrite the open-failed marker to "closed".
+    await c.server.close();
+    assert.equal(readOnlyMarker(runsDir).status, "open-failed");
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
 });
 
 // ---- spawned stdio smoke test: proves the real NDJSON-over-stdio path ----
@@ -343,4 +585,63 @@ test("spawned server over real stdio: initialize → tools → execute → verif
   } finally {
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
   }
+});
+
+// ---- outcome normalization consistency (Issue #226) ----
+
+test("lowercase adapter outcome spellings normalize on MCP surface; session meta cannot spoof kind/evidenceLevel", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const inner = openFakeSession();
+    const session = {
+      ...inner,
+      kind: "a8n",
+      evidenceLevel: "verified on real host (macOS)",
+      // meta must not override the honest top-level fields.
+      meta: { aeVersion: "26.5-fake", ownership: "owned", kind: "fake", evidenceLevel: "spoofed" },
+      runner: { runScript: async () => ({ outcome: "unknown", result: null }) },
+      pin: { sessionId: "sess-lower-unknown" },
+    };
+    const c = makeClient({ sessionKind: "a8n", sessionFactory: async () => session, runsDir });
+    const { payload, isError } = toolPayload(await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    }));
+    assert.equal(isError, true);
+    // Raw "unknown" is normalized to the wire spelling — consumers
+    // comparing "UNKNOWN" must not miss it.
+    assert.equal(payload.outcome, "UNKNOWN");
+    assert.equal(payload.session.kind, "a8n");
+    assert.equal(payload.session.evidenceLevel, "verified on real host (macOS)");
+    // The run-guard event uses the same normalization: lowercase
+    // "unknown" is the recoverable in-flight state → "timeout", never
+    // "resolved".
+    const marker = readOnlyMarker(runsDir);
+    const events = marker.requests.map((r) => r.event);
+    assert.ok(events.includes("timeout"), `expected timeout event, got ${JSON.stringify(events)}`);
+    assert.ok(!events.includes("resolved"));
+    await c.server.close();
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("runner returning null produces a structured payload, not a throw (Issue #226)", async () => {
+  const c = makeClient({
+    sessionFactory: async () => ({
+      kind: "fake",
+      evidenceLevel: "fake/mock only",
+      runner: { runScript: async () => null },
+      pin: { sessionId: "sess-null-runner" },
+      close: async () => {},
+    }),
+  });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(isError, true);
+  assert.equal(payload.outcome, "FAILED");
+  assert.equal(payload.result.reason, "EMPTY_RUNNER_RESULT");
+  await c.server.close();
 });

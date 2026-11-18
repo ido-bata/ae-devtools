@@ -12,7 +12,17 @@ import {
   beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
   attachEvidence, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
-import { failureOutcome, isFailureResult } from "../diagnostics.mjs";
+import { failureOutcome, isFailureResult, normalizedOutcome, isUnknownOutcome } from "../../dev-loop/outcomes.mjs";
+import { parseArgs, arg as argvArg, hasFlag } from "../argv.mjs";
+import {
+  aeProcessSnapshot,
+  createEvalDispatch,
+  gitHeadAndDirty,
+  spawnMcpStdio,
+  withTimeout,
+} from "../real-run-kit.mjs";
+import { consentScopeFor } from "../../trusted-execution/permissions.mjs";
+import { t, at, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "cli.mjs");
@@ -22,7 +32,6 @@ const RUNS_DIR = join(tmpdir(), "ae-devtools-cli-test-runs");
 // Packaged diagnostics module (Issue #113): diagnostics/ ships in the
 // tarball next to devtools-cli/.
 const DIAG_FIXTURE_JSX = join(HERE, "..", "..", "diagnostics", "tests", "fixtures", "single", "runtime-error.jsx");
-let passed = 0;
 
 function run(args, env = {}) {
   try {
@@ -35,14 +44,6 @@ function run(args, env = {}) {
     // nonzero exit still prints the JSON result on stdout
     return { code: e.status ?? 1, body: JSON.parse(e.stdout?.toString() ?? "{}") };
   }
-}
-function t(name, fn) {
-  try { fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
-async function at(name, fn) {
-  try { await fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
 }
 function freshRunsDir() {
   rmSync(RUNS_DIR, { recursive: true, force: true });
@@ -79,18 +80,18 @@ t("execute on fake session completes and verify reads back", () => {
 
 t("execute refuses without --consent grant (default deny)", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--confirm-destructive"]).body;
-  assert.equal(r.outcome, "refused");
+  assert.equal(r.outcome, "REFUSED");
 });
 
 t("execute refuses destructive op without --confirm-destructive", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--consent", "grant"]).body;
-  assert.equal(r.outcome, "refused");
+  assert.equal(r.outcome, "REFUSED");
   assert.match(JSON.stringify(r.result), /DESTRUCTIVE|refused/);
 });
 
 t("execute reports unknown op", () => {
   const r = run(["execute", "no.such.op", "--session", "fake", "--consent", "grant"]).body;
-  assert.equal(r.outcome, "refused");
+  assert.equal(r.outcome, "REFUSED");
   assert.equal(r.result.reason, "UNKNOWN_OPERATION");
 });
 
@@ -141,6 +142,25 @@ t("hung close hits --close-timeout-ms and keeps marker", () => {
   assert.ok(Date.now() - started < 60_000, "close timeout did not bound the wait");
   assert.match(r.body.cleanup.error, /timed out/);
   assert.equal(run(["runs"]).body.runs[0].status, "close-failed");
+});
+
+t("bare --close-timeout-ms does not collapse the close timeout (Issue #219)", () => {
+  freshRunsDir();
+  // A bare flag parses to boolean true; the buggy path turned that into
+  // a 1ms timeout. With a 150ms fake close, only the default 20s bound
+  // lets cleanup succeed.
+  const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant",
+    "--close-timeout-ms"],
+    { AE_DEVTOOLS_CLI_FAKE_CLOSE: "slow" });
+  assert.equal(r.body.cleanup.ok, true, JSON.stringify(r.body.cleanup));
+});
+
+t("unknown --session is a usage error and leaves no run marker (Issue #219)", () => {
+  freshRunsDir();
+  const r = run(["execute", "read.projectSummary", "--session", "typo", "--consent", "grant"]);
+  assert.equal(r.code, 2);
+  assert.equal(r.body.code, "USAGE");
+  assert.equal(run(["runs"]).body.runs.length, 0);
 });
 
 await at("SIGTERM during execute runs cleanup then exits 143", async () => {
@@ -337,6 +357,27 @@ await at("guard: owned marker without ae-a8n attestation is never reaped", async
   }
 });
 
+await at("guard: listRuns marks unattested owned markers not reapable (Issue #219)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    // Same shape the MCP/VSCode surface guards write: ownership claims
+    // "owned" but session.process attestation is absent by design.
+    const { runId } = await beginRun({ dir, sessionKind: "a8n", surface: "mcp" });
+    markSession(dir, runId, {
+      kind: "a8n", evidenceLevel: "verified on real host (macOS)",
+      meta: { aeVersion: "26.5-fake", ownership: "owned" },
+      ownership: { kind: "owned", evidence: null },
+    });
+    endRun(dir, runId, "close-failed");
+    const runs = await listRuns({ dir, aliveFn: () => false });
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].reapable, false);
+    assert.equal(runs[0].reapBlockReason, "NO_A8N_ATTESTATION");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 await at("guard: single AE candidate that is NOT the attested pid is never quit", async () => {
   const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
   try {
@@ -437,7 +478,7 @@ t("wire FAILED outcome exits non-zero (Issue #105)", () => {
 
 t("adapter-level refusal produces a transport-outcome diagnostics record", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--consent", "grant"]).body;
-  assert.equal(r.outcome, "refused"); // destructive confirm missing
+  assert.equal(r.outcome, "REFUSED"); // destructive confirm missing
   const rec = r.diagnostics?.records?.[0];
   assert.equal(rec?.recordVersion, "ae-devtools.diagnostics/v1");
   assert.equal(rec?.kind, "transport-outcome");
@@ -459,6 +500,30 @@ await at("diagnostics: failureOutcome normalizes spellings; failure status beats
   assert.equal(failureOutcome({ outcome: "COMPLETED", error: { message: "x" } }, "COMPLETED"), "FAILED");
 });
 
+t("normalizedOutcome/isUnknownOutcome normalize spellings; null-safe (Issue #226)", () => {
+  // lowercase/mixed-case spellings normalize to the wire vocabulary
+  assert.equal(normalizedOutcome({ status: "refused" }), "REFUSED");
+  assert.equal(normalizedOutcome({ outcome: "completed" }), "COMPLETED");
+  assert.equal(normalizedOutcome({ outcome: "WeIrD" }), "WeIrD"); // unknown spellings pass through verbatim
+  assert.equal(normalizedOutcome(null), null);
+  assert.equal(normalizedOutcome({}), null);
+  // explicit outcome argument wins over result fields
+  assert.equal(normalizedOutcome({ outcome: "COMPLETED" }, "failed"), "FAILED");
+  // UNKNOWN detection is spelling-normalized: lowercase "unknown" is
+  // the recoverable in-flight state; null/missing is not
+  assert.equal(isUnknownOutcome({ outcome: "UNKNOWN" }), true);
+  assert.equal(isUnknownOutcome({ status: "unknown" }), true);
+  assert.equal(isUnknownOutcome({ outcome: "COMPLETED" }), false);
+  assert.equal(isUnknownOutcome(null), false);
+  assert.equal(isUnknownOutcome({}), false);
+});
+
+t("verify accepts --args and completes (readArgs forwarding, Issue #226)", () => {
+  const r = run(["verify", "--session", "fake", "--consent", "grant",
+    "--read-op", "read.projectSummary", "--args", '{"unused":true}']);
+  assert.equal(r.body.outcome, "COMPLETED");
+});
+
 t("wire REFUSED outcome exits 1 and carries a diagnostics block", () => {
   const reply = JSON.stringify({
     ok: false,
@@ -477,15 +542,18 @@ t("wire REFUSED outcome exits 1 and carries a diagnostics block", () => {
   assert.match(rec?.message ?? "", /host reported busy\/modal/);
 });
 
-t("adapter payload failure (wire COMPLETED + status failed) exits 1 with FAILED record", () => {
+t("adapter payload failure reports FAILED outcome, exits 1 with FAILED record", () => {
   const reply = JSON.stringify({
     ok: true,
     result: JSON.stringify({ ok: false, error: { message: "adapter boom" } }),
   });
   const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"],
     { AE_DEVTOOLS_CLI_FAKE_REPLY: reply });
-  assert.equal(r.body.outcome, "COMPLETED"); // wire level
+  // Issue #196: the reported outcome is normalized at the adapter —
+  // a failure-bearing dispatch must never read COMPLETED on any surface.
+  assert.equal(r.body.outcome, "FAILED");
   assert.equal(r.body.result?.status, "failed"); // adapter level
+  assert.equal(r.body.result?.outcome, "FAILED");
   assert.equal(r.code, 1, "failure-bearing status must drive the exit code");
   const rec = r.body.diagnostics?.records?.[0];
   assert.equal(rec?.kind, "transport-outcome");
@@ -600,4 +668,224 @@ t("diagnose recognizes a CLI error document explicitly", () => {
   }
 });
 
-console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);
+// ---- Issue #197: shared argv parser + real-run kit -------------------
+
+t("argv: --flag value / --flag=value / boolean / positional", () => {
+  const { pos, flags } = parseArgs([
+    "cmd", "tail", "--out", "ev.json", "--name=My Comp", "--force",
+    "--empty=", "--next", "--other",
+  ]);
+  assert.deepEqual(pos, ["cmd", "tail"]);
+  assert.equal(flags.out, "ev.json");
+  assert.equal(flags.name, "My Comp");
+  assert.equal(flags.force, true);
+  assert.equal(flags.empty, "");
+  // --next is followed by another flag → boolean, not a value
+  assert.equal(flags.next, true);
+  assert.equal(flags.other, true);
+});
+
+t("argv: multi collects repeated flags; singles stay last-wins", () => {
+  const { flags, multi } = parseArgs(
+    ["--reports-dir", "a", "--reports-dir=b", "--sentry-dir", "s", "--once", "1", "--once", "2"],
+    { multi: ["reports-dir", "sentry-dir"] },
+  );
+  assert.deepEqual(multi["reports-dir"], ["a", "b"]);
+  assert.deepEqual(multi["sentry-dir"], ["s"]);
+  assert.equal(flags.once, "2");
+  assert.equal(flags["reports-dir"], undefined);
+});
+
+t("argv: arg() returns string values only; hasFlag sees bare flags", () => {
+  const argv = ["--install-dir", "/Applications/AE.app", "--force", "--empty="];
+  assert.equal(argvArg("--install-dir", argv), "/Applications/AE.app");
+  assert.equal(argvArg("--install-dir=/x", argv), undefined);
+  assert.equal(argvArg("--missing", argv), undefined);
+  // bare boolean is not a value
+  assert.equal(argvArg("--force", argv), undefined);
+  assert.equal(argvArg("--empty", argv), "");
+  assert.equal(hasFlag("--force", argv), true);
+  assert.equal(hasFlag("--missing", argv), false);
+  // --flag=value form
+  assert.equal(argvArg("--out", ["--out=/tmp/e.json"]), "/tmp/e.json");
+});
+
+await at("kit: createEvalDispatch binds consent scope and runScript args shape", async () => {
+  const pin = { sessionId: "sess-1", aeVersion: "26.0", dispatchId: "d1" };
+  const seen = [];
+  const runner = { runScript: async (input) => { seen.push(input); return { outcome: "COMPLETED" }; } };
+  let identity = "proj-a";
+  const dispatch = createEvalDispatch({
+    runner, pin,
+    projectIdentity: () => identity,
+    operationId: "op.test.eval",
+    scriptProvenance: "test",
+  });
+  const r1 = await dispatch("source-one", "req-1");
+  assert.equal(r1.outcome, "COMPLETED");
+  const expectedScope = consentScopeFor({
+    pin, operationId: "op.test.eval",
+    args: { source: "source-one", dispatchArgs: null },
+    projectIdentity: "proj-a",
+  });
+  assert.deepEqual(seen[0].consent.scope, expectedScope);
+  assert.equal(seen[0].source, "source-one");
+  assert.equal(seen[0].args, null);
+  assert.equal(seen[0].projectIdentity, "proj-a");
+  assert.equal(seen[0].trustedScriptOptIn, true);
+  assert.equal(seen[0].scriptProvenance, "test");
+  assert.equal(seen[0].requestId, "req-1");
+  // lazy projectIdentity: re-bound identity is used on the next dispatch
+  identity = "proj-b";
+  await dispatch("source-two", "req-2", { extra: 1 });
+  assert.equal(seen[1].projectIdentity, "proj-b");
+  assert.deepEqual(seen[1].args, { extra: 1 });
+  assert.deepEqual(seen[1].consent.scope, consentScopeFor({
+    pin, operationId: "op.test.eval",
+    args: { source: "source-two", dispatchArgs: { extra: 1 } },
+    projectIdentity: "proj-b",
+  }));
+});
+
+await at("kit: withTimeout rejects with TIMEOUT tag", async () => {
+  await assert.rejects(
+    withTimeout(new Promise(() => {}), 20, "probe"),
+    /TIMEOUT probe/,
+  );
+  assert.equal(await withTimeout(Promise.resolve(7), 1000, "ok"), 7);
+});
+
+await at("kit: spawnMcpStdio round-trips NDJSON against a stub server", async () => {
+  const records = [];
+  const stub = [
+    "const rl = require('node:readline').createInterface({ input: process.stdin });",
+    "rl.on('line', (l) => {",
+    "  const m = JSON.parse(l);",
+    "  if (m.id !== undefined) process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: m.id, result: { echo: m.method } }) + '\\n');",
+    "});",
+  ].join(" ");
+  const { child, send, notify, call } = spawnMcpStdio({
+    scriptArgs: ["-e", stub],
+    cwd: tmpdir(),
+    onRecord: (o) => records.push(o),
+    onStderr: () => {},
+  });
+  try {
+    const res = await withTimeout(send("ping", {}), 5000, "stub");
+    assert.equal(res.result.echo, "ping");
+    notify("notifications/initialized");
+    const tool = await withTimeout(call("ae_discover", {}), 5000, "stub-call");
+    assert.equal(tool.result.echo, "tools/call");
+    assert.ok(records.some((r) => r.rx && r.rx.result));
+  } finally {
+    child.kill("SIGKILL");
+  }
+});
+
+await at("kit: spawnMcpStdio rejects pending sends when the child exits (Issue #219)", async () => {
+  const { child, send } = spawnMcpStdio({
+    scriptArgs: ["-e", "setTimeout(() => process.exit(0), 50)"],
+    cwd: tmpdir(),
+    onStderr: () => {},
+  });
+  try {
+    await assert.rejects(
+      withTimeout(send("ping", {}), 5000, "dead-child"),
+      /exited with requests in flight/,
+    );
+  } finally {
+    child.kill("SIGKILL");
+  }
+});
+
+t("kit: aeProcessSnapshot and gitHeadAndDirty degrade honestly", async () => {
+  const snap = await aeProcessSnapshot("ae-devtools-definitely-no-such-proc-197");
+  assert.ok(Array.isArray(snap), JSON.stringify(snap));
+  const git = await gitHeadAndDirty(HERE);
+  assert.ok("head" in git && "dirty" in git);
+  assert.ok(git.head === null || typeof git.head === "string");
+});
+
+
+// ---- Issue #227: runId path-traversal + AppleScript injection guards ----
+
+await at("guard: non-run-* ids can never reach marker paths", async () => {
+  const base = mkdtempSync(join(tmpdir(), "guard-trav-"));
+  const dir = join(base, "runs");
+  try {
+    // A foreign .json in the runs dir is not a marker and is ignored.
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "notes.json"), "{}");
+    assert.equal((await listRuns({ dir, aliveFn: () => false })).length, 0);
+
+    // reap on a traversal id refuses before touching the filesystem.
+    let v = await reapRun("../../etc/passwd", { dir, confirm: true, exec: async () => ({ stdout: "" }) });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "INVALID_RUN_ID");
+    v = await reapRun("run-x/../../y", { dir, confirm: true, exec: async () => ({ stdout: "" }) });
+    assert.equal(v.reason, "INVALID_RUN_ID");
+
+    // endRun on a traversal id must not delete outside the runs dir.
+    const victim = join(base, "victim.json");
+    writeFileSync(victim, "{}");
+    endRun(dir, "../victim", "closed");
+    assert.ok(existsSync(victim), "endRun deleted a file outside the runs dir");
+    rmSync(victim, { force: true });
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+await at("guard: reap passes the quit target via osascript argv, never interpolated", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-osa-"));
+  try {
+    // A marker-controlled path containing a double quote must reach
+    // osascript as an argv element, never inside a script literal.
+    const appPath = "/Applications/AE \"quoted\".app";
+    const { runId } = await beginRun({ dir, sessionKind: "a8n" });
+    markSession(dir, runId, {
+      kind: "a8n", ownership: { kind: "owned", evidence: "t" },
+      installDir: "/x", appPath,
+    });
+    endRun(dir, runId, "close-failed");
+    noteSessionProcess(dir, runId, {
+      aePid: 4242,
+      attestation: {
+        source: ATTESTATION_SOURCE,
+        ownershipKind: "owned",
+        ownershipEvidence: "probe answered in owned session",
+      },
+    });
+    let osaArgs = null;
+    const exec = async (cmd, args) => {
+      if (cmd === "ps" && args[0] === "-axo") {
+        return { stdout: "  4242 " + appPath + "/Contents/MacOS/After Effects\n" };
+      }
+      if (cmd === "ps" && args.includes("4242")) return { stdout: "" };
+      if (cmd === "osascript") { osaArgs = args; return { stdout: "" }; }
+      throw new Error("unexpected exec " + cmd);
+    };
+    const v = await reapRun(runId, {
+      dir, confirm: true, aliveFn: () => false, exec, wait: async () => {},
+    });
+    assert.equal(v.verdict, "REAPED");
+    assert.ok(osaArgs, "osascript was not invoked");
+    assert.equal(osaArgs[osaArgs.length - 1], appPath);
+    assert.ok(osaArgs.includes("on run argv"));
+    assert.ok(!osaArgs.some((a) => a.includes("tell application \"" + appPath)),
+      "target was interpolated into a script literal");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("diagnose refuses marker-lookup traversal ids", () => {
+  freshRunsDir();
+  const r = run(["diagnose", "../outside-marker"]);
+  assert.equal(r.code, 2);
+  assert.equal(r.body.schema, "ae-devtools.cli.diagnose/v1");
+  assert.ok(r.body.notes.some((n) => n.includes("no such file or run marker")), JSON.stringify(r.body.notes));
+});
+
+await finish("tests passed");

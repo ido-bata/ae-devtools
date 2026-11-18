@@ -40,7 +40,6 @@
  * in strength to a8n-transport/scenario.mjs — it exercises gate
  * mechanics, not authenticated authorization (ae-a8n #97–#99).
  */
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -50,57 +49,29 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { promisify } from "node:util";
 
 import { openSliceSession } from "../a8n-transport/session.mjs";
 import { runVerticalSlice, assertSliceOutcomes } from "../a8n-transport/scenario.mjs";
-import { consentScopeFor } from "../trusted-execution/permissions.mjs";
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
 import { runOperation } from "../scripting-adapters/execute.mjs";
 import { buildFile } from "../jsx-toolchain/src/build.mjs";
 import { lookup } from "../jsx-toolchain/src/sourcemap.mjs";
+import { arg } from "../devtools-cli/argv.mjs";
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
+import {
+  MAIN_EXE,
+  aeProcessSnapshot,
+  createEvalDispatch,
+  gitHeadAndDirty,
+} from "../devtools-cli/real-run-kit.mjs";
 
-const execFileAsync = promisify(execFile);
 const HERE = dirname(new URL(import.meta.url).pathname);
 const FIXTURES = join(HERE, "..", "jsx-toolchain", "fixtures");
 
 const EVAL_OP = "op.a8n-transport.eval";
 const PROJECT_IDENTITY_PRE = "conformance-pre-disposable";
-
-function arg(flag) {
-  const i = process.argv.indexOf(flag);
-  return i >= 0 ? process.argv[i + 1] : undefined;
-}
-
-async function gitHeadAndDirty() {
-  try {
-    const { stdout: head } = await execFileAsync(
-      "git", ["-C", HERE, "rev-parse", "HEAD"], { timeout: 5_000 });
-    const { stdout: dirty } = await execFileAsync(
-      "git", ["-C", HERE, "status", "--porcelain"], { timeout: 5_000 });
-    return { head: head.trim(), dirty: dirty.trim().length > 0 };
-  } catch {
-    return { head: null, dirty: null };
-  }
-}
-
-const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)/;
-async function aeProcessSnapshot(fragment) {
-  try {
-    const { stdout } = await execFileAsync("ps", ["-axo", "pid=,args="], { timeout: 10_000 });
-    return stdout.split("\n").map((l) => l.trim())
-      .filter((l) => l.length > 0 && l.includes(fragment))
-      .map((l) => {
-        const m = /^(\d+)\s+(.*)$/.exec(l);
-        return m ? { pid: Number(m[1]), args: m[2] } : { pid: null, args: l };
-      });
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
-}
 
 function sha256File(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -124,7 +95,7 @@ export async function main() {
     installDir: installDir ?? null,
     workdir,
     fixturePath,
-    git: await gitHeadAndDirty(),
+    git: await gitHeadAndDirty(HERE),
     consentModel: "local approve-all policy (gate mechanics only; not authenticated authorization)",
     aeProcessesBeforeLaunch: await aeProcessSnapshot(processFragment),
     steps: [],
@@ -162,25 +133,20 @@ export async function main() {
     }
 
     // ---- eval dispatch helper (consent scope bound to exact source) ----
+    // Shared wrapper (Issue #197): the consent scope and the runScript
+    // args shape are hashed together inside runner.mjs, so one builder
+    // keeps them from drifting. projectIdentity is read lazily — it is
+    // re-bound after project.new/project.save below.
     let projectIdentity = PROJECT_IDENTITY_PRE;
+    const evalDispatchRaw = createEvalDispatch({
+      runner: session.runner,
+      pin: session.pin,
+      projectIdentity: () => projectIdentity,
+      operationId: EVAL_OP,
+      scriptProvenance: "conformance-run",
+    });
     const evalDispatch = async (label, source) => {
-      const scope = consentScopeFor({
-        pin: session.pin,
-        operationId: EVAL_OP,
-        args: { source, dispatchArgs: null },
-        projectIdentity,
-      });
-      const r = await session.runner.runScript({
-        source,
-        pin: session.pin,
-        operationId: EVAL_OP,
-        args: null,
-        projectIdentity,
-        consent: { scope },
-        trustedScriptOptIn: true,
-        scriptProvenance: "conformance-run",
-        requestId: `conf-eval-${label}-${Date.now().toString(36)}`,
-      });
+      const r = await evalDispatchRaw(source, `conf-eval-${label}-${Date.now().toString(36)}`);
       evalResults[label] = r;
       return r;
     };
@@ -388,20 +354,9 @@ export async function main() {
     const okBuild = buildFile(join(FIXTURES, "ok.ts"));
     step("jsx.build.ok", { ok: okBuild.status === "ok", status: okBuild.status });
     if (okBuild.status === "ok") {
-      const jsxDispatch = async (source, requestId) => {
-        const scope = consentScopeFor({
-          pin: session.pin,
-          operationId: EVAL_OP,
-          args: { source, dispatchArgs: null },
-          projectIdentity,
-        });
-        return session.runner.runScript({
-          source, pin: session.pin, operationId: EVAL_OP, args: null,
-          projectIdentity, consent: { scope },
-          trustedScriptOptIn: true, scriptProvenance: "conformance-run",
-          requestId,
-        });
-      };
+      // Same consent-bound eval dispatch as the identity probes above —
+      // the shared wrapper (Issue #197) replaced the hand-built copy.
+      const jsxDispatch = evalDispatchRaw;
       const j1 = await jsxDispatch(okBuild.output, `conf-jsx-ok-${Date.now().toString(36)}`);
       step("jsx.dispatch.ok", { ok: j1.outcome === "COMPLETED", outcome: j1.outcome });
       const j2 = await jsxDispatch('"" + $.global.__toolchainProbe', `conf-jsx-read-${Date.now().toString(36)}`);
@@ -458,25 +413,16 @@ export async function main() {
 
     // ---- 6. timeout dimension: deadline must yield UNKNOWN, no resend ----
     const shortRunner = createJsxRunner({ transport: session.transport, deadlineMs: 800 });
-    const timeoutScope = consentScopeFor({
+    const timeoutDispatch = createEvalDispatch({
+      runner: shortRunner,
       pin: session.pin,
+      projectIdentity: () => projectIdentity,
       operationId: EVAL_OP,
-      args: { source: '$.sleep(2000); "slept"', dispatchArgs: null },
-      projectIdentity,
+      scriptProvenance: "conformance-run",
     });
     const t0 = Date.now();
     const timeoutRequestId = `conf-timeout-${Date.now().toString(36)}`;
-    const timeoutResult = await shortRunner.runScript({
-      source: '$.sleep(2000); "slept"',
-      pin: session.pin,
-      operationId: EVAL_OP,
-      args: null,
-      projectIdentity,
-      consent: { scope: timeoutScope },
-      trustedScriptOptIn: true,
-      scriptProvenance: "conformance-run",
-      requestId: timeoutRequestId,
-    });
+    const timeoutResult = await timeoutDispatch('$.sleep(2000); "slept"', timeoutRequestId);
     evidence.timeoutProbe = {
       outcome: timeoutResult.outcome,
       contractOutcome: timeoutResult.contractOutcome ?? null,
@@ -544,16 +490,7 @@ export async function main() {
   if (evidence.ok === false) process.exitCode = 1;
 }
 
-function isMainEntry() {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  try {
-    return realpathSync(resolve(entry)) === realpathSync(new URL(import.meta.url).pathname);
-  } catch {
-    return false;
-  }
-}
-if (isMainEntry()) {
+if (isMainEntry(import.meta.url)) {
   main().catch((error) => {
     console.error(`conformance real-run failed: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

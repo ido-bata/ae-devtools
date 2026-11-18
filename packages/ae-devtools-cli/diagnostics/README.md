@@ -13,9 +13,9 @@
 | CAP | Requirement | State |
 | --- | --- | --- |
 | CAP061 | Diagnostics record schema | **implemented, automated-test level** — `schema.mjs` |
-| CAP062 | Script exception / expression error / render failure host collection | **partially** — `fromAeError` normalizer done (fake); expression-error and render-failure collectors `pending-real-host` |
-| CAP063 | Panel logs / native crash / plugin load failure collection | **pending-real-host** — sources unverified until #36/#17/#18 real-host runs; registry records why |
-| CAP064 | Diagnostics → source-position mapping | **partially implemented, automated-test level** — `source-map.mjs` resolves JSX `{line,column}` → original TS via jsx-toolchain sourcemaps (single-file one-hop, project two-hop); panel/plugin-binary mapping still pending consumers |
+| CAP062 | Script exception / expression error / render failure host collection | **partially** — `fromAeError` + `fromRenderItem` normalizers done (fake); expression-error collector `pending-real-host` |
+| CAP063 | Panel logs / native crash / plugin load failure collection | **partially** — `fromCrashEvidence` (recovery-orchestrator manifest bridge) + `fromPanelLog`/`collectPanelLogs` (CEPHtmlEngine*.log fixture parser) done at fake level; plugin-load-failure `pending-real-host`; real-host inputs unverified |
+| CAP064 | Diagnostics → source-position mapping | **partially implemented, automated-test level** — `source-map.mjs` resolves JSX `{line,column}` → original TS via jsx-toolchain sourcemaps (single-file one-hop, project two-hop); `plugin-binary` reports `unsupported-with-reason` (no symbol source); panel-asset mapping still pending consumers |
 
 ## Record model (`schema.mjs`)
 
@@ -34,14 +34,22 @@ malformed positions and bad timestamps are refused, never coerced.
 
 `COLLECTOR_STATUS` gives every kind an explicit status —
 `implemented-fake` / `pending-real-host` / `unsupported-with-reason` —
-with the reason and upstream dependency recorded. Two normalizers work
+with the reason and upstream dependency recorded. Normalizers that work
 today without AE:
 
 - `fromAeError(aeError, ctx)` — trusted-codec `aeError` → `script-exception`.
 - `fromTransportOutcome(outcome, ctx)` — probe/trusted-execution outcome → `transport-outcome`.
+- `fromCrashEvidence(manifest, ctx)` — recovery-orchestrator crash-evidence
+  manifest → `native-crash` records (delegates to the tested
+  `crashEvidenceToDiagnostics`; preserves sha256 `artifactHashes`).
+- `fromPanelLog(text, { path })` / `collectPanelLogs({ logDir })` — tolerant
+  `CEPHtmlEngine*.log` parser → `panel-log` records; a missing/unreadable
+  log dir is an explicit incomplete result, never fabricated positions.
+- `fromRenderItem(item, ctx)` — synthetic `rqItem.status` shape →
+  `render-failure` record (real status strings unverified).
 
-Everything else is honestly marked pending; no collector claims a source
-it cannot reach.
+`expression-error` and `plugin-load-failure` remain `pending-real-host`;
+no collector claims a source it cannot reach.
 
 ## Source-position mapping (`source-map.mjs`, CAP064)
 
@@ -111,5 +119,6 @@ diagnostics/
 ├── source-map.mjs       # diagnostics source → TS position via jsx-toolchain maps
 └── tests/               # node:test suite (fake-level only)
     ├── fixtures/        # committed jsx-toolchain build outputs (jsx + maps)
-    └── source-map.test.mjs
+    │   └── panel-logs/  # clearly-fake CEPHtmlEngine*.log fixtures
+    └── *.test.mjs
 ```

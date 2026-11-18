@@ -94,11 +94,16 @@ node packages/ae-devtools-cli/cep-extension/devkit.mjs validate ./my-panel
 ### Option C — vendor the directory
 
 Copy `cep-extension/` into your project (e.g. `tools/cep-extension/`).
-`scaffold.mjs` resolves its templates relative to its own location, so
-the copy works standalone:
+`scaffold.mjs` resolves its templates relative to its own location.
+Two CLI entry points (`scaffold.mjs`, `cep-lifecycle.mjs`) import the
+shared helpers `devtools-cli/argv.mjs` and
+`devtools-cli/is-main-entry.mjs` from the sibling directory, so vendor
+those two files alongside, preserving the relative layout:
 
 ```sh
 cp -R /path/to/ae-devtools/packages/ae-devtools-cli/cep-extension tools/cep-extension
+mkdir -p tools/devtools-cli
+cp /path/to/ae-devtools/packages/ae-devtools-cli/devtools-cli/{argv,is-main-entry}.mjs tools/devtools-cli/
 node tools/cep-extension/devkit.mjs scaffold --id com.example.my-panel --out ./my-panel
 node tools/cep-extension/devkit.mjs validate ./my-panel
 ```
@@ -142,7 +147,9 @@ node cep-lifecycle.mjs playerdebugmode
 Mechanized (automated-test level, `tests/lifecycle.test.mjs`):
 
 - platform CEP extensions dirs (`darwin`/`win32` paths; other platforms
-  refused) and the CEPHtmlEngine log dir
+  refused) and the CEPHtmlEngine log dir (`darwin` verified on real
+  host; `win32` modeled as `%TEMP%` per Adobe's Debugging Handbook —
+  never exercised on a Windows host, **UNVERIFIED**)
 - `install` — copies the extension into the CEP extensions dir via
   tmp-dir + rename (rollback on failure), writes an ownership marker
   `.ae-devtools-owned.json`, verifies the manifest `Id` matches;
@@ -187,6 +194,14 @@ gate and an owned AE session):
   `~/Library/Application Support/Adobe/CEP/extensions/` (macOS)
   (`docs/troubleshooting.md`). Whether AE 2026/2027 honors this path
   unchanged is unverified.
+- CEP log folder: `~/Library/Logs/CSXS/` (macOS, verified on this host)
+  / `%TEMP%` directly (Windows, per Adobe CEP Debugging Handbook
+  CEP_11.x/12.x "Logs Folders" — modeled in `cepLogDir`, **UNVERIFIED**
+  on a real Windows host). Note: logs are NOT under
+  `%APPDATA%\Adobe\CEP\logs`.
+- Remote debugging / `.zxp` signing: see `REMOTE-DEBUGGING.md` and
+  `ZXP-SIGNING.md` — decision/feasibility notes, all real-host claims
+  UNVERIFIED.
 - `CSInterface.js` is **bundled** at the extension root (official CEP_12.x
   file). Whether a given AE/CEP runtime additionally resolves a host copy
   is irrelevant to correctness — bundling is the documented requirement.
@@ -221,6 +236,8 @@ cep-extension/
 ├── README.md                  # this file
 ├── EVIDENCE.md                # evidence ledger
 ├── LOAD-PROOF.md              # gated real-AE load procedure + fixtures
+├── REMOTE-DEBUGGING.md        # .debug/remote-debugging feasibility note (UNVERIFIED claims marked)
+├── ZXP-SIGNING.md             # .zxp signing decision record (no signing executed)
 ├── scaffold.mjs               # generator CLI (Node >= 22, zero deps)
 ├── devkit.mjs                 # external-project entry: scaffold | validate
 ├── validate.mjs               # static extension-dir validator (JSON report)

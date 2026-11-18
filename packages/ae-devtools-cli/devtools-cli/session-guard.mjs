@@ -10,11 +10,26 @@
  * (a later `doctor`/`reap` invocation, a human, ae-a8n #108's adopt path)
  * can use to find the residue.
  *
- * Marker lifecycle:
+ * Marker lifecycle (statuses actually written today):
  *   beginRun()          — before session open (status "opening")
- *   markSession()       — after open, records ownership evidence
+ *   markSession()       — after open (status "open"), records ownership
  *   endRun("closed")    — clean close: marker removed
- *   endRun("close-failed"|"interrupted"|"error") — marker kept, status set
+ *   endRun("close-failed"|"open-failed") — marker kept, status set
+ *
+ * `surface` (Issue #198): which dev-loop surface owns the run —
+ * "cli" (devtools-cli/cli.mjs), "mcp" (mcp-server), "vscode"
+ * (vscode-extension). Non-CLI surfaces record markers for residue
+ * visibility ONLY: they never call noteSessionProcess, so
+ * session.process/attestation stays absent and reap/recover keep
+ * refusing those markers (fail-closed).
+ *
+ *   Dead vocabulary note (Issue #196 inventory): "interrupted" and
+ *   "error" were documented here historically but no writer ever
+ *   emits them — a hard-killed runner simply leaves status "open".
+ *   recovery-orchestrator/orchestrator.mjs accepts a WIDER status list
+ *   on its own side ("closed","corrupt","open-failed","interrupted",
+ *   "error","close-failed"); trimming that list is owned by the
+ *   recovery-orchestrator workstream, not this file.
  *
  * Reap rules (fail-closed, mirrors ae-a8n ownership semantics):
  *   - runner pid alive            → refuse (the owner may still clean up)
@@ -53,6 +68,10 @@ export const ATTESTATION_SOURCE = "ae-a8n:AfterEffects.recoveryTarget()";
 export const RUNS_DIR = process.env.AE_DEVTOOLS_CLI_RUNS_DIR
   ?? join(tmpdir(), "ae-devtools-cli-runs");
 
+/** Run ids are `run-<timestamp>-<rand>` from beginRun(); anything else is
+ *  not a marker we own and must never reach a path join (Issue #227). */
+export const RUN_ID_RE = /^run-[A-Za-z0-9-]+$/;
+
 /** pid liveness. EPERM means the process exists but is not ours to signal. */
 export function pidAlive(pid, kill = process.kill.bind(process)) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -85,6 +104,9 @@ function writeMarker(dir, marker) {
 }
 
 function readMarker(dir, runId) {
+  // Only canonical run-* ids may resolve to a marker path — a foreign id
+  // must never escape the runs dir via `../` (Issue #227).
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId)) return null;
   const file = markerPath(dir, runId);
   if (!existsSync(file)) return null;
   try {
@@ -99,11 +121,14 @@ function readMarker(dir, runId) {
  * The marker exists even if openSession throws, so a launch that leaves an
  * unproven AE behind is still attributable to this runId.
  */
-export async function beginRun({ dir = RUNS_DIR, sessionKind, argv = [], exec = execFileAsync } = {}) {
+export async function beginRun({ dir = RUNS_DIR, sessionKind, argv = [], surface = null, exec = execFileAsync } = {}) {
   const runId = `run-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
   const marker = {
     schema: GUARD_SCHEMA,
     runId,
+    // Which surface owns this run ("cli"|"mcp"|"vscode"). Attribution
+    // only — it grants no recovery authority.
+    surface: typeof surface === "string" && surface.length > 0 ? surface : null,
     pid: process.pid,
     pidStartStamp: await processStartStamp(process.pid, exec),
     startedAt: new Date().toISOString(),
@@ -189,8 +214,8 @@ export function noteSessionProcess(dir, runId, evidence = {}) {
 
 /**
  * Link a surviving run marker to the evidence file written for the run
- * (--out). Only markers that outlive cleanup (close-failed/interrupted/
- * error) can carry this — a cleanly closed run removes its marker, so
+ * (--out). Only markers that outlive cleanup (close-failed/open-failed)
+ * can carry this — a cleanly closed run removes its marker, so
  * there is nothing to link. `ae-devtools diagnose <runId>` follows this
  * pointer to re-resolve stored diagnostics (Issue #103).
  */
@@ -238,6 +263,9 @@ export function latestRequestEvent(marker, requestId) {
  * it so `doctor`/`reap` can still find the residue.
  */
 export function endRun(dir, runId, status) {
+  // A non-canonical runId can never name one of our markers — refuse
+  // before markerPath joins it into a filesystem path (Issue #227).
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId)) return;
   const file = markerPath(dir, runId);
   if (!existsSync(file)) return;
   if (status === "closed") {
@@ -279,16 +307,30 @@ export async function listRuns({
       if (now !== null && now !== marker.pidStartStamp) runnerAlive = false;
     }
     const owned = marker.session?.ownership?.kind === "owned";
+    // reapable must mirror reap()'s gates, not just ownership: without
+    // ae-a8n attestation and an app/install identity reap always
+    // refuses, so reporting reapable:true would lie about exactly the
+    // residue class surface guards (MCP/VSCode) produce (Issue #219).
+    const att = marker.session?.process?.attestation;
+    const attested = att?.source === ATTESTATION_SOURCE &&
+      typeof att?.ownershipEvidence === "string" && att.ownershipEvidence.length > 0 &&
+      Number.isInteger(marker.session?.process?.aePid);
+    const hasAppIdentity = marker.session?.appPath != null || marker.session?.installDir != null;
+    const reapBlockReason = runnerAlive
+      ? "RUNNER_ALIVE"
+      : owned !== true
+        ? "OWNERSHIP_NOT_OWNED"
+        : !attested
+          ? "NO_A8N_ATTESTATION"
+          : !hasAppIdentity
+            ? "NO_APP_IDENTITY"
+            : null;
     runs.push({
       ...marker,
       markerPath: markerPath(dir, runId),
       runnerAlive,
-      reapable: !runnerAlive && owned === true && marker.status !== "closed",
-      reapBlockReason: runnerAlive
-        ? "RUNNER_ALIVE"
-        : owned !== true
-          ? "OWNERSHIP_NOT_OWNED"
-          : null,
+      reapable: reapBlockReason === null && marker.status !== "closed",
+      reapBlockReason,
     });
   }
   return runs;
@@ -328,6 +370,11 @@ export async function reapRun(runId, {
   now = () => Date.now(),
   wait = sleep,
 } = {}) {
+  // A non-canonical runId can never name one of our markers — refuse
+  // before markerPath joins it into a filesystem path (Issue #227).
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId)) {
+    return { runId, verdict: "REFUSED", reason: "INVALID_RUN_ID" };
+  }
   const marker = readMarker(dir, runId);
   if (marker === null) return { runId, verdict: "NO_MARKER" };
   if (marker.status === "closed") return { runId, verdict: "ALREADY_CLOSED" };
@@ -430,8 +477,13 @@ export async function reapRun(runId, {
 
   const target = appPath ?? `${installDir.replace(/\/$/, "")}.app`;
   try {
+    // Pass the target via argv — never interpolate a marker-controlled
+    // path into an AppleScript string literal (Issue #227).
     await exec("osascript", [
-      "-e", `tell application "${target}" to quit`,
+      "-e", "on run argv",
+      "-e", "tell application (item 1 of argv) to quit",
+      "-e", "end run",
+      target,
     ], { timeout: 30_000 });
   } catch (e) {
     return { runId, verdict: "QUIT_FAILED", candidate: candidates[0], message: String(e?.message ?? e) };

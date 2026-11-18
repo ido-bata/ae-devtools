@@ -100,8 +100,13 @@ express. This limitation is recorded, not hidden.
 
 ## Permission classes and consent (CAP025/CAP027 groundwork)
 
-`permissions.mjs` implements the class layer that sits **after** the
-catalog dispatch gate (`assertDispatchAllowed`):
+`permissions.mjs` is the **effective dispatch authorization** for the
+trusted-eval path (Issue #184). The catalog's `assertDispatchAllowed`
+gates advertised capability ids in the handshake layer — exercised as
+contract evidence in `a8n-transport/` (pre-launch battery +
+real-run.mjs), not invoked per dispatch, because raw ExtendScript eval
+has no catalog capability row. `packages/capability-catalog` is a
+private TS package; the published JS dispatch path never imports it.
 
 - `executionClassFor(advertisement, permission)` resolves
   `read-only` / `intentional-write` / `trusted-dev-script` from the

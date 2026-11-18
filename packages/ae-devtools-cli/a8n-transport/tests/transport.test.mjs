@@ -86,6 +86,55 @@ test("pin aeVersion mismatch refuses before ae.call", async () => {
   assert.equal(ae.calls.length, 0);
 });
 
+test("pin aeVersion unverifiable refuses before ae.call (fail-closed, Issue #219)", async () => {
+  const ae = createFakeAe();
+  ae.info = () => { throw new Error("probe unavailable"); };
+  const t = createA8nTransport({ ae });
+  const reply = codec.parse(await t.send(envelope()));
+  assert.equal(reply.refusal.code, "SESSION_PIN_UNVERIFIED");
+  // requestId echo is load-bearing: runner.mjs classifies a refusal
+  // without it as UNKNOWN/UNATTRIBUTABLE_REPLY (mayHaveMutated) instead
+  // of REFUSED — pin that distinction here (Issue #248).
+  assert.equal(reply.requestId, "req-t1");
+  assert.equal(ae.calls.length, 0);
+});
+
+test("pin unverifiable covers missing info, non-string and empty live version (Issue #248)", async () => {
+  const noInfo = createFakeAe();
+  delete noInfo.info;
+  const t1 = createA8nTransport({ ae: noInfo });
+  const refused = codec.parse(await t1.send(envelope()));
+  assert.equal(refused.refusal.code, "SESSION_PIN_UNVERIFIED");
+  assert.equal(noInfo.calls.length, 0);
+
+  const nonString = createFakeAe();
+  nonString.info = () => ({ version: 26 });
+  const t2 = createA8nTransport({ ae: nonString });
+  const refused2 = codec.parse(await t2.send(envelope()));
+  assert.equal(refused2.refusal.code, "SESSION_PIN_UNVERIFIED");
+  assert.equal(nonString.calls.length, 0);
+
+  const emptyVersion = createFakeAe({ version: "" });
+  const t3 = createA8nTransport({ ae: emptyVersion });
+  const refused3 = codec.parse(await t3.send(envelope()));
+  assert.equal(refused3.refusal.code, "SESSION_PIN_UNVERIFIED");
+  assert.equal(emptyVersion.calls.length, 0);
+});
+
+test("versionless pin refuses before ae.call — no drift check is not a pass (Issue #248)", async () => {
+  const ae = createFakeAe({ version: PIN_VERSION });
+  const t = createA8nTransport({ ae });
+  for (const pin of [
+    { sessionId: "s", dispatchId: "d" },          // no aeVersion key
+    { sessionId: "s", aeVersion: null, dispatchId: "d" },
+    { sessionId: "s", aeVersion: "", dispatchId: "d" },
+  ]) {
+    const reply = codec.parse(await t.send(envelope({ pin })));
+    assert.equal(reply.refusal.code, "SESSION_PIN_UNVERIFIED", JSON.stringify(pin));
+  }
+  assert.equal(ae.calls.length, 0);
+});
+
 test("pin match dispatches; absent pin skips the check", async () => {
   const ae = createFakeAe({ version: "26.5.3" });
   const t = createA8nTransport({ ae });

@@ -1,7 +1,7 @@
 # Research — AE operation surface and evidence
 
 - Status: **research baseline, not a complete API inventory**.
-- Recorded: **2026-11-12**. This record describes repository state read at that date; external API claims below still require source-version and real-host verification.
+- Recorded: **2026-11-12**. This record describes repository state read at that date — it is a **point-in-time baseline**, not current state: `packages/ae-devtools-cli`, `packages/capability-catalog`, `packages/native-adapter`, `inventories/*` and the conformance gate have shipped since. The §1 table's ae-devtools row predates those packages. External API claims below still require source-version and real-host verification.
 - Owner: [ae-devtools #6](https://github.com/ido-bata/ae-devtools/issues/6). Execution-specific truth remains in the respective consumer repositories.
 
 ## 1. Current ecosystem and source-of-truth boundaries

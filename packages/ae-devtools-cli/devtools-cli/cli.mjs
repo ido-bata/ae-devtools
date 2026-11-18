@@ -15,7 +15,7 @@
  *                 [--ae-a8n-root <dir>] [--install-dir <dir>]
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
- *   node cli.mjs verify [--read-op <opId>] [same session flags]
+ *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
  *   node cli.mjs runs            — list run-guard markers (residue detection)
  *   node cli.mjs reap <runId> [--confirm] — recover a stale owned leftover
  *   node cli.mjs diagnose <record.json|marker|runId>
@@ -60,29 +60,17 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseArgs } from "./argv.mjs";
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
-import { openFakeSession } from "./fake-session.mjs";
+import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
+import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
-import { buildFailureDiagnostics, failureOutcome, runDiagnose } from "./diagnostics.mjs";
+import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
+import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
+import { aeDevtoolsSourceRef } from "./real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
-const DEFAULT_CLOSE_TIMEOUT_MS = 20_000;
-
-function parseArgs(argv) {
-  const pos = [];
-  const flags = {};
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      const eq = a.indexOf("=");
-      if (eq >= 0) { flags[a.slice(2, eq)] = a.slice(eq + 1); }
-      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) { flags[a.slice(2)] = argv[++i]; }
-      else { flags[a.slice(2)] = true; }
-    } else pos.push(a);
-  }
-  return { pos, flags };
-}
 
 /** Write the JSON result. Never exits — callers decide the exit code. */
 function emit(obj) {
@@ -104,62 +92,55 @@ function findAeInstalls() {
 
 async function openSession(flags) {
   const kind = flags.session ?? "fake";
-  if (kind === "fake") return openFakeSession();
-  if (kind === "a8n") {
-    const tdir = join(EXP, "a8n-transport", "session.mjs");
-    if (!existsSync(tdir)) {
-      const e = new Error("a8n session requires packages/ae-devtools-cli/a8n-transport (Issue #49) — not present on this branch");
-      e.code = "A8N_TRANSPORT_MISSING";
-      throw e;
-    }
-    const { openSliceSession } = await import(tdir);
-    const s = await openSliceSession({
-      aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
-      installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
-    });
-    // Attest the owned target for recovery authorization: the pid and GUI
-    // session must come from ae-a8n's own ownership proof (recoveryTarget),
-    // never from a pid discovered by other means. Older ae-a8n builds lack
-    // the accessor — the marker then records nulls and recover refuses.
-    const target = typeof s.ae?.recoveryTarget === "function" ? s.ae.recoveryTarget() : null;
-    // Attestation provenance: recorded ONLY from the live ae-a8n session
-    // object. recoveryTarget() null (unowned/closed/unattested transport)
-    // or missing ownership evidence → attestation null → recover/reap
-    // refuse. The marker stays an attribution record; authority comes
-    // from this ae-a8n contract trace, never from the JSON itself.
-    const attestation = target === null ? null : {
-      source: ATTESTATION_SOURCE,
-      ownershipKind: typeof s.ownership?.kind === "string" ? s.ownership.kind : null,
-      ownershipEvidence: typeof s.ownership?.evidence === "string" ? s.ownership.evidence : null,
-      transportKind: typeof s.transportKind === "string" ? s.transportKind : null,
-      aeA8nVersion: typeof s.aeA8nHead === "string" ? s.aeA8nHead : null,
-    };
-    const processEvidence = target === null ? null : {
-      aePid: target.pid,
-      aePidStartStamp: await processStartStamp(target.pid),
-      guiSession: target.session === null || target.session === undefined
-        ? null
-        : { uid: target.session.uid, asid: target.session.asid ?? null },
-      attestation,
-    };
-    return {
-      kind: "a8n",
-      evidenceLevel: "verified on real host (macOS)",
-      runner: s.runner,
-      pin: s.pin,
-      close: () => s.close(),
-      processEvidence,
-      meta: { aeVersion: s.info?.version ?? null, ownership: s.ownership?.kind ?? null, aeA8nHead: s.aeA8nHead ?? null },
-      ownership: s.ownership ?? null,
-      installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : (s.installDir ?? null),
-      appPath: s.appPath ?? null,
-      tracePath: s.tracePath ?? null,
-      workdir: s.workdir ?? null,
-    };
+  // Session-kind dispatch is shared with MCP/VSCode via
+  // dev-loop/session-open.mjs (Issue #183) — one implementation of the
+  // fake/a8n decision, the A8N_TRANSPORT_MISSING refusal and the
+  // openSliceSession call. `base.slice` is the raw slice session the
+  // CLI needs for recovery attestation; it is stripped before return.
+  const base = await openSharedSession(kind, {
+    aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
+    installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+  });
+  if (kind !== "a8n") {
+    const { slice: _slice, ...session } = base;
+    return session;
   }
-  const e = new Error(`unknown --session '${kind}' (fake|a8n)`);
-  e.code = "USAGE";
-  throw e;
+  const s = base.slice;
+  // Attest the owned target for recovery authorization: the pid and GUI
+  // session must come from ae-a8n's own ownership proof (recoveryTarget),
+  // never from a pid discovered by other means. Older ae-a8n builds lack
+  // the accessor — the marker then records nulls and recover refuses.
+  const target = typeof s.ae?.recoveryTarget === "function" ? s.ae.recoveryTarget() : null;
+  // Attestation provenance: recorded ONLY from the live ae-a8n session
+  // object. recoveryTarget() null (unowned/closed/unattested transport)
+  // or missing ownership evidence → attestation null → recover/reap
+  // refuse. The marker stays an attribution record; authority comes
+  // from this ae-a8n contract trace, never from the JSON itself.
+  const attestation = target === null ? null : {
+    source: ATTESTATION_SOURCE,
+    ownershipKind: typeof s.ownership?.kind === "string" ? s.ownership.kind : null,
+    ownershipEvidence: typeof s.ownership?.evidence === "string" ? s.ownership.evidence : null,
+    transportKind: typeof s.transportKind === "string" ? s.transportKind : null,
+    aeA8nVersion: typeof s.aeA8nHead === "string" ? s.aeA8nHead : null,
+  };
+  const processEvidence = target === null ? null : {
+    aePid: target.pid,
+    aePidStartStamp: await processStartStamp(target.pid),
+    guiSession: target.session === null || target.session === undefined
+      ? null
+      : { uid: target.session.uid, asid: target.session.asid ?? null },
+    attestation,
+  };
+  const { slice: _slice, ...rest } = base;
+  return {
+    ...rest,
+    processEvidence,
+    ownership: s.ownership ?? null,
+    installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : (s.installDir ?? null),
+    appPath: s.appPath ?? null,
+    tracePath: s.tracePath ?? null,
+    workdir: s.workdir ?? null,
+  };
 }
 
 function consentProviderFor(flags) {
@@ -180,27 +161,17 @@ function makeCleanup(state, flags) {
     if (state.cleanupPromise) return state.cleanupPromise;
     state.cleanupPromise = (async () => {
       const cleanup = { attempted: false, ok: null, error: null, result: null };
-      if (state.session && typeof state.session.close === "function") {
-        cleanup.attempted = true;
-        const timeoutMs = Number.isFinite(Number(flags["close-timeout-ms"]))
-          ? Number(flags["close-timeout-ms"])
+      if (state.session) {
+        // Bounded close is shared with MCP/VSCode
+        // (dev-loop/session-close.mjs, Issue #196).
+        // A bare `--close-timeout-ms` parses to boolean true; Number(true)
+        // is 1 — guard on string + finite + positive like the MCP path.
+        const closeTimeoutRaw = flags["close-timeout-ms"];
+        const closeTimeoutNum = typeof closeTimeoutRaw === "string" ? Number(closeTimeoutRaw) : NaN;
+        const timeoutMs = Number.isFinite(closeTimeoutNum) && closeTimeoutNum > 0
+          ? closeTimeoutNum
           : DEFAULT_CLOSE_TIMEOUT_MS;
-        let timer;
-        try {
-          const result = await Promise.race([
-            state.session.close(),
-            new Promise((_, reject) => {
-              timer = setTimeout(() => reject(new Error(`session.close timed out after ${timeoutMs}ms`)), timeoutMs);
-            }),
-          ]);
-          cleanup.ok = true;
-          cleanup.result = result ?? null;
-        } catch (e) {
-          cleanup.ok = false;
-          cleanup.error = String(e?.message ?? e);
-        } finally {
-          clearTimeout(timer);
-        }
+        Object.assign(cleanup, await closeSessionWithTimeout(state.session, { timeoutMs }));
       }
       if (state.guard) {
         // close-failed keeps the marker so `runs`/`reap` can find residue;
@@ -340,11 +311,21 @@ async function main() {
         }
       }
 
+      // Validate the session kind BEFORE writing the run marker: an
+      // unknown --session would otherwise leave a permanent open-failed
+      // marker that reap can never resolve (OWNERSHIP_NOT_OWNED,
+      // session:null) — noise, not residue (Issue #219).
+      const sessionKind = flags.session ?? "fake";
+      if (sessionKind !== "fake" && sessionKind !== "a8n") {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `unknown --session '${flags.session}' (fake|a8n)` });
+        return 2;
+      }
+
       // Marker BEFORE session open: a launch that dies mid-open still
       // leaves an attributable residue record.
       const guard = await beginRun({
         dir: RUNS_DIR, sessionKind: flags.session ?? "fake",
-        argv: [cmd, ...rest],
+        argv: [cmd, ...rest], surface: "cli",
       });
       state.guard = { dir: RUNS_DIR, runId: guard.runId };
 
@@ -358,16 +339,24 @@ async function main() {
         // refuses markers without it, which is the intended fail-closed
         // state until the owned-session path supplies proof.
         noteSessionProcess(RUNS_DIR, guard.runId, state.session.processEvidence ?? {});
+        // Commit binding when running from the repo checkout (Issue #235
+        // / ADR-0017); nulls for installed-package runs — those records
+        // are informational, not commit-bound verification.
+        const sourceRef = await aeDevtoolsSourceRef(HERE);
         const evidence = {
           schema: "ae-devtools.cli.run/v1",
           runId: guard.runId,
           command: cmd,
+          sourceSha: sourceRef.head,
+          sourceDirty: sourceRef.dirty,
           opId: opId ?? null,
           requestId: null, // filled below once minted
           session: {
+            // meta first: session-supplied fields must not override the
+            // honest top-level kind/evidenceLevel (Issue #226).
+            ...(state.session.meta ?? {}),
             kind: state.session.kind,
             evidenceLevel: state.session.evidenceLevel,
-            ...state.session.meta,
             ownership: state.session.ownership?.kind ?? state.session.meta?.ownership ?? null,
           },
           at: new Date().toISOString(),
@@ -398,9 +387,9 @@ async function main() {
               confirmDestructive: flags["confirm-destructive"] === true,
               confirmRender: flags["confirm-render"] === true,
             })
-          : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary" });
+          : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary", readArgs: args });
         evidence.result = result;
-        evidence.outcome = result.outcome ?? result.status ?? null;
+        evidence.outcome = normalizedOutcome(result);
         // Additive failure diagnostics (Issue #103): a unified
         // ae-devtools.diagnostics/v1 record plus sourcemap resolution.
         // Completed runs carry no block; failures always do — an
@@ -425,7 +414,7 @@ async function main() {
         recordRequestEvent(RUNS_DIR, guard.runId, {
           requestId,
           method: opId ?? flags["read-op"] ?? "read.projectSummary",
-          event: evidence.outcome === "UNKNOWN" ? "timeout" : "resolved",
+          event: isUnknownOutcome(result) ? "timeout" : "resolved",
         });
         // The exit decision uses the SAME failure-bearing outcome as the
         // diagnostics gate — evidence.outcome alone is the wire spelling

@@ -381,6 +381,41 @@ try {
     assertNode.equal(json.iterations, 1, "expected a single dispatch for the clean fixture");
     assertNode.equal(json.result, "final", "unexpected fake-host result: " + out);
   });
+
+  // 14. exports boundary (Issue #184): the wildcard `./*` export was
+  //     removed — every supported subpath must resolve (check 13 already
+  //     imports all four) and every unsupported deep path must be
+  //     rejected with ERR_PACKAGE_PATH_NOT_EXPORTED from the packed
+  //     tarball install.
+  check("unsupported deep imports are rejected by exports map", () => {
+    writeFileSync(join(consumer, "exports-boundary-smoke.mjs"), [
+      "const rejected = [];",
+      "for (const subpath of [",
+      '  "@ido-bata/ae-devtools-cli/dev-loop/outcomes.mjs",',
+      '  "@ido-bata/ae-devtools-cli/dev-loop/session-open.mjs",',
+      '  "@ido-bata/ae-devtools-cli/dev-loop/tests/run.mjs",',
+      '  "@ido-bata/ae-devtools-cli/trusted-execution/outcomes.mjs",',
+      '  "@ido-bata/ae-devtools-cli/trusted-execution/tests/run.mjs",',
+      '  "@ido-bata/ae-devtools-cli/mcp-server/server.mjs",',
+      "]) {",
+      "  try {",
+      "    await import(subpath);",
+      "    rejected.push({ subpath, error: \"import succeeded\" });",
+      "  } catch (e) {",
+      "    rejected.push({ subpath, code: e.code ?? null });",
+      "  }",
+      "}",
+      "console.log(JSON.stringify(rejected));",
+      "",
+    ].join("\n"));
+    const out = run(process.execPath, ["exports-boundary-smoke.mjs"], { cwd: consumer });
+    const results14 = JSON.parse(out);
+    assertNode.equal(results14.length, 6, "unexpected probe count: " + out);
+    for (const r of results14) {
+      assertNode.equal(r.code, "ERR_PACKAGE_PATH_NOT_EXPORTED",
+        `${r.subpath} was not rejected by exports map: ${JSON.stringify(r)}`);
+    }
+  });
 } finally {
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} consumer smoke checks passed`);

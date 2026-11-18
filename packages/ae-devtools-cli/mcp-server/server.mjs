@@ -28,15 +28,22 @@
  * session via ../a8n-transport.
  */
 import { createInterface } from "node:readline";
-import { realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
+import { parseArgs } from "../devtools-cli/argv.mjs";
+import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
+import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
-export const SERVER_VERSION = "0.1.0";
+// Single source of truth for the published version — avoids the drift
+// a hardcoded constant produced when the package moved to 0.3.0.
+export const SERVER_VERSION = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 // MCP revisions this server understands. The client proposes a version
 // in `initialize`; we answer with the newest mutually supported one.
@@ -66,6 +73,11 @@ function rpcError(id, code, message, data) {
  *   sessionFactory — async (kind, options) => session (default openSession)
  *   sessionKind    — "fake" (default) | "a8n"
  *   sessionOptions — { aeA8nRoot, installDir } forwarded to the factory
+ *   closeTimeoutMs — bound for session.close() (default: the shared
+ *                    dev-loop close timeout); a hung close is reported,
+ *                    never awaited forever (Issue #196)
+ *   runsDir        — run-guard marker dir for a8n sessions (default:
+ *                    devtools-cli RUNS_DIR; Issue #198 residue markers)
  * @returns {{close: () => Promise<void>}}
  */
 export function createServer(opts = {}) {
@@ -74,6 +86,17 @@ export function createServer(opts = {}) {
   const sessionFactory = opts.sessionFactory ?? openSession;
   const sessionKind = opts.sessionKind ?? "fake";
   const sessionOptions = opts.sessionOptions ?? {};
+  const closeTimeoutMs = opts.closeTimeoutMs;
+
+  // Run-guard residue markers for a8n sessions only (Issue #198, 案 C):
+  // a SIGKILLed/crashed server leaves an attributable "open" marker in
+  // the shared runs dir. The guard records NO session.process
+  // attestation — the slice handle is stripped in session.mjs — so
+  // reap/recover keep refusing these markers (fail-closed). Fake
+  // sessions launch no AE and get no marker.
+  const guard = createSurfaceGuard({
+    surface: "mcp", sessionKind, dir: opts.runsDir,
+  });
 
   // Lazy single-flight session: opened on first dispatch-capable call,
   // shared by every later call, closed by close().
@@ -82,19 +105,45 @@ export function createServer(opts = {}) {
   const getSession = () => {
     if (!sessionPromise) {
       sessionPromise = Promise.resolve()
-        .then(() => sessionFactory(sessionKind, sessionOptions))
-        .then((s) => { resolvedSession = s; return s; });
+        .then(async () => {
+          // Marker BEFORE open: a launch that dies mid-open still
+          // leaves an attributable residue record.
+          await guard.begin();
+          try {
+            const s = await sessionFactory(sessionKind, sessionOptions);
+            guard.mark(s);
+            resolvedSession = s;
+            return s;
+          } catch (e) {
+            guard.failOpen();
+            throw e;
+          }
+        });
     }
     return sessionPromise;
   };
 
   async function close() {
     if (!sessionPromise) return;
+    let closeFailed = false;
     try {
       const s = await sessionPromise;
-      if (s && typeof s.close === "function") await s.close();
+      // Bounded close — shared with CLI/VSCode
+      // (dev-loop/session-close.mjs, Issue #196). A hung or failing
+      // close is reported on stderr, never swallowed, never unbounded.
+      if (s) {
+        const r = await closeSessionWithTimeout(s, { timeoutMs: closeTimeoutMs });
+        if (r.ok === false) {
+          closeFailed = true;
+          process.stderr.write(`mcp-server: session close failed: ${r.error}\n`);
+        }
+      }
     } catch (e) {
       process.stderr.write(`mcp-server: session close failed: ${e?.message ?? e}\n`);
+    } finally {
+      // "closed" removes the marker; "close-failed" keeps it as
+      // residue — the same contract the CLI cleanup path uses.
+      guard.end(closeFailed ? "close-failed" : "closed");
     }
   }
 
@@ -109,7 +158,10 @@ export function createServer(opts = {}) {
     const { id, method, params } = msg;
     const isNotification = id === undefined || id === null;
 
-    // Notifications never get a response — consume and drop.
+    // Notifications never get a response — consume and drop. This must
+    // precede the method dispatch: an id-less tools/call is a
+    // notification and must not execute (Issue #219).
+    if (isNotification) return null;
     if (typeof method === "string" && method.startsWith("notifications/")) {
       return null;
     }
@@ -139,11 +191,15 @@ export function createServer(opts = {}) {
           if (typeof name !== "string" || name.length === 0) {
             return rpcError(id, INVALID_PARAMS, "tools/call requires params.name (string)");
           }
-          const result = await callTool(name, args, { getSession });
+          const result = await callTool(name, args, {
+            getSession,
+            // Request lifecycle events land in the a8n run-guard marker
+            // when one exists (Issue #198); inert for fake sessions.
+            onRequestEvent: (ev) => guard.request(ev),
+          });
           return rpcResult(id, result);
         }
         default:
-          if (isNotification) return null;
           return rpcError(id, METHOD_NOT_FOUND, `Method not found: ${String(method)}`);
       }
     } catch (e) {
@@ -177,38 +233,12 @@ export function createServer(opts = {}) {
 
 // ---- CLI entry ----
 
-function parseArgs(argv) {
-  const flags = {};
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      const eq = a.indexOf("=");
-      if (eq >= 0) flags[a.slice(2, eq)] = a.slice(eq + 1);
-      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) flags[a.slice(2)] = argv[++i];
-      else flags[a.slice(2)] = true;
-    }
-  }
-  return flags;
-}
-
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Installed bins are symlinks into node_modules/.bin, so argv[1] is the
-// shim path while import.meta.url is already realpath-resolved by Node.
-// Compare realpaths or the packaged `ae-devtools-mcp` bin would never
-// start the server.
-function isMainEntry() {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  try {
-    return realpathSync(resolve(entry)) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return false;
-  }
-}
-const isMain = isMainEntry();
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
+const isMain = isMainEntry(import.meta.url);
 
 if (isMain) {
-  const flags = parseArgs(process.argv.slice(2));
+  const { flags } = parseArgs(process.argv.slice(2));
   const sessionKind = flags.session ?? "fake";
   if (!["fake", "a8n"].includes(sessionKind)) {
     process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");
@@ -220,6 +250,11 @@ if (isMain) {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     },
+    closeTimeoutMs: (() => {
+      const raw = flags["close-timeout-ms"];
+      const n = typeof raw === "string" ? Number(raw) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    })(),
   });
   process.stderr.write(
     `mcp-server: ${SERVER_NAME}@${SERVER_VERSION} schema=${MCP_SCHEMA} session=${sessionKind} ` +

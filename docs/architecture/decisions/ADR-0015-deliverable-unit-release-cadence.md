@@ -1,6 +1,6 @@
 # ADR-0015 — Deliverable-Unit Release Cadence and Continuous Release-Branch Integration
 
-> Status: **Proposed** (2026-11-16). Refines the cadence clause of
+> Status: **Accepted** (promoted 2026-11-18). Refines the cadence clause of
 > [ADR-0003-weekly-release-sprint.md](ADR-0003-weekly-release-sprint.md);
 > does not replace its branch model, Draft PR lifecycle, or stacked-PR rules.
 > ADR-0012 (explicit human authorization for release → main) is unchanged.
@@ -9,7 +9,10 @@
 
 ## Status
 
-**Proposed.** This ADR records the release cadence decided for the 0.2.0
+**Accepted.** Promotion criterion met: deliverable-unit releases 0.2.0
+(PR #87), 0.2.1 (PR #137) and 0.3.0 (PR #140) executed end-to-end under
+this cadence with the freeze → batch-verification → ready-to-merge →
+explicit-authorization sequence. This ADR records the release cadence decided for the 0.2.0
 practicalization sprint: releases are cut per **independently usable
 deliverable unit**, not on a fixed calendar, and accepted ticket PRs
 integrate into the active release branch continuously without per-merge

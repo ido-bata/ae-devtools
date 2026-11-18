@@ -44,11 +44,9 @@ import {
 } from "./compat.mjs";
 import { runHandshakeContractChecks } from "./contract.mjs";
 
-const execFileAsync = promisify(execFile);
-const HERE = dirname(fileURLToPath(import.meta.url));
-const EXTENSION_MODULE = join(HERE, "extension.mjs");
-
-/** git HEAD of a local ae-a8n checkout, or null when unavailable. */
+// Local copy of the provenance probe — kept here (not imported from
+// devtools-cli/real-run-kit.mjs) so a8n-transport does not depend on the
+// CLI layer above it (Issue #248).
 async function gitHead(root) {
   try {
     const { stdout } = await execFileAsync("git", ["-C", root, "rev-parse", "HEAD"], { timeout: 5_000 });
@@ -57,6 +55,10 @@ async function gitHead(root) {
     return null;
   }
 }
+
+const execFileAsync = promisify(execFile);
+const HERE = dirname(fileURLToPath(import.meta.url));
+const EXTENSION_MODULE = join(HERE, "extension.mjs");
 
 /**
  * Resolve the ae-a8n API + CLI. Default: the pinned npm dependency.
@@ -133,6 +135,13 @@ export async function openSliceSession(options = {}) {
       failures: battery.checks.filter((c) => !c.ok),
     });
   }
+  // Normalize once: an empty string (e.g. `--install-dir=`) is not a
+  // usable install identity — treat it as absent for BOTH the launch
+  // forward and the marker identity below (Issue #248).
+  const optInstallDir =
+    typeof options.installDir === "string" && options.installDir.length > 0
+      ? options.installDir
+      : null;
   const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-transport-"));
   // sessionRoot keeps ae-a8n's trace.jsonl + result files inside workdir so
   // launch-failure evidence survives instead of landing in an anonymous
@@ -148,7 +157,7 @@ export async function openSliceSession(options = {}) {
   let ae;
   try {
     ae = await AfterEffects.launch({
-      ...(options.installDir !== undefined ? { installDir: options.installDir } : {}),
+      ...(optInstallDir !== null ? { installDir: optInstallDir } : {}),
       hostScript: hostScriptPath,
       sessionRoot,
     });
@@ -162,51 +171,131 @@ export async function openSliceSession(options = {}) {
     throw error;
   }
 
-  const info = ae.info();
-  const ownership = ae.ownership();
-  if (!ownership || ownership.kind !== "owned") {
-    await ae.close({ unsavedChanges: "refuse" }).catch(() => {});
-    const refusal = new Error(
-      `slice requires an owned AE session, got ownership ${JSON.stringify(ownership)}`,
-    );
-    // Same evidence context as a launch failure: the session DID start
-    // (attached/unknown), so its trace exists and must be preserved.
-    refusal.sliceWorkdir = workdir;
-    refusal.sliceSessionRoot = sessionRoot;
-    refusal.sliceTracePath = ae.tracePath;
-    throw refusal;
-  }
-
-  const pin = {
-    sessionId: `a8n-slice-${randomUUID()}`,
-    aeVersion: typeof info.version === "string" ? info.version : null,
-    dispatchId: `disp-${randomUUID()}`,
-  };
-  const transport = createA8nTransport({
-    ae,
-    callTimeoutMs: options.callTimeoutMs ?? 9_500,
-  });
-  const runner = createJsxRunner({
-    transport,
-    deadlineMs: options.deadlineMs ?? 10_000,
-  });
-
-  async function close() {
+  // Everything after a successful launch runs inside one guard: ANY
+  // failure here (info/ownership throwing, transport/runner setup,
+  // the ownership refusal itself) must close the AE session — an
+  // orphaned owned process has no run-guard marker because
+  // openSliceSession runs before markSession (Issue #228).
+  try {
+    const info = ae.info();
+    const ownership = ae.ownership();
+    // Resolve the concrete install identity for run-guard markers
+    // (Issue #219): AfterEffects.launch auto-detects the install when
+    // installDir is not passed, but reap's process matching needs the
+    // real paths — resolveInstall repeats the same discovery cheaply.
+    // Best-effort: launch already succeeded, so a resolution failure
+    // here records nulls rather than failing the session.
+    let installDir = optInstallDir;
+    let appPath = null;
     try {
-      await ae.close({ unsavedChanges: "refuse" });
-    } finally {
-      if (options.workdir === undefined) {
-        rmSync(workdir, { recursive: true, force: true });
+      if (typeof aeA8nMod.resolveInstall === "function") {
+        // Await + shape-check: the export is not part of
+        // REQUIRED_AE_A8N_CONTRACT, so a missing/renamed/wrong-signature
+        // export must degrade to nulls, never throw mid-session (Issue #248).
+        const install = await aeA8nMod.resolveInstall(
+          process.platform,
+          installDir !== null ? { installDir } : {},
+        );
+        const exe = typeof install?.executable === "string" ? install.executable : null;
+        if (exe !== null && exe.length > 0) {
+          if (process.platform === "darwin") {
+            // <bundle>.app/Contents/MacOS/<exe>
+            appPath = dirname(dirname(dirname(exe)));
+            // session-guard expands a non-".app" root as `${root}.app`,
+            // so installDir must be the bundle path minus that suffix —
+            // dirname(appPath) would name the bundle's PARENT folder and
+            // the reaper's quit target would not exist (Issue #248).
+            installDir = installDir ?? appPath.replace(/\.app$/, "");
+          } else {
+            installDir = installDir ?? dirname(exe);
+          }
+        }
+      }
+    } catch {
+      // marker metadata only — see comment above
+    }
+    if (!ownership || ownership.kind !== "owned") {
+      const refusal = new Error(
+        `slice requires an owned AE session, got ownership ${JSON.stringify(ownership)}`,
+      );
+      // Same evidence context as a launch failure: the session DID start
+      // (attached/unknown), so its trace exists and must be preserved.
+      refusal.sliceWorkdir = workdir;
+      refusal.sliceSessionRoot = sessionRoot;
+      refusal.sliceTracePath = ae.tracePath;
+      throw refusal;
+    }
+
+    const pin = {
+      sessionId: `a8n-slice-${randomUUID()}`,
+      aeVersion: typeof info.version === "string" ? info.version : null,
+      dispatchId: `disp-${randomUUID()}`,
+    };
+    const transport = createA8nTransport({
+      ae,
+      callTimeoutMs: options.callTimeoutMs ?? 9_500,
+    });
+    const runner = createJsxRunner({
+      transport,
+      deadlineMs: options.deadlineMs ?? 10_000,
+    });
+
+    async function close() {
+      try {
+        await ae.close({ unsavedChanges: "refuse" });
+      } finally {
+        if (options.workdir === undefined) {
+          rmSync(workdir, { recursive: true, force: true });
+        }
       }
     }
-  }
 
-  return {
-    ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource,
-    aeA8nHead, tracePath: ae.tracePath, sessionRoot,
-    // Handshake functions from the resolved module, for live-session
-    // contract evidence (real-run.mjs). Gate already proved they exist.
-    negotiateCapabilities: aeA8nMod.negotiateCapabilities,
-    assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
-  };
+    return {
+      ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource,
+      aeA8nHead, tracePath: ae.tracePath, sessionRoot, installDir, appPath,
+      // Handshake functions from the resolved module, for live-session
+      // contract evidence (real-run.mjs). Gate already proved they exist.
+      negotiateCapabilities: aeA8nMod.negotiateCapabilities,
+      assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
+    };
+  } catch (error) {
+    // Close on EVERY post-launch failure — bounded (a hung transport
+    // close must not pin this path forever; same 20s budget as
+    // dev-loop/session-close.mjs), guarded (ae.close may be absent or
+    // non-promise on older ae-a8n), and REPORTED: a refused close leaves
+    // an owned AE process alive with no run-guard marker, so the close
+    // outcome is attached to the thrown error instead of swallowed
+    // (Issue #248). The original failure is still the one callers see.
+    let closeError = null;
+    try {
+      if (typeof ae.close === "function") {
+        const closePromise = Promise.resolve()
+          .then(() => ae.close({ unsavedChanges: "refuse" }))
+          .then(() => null, (e) => { closeError = e; });
+        let timedOut = false;
+        await Promise.race([
+          closePromise,
+          new Promise((resolve) => setTimeout(() => { timedOut = true; resolve(); }, 20_000)),
+        ]);
+        if (timedOut) closeError = new Error("ae.close timed out after 20s");
+      }
+    } catch (e) {
+      closeError = e;
+    }
+    if (error !== null && typeof error === "object") {
+      // Context attachment is best-effort: a frozen/non-extensible thrown
+      // error must not replace the original failure with a TypeError.
+      try { error.sliceWorkdir ??= workdir; } catch { /* frozen error */ }
+      try { error.sliceSessionRoot ??= sessionRoot; } catch { /* frozen error */ }
+      try { error.sliceTracePath ??= ae.tracePath; } catch { /* trace path is best-effort */ }
+      if (closeError !== null) {
+        try { error.sliceCloseError = String(closeError?.message ?? closeError); } catch { /* frozen error */ }
+      }
+    }
+    // NOTE: on this path the auto-created workdir is intentionally left
+    // for the CALLER — error.sliceWorkdir/sliceTracePath point inside it
+    // and real-run.mjs copies the trace into the evidence file before
+    // cleanup. Do not rmSync here.
+    throw error;
+  }
 }

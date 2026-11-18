@@ -1,0 +1,38 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-18T04-10-46-340Z-9104ee14",
+  "command": "execute",
+  "opId": "project.open",
+  "requestId": "req-run-2026-11-18T04-10-46-340Z-9104ee14-project.open",
+  "session": {
+    "kind": "a8n",
+    "evidenceLevel": "verified on real host (macOS)",
+    "aeVersion": "26.5.3x9",
+    "ownership": "owned",
+    "aeA8nHead": "0.2.0"
+  },
+  "at": "2026-11-18T04:10:49.533Z",
+  "result": {
+    "requestId": "req-run-2026-11-18T04-10-46-340Z-9104ee14-project.open",
+    "operationId": "project.open",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "project": "/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep"
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "project.open",
+    "mutating": true,
+    "destructive": true
+  },
+  "outcome": "COMPLETED",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

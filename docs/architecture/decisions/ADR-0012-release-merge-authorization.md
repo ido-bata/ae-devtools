@@ -1,6 +1,8 @@
 # ADR-0012 — Explicit Human Authorization for Release PR Merge
 
 > Status: **Proposed** (2026-09-18). Promotion to Accepted requires (a) at least one successful release PR end-to-end with the described authorization boundary honored, (b) branch protection / ruleset on `main` enforces the reviewer / CODEOWNERS branch of the contract.
+>
+> Verification note (2026-11-18): (a) is met — release PRs #87 (0.2.0), #137 (0.2.1), #140 (0.3.0) merged to `main` through the authorized path. (b) is partially met — `main` has branch protection (PR-required flow, conversation resolution, no force-push) and `.github/CODEOWNERS` exists, but `required_approving_review_count=0` and `require_code_owner_reviews=false`, so reviewer approval is policy-enforced (solo profile: explicit human authorization + CI), not mechanically enforced. Promotion remains an owner governance call.
 
 ---
 

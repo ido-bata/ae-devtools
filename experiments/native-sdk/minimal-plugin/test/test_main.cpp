@@ -198,10 +198,10 @@ static void TestProbeHappyPathOneProject()
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemName err=0"));
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemType err=0 value=2")); /* AEGP_ItemType_COMP */
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetNextProjItem err=0"));
-    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_GetMemHandleSize err=0"));
-    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_LockMemHandle err=0"));
-    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_UnlockMemHandle err=0"));
-    CHECK(h->LogContains("op AEGPMemorySuite1.AEGP_FreeMemHandle err=0"));
+    CHECK(h->LogContains("op AEGP_MemorySuite1.AEGP_GetMemHandleSize err=0"));
+    CHECK(h->LogContains("op AEGP_MemorySuite1.AEGP_LockMemHandle err=0"));
+    CHECK(h->LogContains("op AEGP_MemorySuite1.AEGP_UnlockMemHandle err=0"));
+    CHECK(h->LogContains("op AEGP_MemorySuite1.AEGP_FreeMemHandle err=0"));
     CHECK(h->LogContains("op SPBasicSuite.AcquireSuite err=0 suite=\"AEGP Item Suite\" version=14"));
     CHECK(h->LogContains("op SPBasicSuite.ReleaseSuite err=0 suite=\"AEGP Item Suite\" version=14"));
     for (const auto& rec : h->memRecs)

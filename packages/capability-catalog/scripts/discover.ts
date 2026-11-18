@@ -11,10 +11,11 @@
 
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { REPO_ROOT, loadRepoInputs } from "./inputs.ts";
 import { buildDiscoveryHandshake } from "../src/discover.ts";
+import { parseReleaseScope } from "../src/release-gate.ts";
 
 const inputs = loadRepoInputs();
 const catalogBytes = readFileSync(
@@ -29,11 +30,26 @@ try {
   // Discovery still works outside a git checkout; the SHA is provenance only.
 }
 
+// The discovery document reports the SAME supported-release declaration
+// the conformance gate enforces — a hardcoded not-recorded here would go
+// stale the moment release-scope.json records a set (Issue #230).
+const SCOPE_PATH = join(REPO_ROOT, "packages/capability-catalog/release-scope.json");
+let supportedRelease;
+if (existsSync(SCOPE_PATH)) {
+  const parsed = parseReleaseScope(JSON.parse(readFileSync(SCOPE_PATH, "utf8")));
+  if (!parsed.ok) {
+    console.error(`invalid release scope: ${parsed.errors.join("; ")}`);
+    process.exit(1);
+  }
+  supportedRelease = parsed.scope.supportedRelease;
+}
+
 const response = buildDiscoveryHandshake({
   scripting: inputs.scripting,
   tools: inputs.tools,
   semantics: inputs.semantics,
   sdk: inputs.sdk,
+  supportedRelease,
   meta: {
     catalogRevision,
     hostId: `ae-devtools-repo@${gitSha}`,

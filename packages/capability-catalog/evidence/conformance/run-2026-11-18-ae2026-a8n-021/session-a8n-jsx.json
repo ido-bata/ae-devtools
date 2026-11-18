@@ -1,0 +1,535 @@
+{
+  "schema": "ae-devtools.conformance-run/v1",
+  "issue": 177,
+  "startedAt": "2026-11-18T04:06:49.690Z",
+  "platform": "darwin/arm64",
+  "node": "v26.13.1",
+  "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+  "workdir": "/tmp/ae-conf-221-Aozq/session1b",
+  "fixturePath": "/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep",
+  "git": {
+    "head": "2b11a15f557836760836f5767d29c7a5e6584823",
+    "dirty": true
+  },
+  "consentModel": "local approve-all policy (gate mechanics only; not authenticated authorization)",
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": 49059,
+      "args": "bash -c cd ~/work/ae-devtools/packages/ae-devtools-cli && STAGE=/tmp/ae-conf-221-Aozq && AE=\"/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app\" && node conformance/real-run.mjs --install-dir \"$AE\" --workdir \"$STAGE/session1b\" --out \"$STAGE/session-a8n-jsx.json\" 2>&1"
+    },
+    {
+      "pid": 49060,
+      "args": "node conformance/real-run.mjs --install-dir /Applications/Adobe After Effects 2026/Adobe After Effects 2026.app --workdir /tmp/ae-conf-221-Aozq/session1b --out /tmp/ae-conf-221-Aozq/session-a8n-jsx.json"
+    }
+  ],
+  "steps": [
+    {
+      "name": "session.launch",
+      "at": "2026-11-18T04:06:55.542Z",
+      "ok": true,
+      "aeVersion": "26.5.3x9",
+      "aeBuild": "9",
+      "ownership": "owned",
+      "aeA8nSource": "npm:@ido-bata/ae-a8n",
+      "aeA8nHead": "0.2.0"
+    },
+    {
+      "name": "identity.before",
+      "at": "2026-11-18T04:06:55.727Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "project": {
+        "version": "26.5.3x9",
+        "file": "",
+        "items": "0",
+        "dirty": "false",
+        "raw": "V:26.5.3x9|F:|N:0|D:false"
+      }
+    },
+    {
+      "name": "disposable.gate",
+      "at": "2026-11-18T04:06:55.727Z",
+      "ok": true,
+      "decision": {
+        "proceed": true,
+        "reason": "dirty=false, file='', items=0"
+      }
+    },
+    {
+      "name": "op.project.new",
+      "at": "2026-11-18T04:06:55.909Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "status": null,
+      "result": {
+        "ok": true
+      }
+    },
+    {
+      "name": "op.project.save",
+      "at": "2026-11-18T04:06:56.100Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true
+      },
+      "fixturePath": "/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep"
+    },
+    {
+      "name": "identity.fixture",
+      "at": "2026-11-18T04:06:56.229Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "project": {
+        "version": "26.5.3x9",
+        "file": "/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep",
+        "items": "0",
+        "dirty": "false",
+        "raw": "V:26.5.3x9|F:/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep|N:0|D:false"
+      },
+      "expectedFile": "/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep"
+    },
+    {
+      "name": "op.read.projectSummary.baseline",
+      "at": "2026-11-18T04:06:56.364Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true,
+        "count": 0,
+        "items": [],
+        "activeItem": null
+      }
+    },
+    {
+      "name": "op.item.addComp",
+      "at": "2026-11-18T04:06:56.503Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true,
+        "id": 1,
+        "name": "Conformance QA Comp"
+      }
+    },
+    {
+      "name": "op.read.projectSummary.readback",
+      "at": "2026-11-18T04:06:56.637Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "sawComp": true,
+      "items": [
+        {
+          "name": "Conformance QA Comp",
+          "typeName": "コンポジション",
+          "id": 1
+        }
+      ]
+    },
+    {
+      "name": "ae.undo",
+      "at": "2026-11-18T04:06:56.915Z",
+      "ok": true,
+      "undo": {
+        "ok": true,
+        "result": {
+          "id": 16,
+          "durationMs": 6,
+          "before": {
+            "itemCount": 1,
+            "comp": null,
+            "layers": []
+          },
+          "after": {
+            "itemCount": 0,
+            "comp": null,
+            "layers": []
+          },
+          "name": "Undo",
+          "added": [],
+          "removed": []
+        }
+      },
+      "outcome": "COMPLETED",
+      "itemsAfter": []
+    },
+    {
+      "name": "op.item.addComp.second",
+      "at": "2026-11-18T04:06:57.065Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true,
+        "id": 13,
+        "name": "Conformance Temp Comp"
+      }
+    },
+    {
+      "name": "op.item.remove",
+      "at": "2026-11-18T04:06:57.218Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true,
+        "removed": "Conformance Temp Comp"
+      }
+    },
+    {
+      "name": "op.read.projectSummary.final",
+      "at": "2026-11-18T04:06:57.363Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "items": []
+    },
+    {
+      "name": "op.project.save.resave",
+      "at": "2026-11-18T04:06:57.535Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true
+      }
+    },
+    {
+      "name": "jsx.build.ok",
+      "at": "2026-11-18T04:06:57.553Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "jsx.dispatch.ok",
+      "at": "2026-11-18T04:06:57.686Z",
+      "ok": true,
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "jsx.verify.global-write",
+      "at": "2026-11-18T04:06:57.829Z",
+      "ok": true,
+      "observed": "hello ae 26.5.3x9",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "jsx.build.runtime-error",
+      "at": "2026-11-18T04:06:57.831Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "jsx.dispatch.runtime-error",
+      "at": "2026-11-18T04:06:57.982Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostError": "__toolchainUndeclaredIdentifierは未定義です。",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3
+    },
+    {
+      "name": "jsx.sourcemap.to-source",
+      "at": "2026-11-18T04:06:57.982Z",
+      "ok": true,
+      "mapped": {
+        "source": "runtime-error.ts",
+        "line": 3,
+        "column": 48,
+        "name": null,
+        "content": "// Deliberate runtime fault for real-host sourcemap verification.\nfunction boom(): void {\n  var missing = __toolchainUndeclaredIdentifier;\n  $.global.__toolchainBoom = missing;\n}\nboom();\n"
+      }
+    },
+    {
+      "name": "a8n.slice",
+      "at": "2026-11-18T04:06:58.834Z",
+      "ok": true,
+      "violations": [],
+      "outcomes": [
+        "connect.state:COMPLETED",
+        "project.state:COMPLETED",
+        "error.capture:FAILED",
+        "fix.rerun:COMPLETED",
+        "verify.counter.1:COMPLETED",
+        "verify.counter.2:COMPLETED",
+        "consent.tampered:BLOCKED",
+        "consent.denied:REFUSED-BEFORE-SEND"
+      ]
+    },
+    {
+      "name": "timeout.probe",
+      "at": "2026-11-18T04:06:59.635Z",
+      "ok": true,
+      "outcome": "UNKNOWN",
+      "contractOutcome": "unknown",
+      "retry": "quarantine",
+      "elapsedMs": 801,
+      "quarantined": true
+    },
+    {
+      "name": "session.close",
+      "at": "2026-11-18T04:07:02.867Z",
+      "ok": true
+    }
+  ],
+  "ok": true,
+  "hostScriptSha256": "d41a31991246b25af2e996e595151109d2bfe17693ff9f9924f38a4ca651b1b1",
+  "hostScriptCopy": "/tmp/ae-conf-221-Aozq/session1b/a8n-host-ext.js",
+  "projectBefore": {
+    "version": "26.5.3x9",
+    "file": "",
+    "items": "0",
+    "dirty": "false",
+    "raw": "V:26.5.3x9|F:|N:0|D:false"
+  },
+  "disposableDecision": {
+    "proceed": true,
+    "reason": "dirty=false, file='', items=0"
+  },
+  "projectFixture": {
+    "version": "26.5.3x9",
+    "file": "/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep",
+    "items": "0",
+    "dirty": "false",
+    "raw": "V:26.5.3x9|F:/tmp/ae-conf-221-Aozq/session1b/Conformance-Disposable.aep|N:0|D:false"
+  },
+  "fixtureSha256": "1984aa586f8971f9889392670cfec92e5ef19456e1de2413064503db0790b65b",
+  "undo": {
+    "call": {
+      "ok": true,
+      "result": {
+        "id": 16,
+        "durationMs": 6,
+        "before": {
+          "itemCount": 1,
+          "comp": null,
+          "layers": []
+        },
+        "after": {
+          "itemCount": 0,
+          "comp": null,
+          "layers": []
+        },
+        "name": "Undo",
+        "added": [],
+        "removed": []
+      }
+    },
+    "readbackEmpty": true
+  },
+  "projectOps": {
+    "baseline": {
+      "ok": true,
+      "count": 0,
+      "items": [],
+      "activeItem": null
+    },
+    "addComp": {
+      "ok": true,
+      "id": 1,
+      "name": "Conformance QA Comp"
+    },
+    "readbackSawComp": true,
+    "undo": {
+      "call": {
+        "ok": true,
+        "result": {
+          "id": 16,
+          "durationMs": 6,
+          "before": {
+            "itemCount": 1,
+            "comp": null,
+            "layers": []
+          },
+          "after": {
+            "itemCount": 0,
+            "comp": null,
+            "layers": []
+          },
+          "name": "Undo",
+          "added": [],
+          "removed": []
+        }
+      },
+      "readbackEmpty": true
+    },
+    "addComp2": {
+      "ok": true,
+      "id": 13,
+      "name": "Conformance Temp Comp"
+    },
+    "remove": {
+      "ok": true,
+      "removed": "Conformance Temp Comp"
+    },
+    "finalItems": []
+  },
+  "jsx": {
+    "okBuild": {
+      "status": "ok",
+      "jsxBytes": 185
+    },
+    "dispatchOk": "COMPLETED",
+    "globalWrite": "hello ae 26.5.3x9",
+    "runtimeError": {
+      "outcome": "FAILED",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3,
+      "mapped": {
+        "source": "runtime-error.ts",
+        "line": 3,
+        "column": 48,
+        "name": null,
+        "content": "// Deliberate runtime fault for real-host sourcemap verification.\nfunction boom(): void {\n  var missing = __toolchainUndeclaredIdentifier;\n  $.global.__toolchainBoom = missing;\n}\nboom();\n"
+      }
+    }
+  },
+  "sliceSteps": [
+    {
+      "label": "connect.state",
+      "source": "String(app.version)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "26.5.3x9",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 15,
+      "sendsAfter": 16
+    },
+    {
+      "label": "project.state",
+      "source": "String(app.project.numItems)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 16,
+      "sendsAfter": 17
+    },
+    {
+      "label": "error.capture",
+      "source": "__a8nSliceUndeclaredIdentifier;",
+      "outcome": "FAILED",
+      "contractOutcome": "failed",
+      "requestState": "ACKED",
+      "result": null,
+      "error": {
+        "name": "ReferenceError",
+        "message": "__a8nSliceUndeclaredIdentifierは未定義です。",
+        "line": 1,
+        "hostReported": true
+      },
+      "refusal": null,
+      "sendsBefore": 17,
+      "sendsAfter": 18
+    },
+    {
+      "label": "fix.rerun",
+      "source": "String(app.project.numItems + 0)",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "0",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 18,
+      "sendsAfter": 19
+    },
+    {
+      "label": "verify.counter.1",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "1",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 19,
+      "sendsAfter": 20
+    },
+    {
+      "label": "verify.counter.2",
+      "source": "$.global.__a8nSliceCounter = (typeof $.global.__a8nSliceCounter === 'undefined' ? 0 : $.global.__a8nSliceCounter) + 1; String($.global.__a8nSliceCounter);",
+      "outcome": "COMPLETED",
+      "contractOutcome": "completed",
+      "requestState": "ACKED",
+      "result": "2",
+      "error": null,
+      "refusal": null,
+      "sendsBefore": 20,
+      "sendsAfter": 21
+    },
+    {
+      "label": "consent.tampered",
+      "source": "String(app.version)",
+      "outcome": "BLOCKED",
+      "contractOutcome": "not-sent",
+      "requestState": "NOT_SENT",
+      "result": null,
+      "error": null,
+      "refusal": {
+        "code": "CONSENT_SCOPE_MISMATCH",
+        "message": "consent scope does not match this dispatch (session/operation/args/project)"
+      },
+      "sendsBefore": 21,
+      "sendsAfter": 21
+    },
+    {
+      "label": "consent.denied",
+      "source": "__DENY__ String(app.version)",
+      "outcome": "REFUSED-BEFORE-SEND",
+      "reason": "policy denied: source carries __DENY__ marker",
+      "sendsBefore": 21,
+      "sendsAfter": 21
+    }
+  ],
+  "sliceViolations": [],
+  "timeoutProbe": {
+    "outcome": "UNKNOWN",
+    "contractOutcome": "unknown",
+    "retry": "quarantine",
+    "elapsedMs": 801,
+    "quarantined": true
+  },
+  "transportSends": 22,
+  "opResultSummary": {
+    "project.new#1": "COMPLETED",
+    "project.save#2": "COMPLETED",
+    "read.projectSummary#3": "COMPLETED",
+    "item.addComp#4": "COMPLETED",
+    "read.projectSummary#5": "COMPLETED",
+    "read.projectSummary#6": "COMPLETED",
+    "item.addComp#7": "COMPLETED",
+    "item.remove#8": "COMPLETED",
+    "read.projectSummary#9": "COMPLETED",
+    "project.save#10": "COMPLETED"
+  },
+  "evidenceLevel": "verified on real host",
+  "traceCopy": "/tmp/ae-conf-221-Aozq/session1b/trace.jsonl",
+  "traceSha256": "56743ab47f77ba2c6c1d0991a2c42b44aaeac5175ccc4c529682e57f519b1f4f",
+  "close": {
+    "quit": true
+  },
+  "aeProcessesAfterClose": [
+    {
+      "pid": 49059,
+      "args": "bash -c cd ~/work/ae-devtools/packages/ae-devtools-cli && STAGE=/tmp/ae-conf-221-Aozq && AE=\"/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app\" && node conformance/real-run.mjs --install-dir \"$AE\" --workdir \"$STAGE/session1b\" --out \"$STAGE/session-a8n-jsx.json\" 2>&1"
+    },
+    {
+      "pid": 49060,
+      "args": "node conformance/real-run.mjs --install-dir /Applications/Adobe After Effects 2026/Adobe After Effects 2026.app --workdir /tmp/ae-conf-221-Aozq/session1b --out /tmp/ae-conf-221-Aozq/session-a8n-jsx.json"
+    },
+    {
+      "pid": 49761,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/crashpad_handler --no-rate-limit --database=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --metrics-dir=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/7fe05394-f89c-4d1a-e490-642c8e2dd913.run/__sentry-event --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/7fe05394-f89c-4d1a-e490-642c8e2dd913.run/__sentry-breadcrumb1 --attachment=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/7fe05394-f89c-4d1a-e490-642c8e2dd913.run/__sentry-breadcrumb2 --crash-reporter=/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/AdobeCrashReport.app --crash-envelope=/Users/rebui/Library/Caches/Adobe/After Effects/26.0/SentryIO-db/external/ea8fd919-7330-471c-da08-a7c61705d78d.envelope --report-id=ea8fd919-7330-471c-da08-a7c61705d78d --handshake-fd=5"
+    },
+    {
+      "pid": 49895,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/dynamiclinkmanager --rogue"
+    },
+    {
+      "pid": 50049,
+      "args": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/TeamProjectsLocalHub.app/Contents/MacOS/TeamProjectsLocalHub"
+    }
+  ],
+  "finishedAt": "2026-11-18T04:07:02.901Z"
+}

@@ -28,6 +28,8 @@
  * fake/mock results are never presented as real-host verification.
  */
 import { discover, inspect, execute, verify } from "../dev-loop/devloop.mjs";
+import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
+import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
 
@@ -100,9 +102,57 @@ function toolResult(payload, isError = false) {
   };
 }
 
-function isBadOutcome(payload) {
-  const outcome = payload?.outcome ?? payload?.status ?? null;
-  return ["refused", "failed", "BLOCKED", "UNKNOWN"].includes(outcome) || payload?.error !== undefined;
+// Outcome normalization is shared with the CLI diagnostics block and
+// the VSCode collector (dev-loop/outcomes.mjs, Issue #181): adapter
+// `status` spellings and the failure-beats-COMPLETED rule are handled
+// identically on every surface — the previous local check only looked
+// at `outcome ?? status` and reported adapter-level failures as
+// COMPLETED/isError:false. The `error`-field rule lives in
+// failureOutcome too (Issue #196): any non-nullish value is failure
+// evidence; `error: null` is not — the old local `!== undefined` patch
+// produced exactly that false positive.
+function isBadOutcome(result) {
+  return failureOutcome(result) !== null;
+}
+
+// diagnostics/collectors.mjs is loaded lazily and only on the failure
+// path: a damaged/partial install degrades to an honest "unavailable"
+// diagnostics block instead of keeping the whole MCP server from
+// starting (same discipline as devtools-cli/diagnostics.mjs).
+let collectorsPromise = null;
+function diagnosticsCollectors() {
+  collectorsPromise ??= import("../diagnostics/collectors.mjs").then((m) => ({
+    fromAeError: m.fromAeError,
+    fromTransportOutcome: m.fromTransportOutcome,
+  }));
+  return collectorsPromise;
+}
+
+/**
+ * Failure → canonical ae-devtools.diagnostics/v1 record for the tool
+ * payload (Issue #196): the SAME recordFromExecuteResult mapping the
+ * CLI evidence block and the VSCode Problems collector use, so an
+ * ae_execute/ae_verify failure carries identical diagnostics.records
+ * semantics on every surface. Returns null when the result is not
+ * failure-shaped; an "unavailable" block when the packaged
+ * diagnostics/ module cannot be loaded.
+ */
+async function failureDiagnostics({ result, session, requestId }) {
+  const state = failureOutcome(result);
+  if (state === null) return null;
+  try {
+    const collectors = await diagnosticsCollectors();
+    const record = recordFromExecuteResult({
+      result,
+      outcome: state,
+      session: { kind: session.kind, pin: session.pin },
+      requestId,
+      collectors,
+    });
+    return record === null ? null : { status: "ok", records: [record] };
+  } catch (e) {
+    return { status: "unavailable", reason: String(e?.message ?? e), records: [] };
+  }
 }
 
 function consentRefusal(opLabel, consent) {
@@ -118,10 +168,12 @@ function consentRefusal(opLabel, consent) {
 }
 
 function sessionBlock(session) {
+  // meta first: session-supplied fields must not override the honest
+  // top-level kind/evidenceLevel (Issue #226).
   return {
+    ...(session.meta ?? {}),
     kind: session.kind,
     evidenceLevel: session.evidenceLevel,
-    ...(session.meta ?? {}),
   };
 }
 
@@ -130,9 +182,13 @@ let requestCounter = 0;
 /**
  * @param {string} name — tool name
  * @param {object} args — tool arguments
- * @param {{getSession: () => Promise<object>}} ctx — lazy session accessor;
- *   only ae_execute/ae_verify (and only after the consent pre-gate passes)
- *   call it, so discover/inspect/denied calls never open a session.
+ * @param {{getSession: () => Promise<object>,
+ *   onRequestEvent?: (ev:{requestId:string,method:string|null,event:string})=>*}} ctx
+ *   — lazy session accessor; only ae_execute/ae_verify (and only after
+ *   the consent pre-gate passes) call it, so discover/inspect/denied
+ *   calls never open a session. `onRequestEvent` is an optional sink
+ *   for run-guard request lifecycle events (Issue #198); surfaces
+ *   without a marker simply omit it.
  */
 export async function callTool(name, args = {}, ctx = {}) {
   if (!TOOL_NAMES.has(name)) {
@@ -173,6 +229,12 @@ export async function callTool(name, args = {}, ctx = {}) {
       // consent === "grant" was verified before the session opened; the
       // provider exists because runOperation requires one for EVERY
       // dispatch — it is not an approval of its own.
+      const requestId = `req-mcp-${++requestCounter}`;
+      // Request lifecycle → run-guard marker when the surface keeps one
+      // (a8n sessions, Issue #198). "timeout" is recorded only for a
+      // wire UNKNOWN outcome — the same recoverable-state rule the CLI
+      // uses; these events are residue visibility, never authority.
+      ctx.onRequestEvent?.({ requestId, method: args.opId, event: "dispatched" });
       const result = await execute({
         opId: args.opId,
         args: args.args ?? {},
@@ -182,15 +244,21 @@ export async function callTool(name, args = {}, ctx = {}) {
         consentProvider: async () => ({ approved: true }),
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
-        requestId: `req-mcp-${++requestCounter}`,
+        requestId,
         confirmDestructive: args.confirmDestructive === true,
         confirmRender: args.confirmRender === true,
       });
+      ctx.onRequestEvent?.({
+        requestId, method: args.opId,
+        event: isUnknownOutcome(result) ? "timeout" : "resolved",
+      });
+      const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
         schema: MCP_SCHEMA,
         session: sessionBlock(session),
-        outcome: result.outcome ?? result.status ?? null,
+        outcome: normalizedOutcome(result),
         result,
+        ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));
     }
     case "ae_verify": {
@@ -198,8 +266,11 @@ export async function callTool(name, args = {}, ctx = {}) {
         return toolResult(consentRefusal("ae_verify", args.consent), true);
       }
       const session = await ctx.getSession();
+      const readOpId = typeof args.readOpId === "string" && args.readOpId.length > 0 ? args.readOpId : "read.projectSummary";
+      const requestId = `req-mcp-${++requestCounter}`;
+      ctx.onRequestEvent?.({ requestId, method: readOpId, event: "dispatched" });
       const result = await verify({
-        readOpId: typeof args.readOpId === "string" && args.readOpId.length > 0 ? args.readOpId : "read.projectSummary",
+        readOpId,
         readArgs: args.args ?? {},
         runner: session.runner,
         pin: session.pin,
@@ -207,13 +278,19 @@ export async function callTool(name, args = {}, ctx = {}) {
         consentProvider: async () => ({ approved: true }),
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
-        requestId: `req-mcp-${++requestCounter}`,
+        requestId,
       });
+      ctx.onRequestEvent?.({
+        requestId, method: readOpId,
+        event: isUnknownOutcome(result) ? "timeout" : "resolved",
+      });
+      const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
         schema: MCP_SCHEMA,
         session: sessionBlock(session),
-        outcome: result.outcome ?? result.status ?? null,
+        outcome: normalizedOutcome(result),
         result,
+        ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));
     }
     default:

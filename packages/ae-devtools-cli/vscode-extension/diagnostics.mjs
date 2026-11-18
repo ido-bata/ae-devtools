@@ -24,6 +24,7 @@
 import { resolveDiagnosticsSource } from "../diagnostics/source-map.mjs";
 import { fromAeError, fromTransportOutcome } from "../diagnostics/collectors.mjs";
 import { validateDiagnosticsRecord } from "../diagnostics/schema.mjs";
+import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 
 export const DIAGNOSTICS_PUBLISH_SCHEMA = "ae-devtools.vscode-diagnostics/v1";
 
@@ -136,30 +137,23 @@ export function toDiagnosticItem(record, opts = {}) {
  */
 export function recordsFromExecuteResult(result, ctx = {}) {
   if (!result || typeof result !== "object") return [];
-  const records = [];
-  const err = result.error ?? null;
-  const aeError = err?.aeError ?? (err && typeof err === "object" && typeof err.message === "string" ? err : null);
-  if (aeError) {
-    try {
-      records.push(fromAeError({ aeError }, {
-        ctx: {
-          session: ctx.session,
-          requestId: ctx.requestId ?? result.requestId,
-          outcome: result.outcome ?? result.status,
-        },
-      }));
-    } catch { /* malformed aeError — skip rather than fabricate */ }
-  } else {
-    const state = result.outcome ?? result.state;
-    // COMPLETED is not a diagnostic; every other contract outcome
-    // (REFUSED/FAILED/UNKNOWN/BLOCKED) is worth a Problems-panel record.
-    if (typeof state === "string" && state !== "COMPLETED") {
-      try {
-        records.push(fromTransportOutcome(result, { ctx }));
-      } catch { /* not an outcome shape */ }
-    }
+  try {
+    // Shared failure→record mapping (dev-loop/failure-record.mjs,
+    // Issue #181): adapter `status` spellings and the
+    // failure-beats-COMPLETED rule are identical to the CLI evidence
+    // block — the previous local check missed `status:"refused"`
+    // outcomes that carry no wire `outcome` field.
+    const record = recordFromExecuteResult({
+      result,
+      outcome: ctx.outcome,
+      session: ctx.session,
+      requestId: ctx.requestId ?? result.requestId,
+      collectors: { fromAeError, fromTransportOutcome },
+    });
+    return record === null ? [] : [record];
+  } catch {
+    return [];
   }
-  return records;
 }
 
 /**

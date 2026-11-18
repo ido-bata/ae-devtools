@@ -22,6 +22,8 @@
  */
 import { callTool } from "../mcp-server/tools.mjs";
 import { openSession } from "../mcp-server/session.mjs";
+import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
+import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
 import { recordsFromExecuteResult, buildPublishPlan } from "./diagnostics.mjs";
 import { buildAttachConfig, writeLaunchJson } from "../vscode-debugger/src/gen.mjs";
 import { validateLaunchJson, hasErrors } from "../vscode-debugger/src/schema.mjs";
@@ -55,6 +57,11 @@ function uiDeclined(detail) {
  * @param {{confirm:Function, info?:Function, error?:Function}} [options.ui]
  * @param {Function} [options.sessionFactory] — (kind, opts) => session;
  *   defaults to mcp-server/session.mjs openSession. Injected by tests.
+ * @param {number} [options.closeTimeoutMs] — bound for session.close()
+ *   (default: the shared dev-loop close timeout, Issue #196)
+ * @param {string} [options.runsDir] — run-guard marker dir for a8n
+ *   sessions (default: devtools-cli RUNS_DIR; Issue #198 residue
+ *   markers — surface "vscode", no attestation, reap/recover refuse)
  */
 export function createController(options = {}) {
   const {
@@ -63,16 +70,41 @@ export function createController(options = {}) {
     installDir,
     ui = DENY_ALL_UI,
     sessionFactory = openSession,
+    closeTimeoutMs,
+    runsDir,
   } = options;
+
+  // Run-guard residue markers for a8n sessions only (Issue #198, 案 C)
+  // — same contract as the MCP server: marker on session open, request
+  // lifecycle events per dispatch, NO session.process attestation, so
+  // reap/recover keep refusing (fail-closed). Fake sessions get none.
+  const guard = createSurfaceGuard({
+    surface: "vscode", sessionKind, dir: runsDir,
+  });
 
   let sessionPromise = null;
   const getSession = () => {
-    sessionPromise ??= sessionFactory(sessionKind, { aeA8nRoot, installDir });
+    sessionPromise ??= (async () => {
+      // Marker BEFORE open: a launch that dies mid-open still leaves
+      // an attributable residue record.
+      await guard.begin();
+      try {
+        const s = await sessionFactory(sessionKind, { aeA8nRoot, installDir });
+        guard.mark(s);
+        return s;
+      } catch (e) {
+        guard.failOpen();
+        throw e;
+      }
+    })();
     return sessionPromise;
   };
 
   async function tool(name, args) {
-    const res = await callTool(name, args ?? {}, { getSession });
+    const res = await callTool(name, args ?? {}, {
+      getSession,
+      onRequestEvent: (ev) => guard.request(ev),
+    });
     // callTool wraps the payload as MCP text content; unwrap it so
     // commands/tests see the honest payload (session.evidenceLevel
     // included) directly instead of a JSON string inside content[].
@@ -95,11 +127,18 @@ export function createController(options = {}) {
    * Collection is read-only observation of the outcome — it never
    * changes dispatch, consent, or retry behavior.
    */
-  function withDiagnostics(payload) {
+  async function withDiagnostics(payload) {
     const inner = payload?.result;
     if (!inner || typeof inner !== "object") return payload;
+    // payload.session is the serialized sessionBlock (kind/evidenceLevel/
+    // meta) — it carries no pin. The live session object does; without it
+    // the diagnostics record loses the sessionId/dispatchId binding that
+    // CLI and MCP records have (Issue #219).
+    const live = await getSession().catch(() => null);
     const records = recordsFromExecuteResult(inner, {
-      session: payload.session,
+      session: live !== null && typeof live === "object" && "pin" in live
+        ? { kind: live.kind, pin: live.pin }
+        : payload.session,
       requestId: inner.requestId,
     });
     if (records.length === 0) return payload;
@@ -295,16 +334,28 @@ export function createController(options = {}) {
       };
     },
 
-    /** Close the shared session if one was opened. Safe to call always. */
+    /** Close the shared session if one was opened. Safe to call always.
+     *  Bounded by the shared dev-loop close timeout (Issue #196) — a
+     *  hung close reports {closed:false, error} instead of pinning
+     *  deactivate() forever. Finalizes the a8n run-guard marker:
+     *  "closed" removes it, "close-failed" keeps it as residue
+     *  (Issue #198). */
     async close() {
       if (sessionPromise === null) return { closed: false };
+      let closeFailed = false;
       try {
         const s = await sessionPromise;
-        await s.close?.();
+        const r = await closeSessionWithTimeout(s, { timeoutMs: closeTimeoutMs });
+        if (r.ok === false) {
+          closeFailed = true;
+          return { closed: false, error: r.error };
+        }
         return { closed: true };
       } catch {
+        closeFailed = true;
         return { closed: false, error: "session close failed" };
       } finally {
+        guard.end(closeFailed ? "close-failed" : "closed");
         sessionPromise = null;
       }
     },

@@ -122,6 +122,17 @@ export function promotionViolations(record: CapabilityRecord): PromotionViolatio
   }
 
   if (claimed === "verified-on-real-host") {
+    // A real-host claim with zero declared platforms produces no
+    // conformance claim and no platform violation, yet still earns
+    // verified-on-real-host — a silent promotion hole (Issue #230).
+    // Fail closed: the claim must name at least one platform.
+    if ((record.compatibility.os ?? []).length === 0) {
+      out.push({
+        code: "platform-unverified",
+        id: record.id,
+        detail: "verified-real-host claimed with empty compatibility.os — no platform-scoped claim can be made",
+      });
+    }
     for (const platform of record.compatibility.os ?? []) {
       const covered = c.evidenceRefs.some(
         (ref) => ref.kind === "real-host" && ref.platform === platform,

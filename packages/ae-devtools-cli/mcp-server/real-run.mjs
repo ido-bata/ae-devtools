@@ -24,21 +24,18 @@
  * part of the contract under test; the run refuses to proceed without
  * them.
  */
-import { spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { arg } from "../devtools-cli/argv.mjs";
+import { spawnMcpStdio, withTimeout, aeDevtoolsSourceRef } from "../devtools-cli/real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = process.env.AE_DEVTOOLS_CLI ?? join(HERE, "..");
 const OUT =
   process.env.MCP_OUT ??
   join(HERE, "evidence", `mcp-real-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
-
-function arg(flag) {
-  const i = process.argv.indexOf(flag);
-  return i >= 0 ? process.argv[i + 1] : undefined;
-}
 
 const session = arg("--session") ?? "a8n";
 const serverArgs = ["mcp-server/server.mjs", "--session", session];
@@ -48,53 +45,29 @@ const installDir = arg("--install-dir") ?? process.env.AE_INSTALL_DIR;
 if (installDir) serverArgs.push("--install-dir", installDir);
 
 const log = [];
+let fatal = false;
 const rec = (o) => {
   log.push({ t: new Date().toISOString(), ...o });
   writeFileSync(OUT, JSON.stringify(log, null, 2));
 };
+// Commit binding (Issue #235 / ADR-0017): the NDJSON log has no envelope
+// object, so the first record carries the run's source provenance.
+// Nulls outside the repo checkout — unbound records are informational.
+const sourceRef = await aeDevtoolsSourceRef(HERE);
+rec({ event: "source", sourceSha: sourceRef.head, sourceDirty: sourceRef.dirty });
 
-const child = spawn(process.execPath, serverArgs, {
+// NDJSON stdio client harness shared with conformance/mcp-real-run.mjs
+// (Issue #197).
+const { child, send, notify, call } = spawnMcpStdio({
+  scriptArgs: serverArgs,
   cwd: CLI,
-  stdio: ["pipe", "pipe", "pipe"],
+  onRecord: rec,
+  onStderr: (d) => rec({ stderr: d.slice(0, 500) }),
 });
-child.stderr.on("data", (d) => rec({ stderr: String(d).slice(0, 500) }));
-let buf = "";
-const pending = new Map();
-let nextId = 1;
-child.stdout.on("data", (d) => {
-  buf += d;
-  let i;
-  while ((i = buf.indexOf("\n")) >= 0) {
-    const line = buf.slice(0, i).trim();
-    buf = buf.slice(i + 1);
-    if (!line) continue;
-    try {
-      const msg = JSON.parse(line);
-      rec({ rx: msg });
-      if (msg.id !== undefined && pending.has(msg.id)) {
-        pending.get(msg.id)(msg);
-        pending.delete(msg.id);
-      }
-    } catch {
-      rec({ rxRaw: line.slice(0, 300) });
-    }
-  }
-});
-const send = (method, params) =>
-  new Promise((res) => {
-    const id = nextId++;
-    pending.set(id, res);
-    child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
-  });
-const notify = (method) =>
-  child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method }) + "\n");
-const call = (name, args) => send("tools/call", { name, arguments: args });
-const timeout = (p, ms, tag) =>
-  Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT " + tag)), ms))]);
 
 try {
   rec({ step: "initialize", argv: serverArgs });
-  await timeout(
+  await withTimeout(
     send("initialize", {
       protocolVersion: "2024-11-05",
       capabilities: {},
@@ -107,11 +80,11 @@ try {
   rec({ step: "initialized" });
 
   rec({ step: "ae_discover" });
-  await timeout(call("ae_discover", {}), 60000, "discover");
+  await withTimeout(call("ae_discover", {}), 60000, "discover");
   rec({ step: "ae_discover-done" });
 
   rec({ step: "ae_execute (launches owned AE)" });
-  await timeout(
+  await withTimeout(
     call("ae_execute", {
       opId: "item.addComp",
       args: { name: "MCP QA Comp", width: 1920, height: 1080, pixelAspect: 1, duration: 5, frameRate: 30 },
@@ -123,16 +96,20 @@ try {
   rec({ step: "ae_execute-done" });
 
   rec({ step: "ae_verify" });
-  await timeout(call("ae_verify", { consent: "grant" }), 120000, "verify");
+  await withTimeout(call("ae_verify", { consent: "grant" }), 120000, "verify");
   rec({ step: "ae_verify-done" });
 } catch (e) {
   rec({ fatal: String(e?.message ?? e) });
+  fatal = true;
 } finally {
   child.kill("SIGTERM");
   setTimeout(() => {
     try {
       child.kill("SIGKILL");
     } catch {}
-    process.exit(0);
+    // A recorded `fatal` is a failed verification run — exit nonzero so
+    // callers/CI cannot read it as success (Issue #234). The evidence
+    // JSON remains the verdict record either way.
+    process.exit(fatal ? 1 : 0);
   }, 5000).unref();
 }

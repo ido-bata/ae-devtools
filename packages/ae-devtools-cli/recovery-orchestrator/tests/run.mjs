@@ -4,9 +4,9 @@
  * cli.mjs is UNVERIFIED while GUI testing is frozen.
  */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,19 +32,12 @@ import {
   timeoutRecoveryToDiagnostics,
 } from "../diagnostics.mjs";
 import { validateDiagnosticsRecord } from "../../diagnostics/schema.mjs";
+import { t, at, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "cli.mjs");
-let passed = 0;
+const FAKE_A8N = join(HERE, "fixtures", "fake-a8n");
 
-function t(name, fn) {
-  try { fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
-async function at(name, fn) {
-  try { await fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
 function tmp() { return mkdtempSync(join(tmpdir(), "ae-rec-orch-")); }
 
 const IPS_PROC_PATH = "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects";
@@ -569,12 +562,63 @@ t("cli evidence writes a correlated manifest", () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function cliJson(args) {
+function cliJson(args, env = {}) {
   try {
-    return { code: 0, body: JSON.parse(execFileSync("node", [CLI, ...args], { encoding: "utf8" })) };
+    return {
+      code: 0,
+      body: JSON.parse(execFileSync("node", [CLI, ...args], {
+        encoding: "utf8",
+        env: { ...process.env, ...env },
+      })),
+    };
   } catch (e) {
     return { code: e.status ?? 1, body: JSON.parse(e.stdout?.toString() ?? "{}") };
   }
+}
+
+/**
+ * Write a fake-a8n config (see fixtures/fake-a8n/dist/index.js) into a fresh
+ * tmp dir and return { root, env } for cliJson. Liveness is NOT faked —
+ * tests must pass real live/dead pids through the config and flags.
+ */
+function fakeA8nFixture(over = {}) {
+  const root = tmp();
+  const cfg = {
+    guiSession: { uid: 501, asid: 42, username: "fakeuser", kind: "Aqua" },
+    instances: [],
+    windows: [
+      {
+        title: "Fake After Effects",
+        role: "AXWindow",
+        subrole: "AXDialog",
+        buttons: [{ title: "OK" }],
+        texts: ["a measured fake dialog"],
+      },
+    ],
+    frontmost: false,
+    windowServer: { available: true, reason: null, windowCount: 0, onScreenCount: 0 },
+    axSuspect: false,
+    census: { available: true, windows: [] },
+    recoveryOutcome: {
+      recovered: true,
+      outcome: "dismissed",
+      evidence: "fake-a8n: pressed OK on the measured dialog",
+      window: "Fake After Effects",
+    },
+    ...over,
+  };
+  const file = join(root, "a8n.json");
+  writeFileSync(file, JSON.stringify(cfg));
+  return { root, env: { FAKE_A8N_CONFIG: file } };
+}
+
+/** A pid that is provably dead by the time the CLI probes it. */
+async function deadPid() {
+  const child = spawn("sleep", ["30"], { stdio: "ignore" });
+  const pid = child.pid;
+  child.kill("SIGKILL");
+  await new Promise((resolve) => child.once("exit", resolve));
+  return pid;
 }
 
 t("cli recover refuses without --run-id before touching ae-a8n", () => {
@@ -591,6 +635,20 @@ t("cli recover refuses a missing run marker", () => {
   ]);
   assert.equal(code, 2);
   assert.equal(body.code, "RUN_MARKER_INVALID");
+  rmSync(root, { recursive: true, force: true });
+});
+
+t("cli recover refuses a non-run-* run-id before touching the filesystem (Issue #227)", () => {
+  const root = tmp();
+  const victim = join(root, "victim.json");
+  writeFileSync(victim, JSON.stringify({ schema: "ae-devtools.cli.run-guard/v1" }));
+  const { code, body } = cliJson([
+    "recover", "--run-id", "../victim", "--request-id", "req-1", "--method", "op.x",
+    "--runs-dir", root,
+  ]);
+  assert.equal(code, 2);
+  assert.equal(body.code, "RUN_MARKER_INVALID");
+  assert.ok(existsSync(victim), "recover read a marker outside runs-dir naming");
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -634,6 +692,189 @@ t("cli observe refuses when the ae-a8n surface cannot be resolved", () => {
   ]);
   assert.equal(code, 2);
   assert.equal(body.code, "AE_A8N_SURFACE_MISSING");
+});
+
+// ---- Issue #195: fake-a8n fixture drives observe / verify-exit / recover --
+
+await at("cli observe returns a valid verdict via the fake-a8n fixture", async () => {
+  const fx = fakeA8nFixture();
+  const shot = join(fx.root, "shots");
+  const { code, body } = cliJson([
+    "observe", "--pid", "4242", "--session-uid", "501", "--session-asid", "42",
+    "--ae-a8n-root", FAKE_A8N, "--shot-dir", shot,
+  ], fx.env);
+  assert.equal(code, 0);
+  assert.equal(body.schema, "ae-devtools.recovery-orchestrator.observe/v1");
+  assert.equal(body.ok, true);
+  assert.equal(body.windowCount, 1);
+  assert.deepEqual(body.windows[0].buttons, ["OK"]);
+  assert.ok(body.screenshotPath.endsWith("recovery-observe.png"));
+  rmSync(fx.root, { recursive: true, force: true });
+});
+
+await at("cli observe reports a degraded GUI as ok:false, never empty", async () => {
+  const fx = fakeA8nFixture({ guiError: "fake AX tree dead" });
+  const { code, body } = cliJson([
+    "observe", "--pid", "4242", "--session-uid", "501", "--session-asid", "42",
+    "--ae-a8n-root", FAKE_A8N,
+  ], fx.env);
+  assert.equal(code, 1);
+  assert.equal(body.ok, false);
+  assert.equal(body.verdict, "unknown");
+  assert.match(body.error, /fake AX tree dead/);
+  rmSync(fx.root, { recursive: true, force: true });
+});
+
+await at("cli verify-exit reaches clean on dead pid + confirmed session + empty census", async () => {
+  const pid = await deadPid();
+  const fx = fakeA8nFixture();
+  const evidenceDir = join(fx.root, "evidence");
+  const reportsDir = join(fx.root, "reports");
+  mkdirSync(reportsDir, { recursive: true });
+  const { code, body } = cliJson([
+    "verify-exit", "--pid", String(pid),
+    "--session-uid", "501", "--session-asid", "42",
+    "--expectation", "exit",
+    "--evidence-dir", evidenceDir,
+    "--reports-dir", reportsDir,
+    "--since", new Date(Date.now() - 3600e3).toISOString(),
+    "--ae-a8n-root", FAKE_A8N,
+  ], fx.env);
+  assert.equal(code, 0);
+  assert.equal(body.verdict, "clean");
+  assert.equal(body.channels.process.state, "dead");
+  assert.equal(body.channels.windows.state, "ok");
+  assert.equal(body.channels.windows.pidAttribution, "dead");
+  assert.equal(body.channels.evidence.state, "collected");
+  rmSync(fx.root, { recursive: true, force: true });
+});
+
+await at("cli verify-exit reports residue when the census still attributes a window", async () => {
+  const pid = await deadPid();
+  const fx = fakeA8nFixture({
+    census: { available: true, windows: [{ pid, owner: "fake", layer: 0, onScreen: true, name: "leftover", bounds: null }] },
+  });
+  const { code, body } = cliJson([
+    "verify-exit", "--pid", String(pid),
+    "--session-uid", "501", "--session-asid", "42",
+    "--expectation", "exit",
+    "--ae-a8n-root", FAKE_A8N,
+  ], fx.env);
+  assert.equal(code, 1);
+  assert.equal(body.verdict, "residue");
+  assert.equal(body.channels.windows.windowCount, 1);
+  rmSync(fx.root, { recursive: true, force: true });
+});
+
+await at("cli recover reaches fake MacHostRecovery.attempt with the authorized ownerId", async () => {
+  const fx = fakeA8nFixture();
+  const runsDir = join(fx.root, "runs");
+  mkdirSync(runsDir, { recursive: true });
+  // Live test pids: this test process is the "runner", a sleeper stands in
+  // for the AE process. Start stamps are omitted so no ps compare runs.
+  const ae = spawn("sleep", ["60"], { stdio: "ignore" });
+  try {
+    writeFileSync(join(runsDir, "run-cli-fake.json"), JSON.stringify({
+      ...marker({ runId: "run-cli-fake" }),
+      pid: process.pid,
+      pidStartStamp: null,
+      session: {
+        ...marker().session,
+        process: {
+          aePid: ae.pid,
+          aePidStartStamp: null,
+          guiSession: { uid: 501, asid: 42 },
+          attestation: {
+            source: ATTESTATION_SOURCE,
+            ownershipKind: "owned",
+            ownershipEvidence: "probe answered in owned session",
+          },
+          recordedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    // listAppInstances must attribute the live aePid to the fake session.
+    writeFileSync(join(fx.root, "a8n.json"), JSON.stringify({
+      ...JSON.parse(readFileSync(join(fx.root, "a8n.json"), "utf-8")),
+      instances: [{ name: "Fake After Effects", pid: ae.pid, uid: 501, asid: 42 }],
+      attemptLog: join(fx.root, "attempts.jsonl"),
+    }));
+    const { code, body } = cliJson([
+      "recover", "--run-id", "run-cli-fake",
+      "--request-id", "req-1", "--method", "op.x",
+      "--runs-dir", runsDir,
+      "--ae-a8n-root", FAKE_A8N,
+    ], fx.env);
+    assert.equal(code, 0);
+    assert.equal(body.verdict, "await-original");
+    assert.equal(body.outcome.recovered, true);
+    assert.equal(body.outcome.outcome, "dismissed");
+    assert.ok(body.rules.some((r) => r.includes("never resent")));
+    assert.equal(body.guiLease.available, true);
+    assert.equal(body.guiLease.state, "free");
+    // The fake host recovery saw the authorized context — never a
+    // self-declared requestId.
+    const attempt = JSON.parse(readFileSync(join(fx.root, "attempts.jsonl"), "utf-8").trim());
+    assert.equal(attempt.ownerId, "run:run-cli-fake");
+    assert.equal(attempt.requestId, "req-1");
+    assert.equal(attempt.method, "op.x");
+    assert.equal(attempt.pid, ae.pid);
+  } finally {
+    ae.kill("SIGKILL");
+    rmSync(fx.root, { recursive: true, force: true });
+  }
+});
+
+await at("cli recover still refuses a marker without ae-a8n attestation, fixture or not", async () => {
+  const fx = fakeA8nFixture();
+  const runsDir = join(fx.root, "runs");
+  mkdirSync(runsDir, { recursive: true });
+  const noAtt = marker({ runId: "run-noatt" });
+  delete noAtt.session.process.attestation;
+  writeFileSync(join(runsDir, "run-noatt.json"), JSON.stringify(noAtt));
+  const { code, body } = cliJson([
+    "recover", "--run-id", "run-noatt",
+    "--request-id", "req-1", "--method", "op.x",
+    "--runs-dir", runsDir,
+    "--ae-a8n-root", FAKE_A8N,
+  ], fx.env);
+  assert.equal(code, 2);
+  assert.equal(body.code, "RECOVERY_REFUSED");
+  assert.match(body.message, /no ae-a8n ownership attestation/);
+  rmSync(fx.root, { recursive: true, force: true });
+});
+
+await at("cli fails loudly when the ae-a8n build lacks a command-required export", async () => {
+  // observe needs the session surfaces even though it never mutates.
+  const obs = cliJson([
+    "observe", "--pid", "1", "--session-uid", "501", "--session-asid", "42",
+    "--ae-a8n-root", FAKE_A8N,
+  ], { FAKE_A8N_OMIT: "readGuiSession" });
+  assert.equal(obs.code, 2);
+  assert.equal(obs.body.code, "AE_A8N_SURFACE_MISSING");
+  assert.match(obs.body.message, /'observe'.*readGuiSession/);
+
+  // verify-exit needs the session-scoped census pair.
+  const vex = cliJson([
+    "verify-exit", "--pid", "1", "--session-uid", "501", "--session-asid", "42",
+    "--ae-a8n-root", FAKE_A8N,
+  ], { FAKE_A8N_OMIT: "windowServerCensus" });
+  assert.equal(vex.code, 2);
+  assert.equal(vex.body.code, "AE_A8N_SURFACE_MISSING");
+  assert.match(vex.body.message, /'verify-exit'.*windowServerCensus/);
+});
+
+await at("cli fails loudly when a required ae-a8n export is null, not just missing (Issue #234)", async () => {
+  // `typeof null === "object"` used to let a null export pass the
+  // surface check — the command would then crash mid-run instead of
+  // refusing up front.
+  const obs = cliJson([
+    "observe", "--pid", "1", "--session-uid", "501", "--session-asid", "42",
+    "--ae-a8n-root", FAKE_A8N,
+  ], { FAKE_A8N_NULL: "readGuiSession" });
+  assert.equal(obs.code, 2);
+  assert.equal(obs.body.code, "AE_A8N_SURFACE_MISSING");
+  assert.match(obs.body.message, /'observe'.*readGuiSession/);
 });
 
 // ---- Issue #155: recovery verdicts -> diagnostics records ----
@@ -750,4 +991,4 @@ t("diagnostics converters refuse unknown verdicts instead of guessing", () => {
   assert.throws(() => crashEvidenceToDiagnostics({ kind: "other" }, {}), /crash-evidence manifest/);
 });
 
-console.log(`\n${passed} passed`);
+await finish("passed");

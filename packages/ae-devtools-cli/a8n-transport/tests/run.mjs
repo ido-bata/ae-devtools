@@ -7,25 +7,8 @@
  * a node:vm stub, not After Effects. Real-host evidence lives in
  * real-run.mjs output (evidence/*.json) per the repo verification taxonomy.
  */
-import { readdirSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { spawnSync } from "node:child_process";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runTestDir } from "../../scripts/test-harness.mjs";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const files = readdirSync(here)
-  .filter((f) => f.endsWith(".test.mjs"))
-  .sort();
-
-let failed = 0;
-for (const file of files) {
-  console.log(`\n=== ${file} ===`);
-  const result = spawnSync(process.execPath, ["--test", join(here, file)], {
-    stdio: "inherit",
-  });
-  if (result.status !== 0) {
-    failed++;
-    console.error(`FAILED: ${file}`);
-  }
-}
-process.exit(failed === 0 ? 0 : 1);
+runTestDir(dirname(fileURLToPath(import.meta.url)));

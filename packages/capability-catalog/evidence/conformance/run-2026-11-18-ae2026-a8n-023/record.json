@@ -1,0 +1,62 @@
+{
+ "schema": "ae-devtools.conformance-record/v1",
+ "recordVersion": 1,
+ "capabilityIds": [
+  "ae.scripting.app.newProject",
+  "ae.scripting.app.open",
+  "ae.scripting.Project.save",
+  "ae.scripting.ItemCollection.addComp",
+  "ae.scripting.Item.remove",
+  "ae.scripting.Project.activeItem",
+  "ae.scripting.Item.name",
+  "ae.scripting.Item.id",
+  "ae.scripting.Item.typeName"
+ ],
+ "platform": {
+  "os": "darwin",
+  "osVersion": "27.2.1",
+  "arch": "arm64"
+ },
+ "aeVersion": {
+  "version": "26.5.3x9",
+  "build": "9"
+ },
+ "sdkBuild": null,
+ "sdkBuildStatus": "not-applicable",
+ "verification": "verified-real-host",
+ "result": "PASS",
+ "catalogBinding": {
+  "kind": "real-host",
+  "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-023",
+  "platform": "darwin"
+ },
+ "sourceSha": "599a082940e93e2507d84a30341543b274d41450",
+ "runId": "run-2026-11-18-ae2026-a8n-023",
+ "artifactHashes": {
+  "Conformance-Disposable.aep": "7dea7705af7addca11ad8bb99d6485c3d8fbfee19a0a24dee0f159cc39fb8fc3",
+  "Conformance-MCP-Disposable.aep": "8391f97f15039559ac735431708f403211b6c464c8f39ed498a4d861b1cf282f",
+  "a8n-host-ext.js": "d41a31991246b25af2e996e595151109d2bfe17693ff9f9924f38a4ca651b1b1",
+  "ae-a8n-0.2.0.tgz": "3c63588bb618106f4ee89716f840787b9da601977f01cca92547ba5700bda372",
+  "cli-doctor.json": "67dbc09a707fecbba887f9bbe025c386a15f3136959f6d41d7573fc40d01fbce",
+  "cli-project-open.json": "bff26792485807631ea0fd458a2e89a37011958fc7657895d104d4800eef0a5d",
+  "harness-mcp-real-run.mjs": "b1801dc370a1038fc12e9e0a6c7793e3169cae823e58d5b53ce5dd8b579fa1a0",
+  "harness-real-run.mjs": "b49edc34bab55aacb3728964590d943d15a3c9fbf110baab0ab41ebf0e57c7b6",
+  "mcp-stdio.jsonl": "d6b022481cba5a5eebc998b44dd318e6bf92fe055800b4625a08a4b09a9cb2d7",
+  "session-a8n-jsx.json": "58254289f8c41244d328595960bd5e029bdabe819511f836c8336ff99d09613f",
+  "trace.jsonl": "198150c8d074e2482257c8398bb1de7e35e0a0d4b91ce39abf94454b9c30119c",
+  "provenance.json": "09e7a1b7f275767b4b9ce1b79d90fc619fdc433be427fa2d79134bfd48880fec"
+ },
+ "environment": {
+  "disposableProject": true,
+  "sideEffects": "none-observed",
+  "sessionRef": "owned ae-a8n sessions only: conformance/real-run.mjs, conformance/mcp-real-run.mjs, devtools-cli execute project.open; each launched its own AE instance and closed with unsavedChanges=refuse after restoring saved state; no pre-existing AE instance or user project was touched"
+ },
+ "dimensions": {
+  "script": "PASS",
+  "transport": "PASS",
+  "ownership": "PASS",
+  "timeout": "PASS",
+  "undo": "PASS"
+ },
+ "recordedAt": "2026-11-18T09:50:55.403Z"
+}

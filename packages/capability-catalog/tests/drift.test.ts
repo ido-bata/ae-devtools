@@ -299,8 +299,8 @@ describe("manifest generation (capability manifest)", () => {
     expect(manifest.records.some((r) => r.kind === "sdk-symbol")).toBe(false);
     expect(manifest.records.some((r) => r.id.startsWith("ae.sdk."))).toBe(false);
     expect(manifest.sdk.persistence).toBe("aggregate-only");
-    expect(manifest.sdk.totals.symbols).toBe(4677);
-    expect(manifest.sdk.denominatorCaveats.length).toBe(5);
+    expect(manifest.sdk.totals.symbols).toBe(4660);
+    expect(manifest.sdk.denominatorCaveats.length).toBe(6);
     expect(manifest.contractVersion).toEqual({ major: 1, minor: 0 });
   });
 

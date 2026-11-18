@@ -17,10 +17,9 @@
  *  - no AE process is launched, signaled, or configured by this module
  */
 
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 
 export const OWNED_MARKER = ".ae-devtools-owned.json";
 export const MANIFEST_PATH = join("CSXS", "manifest.xml");
@@ -40,13 +39,26 @@ export function cepExtensionsDir({ platform = process.platform, home = process.e
   throw new Error(`unsupported platform for CEP extensions dir: ${platform}`);
 }
 
-/** CEPHtmlEngine log dir (panel/JSX-side evidence lives here). */
-export function cepLogDir({ platform = process.platform, home = process.env.HOME } = {}) {
+/** CEPHtmlEngine log dir (panel/JSX-side evidence lives here).
+ *  darwin: ~/Library/Logs/CSXS (verified on real host — EVIDENCE.md).
+ *  win32: the user's temp dir. Adobe's CEP Debugging Handbook
+ *  (CEP_11.x/CEP_12.x, "Logs Folders") documents the Windows CEP logs
+ *  folder as `%temp%` — `CEPHtmlEngine12-<Host>-<ver>-<ext>.log` panel
+ *  logs sit directly in %TEMP% (typically C:\Users\<user>\AppData\Local\Temp),
+ *  NOT under %APPDATA%\Adobe\CEP. `collectLogs` lists only the
+ *  CEPHtmlEngine* panel logs; other CEP files there (e.g. CEP12-<Host>.log)
+ *  are not collected. Modeled path only: never exercised on a real
+ *  Windows host (UNVERIFIED).
+ *  Other platforms: null (unsupported). */
+export function cepLogDir({ platform = process.platform, home = process.env.HOME, temp = process.env.TEMP ?? process.env.TMP } = {}) {
   if (platform === "darwin") {
     if (!home) throw new Error("HOME is required for darwin CEP log dir");
     return join(home, "Library", "Logs", "CSXS");
   }
-  if (platform === "win32") return null; // %APPDATA%/Adobe/CEP/logs — not modeled here
+  if (platform === "win32") {
+    if (!temp) throw new Error("TEMP/TMP is required for win32 CEP log dir");
+    return temp;
+  }
   return null;
 }
 
@@ -85,6 +97,27 @@ export async function readManifestId(sourceDir) {
   return hit[1];
 }
 
+/**
+ * Resolve an extension id to its install path strictly inside `target`.
+ * Manifest Ids and caller-supplied ids are untrusted input: reject path
+ * separators and anything that resolves outside the extensions dir
+ * (Issue #227 — `../../x` must never reach mkdir/cp/rm).
+ */
+export function extensionDest(target, id) {
+  if (typeof id !== "string" || id.length === 0 || /[/\\\0]/.test(id)
+    || /[. ]$/.test(id)                        // Windows strips trailing dot/space → aliases a sibling id
+    || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(id)) { // reserved device names
+    throw new Error(`invalid extension id: ${JSON.stringify(id)}`);
+  }
+  const root = resolve(target);
+  const dest = resolve(root, id);
+  const prefix = root.endsWith(sep) ? root : root + sep;
+  if (!dest.startsWith(prefix)) {
+    throw new Error(`extension id escapes the CEP extensions dir: ${JSON.stringify(id)}`);
+  }
+  return dest;
+}
+
 async function readMarker(dest) {
   try {
     return JSON.parse(await readFile(join(dest, OWNED_MARKER), "utf8"));
@@ -105,7 +138,7 @@ export async function install({ sourceDir, extensionId = null, targetDir = null,
     throw new Error(`manifest Extension Id '${manifestId}' != requested '${extensionId}'`);
   }
   const target = resolve(targetDir ?? cepExtensionsDir({ platform }));
-  const dest = join(target, manifestId);
+  const dest = extensionDest(target, manifestId);
   await mkdir(target, { recursive: true });
 
   const marker = await readMarker(dest);
@@ -141,7 +174,7 @@ export async function install({ sourceDir, extensionId = null, targetDir = null,
  *  missing dir → {status:"absent"}. */
 export async function uninstall({ extensionId, targetDir = null, platform = process.platform } = {}) {
   const target = resolve(targetDir ?? cepExtensionsDir({ platform }));
-  const dest = join(target, extensionId);
+  const dest = extensionDest(target, extensionId);
   if (!(await exists(dest))) return { status: "absent", dest };
   const marker = await readMarker(dest);
   if (!marker || marker.extensionId !== extensionId) {
@@ -154,7 +187,7 @@ export async function uninstall({ extensionId, targetDir = null, platform = proc
 /** Inspect install state without modifying anything. */
 export async function status({ extensionId, targetDir = null, platform = process.platform, sourceDir = null } = {}) {
   const target = resolve(targetDir ?? cepExtensionsDir({ platform }));
-  const dest = join(target, extensionId);
+  const dest = extensionDest(target, extensionId);
   if (!(await exists(dest))) return { status: "absent", dest };
   const marker = await readMarker(dest);
   const owned = marker?.extensionId === extensionId;
@@ -189,12 +222,18 @@ export async function cleanup({ targetDir = null, platform = process.platform } 
 
 /** List CEPHtmlEngine log files (names + sizes). Reading panel logs is
  *  evidence collection, not AE interaction. */
-export async function collectLogs({ logDir = null, home = process.env.HOME } = {}) {
-  const dir = logDir ?? cepLogDir({ home });
+export async function collectLogs({ logDir = null, home = process.env.HOME, platform = process.platform, temp = process.env.TEMP ?? process.env.TMP, extensionId = null } = {}) {
+  const dir = logDir ?? cepLogDir({ platform, home, temp });
   if (!dir || !(await exists(dir))) return { dir, logs: [] };
   const logs = [];
   for (const e of await readdir(dir)) {
     if (!/CEPHtmlEngine.*\.log$/i.test(e)) continue;
+    // The log file name embeds the extension id
+    // (CEPHtmlEngine12-<Host>-<ver>-<ext>.log). On win32 the log dir is the
+    // SHARED user %TEMP%, so an unscoped listing would attribute foreign
+    // extensions' logs to this session — scope by extensionId when given
+    // (Issue #248).
+    if (typeof extensionId === "string" && extensionId.length > 0 && !e.includes(extensionId)) continue;
     const st = await stat(join(dir, e));
     logs.push({ name: e, bytes: st.size, mtime: st.mtime.toISOString() });
   }

@@ -11,7 +11,7 @@ description: Skill progressive disclosure entrypoint. AGENTS.md §17 pointer ind
 
 ## 標準 Skill taxonomy
 
-リポジトリで vendor する Skill は 24 個 + 1 個の dispatcher（本ファイル）。
+リポジトリで vendor する Skill は 25 個 + 1 個の dispatcher（本ファイル）。
 ファイル名は `<skill>/SKILL.md` で、 `name` frontmatter は <skill> と一致する。
 
 | Skill | 主な責務 |
@@ -38,6 +38,7 @@ description: Skill progressive disclosure entrypoint. AGENTS.md §17 pointer ind
 | `security-maintenance` | security advisory intake / priority / release 割り |
 | `skill-selection` | project の必要能力判定と Skill 導入・採否の記録 |
 | `supervisor-boundary` | Supervisor / Worker の権限分離が必要な場合の境界 contract |
+| `system-quality` | 要求保存・全体再構成・既知アンチケース排除・改善関係の検証と旧構造撤去 |
 | `worktree-workflow` | Worktrunk を WSL/Linux の worktree 操作 layer として使う契約 |
 | `writing-discipline` | reader-oriented writing / Select-Compose-Reread pipeline |
 
@@ -55,6 +56,13 @@ ADR は [`docs/architecture/decisions/`](../docs/architecture/decisions/) にあ
 （例: skill 内の release merge authorization は本リポジトリでは
 `ADR-0012-release-merge-authorization.md` が対応する）。
 
+従って Skill 本文中の `organization/execution-placement.md`、
+`docs/adr/ADR-0036.md` 等への relative link は **このリポジトリ内では
+解決されない（404 相当）のが正常** であり、vendored hash を壊さないため
+local 側での link 修正は行わない。参照先を確認する場合は配布元
+`rebuildup/project-init` の同 path を見る。upstream 側の link 修正が
+必要な場合は project-init で直してから re-vendor する。
+
 ## Sync / freshness
 
 - source: `rebuildup/project-init`（floating。freeze が必要なら ADR で明示する）
@@ -62,14 +70,17 @@ ADR は [`docs/architecture/decisions/`](../docs/architecture/decisions/) にあ
   （`.agents/skills/` + `.claude/skills/` の canonical layout からの意図的な deviation。
   `AGENTS.md` §17 と [`docs/development.md`](../docs/development.md) の field ownership が
   `skills/` を canonical として参照しているため）
-- `skills-lock.json` は source / skill path / folder content hash の durable metadata。
-  hash は skills CLI (`bunx skills`) の `computeSkillFolderHash` と同一手順
-  （version 2 format）で、vendor した directory 全体を対象に計算する
+- `skills-lock.json` は source / commit / skill path / folder content hash の durable metadata。
+  hash は skills CLI (`bunx skills`, v2 format) の `computeSkillFolderHash` と同一手順
+  （version 2 format）で、vendor した directory 全体を対象に計算する。
+  `scripts/verify-skills-lock.mjs` が lock 記載 hash と `skills/<name>/` の実内容を照合する
 - 更新手順: `bunx skills add rebuildup/project-init --skill '*' --agent claude-code --agent codex -y`
   を scratch directory で実行して `.agents/skills/` と `skills-lock.json` を得た後、
-  `skills/` へ反映し `writing-discipline`（`.claude/skills/` 側の upstream 配布物）を手動で
-  同期して lock entry を追加する。`mise run skills-update` / `skills-bootstrap` task は
-  `.agents/skills/` layout 向けのため、この vendor 方式にはそのまま使えない
+  `skills/` へ反映する。`writing-discipline` は配布元が `rebuildup/writing-skills` のため
+  別途 `bunx skills add rebuildup/writing-skills --skill writing-discipline` で取得し、
+  lock entry を merge する（upstream project-init が pin している release 系の内容に合わせる）。
+  `mise run skills-update` / `skills-bootstrap` task は `.agents/skills/` layout 向けのため、
+  この vendor 方式にはそのまま使えない
 
 ## 関連 canonical
 

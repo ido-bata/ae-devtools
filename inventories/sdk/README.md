@@ -70,16 +70,16 @@ SDK zip には**ライセンス / EULA / readme が同梱されていない**。
 ヘッダー **70 ファイル**（`.h` 68 / `.hpp` 2）。うち `Examples/Headers` 直下が 40、
 サブディレクトリ（`SP/`、`adobesdk/` など）が 30。
 
-シンボル総数（分母）: **4677**
+シンボル総数（分母）: **4660**
 
 | class | 件数 |
 | --- | --- |
-| `external-command` | 3766 |
+| `external-command` | 3750 |
 | `unsupported-or-unknown` | 552 |
-| `host-callback` | 154 |
+| `host-callback` | 153 |
 | `in-host-plugin-command` | 131 |
 | `build-test-lifecycle` | 74 |
-| **合計** | **4677** |
+| **合計** | **4660** |
 
 unknown **552** の内訳:
 
@@ -93,10 +93,10 @@ kind 別:
 
 | kind | 件数 |
 | --- | --- |
-| `suite-slot` | 3539 |
+| `suite-slot` | 3523 |
 | `type` | 534 |
 | `suite` | 227 |
-| `callback-slot` | 98 |
+| `callback-slot` | 97 |
 | `version-or-pipl` | 74 |
 | `callback-type` | 69 |
 | `entry-point-slot` | 58 |
@@ -105,18 +105,18 @@ kind 別:
 
 ### 読むときの注意
 
-- **`external-command` が 3766 と大きいのは suite slot の積み上げ**である。
+- **`external-command` が 3750 と大きいのは suite slot の積み上げ**である。
   suite は版ごとに累積する（例: ある suite の v1〜v13 がすべて宣言されている）ため、
-  「3766 個の独立した操作」ではない。**版違いの重複を含む。**
-- deprecated ヘッダー（`*Old.h`）の **2318** シンボルは分母から除外していない。
+  「3750 個の独立した操作」ではない。**版違いの重複を含む。**
+- deprecated ヘッダー（`*Old.h`）の **2317** シンボルは分母から除外していない。
   機能クラスに計上したうえで `deprecatedHeaderSymbols` として別掲している。
 - 未登録 suite は 2 件のみ（いずれも `SPXPlat*`。この配布に対応する `k...` マクロが無い）。
 
 ### 独立検証
 
-関数ポインタ宣言子を **Python で独立に**数えた（コメント除去・複数行対応）。結果 **3792**。
-抽出側は callable 行 3793 − 非 star 形式 1 件（`typedef Ret (Name)(args)`）= **3792** で**完全一致**。
-件数はこの方法で裏取りしてある。
+関数ポインタ宣言子を **Python で独立に**数えた（コメント除去・複数行対応）。生の `(*name)(` 出現数は **3792**。
+抽出側は #207 で hierarchy-aware になり、struct 直下（depth-1）の宣言子だけを member として出力する。
+member signature の引数リスト内にネストした callback param **17 件**（`pix_fn` / `fn_func` 系、suite-slot 16 + callback-slot 1）は pseudo-member として除外され、callable 行は 3776（star 形式 3775 + 非 star 形式 1）となる。3792 − 17 = 3775 で整合する。
 
 ## 生成物
 

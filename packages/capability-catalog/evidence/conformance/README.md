@@ -15,6 +15,9 @@ Rules enforced by `scripts/conformance-gate.ts`:
   (`design/conformance-evidence.md` §1–§4).
 
 Real-host evidence is produced by owner-authorized runs on disposable
-projects; CI never claims real-host levels it did not observe. Until the
-first record lands, the gate verdict is `no-claims` — explicitly not a
-conformance pass.
+projects; CI never claims real-host levels it did not observe. Before the
+first record lands the gate verdict is `no-claims` — explicitly not a
+conformance pass. Records under `run-*/` are bound to the candidate via
+`sourceSha` ancestry + evidence-scope diffing (Issue #221); a candidate
+that touches evidence-scope paths invalidates prior records until a new
+run re-binds them.

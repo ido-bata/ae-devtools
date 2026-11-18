@@ -1,0 +1,108 @@
+{
+  "schema": "ae-devtools.cli.doctor/v1",
+  "node": "v26.13.1",
+  "platform": "darwin/arm64",
+  "devloopSchema": "ae-devtools.dev-loop/v1",
+  "aeA8n": {
+    "resolvable": true,
+    "source": "npm:@ido-bata/ae-a8n",
+    "version": "0.2.0",
+    "contractOk": true,
+    "missing": [],
+    "checks": [
+      {
+        "id": "negotiation.compatible",
+        "ok": true
+      },
+      {
+        "id": "negotiation.client-older-minor",
+        "ok": true
+      },
+      {
+        "id": "negotiation.incompatible-major",
+        "ok": true
+      },
+      {
+        "id": "negotiation.unsupported-minor",
+        "ok": true
+      },
+      {
+        "id": "negotiation.malformed-schema",
+        "ok": true
+      },
+      {
+        "id": "negotiation.requested-capability-compatible",
+        "ok": true
+      },
+      {
+        "id": "negotiation.unknown-capability",
+        "ok": true
+      },
+      {
+        "id": "negotiation.capability-unassessed",
+        "ok": true
+      },
+      {
+        "id": "negotiation.missing-permission",
+        "ok": true
+      },
+      {
+        "id": "dispatch.pass-owned",
+        "ok": true
+      },
+      {
+        "id": "dispatch.pass-explicitly-attached",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unknown-ownership",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-contradictory-claim",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unverified",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-not-implemented",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-no-execution-path",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-missing-permission",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-no-permission-declared",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unknown-capability",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unassessed",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-malformed",
+        "ok": true
+      }
+    ],
+    "required": "ae-a8n capability handshake (ae-a8n#102), which post-dates the ae-a8n#103 extension-prelude and ae-a8n#105 LaunchServices fixes"
+  },
+  "aeInstalls": [
+    "/Applications/Adobe After Effects 2026",
+    "/Applications/Adobe After Effects 2027"
+  ],
+  "a8nTransportPresent": true,
+  "runsDir": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/ae-devtools-cli-runs",
+  "runs": [],
+  "evidenceLevel": "environment probe only — no AE was contacted"
+}

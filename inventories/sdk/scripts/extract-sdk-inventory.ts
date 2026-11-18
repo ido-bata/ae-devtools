@@ -249,19 +249,56 @@ function findEnumBlocks(code: string, lineAt: (o: number) => number): EnumBlock[
 
 type Named = { name: string; line: number; offset: number };
 
-/** `Ret (*Name)(args)` — a function-pointer declarator. */
+/**
+ * `Ret (*Name)(args)` — a function-pointer declarator.
+ *
+ * Hierarchy-aware: only declarators at the top level of the scanned range
+ * count. A `(*name)(` nested inside a member's parameter list — a callback
+ * parameter of a suite function signature, e.g. the per-pixel iterator
+ * argument — sits at paren depth >= 1 and is NOT a slot of the enclosing
+ * struct: it is an argument the caller supplies, not a member the struct
+ * provides. Scanning without depth tracking emitted these callback
+ * parameters as pseudo-members (the #207 extractor artifact).
+ */
 function findFunctionPointers(
   src: string,
   from: number,
   to: number,
   lineAt: (o: number) => number,
+  memberScan = false,
 ): Named[] {
   const out: Named[] = [];
-  const segment = src.slice(from, to);
-  const re = /\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\(/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(segment))) {
-    out.push({ name: m[1], line: lineAt(from + m.index), offset: from + m.index });
+  const re = /\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\(/y;
+  let paren = 0;
+  // Brace depth is only meaningful relative to a struct body: at file scope
+  // an `extern "C" { ... }` wrapper (or any other brace pair) would hide
+  // every top-level typedef behind depth >= 1, so whole-file scans track
+  // parens/brackets only. Member scans additionally exclude declarators
+  // inside nested struct/union members.
+  let brace = 0;
+  let bracket = 0;
+  for (let i = from; i < to; i++) {
+    const c = src[i];
+    if (c === "(") {
+      if (paren === 0 && bracket === 0 && (!memberScan || brace === 0)) {
+        re.lastIndex = i;
+        const m = re.exec(src);
+        if (m !== null && i + m[0].length <= to) {
+          out.push({ name: m[1], line: lineAt(i), offset: i });
+        }
+      }
+      paren++;
+    } else if (c === ")") {
+      paren--;
+    } else if (c === "{") {
+      brace++;
+    } else if (c === "}") {
+      brace--;
+    } else if (c === "[") {
+      bracket++;
+    } else if (c === "]") {
+      bracket--;
+    }
   }
   return out;
 }
@@ -442,7 +479,7 @@ function extractFile(
   const suiteBodyText = suiteBlocks.map((b) => code.slice(b.bodyStart, b.bodyEnd)).join("\n");
 
   for (const block of suiteBlocks) {
-    const slots = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt);
+    const slots = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt, true);
     if (slots.length === 0) continue;
     const macro = suiteMacroFor(block.name!);
     const registered = macro !== null;
@@ -517,7 +554,7 @@ function extractFile(
 
   for (const block of structs) {
     if (!block.name || isSuiteName(block.name)) continue;
-    const slots = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt);
+    const slots = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt, true);
     if (slots.length === 0) continue;
 
     const hostTable = HOST_PROC_TABLE.test(block.name);
@@ -838,6 +875,7 @@ function buildAggregate(
       "unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.",
       "Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.",
       "Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.",
+      "Struct member extraction is hierarchy-aware: only function-pointer declarators at struct depth-1 count as suite/callback slots. Callback parameters nested inside a member's own parameter list (e.g. per-pixel iterator arguments) are arguments the caller supplies, not struct members, and are not counted.",
       "No behavioural claim about any AE build is implied. Nothing here was executed against After Effects.",
     ],
   };

@@ -12,12 +12,12 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 
 ```sh
 npm install @ido-bata/ae-devtools-cli          # registry latest
-npm install @ido-bata/ae-devtools-cli@0.3.0    # this release, once published
+npm install @ido-bata/ae-devtools-cli@0.4.0    # this release, once published
 # tarball / local checkout からも可:
-npm install ./ae-devtools-cli-0.3.0.tgz
+npm install ./ae-devtools-cli-0.4.0.tgz
 ```
 
-### Migrating to 0.3.0
+### Migrating to 0.4.0
 
 - New dev-loop surface: `ae-devtools discover/inspect/execute/verify`,
   `ae-devtools-mcp` (stdio MCP), and the VSCode extension
@@ -30,7 +30,7 @@ npm install ./ae-devtools-cli-0.3.0.tgz
   under the `next` dist-tag); override with `--ae-a8n-root <checkout>`.
   The `fake` session is unaffected.
 
-Provides six bins:
+Provides seven bins:
 
 - `ae-devtools` — developer CLI (`doctor`, `discover`, `inspect`,
   `execute`, `verify`, `runs`, `reap`, `diagnose`)
@@ -42,6 +42,8 @@ Provides six bins:
 - `ae-devtools-cep` — CEP extension devkit (`scaffold` / `validate`)
 - `ae-devtools-cep-lifecycle` — CEP panel install/uninstall/status/
   cleanup/logs/`playerdebugmode` (machine-level only; never launches AE)
+- `ae-devtools-debug` — `extendscript-debug` launch.json generation /
+  contract validation / attach preflight
 
 ## MCP server
 
@@ -151,6 +153,20 @@ import { createFakeHost, createFakeApp }
   from "@ido-bata/ae-devtools-cli/agent-loop/fake-host";
 ```
 
+supported subpath は `exports` map で列挙された以下のみ（Issue #184）:
+
+| subpath | 用途 |
+| --- | --- |
+| `@ido-bata/ae-devtools-cli/agent-loop` | dev loop library（`runDevLoop` 等） |
+| `@ido-bata/ae-devtools-cli/agent-loop/fake-host` | fake host / fake app |
+| `@ido-bata/ae-devtools-cli/trusted-execution/runner.mjs` | `loadTrustedCodec`（custom host を組む consumer 向け） |
+| `@ido-bata/ae-devtools-cli/trusted-execution/permissions.mjs` | `consentScopeFor`（同上） |
+
+上記以外の deep import（`dev-loop/`・`tests/`・その他内部 module を含む）は
+`ERR_PACKAGE_PATH_NOT_EXPORTED` で拒否される unsupported surface であり、
+予告なく変更され得る。consumer-smoke がこの境界を packed tarball 上で
+検証する。
+
 `runDevLoop` は dispatch→diagnose→fix→rerun→regression の dev loop
 （Issue #38）。silent retry なし、fix budget は bounded、consent は
 attempt ごとに注入 provider が評価、dirty FAILED 後の rerun は
@@ -184,14 +200,29 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 | `jsx-toolchain/` | TS→ES3 JSX build / typecheck / lint / sourcemap |
 | `cep-extension/` | CEP extension scaffold + validate devkit (`ae-devtools-cep`, `ae-devtools-cep-lifecycle` bins) |
 | `agent-loop/` | agent dev loop library (`@ido-bata/ae-devtools-cli/agent-loop`; bin なし、fake-level) |
+| `vscode-extension/` | VSCode extension scaffold (`vsce package` → installable VSIX; fake level) |
+| `vscode-debugger/` | debugger attach-config generator + host preflight (`ae-devtools-debug` bin) |
 
 ## Verification
 
-- `npm test` — 全 fake-level suite（AE 不要）
+- `npm test` — 全 fake-level suite（AE 不要）。先頭で `scripts/check-syntax.mjs`
+  が shipped `.mjs` 全件に `node --check` を掛ける最小静的ゲート
+  （`tsc --checkJs` / eslint は未導入 — Issue #185 の記録済み判断）
+- テスト基盤: `*.test.mjs` を持つ suite は `scripts/test-harness.mjs`
+  経由、inline suite（devtools-cli / recovery-orchestrator /
+  vscode-debugger / jsx-toolchain）は `scripts/testkit.mjs` の
+  `t`/`at`/`finish` を共有
 - `npm run smoke:consumer` — tarball を外部ディレクトリへ install し、
   fake session での CLI 実行を検証
 - real-host: `--session a8n` 経路は opt-in。AE 実機・Windows は
   別途 evidence 記録（未検証は未検証と表示）
+- platform scope: `engines` は `node >=22` のみを要求し、fake-level の
+  全 surface（discover/execute/verify/doctor、jsx-toolchain、MCP、
+  CEP scaffold、VSCode 拡張）は Node が動く OS で利用できる。一方
+  real-host session 系（`AfterEffects.launch`、run-marker の
+  `osascript`/`ps` ベースの process probe、`~/Library` 配下の
+  DiagnosticReports 収集）は macOS 前提で実装されており、Windows
+  実機では UNVERIFIED（Issue #224 で追跡）
 
 ## Docs
 
