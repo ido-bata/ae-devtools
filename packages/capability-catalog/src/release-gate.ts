@@ -37,6 +37,7 @@ import {
   evaluateConformanceClaimSources,
   parseConformanceRecord,
   type ConformanceClaim,
+  type ConformanceRecord,
   type ConformanceRecordSource,
   type ConformanceViolation,
 } from "./conformance.ts";
@@ -102,6 +103,21 @@ export type StaleEvidence = {
   sourceSha: string;
   reason: "source-sha-not-ancestor" | "evidence-scope-changed";
   paths?: string[];
+};
+
+/**
+ * A structurally valid record excluded because it falls outside the
+ * recorded `supportedRelease` scope (Issue #229). Out-of-scope evidence
+ * is not wrong — it simply cannot back THIS release's claims; claims it
+ * alone covered surface as no-evidence violations, never as passes.
+ */
+export type OutOfScopeEvidence = {
+  runId: string;
+  reason:
+    | "ae-version-out-of-scope"
+    | "platform-out-of-scope"
+    | "verification-out-of-scope";
+  detail: string;
 };
 
 export type ReleaseScope = {
@@ -281,10 +297,43 @@ export type ReleaseGateReport = {
   /** Records excluded because their sourceSha does not bind to the
    *  candidate (not an ancestor, or evidence-scope paths changed since). */
   staleEvidence: StaleEvidence[];
+  /** Records excluded because they fall outside the recorded
+   *  supportedRelease scope (AE release line / os / arch / verification). */
+  outOfScopeEvidence: OutOfScopeEvidence[];
   /** The candidate head the binding was evaluated against. */
   candidateHead: string;
   diagnostics: string[];
 };
+
+/**
+ * AE release line of a version string: "26.5.3x9" -> "26.5", "27.0" ->
+ * "27.0". Returns null when the version carries no major.minor prefix —
+ * an unparseable version is out of scope, never assumed in.
+ */
+export function aeReleaseLine(version: string): string | null {
+  const m = /^(\d+)\.(\d+)/.exec(version);
+  return m === null ? null : `${m[1]}.${m[2]}`;
+}
+
+/**
+ * Whether a parsed record sits inside the recorded supportedRelease
+ * scope. Only called when state === "recorded"; undeclared scope fields
+ * (os/arch/verification absent) are not constrained.
+ */
+function supportedScopeViolation(
+  rec: ConformanceRecord,
+  sr: Extract<ReleaseScope["supportedRelease"], { state: "recorded" }>,
+): OutOfScopeEvidence["reason"] | null {
+  const line = aeReleaseLine(rec.aeVersion.version);
+  if (line === null || !sr.releases.includes(line)) return "ae-version-out-of-scope";
+  const sc = sr.scope;
+  if (sc?.os !== undefined && !sc.os.includes(rec.platform.os)) return "platform-out-of-scope";
+  if (sc?.arch !== undefined && !sc.arch.includes(rec.platform.arch)) return "platform-out-of-scope";
+  if (sc?.verification !== undefined && rec.verification !== sc.verification) {
+    return "verification-out-of-scope";
+  }
+  return null;
+}
 
 /**
  * Compose the release gate. `recordSources` are the candidate evidence
@@ -332,7 +381,36 @@ export function evaluateReleaseGate(input: {
     return true;
   });
 
-  const evaluation = evaluateConformanceClaimSources(resolution.claims, freshSources);
+  // supportedRelease scope binding (Issue #229): a recorded scope
+  // declares WHICH AE release line / OS / arch / verification level the
+  // release supports. Evidence measured outside that scope must not
+  // satisfy claims — e.g. a PASS on AE 27.0 or darwin/x86_64 cannot back
+  // a 26.5/arm64 declaration. Out-of-scope records are excluded and
+  // reported, never silently reused.
+  const supported = scope.supportedRelease;
+  const outOfScopeEvidence: OutOfScopeEvidence[] = [];
+  const scopedSources =
+    supported.state === "recorded"
+      ? freshSources.filter((s) => {
+          const parsed = parseConformanceRecord(s.record);
+          if (!parsed.ok) return true; // invalid records are reported separately
+          const reason = supportedScopeViolation(parsed.record, supported);
+          if (reason === null) return true;
+          outOfScopeEvidence.push({
+            runId: s.runId,
+            reason,
+            detail:
+              reason === "ae-version-out-of-scope"
+                ? `aeVersion ${parsed.record.aeVersion.version} is not in supportedRelease.releases ${JSON.stringify(supported.releases)}`
+                : reason === "platform-out-of-scope"
+                  ? `platform ${parsed.record.platform.os}/${parsed.record.platform.arch} is outside supportedRelease.scope`
+                  : `verification ${parsed.record.verification} is outside supportedRelease.scope.verification ${JSON.stringify(supported.scope?.verification)}`,
+          });
+          return false;
+        })
+      : freshSources;
+
+  const evaluation = evaluateConformanceClaimSources(resolution.claims, scopedSources);
 
   // Surface structurally invalid records: they cannot support a claim,
   // and their presence in the evidence tree is itself worth reporting.
@@ -347,6 +425,9 @@ export function evaluateReleaseGate(input: {
   }
   if (resolution.claims.length === 0) {
     diagnostics.push("claim-set-empty");
+  }
+  if (outOfScopeEvidence.length > 0) {
+    diagnostics.push("supported-scope-excluded-evidence");
   }
 
   const hasViolations =
@@ -369,6 +450,7 @@ export function evaluateReleaseGate(input: {
     violations: evaluation.violations,
     rejectedRecords,
     staleEvidence,
+    outOfScopeEvidence,
     candidateHead: candidate.head,
     diagnostics,
   };
