@@ -188,6 +188,12 @@ jobs:
       # would be unverified.
       - if: steps.detect.outputs.present == 'true'
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      # Static syntax gate over the shipped .mjs surface (Issue #185) —
+      # the package has no typecheck step, so node --check is the
+      # minimal honest static check wired into CI.
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: packages/ae-devtools-cli
+        run: node scripts/check-syntax.mjs
       # Run every suite even when an earlier one fails, so a single
       # broken suite cannot hide the status of the rest. Each suite is
       # also guarded individually: a head that has the package but not

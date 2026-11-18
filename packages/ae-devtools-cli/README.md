@@ -189,7 +189,13 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
 
 ## Verification
 
-- `npm test` — 全 fake-level suite（AE 不要）
+- `npm test` — 全 fake-level suite（AE 不要）。先頭で `scripts/check-syntax.mjs`
+  が shipped `.mjs` 全件に `node --check` を掛ける最小静的ゲート
+  （`tsc --checkJs` / eslint は未導入 — Issue #185 の記録済み判断）
+- テスト基盤: `*.test.mjs` を持つ suite は `scripts/test-harness.mjs`
+  経由、inline suite（devtools-cli / recovery-orchestrator /
+  vscode-debugger / jsx-toolchain）は `scripts/testkit.mjs` の
+  `t`/`at`/`finish` を共有
 - `npm run smoke:consumer` — tarball を外部ディレクトリへ install し、
   fake session での CLI 実行を検証
 - real-host: `--session a8n` 経路は opt-in。AE 実機・Windows は

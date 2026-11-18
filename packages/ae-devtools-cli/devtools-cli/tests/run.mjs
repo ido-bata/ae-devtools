@@ -13,6 +13,7 @@ import {
   attachEvidence, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
 import { failureOutcome, isFailureResult } from "../diagnostics.mjs";
+import { t, at, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "cli.mjs");
@@ -22,7 +23,6 @@ const RUNS_DIR = join(tmpdir(), "ae-devtools-cli-test-runs");
 // Packaged diagnostics module (Issue #113): diagnostics/ ships in the
 // tarball next to devtools-cli/.
 const DIAG_FIXTURE_JSX = join(HERE, "..", "..", "diagnostics", "tests", "fixtures", "single", "runtime-error.jsx");
-let passed = 0;
 
 function run(args, env = {}) {
   try {
@@ -35,14 +35,6 @@ function run(args, env = {}) {
     // nonzero exit still prints the JSON result on stdout
     return { code: e.status ?? 1, body: JSON.parse(e.stdout?.toString() ?? "{}") };
   }
-}
-function t(name, fn) {
-  try { fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
-async function at(name, fn) {
-  try { await fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
 }
 function freshRunsDir() {
   rmSync(RUNS_DIR, { recursive: true, force: true });
@@ -600,4 +592,4 @@ t("diagnose recognizes a CLI error document explicitly", () => {
   }
 });
 
-console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);
+await finish("tests passed");
