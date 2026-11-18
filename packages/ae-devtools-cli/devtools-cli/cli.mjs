@@ -61,7 +61,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
-import { openFakeSession } from "./fake-session.mjs";
+import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, failureOutcome, runDiagnose } from "./diagnostics.mjs";
 
@@ -104,62 +104,55 @@ function findAeInstalls() {
 
 async function openSession(flags) {
   const kind = flags.session ?? "fake";
-  if (kind === "fake") return openFakeSession();
-  if (kind === "a8n") {
-    const tdir = join(EXP, "a8n-transport", "session.mjs");
-    if (!existsSync(tdir)) {
-      const e = new Error("a8n session requires packages/ae-devtools-cli/a8n-transport (Issue #49) — not present on this branch");
-      e.code = "A8N_TRANSPORT_MISSING";
-      throw e;
-    }
-    const { openSliceSession } = await import(tdir);
-    const s = await openSliceSession({
-      aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
-      installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
-    });
-    // Attest the owned target for recovery authorization: the pid and GUI
-    // session must come from ae-a8n's own ownership proof (recoveryTarget),
-    // never from a pid discovered by other means. Older ae-a8n builds lack
-    // the accessor — the marker then records nulls and recover refuses.
-    const target = typeof s.ae?.recoveryTarget === "function" ? s.ae.recoveryTarget() : null;
-    // Attestation provenance: recorded ONLY from the live ae-a8n session
-    // object. recoveryTarget() null (unowned/closed/unattested transport)
-    // or missing ownership evidence → attestation null → recover/reap
-    // refuse. The marker stays an attribution record; authority comes
-    // from this ae-a8n contract trace, never from the JSON itself.
-    const attestation = target === null ? null : {
-      source: ATTESTATION_SOURCE,
-      ownershipKind: typeof s.ownership?.kind === "string" ? s.ownership.kind : null,
-      ownershipEvidence: typeof s.ownership?.evidence === "string" ? s.ownership.evidence : null,
-      transportKind: typeof s.transportKind === "string" ? s.transportKind : null,
-      aeA8nVersion: typeof s.aeA8nHead === "string" ? s.aeA8nHead : null,
-    };
-    const processEvidence = target === null ? null : {
-      aePid: target.pid,
-      aePidStartStamp: await processStartStamp(target.pid),
-      guiSession: target.session === null || target.session === undefined
-        ? null
-        : { uid: target.session.uid, asid: target.session.asid ?? null },
-      attestation,
-    };
-    return {
-      kind: "a8n",
-      evidenceLevel: "verified on real host (macOS)",
-      runner: s.runner,
-      pin: s.pin,
-      close: () => s.close(),
-      processEvidence,
-      meta: { aeVersion: s.info?.version ?? null, ownership: s.ownership?.kind ?? null, aeA8nHead: s.aeA8nHead ?? null },
-      ownership: s.ownership ?? null,
-      installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : (s.installDir ?? null),
-      appPath: s.appPath ?? null,
-      tracePath: s.tracePath ?? null,
-      workdir: s.workdir ?? null,
-    };
+  // Session-kind dispatch is shared with MCP/VSCode via
+  // dev-loop/session-open.mjs (Issue #183) — one implementation of the
+  // fake/a8n decision, the A8N_TRANSPORT_MISSING refusal and the
+  // openSliceSession call. `base.slice` is the raw slice session the
+  // CLI needs for recovery attestation; it is stripped before return.
+  const base = await openSharedSession(kind, {
+    aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
+    installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+  });
+  if (kind !== "a8n") {
+    const { slice: _slice, ...session } = base;
+    return session;
   }
-  const e = new Error(`unknown --session '${kind}' (fake|a8n)`);
-  e.code = "USAGE";
-  throw e;
+  const s = base.slice;
+  // Attest the owned target for recovery authorization: the pid and GUI
+  // session must come from ae-a8n's own ownership proof (recoveryTarget),
+  // never from a pid discovered by other means. Older ae-a8n builds lack
+  // the accessor — the marker then records nulls and recover refuses.
+  const target = typeof s.ae?.recoveryTarget === "function" ? s.ae.recoveryTarget() : null;
+  // Attestation provenance: recorded ONLY from the live ae-a8n session
+  // object. recoveryTarget() null (unowned/closed/unattested transport)
+  // or missing ownership evidence → attestation null → recover/reap
+  // refuse. The marker stays an attribution record; authority comes
+  // from this ae-a8n contract trace, never from the JSON itself.
+  const attestation = target === null ? null : {
+    source: ATTESTATION_SOURCE,
+    ownershipKind: typeof s.ownership?.kind === "string" ? s.ownership.kind : null,
+    ownershipEvidence: typeof s.ownership?.evidence === "string" ? s.ownership.evidence : null,
+    transportKind: typeof s.transportKind === "string" ? s.transportKind : null,
+    aeA8nVersion: typeof s.aeA8nHead === "string" ? s.aeA8nHead : null,
+  };
+  const processEvidence = target === null ? null : {
+    aePid: target.pid,
+    aePidStartStamp: await processStartStamp(target.pid),
+    guiSession: target.session === null || target.session === undefined
+      ? null
+      : { uid: target.session.uid, asid: target.session.asid ?? null },
+    attestation,
+  };
+  const { slice: _slice, ...rest } = base;
+  return {
+    ...rest,
+    processEvidence,
+    ownership: s.ownership ?? null,
+    installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : (s.installDir ?? null),
+    appPath: s.appPath ?? null,
+    tracePath: s.tracePath ?? null,
+    workdir: s.workdir ?? null,
+  };
 }
 
 function consentProviderFor(flags) {

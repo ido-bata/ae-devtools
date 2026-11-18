@@ -20,6 +20,7 @@
 | [ADR-0012-release-merge-authorization.md](ADR-0012-release-merge-authorization.md) | explicit user authorization for release PR merge | **Proposed** | 2026-09-18 |
 | [ADR-0014-linear-profile.md](ADR-0014-linear-profile.md) | Linear profile を optional release planning control plane として使う場合の契約 | **Proposed** | 2026-09-18 |
 | [ADR-0015-deliverable-unit-release-cadence.md](ADR-0015-deliverable-unit-release-cadence.md) | deliverable-unit release cadence / ticket PR の継続統合 / freeze→batch verification | **Proposed** | 2026-11-16 |
+| [ADR-0016-session-open-and-fake-host-boundary.md](ADR-0016-session-open-and-fake-host-boundary.md) | session-open 単一実装 / fake host 2 系統の境界 / consent semantics SoT | **Proposed** | 2026-11-18 |
 
 ## ADR 作成ガイド
 
