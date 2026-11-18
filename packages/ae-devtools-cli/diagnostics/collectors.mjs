@@ -270,12 +270,24 @@ export function fromPanelLog(text, { path = null, artifactHash = null, ctx = {} 
  * `complete` is false when the directory is missing/unreadable or any
  * matching file failed to read; `errors` lists each failure.
  */
-export function collectPanelLogs({ logDir = null, platform = process.platform, home = process.env.HOME, ctx = {} } = {}) {
-  const dir = logDir ?? cepLogDir({ platform, home });
-  const result = { dir, complete: true, errors: [], files: [], records: [], skippedLines: 0 };
+export function collectPanelLogs({ logDir = null, platform = process.platform, home = process.env.HOME, temp = process.env.TEMP ?? process.env.TMP, extensionId = null, ctx = {} } = {}) {
+  const result = { dir: logDir ?? null, complete: true, errors: [], files: [], records: [], skippedLines: 0 };
+  let dir;
+  try {
+    dir = logDir ?? cepLogDir({ platform, home, temp });
+  } catch (error) {
+    // cepLogDir throws when a required env var is missing (e.g. TEMP/TMP
+    // on win32) — report it, never throw: this collector's contract is an
+    // explicit result in every case (Issue #248).
+    result.dir = null;
+    result.complete = false;
+    result.errors.push(`CEP log dir unavailable: ${String(error?.message ?? error)}`);
+    return result;
+  }
+  result.dir = dir;
   if (typeof dir !== "string" || dir.length === 0) {
     result.complete = false;
-    result.errors.push("no CEP log dir for this platform (win32/other is not modeled)");
+    result.errors.push("no CEP log dir for this platform");
     return result;
   }
   let names;
@@ -288,6 +300,10 @@ export function collectPanelLogs({ logDir = null, platform = process.platform, h
   }
   for (const name of names.sort()) {
     if (!PANEL_LOG_NAME.test(name)) continue;
+    // Scope by extensionId when given: on win32 the CEP log dir is the
+    // shared user %TEMP%, so unscoped collection would attribute other
+    // extensions' panel logs to this session (Issue #248).
+    if (typeof extensionId === "string" && extensionId.length > 0 && !name.includes(extensionId)) continue;
     const path = join(dir, name);
     const file = { path, bytes: null, records: 0 };
     try {

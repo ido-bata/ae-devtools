@@ -43,7 +43,18 @@ import {
   aeA8nHandshakeError,
 } from "./compat.mjs";
 import { runHandshakeContractChecks } from "./contract.mjs";
-import { gitHead } from "../devtools-cli/real-run-kit.mjs";
+
+// Local copy of the provenance probe — kept here (not imported from
+// devtools-cli/real-run-kit.mjs) so a8n-transport does not depend on the
+// CLI layer above it (Issue #248).
+async function gitHead(root) {
+  try {
+    const { stdout } = await execFileAsync("git", ["-C", root, "rev-parse", "HEAD"], { timeout: 5_000 });
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -124,6 +135,13 @@ export async function openSliceSession(options = {}) {
       failures: battery.checks.filter((c) => !c.ok),
     });
   }
+  // Normalize once: an empty string (e.g. `--install-dir=`) is not a
+  // usable install identity — treat it as absent for BOTH the launch
+  // forward and the marker identity below (Issue #248).
+  const optInstallDir =
+    typeof options.installDir === "string" && options.installDir.length > 0
+      ? options.installDir
+      : null;
   const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-transport-"));
   // sessionRoot keeps ae-a8n's trace.jsonl + result files inside workdir so
   // launch-failure evidence survives instead of landing in an anonymous
@@ -139,7 +157,7 @@ export async function openSliceSession(options = {}) {
   let ae;
   try {
     ae = await AfterEffects.launch({
-      ...(options.installDir !== undefined ? { installDir: options.installDir } : {}),
+      ...(optInstallDir !== null ? { installDir: optInstallDir } : {}),
       hostScript: hostScriptPath,
       sessionRoot,
     });
@@ -167,20 +185,27 @@ export async function openSliceSession(options = {}) {
     // real paths — resolveInstall repeats the same discovery cheaply.
     // Best-effort: launch already succeeded, so a resolution failure
     // here records nulls rather than failing the session.
-    let installDir = typeof options.installDir === "string" ? options.installDir : null;
+    let installDir = optInstallDir;
     let appPath = null;
     try {
       if (typeof aeA8nMod.resolveInstall === "function") {
-        const install = aeA8nMod.resolveInstall(
+        // Await + shape-check: the export is not part of
+        // REQUIRED_AE_A8N_CONTRACT, so a missing/renamed/wrong-signature
+        // export must degrade to nulls, never throw mid-session (Issue #248).
+        const install = await aeA8nMod.resolveInstall(
           process.platform,
           installDir !== null ? { installDir } : {},
         );
-        const exe = install?.executable;
-        if (typeof exe === "string" && exe.length > 0) {
+        const exe = typeof install?.executable === "string" ? install.executable : null;
+        if (exe !== null && exe.length > 0) {
           if (process.platform === "darwin") {
             // <bundle>.app/Contents/MacOS/<exe>
             appPath = dirname(dirname(dirname(exe)));
-            installDir = installDir ?? dirname(appPath);
+            // session-guard expands a non-".app" root as `${root}.app`,
+            // so installDir must be the bundle path minus that suffix —
+            // dirname(appPath) would name the bundle's PARENT folder and
+            // the reaper's quit target would not exist (Issue #248).
+            installDir = installDir ?? appPath.replace(/\.app$/, "");
           } else {
             installDir = installDir ?? dirname(exe);
           }
@@ -234,14 +259,43 @@ export async function openSliceSession(options = {}) {
       assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
     };
   } catch (error) {
-    // Close on EVERY post-launch failure. close() errors are swallowed —
-    // the original failure is the one callers must see.
-    await ae.close({ unsavedChanges: "refuse" }).catch(() => {});
-    if (error !== null && typeof error === "object") {
-      error.sliceWorkdir ??= workdir;
-      error.sliceSessionRoot ??= sessionRoot;
-      try { error.sliceTracePath ??= ae.tracePath; } catch { /* trace path is best-effort */ }
+    // Close on EVERY post-launch failure — bounded (a hung transport
+    // close must not pin this path forever; same 20s budget as
+    // dev-loop/session-close.mjs), guarded (ae.close may be absent or
+    // non-promise on older ae-a8n), and REPORTED: a refused close leaves
+    // an owned AE process alive with no run-guard marker, so the close
+    // outcome is attached to the thrown error instead of swallowed
+    // (Issue #248). The original failure is still the one callers see.
+    let closeError = null;
+    try {
+      if (typeof ae.close === "function") {
+        const closePromise = Promise.resolve()
+          .then(() => ae.close({ unsavedChanges: "refuse" }))
+          .then(() => null, (e) => { closeError = e; });
+        let timedOut = false;
+        await Promise.race([
+          closePromise,
+          new Promise((resolve) => setTimeout(() => { timedOut = true; resolve(); }, 20_000)),
+        ]);
+        if (timedOut) closeError = new Error("ae.close timed out after 20s");
+      }
+    } catch (e) {
+      closeError = e;
     }
+    if (error !== null && typeof error === "object") {
+      // Context attachment is best-effort: a frozen/non-extensible thrown
+      // error must not replace the original failure with a TypeError.
+      try { error.sliceWorkdir ??= workdir; } catch { /* frozen error */ }
+      try { error.sliceSessionRoot ??= sessionRoot; } catch { /* frozen error */ }
+      try { error.sliceTracePath ??= ae.tracePath; } catch { /* trace path is best-effort */ }
+      if (closeError !== null) {
+        try { error.sliceCloseError = String(closeError?.message ?? closeError); } catch { /* frozen error */ }
+      }
+    }
+    // NOTE: on this path the auto-created workdir is intentionally left
+    // for the CALLER — error.sliceWorkdir/sliceTracePath point inside it
+    // and real-run.mjs copies the trace into the evidence file before
+    // cleanup. Do not rmSync here.
     throw error;
   }
 }

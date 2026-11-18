@@ -202,5 +202,8 @@
     }
   ],
   "finishedAt": "2026-11-18T01:11:58.434Z",
-  "transportSends": 6
+  "transportSends": 6,
+  "sourceSha": null,
+  "sourceDirty": null,
+  "provenanceNote": "Unbound historical record (ADR-0017 §2): generated before sourceSha/sourceDirty stamping existed. Informational only — records that a run happened, NOT that this commit was tested. Do not cite as candidate-bound verification."
 }
