@@ -52,6 +52,24 @@ import {
 export const DISPATCH_SCHEMA = "ae-devtools/native-dispatch/v1" as const;
 export type DispatchSchema = typeof DISPATCH_SCHEMA;
 
+/**
+ * Verification-lane intake allowlist (Issue #267 Slice A,
+ * `native-channel.md`). This is the fixed read-only set the opt-in
+ * NativeProbe channel will execute inside the host-dispatched idle
+ * context — it is NOT the `dispatchable` gate. Membership here never
+ * promotes a registry entry: `resolveDispatchOperation` still refuses
+ * every committed operation, and `verifiedOnRealHost` /
+ * `externalDispatchVerified` stay false until authorized real-host
+ * evidence exists (Issue #223). The C++ mirror lives in
+ * `native_intake.cpp` (`S_ALLOWLIST`); keep the two in sync — the
+ * guard test in `tests/dispatch.test.ts` pins registry membership.
+ */
+export const NATIVE_INTAKE_OPERATIONS = [
+  "AEGP_ProjSuite6.AEGP_GetNumProjects",
+  "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
+] as const;
+export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
+
 /** Outcome vocabulary — trusted-execution.md §4 / catalog spelling. */
 export const DISPATCH_OUTCOMES = [
   "completed",

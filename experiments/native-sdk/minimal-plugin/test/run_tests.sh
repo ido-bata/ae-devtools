@@ -40,7 +40,7 @@ clang++ -std=c++17 -O1 -g -Wall -Wextra -Werror \
   $SAN_FLAGS \
   -D__MACH__=1 \
   -I"$HEADERS" -I"$HEADERS/SP" -I"$HERE" \
-  "$HERE/../src/probe.cpp" "$HERE/fake_host.cpp" "$HERE/test_main.cpp" \
+  "$HERE/../src/probe.cpp" "$HERE/../src/native_intake.cpp" "$HERE/fake_host.cpp" "$HERE/test_main.cpp" \
   -o "$OUT/probe_test"
 
 "$OUT/probe_test"

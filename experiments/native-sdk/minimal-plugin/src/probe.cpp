@@ -68,8 +68,11 @@
 
 #include <AE_GeneralPlug.h>
 
+#include "native_intake.h"
+
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define PROBE_PLUGIN_NAME "ae-a8n NativeProbe"
@@ -1949,6 +1952,12 @@ static A_Err ProbeIdleHook(
     }
     s_abort_loggedB = FALSE;
 
+    /* Native intake (Issue #267 Slice A): opt-in via
+       AE_DEVTOOLS_NATIVE_CHANNEL, off by default. Runs inside the same
+       host-dispatched context with the fingerprint suites already
+       held; it never disturbs the probe trigger state. */
+    NativeIntakeTick(utilP, projP, s_aegp_plugin_id);
+
     /* Stage 2: project-set fingerprint. A failed count query or a
        failed fingerprint component invalidates the stored fingerprint
        so the next successful tick re-probes (recovery); it does not
@@ -2281,6 +2290,11 @@ extern "C" __attribute__((visibility("default"))) A_Err AEProbePluginEntry(
     s_count_err_loggedB = FALSE;
     s_fp_err_loggedB = FALSE;
     s_abort_loggedB = FALSE;
+
+    /* Native intake channel (Issue #267): enabled only when the operator
+       exports AE_DEVTOOLS_NATIVE_CHANNEL pointing at a prepared channel
+       root; absent/empty disables intake entirely. */
+    NativeIntakeConfigure(getenv("AE_DEVTOOLS_NATIVE_CHANNEL"));
 
     /* Entry-phase op records are buffered and flushed once at the end
        so a failed utility-suite acquisition (no log sink yet) simply

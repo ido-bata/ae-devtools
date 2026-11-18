@@ -32,6 +32,8 @@ op <Suite>.<member> err=<A_Err> [k=v ...]
 | `probe.start` / `probe.reason=<initial\|identity-change\|recovery>` / `probe.end` | probe-run boundaries; `probe.end` is unreachable without `probe.start`; `probe.reason` always follows `probe.start` |
 | `probe.error: <msg>` | tick-level failure (`AEGP_GetNumProjects failed`, `project fingerprint failed`, `AEGP Item Suite acquire failed`) — emitted with **no** op records (they stay buffered and are discarded) |
 | `probe.aborted: required suite entry missing` | infrastructure failure; logged once per streak |
+| `native.request id=<id>` / `native.result id=<id> outcome=<completed\|refused\|failed\|not-sent>[ code=<c>]` | native-channel intake markers (Issue #267, `native-channel.md`): bracket the op records emitted for one claimed dispatch request. `id` is the file-channel requestId (restricted charset, never a secret). Intake requests are **not** probe runs — they carry no `probe.*` markers; a tick containing intake activity but no `probe.start` segments as `tick`-class diagnostics plus these markers |
+| `native.error: <msg>` | intake-level failure (channel privacy violation, result publish failure); log-once guarded |
 | `driver.pluginInitVersion=M.m` / `driver.implementationVersion=M.m` | AE plug-in API / implementation versions (err==0 getters only) |
 | `host.suppressInteractiveUI=0\|1` / `host.isActivated=0\|1` | host flags |
 | `app.numProjects=N` | open project count |

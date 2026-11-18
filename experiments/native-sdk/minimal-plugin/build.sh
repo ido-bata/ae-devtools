@@ -40,13 +40,17 @@ echo "=== compiling $NAME (C++, arm64 host) ==="
 clang++ -std=c++17 -O2 -Wall -Wextra -Werror \
   -D__MACH__=1 \
   -I"$HEADERS" -I"$HEADERS/SP" \
-  -c "$HERE/src/probe.cpp" -o "$WORK/probe.o" \
+  -c "$HERE/src/probe.cpp" -o "$WORK/probe.o"
+clang++ -std=c++17 -O2 -Wall -Wextra -Werror \
+  -D__MACH__=1 \
+  -I"$HEADERS" -I"$HEADERS/SP" \
+  -c "$HERE/src/native_intake.cpp" -o "$WORK/native_intake.o" \
   > "$OUT/$NAME.compile.log" 2>&1 \
   || { echo "compile FAILED (see $OUT/$NAME.compile.log)"; exit 1; }
 
 echo "=== linking $NAME.bundle ==="
 clang -bundle -arch arm64 \
-  -o "$PLUGIN/Contents/MacOS/$NAME" "$WORK/probe.o" \
+  -o "$PLUGIN/Contents/MacOS/$NAME" "$WORK/probe.o" "$WORK/native_intake.o" \
   > "$OUT/$NAME.link.log" 2>&1 \
   || { echo "link FAILED (see $OUT/$NAME.link.log)"; exit 1; }
 

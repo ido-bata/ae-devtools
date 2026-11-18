@@ -60,6 +60,6 @@ A `compatible` handshake result is point-in-time availability, never per-operati
 
 - No transport is selected or implied; message shapes are transport-agnostic (ADR-0005 D4 Open Q1 unchanged).
 - No consent token issuance, storage, or verification — `authorizationRef` is opaque by design.
-- No in-AE request intake, dispatch queue, or result staging is implemented. The plugin currently self-executes its idle-hook probe only; wiring external requests into a host-dispatched context is future work gated on the transport/authorization decisions above.
+- In-AE intake exists only as the **opt-in verification lane** of [native-channel.md](native-channel.md) (Issue #267 Slice A): a fixed read-only allowlist (`NATIVE_INTAKE_OPERATIONS`), off by default, and explicitly *not* the `dispatchable` gate — every committed operation still refuses `operation-not-dispatchable` through `resolveDispatchOperation`, and no intake result promotes a registry entry. The general dispatch path (arbitrary operation dispatch into the host-dispatched context) remains future work gated on the transport/authorization decisions above.
 - No operation is dispatchable today (registry count: 0). `resolveDispatchOperation` refuses every committed entry — expected, honest state.
 - Windows remains entirely UNVERIFIED.
