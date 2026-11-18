@@ -21,20 +21,21 @@
  * them in the tarball (nested tests/.npmignore), but a broken test
  * file is still a broken source file worth gating.
  */
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-// Keep in sync with package.json "files" module directories.
-const SHIPPED_DIRS = [
-  "devtools-cli", "dev-loop", "trusted-execution", "scripting-adapters",
-  "a8n-transport", "mcp-server", "recovery-orchestrator", "diagnostics",
-  "cep-extension", "agent-loop", "vscode-extension", "vscode-debugger",
-  "jsx-toolchain/src", "jsx-toolchain/fixtures",
-];
+// Scope derives from package.json "files" — the same list that decides
+// what ships — so a new module dir or harness can never ship ungated
+// (Issue #232: the hand-maintained SHIPPED_DIRS list had already drifted,
+// missing scripts/*.mjs and the conformance/ harnesses). `scripts/` is
+// added explicitly: test-harness/testkit/consumer-smoke are dev tooling
+// that never ships but is still source worth gating.
+const { files: shipped } = JSON.parse(readFileSync(join(PKG, "package.json"), "utf8"));
+const SCOPES = [...shipped, "scripts"];
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
@@ -45,10 +46,12 @@ function* walk(dir) {
   }
 }
 
-const files = SHIPPED_DIRS.flatMap((d) => {
+const files = SCOPES.flatMap((d) => {
   const abs = join(PKG, d);
   try {
-    return statSync(abs).isDirectory() ? [...walk(abs)] : [];
+    if (statSync(abs).isDirectory()) return [...walk(abs)];
+    // A `files` entry can be a single file (e.g. jsx-toolchain/real-run.mjs).
+    return abs.endsWith(".mjs") ? [abs] : [];
   } catch {
     return [];
   }

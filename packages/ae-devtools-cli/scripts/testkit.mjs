@@ -70,5 +70,11 @@ export async function at(name, fn) {
 /** Await queued async `t` tests, then print the suite summary. */
 export async function finish(label = "tests passed") {
   await Promise.all(pending);
+  // Vacuous-pass guard (Issue #232): a suite that registered zero tests
+  // exits nonzero — "0 tests passed" is not a pass.
+  if (passed === 0 && process.exitCode !== 1) {
+    console.error("testkit: suite registered zero tests");
+    process.exitCode = 1;
+  }
   console.log(`\n${passed} ${label}${process.exitCode ? " (with failures)" : ""}`);
 }
