@@ -153,79 +153,95 @@ export async function openSliceSession(options = {}) {
     throw error;
   }
 
-  const info = ae.info();
-  const ownership = ae.ownership();
-  // Resolve the concrete install identity for run-guard markers
-  // (Issue #219): AfterEffects.launch auto-detects the install when
-  // installDir is not passed, but reap's process matching needs the
-  // real paths — resolveInstall repeats the same discovery cheaply.
-  // Best-effort: launch already succeeded, so a resolution failure
-  // here records nulls rather than failing the session.
-  let installDir = typeof options.installDir === "string" ? options.installDir : null;
-  let appPath = null;
+  // Everything after a successful launch runs inside one guard: ANY
+  // failure here (info/ownership throwing, transport/runner setup,
+  // the ownership refusal itself) must close the AE session — an
+  // orphaned owned process has no run-guard marker because
+  // openSliceSession runs before markSession (Issue #228).
   try {
-    if (typeof aeA8nMod.resolveInstall === "function") {
-      const install = aeA8nMod.resolveInstall(
-        process.platform,
-        installDir !== null ? { installDir } : {},
+    const info = ae.info();
+    const ownership = ae.ownership();
+    // Resolve the concrete install identity for run-guard markers
+    // (Issue #219): AfterEffects.launch auto-detects the install when
+    // installDir is not passed, but reap's process matching needs the
+    // real paths — resolveInstall repeats the same discovery cheaply.
+    // Best-effort: launch already succeeded, so a resolution failure
+    // here records nulls rather than failing the session.
+    let installDir = typeof options.installDir === "string" ? options.installDir : null;
+    let appPath = null;
+    try {
+      if (typeof aeA8nMod.resolveInstall === "function") {
+        const install = aeA8nMod.resolveInstall(
+          process.platform,
+          installDir !== null ? { installDir } : {},
+        );
+        const exe = install?.executable;
+        if (typeof exe === "string" && exe.length > 0) {
+          if (process.platform === "darwin") {
+            // <bundle>.app/Contents/MacOS/<exe>
+            appPath = dirname(dirname(dirname(exe)));
+            installDir = installDir ?? dirname(appPath);
+          } else {
+            installDir = installDir ?? dirname(exe);
+          }
+        }
+      }
+    } catch {
+      // marker metadata only — see comment above
+    }
+    if (!ownership || ownership.kind !== "owned") {
+      const refusal = new Error(
+        `slice requires an owned AE session, got ownership ${JSON.stringify(ownership)}`,
       );
-      const exe = install?.executable;
-      if (typeof exe === "string" && exe.length > 0) {
-        if (process.platform === "darwin") {
-          // <bundle>.app/Contents/MacOS/<exe>
-          appPath = dirname(dirname(dirname(exe)));
-          installDir = installDir ?? dirname(appPath);
-        } else {
-          installDir = installDir ?? dirname(exe);
+      // Same evidence context as a launch failure: the session DID start
+      // (attached/unknown), so its trace exists and must be preserved.
+      refusal.sliceWorkdir = workdir;
+      refusal.sliceSessionRoot = sessionRoot;
+      refusal.sliceTracePath = ae.tracePath;
+      throw refusal;
+    }
+
+    const pin = {
+      sessionId: `a8n-slice-${randomUUID()}`,
+      aeVersion: typeof info.version === "string" ? info.version : null,
+      dispatchId: `disp-${randomUUID()}`,
+    };
+    const transport = createA8nTransport({
+      ae,
+      callTimeoutMs: options.callTimeoutMs ?? 9_500,
+    });
+    const runner = createJsxRunner({
+      transport,
+      deadlineMs: options.deadlineMs ?? 10_000,
+    });
+
+    async function close() {
+      try {
+        await ae.close({ unsavedChanges: "refuse" });
+      } finally {
+        if (options.workdir === undefined) {
+          rmSync(workdir, { recursive: true, force: true });
         }
       }
     }
-  } catch {
-    // marker metadata only — see comment above
-  }
-  if (!ownership || ownership.kind !== "owned") {
+
+    return {
+      ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource,
+      aeA8nHead, tracePath: ae.tracePath, sessionRoot, installDir, appPath,
+      // Handshake functions from the resolved module, for live-session
+      // contract evidence (real-run.mjs). Gate already proved they exist.
+      negotiateCapabilities: aeA8nMod.negotiateCapabilities,
+      assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
+    };
+  } catch (error) {
+    // Close on EVERY post-launch failure. close() errors are swallowed —
+    // the original failure is the one callers must see.
     await ae.close({ unsavedChanges: "refuse" }).catch(() => {});
-    const refusal = new Error(
-      `slice requires an owned AE session, got ownership ${JSON.stringify(ownership)}`,
-    );
-    // Same evidence context as a launch failure: the session DID start
-    // (attached/unknown), so its trace exists and must be preserved.
-    refusal.sliceWorkdir = workdir;
-    refusal.sliceSessionRoot = sessionRoot;
-    refusal.sliceTracePath = ae.tracePath;
-    throw refusal;
-  }
-
-  const pin = {
-    sessionId: `a8n-slice-${randomUUID()}`,
-    aeVersion: typeof info.version === "string" ? info.version : null,
-    dispatchId: `disp-${randomUUID()}`,
-  };
-  const transport = createA8nTransport({
-    ae,
-    callTimeoutMs: options.callTimeoutMs ?? 9_500,
-  });
-  const runner = createJsxRunner({
-    transport,
-    deadlineMs: options.deadlineMs ?? 10_000,
-  });
-
-  async function close() {
-    try {
-      await ae.close({ unsavedChanges: "refuse" });
-    } finally {
-      if (options.workdir === undefined) {
-        rmSync(workdir, { recursive: true, force: true });
-      }
+    if (error !== null && typeof error === "object") {
+      error.sliceWorkdir ??= workdir;
+      error.sliceSessionRoot ??= sessionRoot;
+      try { error.sliceTracePath ??= ae.tracePath; } catch { /* trace path is best-effort */ }
     }
+    throw error;
   }
-
-  return {
-    ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource,
-    aeA8nHead, tracePath: ae.tracePath, sessionRoot, installDir, appPath,
-    // Handshake functions from the resolved module, for live-session
-    // contract evidence (real-run.mjs). Gate already proved they exist.
-    negotiateCapabilities: aeA8nMod.negotiateCapabilities,
-    assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
-  };
 }

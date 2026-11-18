@@ -177,6 +177,122 @@ test("openSliceSession: conformant stub root passes the behavioral gate", async 
 });
 
 /* ------------------------------------------------------------------ */
+/* Post-launch session-leak guard (Issue #228)                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fixture root whose AfterEffects.launch returns a scripted fake `ae`.
+ * Behavior is selected per-test via AE_FIXTURE_BEHAVIOR:
+ *   "owned-ok"        — info/ownership succeed, ownership.kind === "owned"
+ *   "info-throws"     — ae.info() throws after launch
+ *   "ownership-throws"— ae.ownership() throws after launch
+ *   "unowned"         — ownership.kind !== "owned" (existing refusal path)
+ * launchLog (exported) records close() calls so tests can assert the
+ * launched session was never orphaned.
+ */
+function launchFixtureRoot() {
+  const root = fixtureRoot(""); // placeholder; index.js written below
+  const okUrl = JSON.stringify(OK_FIXTURE_URL);
+  writeFileSync(join(root, "dist", "index.js"), `
+export * from ${okUrl};
+export const launchLog = [];
+const behavior = process.env.AE_FIXTURE_BEHAVIOR ?? "owned-ok";
+export const AfterEffects = Object.assign(function AfterEffects() {}, {
+  launch: async () => {
+    const entry = { closed: 0 };
+    launchLog.push(entry);
+    return {
+      info: () => {
+        if (behavior === "info-throws") throw new Error("info boom");
+        return { version: "26.5-fake" };
+      },
+      ownership: () => {
+        if (behavior === "ownership-throws") throw new Error("ownership boom");
+        return { kind: behavior === "unowned" ? "attached" : "owned" };
+      },
+      close: async () => { entry.closed += 1; },
+      tracePath: "/tmp/fake-a8n-trace.jsonl",
+    };
+  },
+});
+`);
+  // dist/cli.js: stub `extension build` — write the --out file and exit 0.
+  writeFileSync(join(root, "dist", "cli.js"), `
+import { writeFileSync } from "node:fs";
+const out = process.argv[process.argv.indexOf("--out") + 1];
+if (typeof out === "string") writeFileSync(out, "// fixture host script");
+`);
+  return root;
+}
+
+async function importLaunchLog(root) {
+  return import(pathToFileURL(join(root, "dist", "index.js")).href);
+}
+
+test("openSliceSession: ae.info() throwing after launch still closes the session (Issue #228)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-wd-"));
+  const prev = process.env.AE_FIXTURE_BEHAVIOR;
+  process.env.AE_FIXTURE_BEHAVIOR = "info-throws";
+  try {
+    await assert.rejects(
+      openSliceSession({ aeA8nRoot: root, workdir }),
+      (e) => e.message === "info boom",
+    );
+    const { launchLog } = await importLaunchLog(root);
+    assert.equal(launchLog.length, 1, "launch should have been attempted once");
+    assert.equal(launchLog[0].closed, 1, "launched AE session must be closed on post-launch failure");
+  } finally {
+    if (prev === undefined) delete process.env.AE_FIXTURE_BEHAVIOR;
+    else process.env.AE_FIXTURE_BEHAVIOR = prev;
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("openSliceSession: ae.ownership() throwing after launch still closes the session (Issue #228)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-wd-"));
+  const prev = process.env.AE_FIXTURE_BEHAVIOR;
+  process.env.AE_FIXTURE_BEHAVIOR = "ownership-throws";
+  try {
+    await assert.rejects(
+      openSliceSession({ aeA8nRoot: root, workdir }),
+      (e) => e.message === "ownership boom",
+    );
+    const { launchLog } = await importLaunchLog(root);
+    assert.equal(launchLog.length, 1);
+    assert.equal(launchLog[0].closed, 1);
+  } finally {
+    if (prev === undefined) delete process.env.AE_FIXTURE_BEHAVIOR;
+    else process.env.AE_FIXTURE_BEHAVIOR = prev;
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("openSliceSession: unowned session still closes exactly once via the shared guard (Issue #228)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-wd-"));
+  const prev = process.env.AE_FIXTURE_BEHAVIOR;
+  process.env.AE_FIXTURE_BEHAVIOR = "unowned";
+  try {
+    await assert.rejects(
+      openSliceSession({ aeA8nRoot: root, workdir }),
+      /slice requires an owned AE session/,
+    );
+    const { launchLog } = await importLaunchLog(root);
+    assert.equal(launchLog.length, 1);
+    assert.equal(launchLog[0].closed, 1, "ownership refusal must close the session exactly once");
+  } finally {
+    if (prev === undefined) delete process.env.AE_FIXTURE_BEHAVIOR;
+    else process.env.AE_FIXTURE_BEHAVIOR = prev;
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+/* ------------------------------------------------------------------ */
 /* Opt-in: real ae-a8n module (no AE launch — pure functions only)     */
 /* ------------------------------------------------------------------ */
 
