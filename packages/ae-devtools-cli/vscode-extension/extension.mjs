@@ -8,6 +8,7 @@
  */
 import * as vscode from "vscode";
 import { createController } from "./controller.mjs";
+import { normalizedOutcome } from "../dev-loop/outcomes.mjs";
 
 const COMMANDS = [
   "ae-devtools.discover",
@@ -112,7 +113,7 @@ function summarize(payload) {
   // "Show Details". Evidence level is always surfaced — fake/mock
   // results are never presented as real-host verification.
   const evidence = payload?.session?.evidenceLevel ?? payload?.evidenceLevel ?? "n/a";
-  const outcome = payload?.outcome ?? payload?.status ?? payload?.error ?? "ok";
+  const outcome = normalizedOutcome(payload) ?? payload?.error ?? "ok";
   return `AE DevTools: ${outcome} (evidence: ${evidence})`;
 }
 

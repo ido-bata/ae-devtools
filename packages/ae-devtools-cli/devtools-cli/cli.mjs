@@ -15,7 +15,7 @@
  *                 [--ae-a8n-root <dir>] [--install-dir <dir>]
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
- *   node cli.mjs verify [--read-op <opId>] [same session flags]
+ *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
  *   node cli.mjs runs            — list run-guard markers (residue detection)
  *   node cli.mjs reap <runId> [--confirm] — recover a stale owned leftover
  *   node cli.mjs diagnose <record.json|marker|runId>
@@ -66,7 +66,7 @@ import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
 import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
-import { failureOutcome } from "../dev-loop/outcomes.mjs";
+import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
@@ -345,9 +345,11 @@ async function main() {
           opId: opId ?? null,
           requestId: null, // filled below once minted
           session: {
+            // meta first: session-supplied fields must not override the
+            // honest top-level kind/evidenceLevel (Issue #226).
+            ...(state.session.meta ?? {}),
             kind: state.session.kind,
             evidenceLevel: state.session.evidenceLevel,
-            ...state.session.meta,
             ownership: state.session.ownership?.kind ?? state.session.meta?.ownership ?? null,
           },
           at: new Date().toISOString(),
@@ -378,9 +380,9 @@ async function main() {
               confirmDestructive: flags["confirm-destructive"] === true,
               confirmRender: flags["confirm-render"] === true,
             })
-          : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary" });
+          : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary", readArgs: args });
         evidence.result = result;
-        evidence.outcome = result.outcome ?? result.status ?? null;
+        evidence.outcome = normalizedOutcome(result);
         // Additive failure diagnostics (Issue #103): a unified
         // ae-devtools.diagnostics/v1 record plus sourcemap resolution.
         // Completed runs carry no block; failures always do — an
@@ -405,7 +407,7 @@ async function main() {
         recordRequestEvent(RUNS_DIR, guard.runId, {
           requestId,
           method: opId ?? flags["read-op"] ?? "read.projectSummary",
-          event: evidence.outcome === "UNKNOWN" ? "timeout" : "resolved",
+          event: isUnknownOutcome(result) ? "timeout" : "resolved",
         });
         // The exit decision uses the SAME failure-bearing outcome as the
         // diagnostics gate — evidence.outcome alone is the wire spelling

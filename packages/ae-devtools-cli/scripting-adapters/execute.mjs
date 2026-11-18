@@ -129,6 +129,16 @@ export async function runOperation(input = {}) {
     scriptProvenance: input.scriptProvenance,
     requestId: input.requestId,
   });
+  // A runner that replies with no outcome object is a transport-level
+  // failure, not a completed dispatch — report it structurally instead
+  // of dereferencing `outcome.result` into a TypeError (Issue #226).
+  if (outcome === null || typeof outcome !== "object") {
+    return {
+      status: "failed", stage: "transport", reason: "EMPTY_RUNNER_RESULT",
+      detail: `runner.runScript returned ${outcome === null ? "null" : typeof outcome} for '${opId}'`,
+      opId,
+    };
+  }
 
   // Decode the host's JSON-string result for callers. A non-JSON or
   // absent result is reported verbatim — never fabricated.

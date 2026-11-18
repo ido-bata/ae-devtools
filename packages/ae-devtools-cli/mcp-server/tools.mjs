@@ -28,7 +28,7 @@
  * fake/mock results are never presented as real-host verification.
  */
 import { discover, inspect, execute, verify } from "../dev-loop/devloop.mjs";
-import { failureOutcome } from "../dev-loop/outcomes.mjs";
+import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
@@ -168,10 +168,12 @@ function consentRefusal(opLabel, consent) {
 }
 
 function sessionBlock(session) {
+  // meta first: session-supplied fields must not override the honest
+  // top-level kind/evidenceLevel (Issue #226).
   return {
+    ...(session.meta ?? {}),
     kind: session.kind,
     evidenceLevel: session.evidenceLevel,
-    ...(session.meta ?? {}),
   };
 }
 
@@ -248,13 +250,13 @@ export async function callTool(name, args = {}, ctx = {}) {
       });
       ctx.onRequestEvent?.({
         requestId, method: args.opId,
-        event: (result?.outcome ?? result?.status ?? null) === "UNKNOWN" ? "timeout" : "resolved",
+        event: isUnknownOutcome(result) ? "timeout" : "resolved",
       });
       const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
         schema: MCP_SCHEMA,
         session: sessionBlock(session),
-        outcome: result.outcome ?? result.status ?? null,
+        outcome: normalizedOutcome(result),
         result,
         ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));
@@ -280,13 +282,13 @@ export async function callTool(name, args = {}, ctx = {}) {
       });
       ctx.onRequestEvent?.({
         requestId, method: readOpId,
-        event: (result?.outcome ?? result?.status ?? null) === "UNKNOWN" ? "timeout" : "resolved",
+        event: isUnknownOutcome(result) ? "timeout" : "resolved",
       });
       const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
         schema: MCP_SCHEMA,
         session: sessionBlock(session),
-        outcome: result.outcome ?? result.status ?? null,
+        outcome: normalizedOutcome(result),
         result,
         ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));

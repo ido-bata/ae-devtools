@@ -12,7 +12,7 @@ import {
   beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
   attachEvidence, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
-import { failureOutcome, isFailureResult } from "../../dev-loop/outcomes.mjs";
+import { failureOutcome, isFailureResult, normalizedOutcome, isUnknownOutcome } from "../../dev-loop/outcomes.mjs";
 import { parseArgs, arg as argvArg, hasFlag } from "../argv.mjs";
 import {
   aeProcessSnapshot,
@@ -80,18 +80,18 @@ t("execute on fake session completes and verify reads back", () => {
 
 t("execute refuses without --consent grant (default deny)", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--confirm-destructive"]).body;
-  assert.equal(r.outcome, "refused");
+  assert.equal(r.outcome, "REFUSED");
 });
 
 t("execute refuses destructive op without --confirm-destructive", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--consent", "grant"]).body;
-  assert.equal(r.outcome, "refused");
+  assert.equal(r.outcome, "REFUSED");
   assert.match(JSON.stringify(r.result), /DESTRUCTIVE|refused/);
 });
 
 t("execute reports unknown op", () => {
   const r = run(["execute", "no.such.op", "--session", "fake", "--consent", "grant"]).body;
-  assert.equal(r.outcome, "refused");
+  assert.equal(r.outcome, "REFUSED");
   assert.equal(r.result.reason, "UNKNOWN_OPERATION");
 });
 
@@ -478,7 +478,7 @@ t("wire FAILED outcome exits non-zero (Issue #105)", () => {
 
 t("adapter-level refusal produces a transport-outcome diagnostics record", () => {
   const r = run(["execute", "project.new", "--session", "fake", "--consent", "grant"]).body;
-  assert.equal(r.outcome, "refused"); // destructive confirm missing
+  assert.equal(r.outcome, "REFUSED"); // destructive confirm missing
   const rec = r.diagnostics?.records?.[0];
   assert.equal(rec?.recordVersion, "ae-devtools.diagnostics/v1");
   assert.equal(rec?.kind, "transport-outcome");
@@ -498,6 +498,30 @@ await at("diagnostics: failureOutcome normalizes spellings; failure status beats
   assert.equal(isFailureResult({ outcome: "COMPLETED" }, "COMPLETED"), false);
   // host error object is failure evidence even with a clean outcome
   assert.equal(failureOutcome({ outcome: "COMPLETED", error: { message: "x" } }, "COMPLETED"), "FAILED");
+});
+
+t("normalizedOutcome/isUnknownOutcome normalize spellings; null-safe (Issue #226)", () => {
+  // lowercase/mixed-case spellings normalize to the wire vocabulary
+  assert.equal(normalizedOutcome({ status: "refused" }), "REFUSED");
+  assert.equal(normalizedOutcome({ outcome: "completed" }), "COMPLETED");
+  assert.equal(normalizedOutcome({ outcome: "WeIrD" }), "WeIrD"); // unknown spellings pass through verbatim
+  assert.equal(normalizedOutcome(null), null);
+  assert.equal(normalizedOutcome({}), null);
+  // explicit outcome argument wins over result fields
+  assert.equal(normalizedOutcome({ outcome: "COMPLETED" }, "failed"), "FAILED");
+  // UNKNOWN detection is spelling-normalized: lowercase "unknown" is
+  // the recoverable in-flight state; null/missing is not
+  assert.equal(isUnknownOutcome({ outcome: "UNKNOWN" }), true);
+  assert.equal(isUnknownOutcome({ status: "unknown" }), true);
+  assert.equal(isUnknownOutcome({ outcome: "COMPLETED" }), false);
+  assert.equal(isUnknownOutcome(null), false);
+  assert.equal(isUnknownOutcome({}), false);
+});
+
+t("verify accepts --args and completes (readArgs forwarding, Issue #226)", () => {
+  const r = run(["verify", "--session", "fake", "--consent", "grant",
+    "--read-op", "read.projectSummary", "--args", '{"unused":true}']);
+  assert.equal(r.body.outcome, "COMPLETED");
 });
 
 t("wire REFUSED outcome exits 1 and carries a diagnostics block", () => {
