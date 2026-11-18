@@ -48,7 +48,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Full history: the gate binds evidence sourceSha ancestry and
+      # evidence-scope diffs against the candidate head (Issue #221).
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Detect catalog package
         id: detect
         run: |
