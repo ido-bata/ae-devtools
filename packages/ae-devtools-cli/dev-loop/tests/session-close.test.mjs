@@ -12,8 +12,8 @@ import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../session-cl
 import { openFakeSession } from "../../devtools-cli/fake-session.mjs";
 
 test("closeSessionWithTimeout: no session / no close() is not attempted, not a failure", async () => {
-  assert.deepEqual(await closeSessionWithTimeout(null), { attempted: false, ok: null, error: null, result: null });
-  assert.deepEqual(await closeSessionWithTimeout({}), { attempted: false, ok: null, error: null, result: null });
+  assert.deepEqual(await closeSessionWithTimeout(null), { attempted: false, ok: null, error: null, result: null, timedOut: false });
+  assert.deepEqual(await closeSessionWithTimeout({}), { attempted: false, ok: null, error: null, result: null, timedOut: false });
 });
 
 test("closeSessionWithTimeout: clean close reports ok with the close result", async () => {

@@ -219,8 +219,13 @@ export const AfterEffects = Object.assign(function AfterEffects() {}, {
   // dist/cli.js: stub `extension build` — write the --out file and exit 0.
   writeFileSync(join(root, "dist", "cli.js"), `
 import { writeFileSync } from "node:fs";
-const out = process.argv[process.argv.indexOf("--out") + 1];
-if (typeof out === "string") writeFileSync(out, "// fixture host script");
+const outIndex = process.argv.indexOf("--out");
+if (outIndex === -1) {
+  console.error("fixture cli: --out is required");
+  process.exit(2);
+}
+const out = process.argv[outIndex + 1];
+writeFileSync(out, "// fixture host script");
 `);
   return root;
 }

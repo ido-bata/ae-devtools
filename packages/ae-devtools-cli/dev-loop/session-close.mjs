@@ -30,26 +30,43 @@ export const DEFAULT_CLOSE_TIMEOUT_MS = 20_000;
  *   timeoutMs — bound for close(); non-finite/non-positive falls back
  *     to DEFAULT_CLOSE_TIMEOUT_MS
  * @returns {Promise<{attempted:boolean, ok:boolean|null, error:string|null,
- *   result:object|null}>}
+ *   result:object|null, timedOut:boolean}>}
+ *   timedOut distinguishes "close() rejected" from "close() exceeded the
+ *   bound"; a timed-out close is still in flight and must not be retried.
  */
 export async function closeSessionWithTimeout(session, { timeoutMs = DEFAULT_CLOSE_TIMEOUT_MS } = {}) {
   if (session === null || typeof session !== "object" || typeof session.close !== "function") {
-    return { attempted: false, ok: null, error: null, result: null };
+    return { attempted: false, ok: null, error: null, result: null, timedOut: false };
   }
-  const ms = Number.isFinite(Number(timeoutMs)) && Number(timeoutMs) > 0
-    ? Number(timeoutMs)
-    : DEFAULT_CLOSE_TIMEOUT_MS;
+  let ms = DEFAULT_CLOSE_TIMEOUT_MS;
+  try {
+    // Booleans are rejected on purpose: a bare flag parses to `true`,
+    // and Number(true) === 1 would turn the bound into 1ms.
+    if (typeof timeoutMs === "number") {
+      if (Number.isFinite(timeoutMs) && timeoutMs > 0) ms = timeoutMs;
+    } else if (typeof timeoutMs === "string" && timeoutMs.trim() !== "") {
+      const n = Number(timeoutMs);
+      if (Number.isFinite(n) && n > 0) ms = n;
+    }
+  } catch {
+    // Unconvertible value (Symbol, throwing valueOf) — the shared
+    // default is the only safe bound.
+  }
   let timer;
+  let timedOut = false;
   try {
     const result = await Promise.race([
       session.close(),
       new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`session.close timed out after ${ms}ms`)), ms);
+        timer = setTimeout(() => {
+          timedOut = true;
+          reject(new Error(`session.close timed out after ${ms}ms`));
+        }, ms);
       }),
     ]);
-    return { attempted: true, ok: true, error: null, result: result ?? null };
+    return { attempted: true, ok: true, error: null, result: result ?? null, timedOut: false };
   } catch (e) {
-    return { attempted: true, ok: false, error: String(e?.message ?? e), result: null };
+    return { attempted: true, ok: false, error: String(e?.message ?? e), result: null, timedOut };
   } finally {
     clearTimeout(timer);
   }

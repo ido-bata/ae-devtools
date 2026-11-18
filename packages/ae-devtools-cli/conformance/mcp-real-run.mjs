@@ -59,6 +59,11 @@ if (installDir) serverArgs.push("--install-dir", installDir);
 
 // NDJSON stdio client harness shared with mcp-server/real-run.mjs
 // (Issue #197).
+// A recorded `fatal` is a failed conformance run — exit nonzero so
+// callers/CI cannot read it as success (same contract as
+// mcp-server/real-run.mjs, Issue #234). The JSONL remains the
+// verdict record either way.
+let fatal = false;
 const { child, send, notify, call } = spawnMcpStdio({
   scriptArgs: serverArgs,
   cwd: CLI,
@@ -155,6 +160,7 @@ try {
     "project.save.resave",
   ));
 } catch (e) {
+  fatal = true;
   rec({ fatal: String(e?.message ?? e) });
 } finally {
   // SIGTERM runs the server's shutdown path: session.close()
@@ -164,5 +170,5 @@ try {
   await new Promise((r) => setTimeout(r, 15000));
   try { child.kill("SIGKILL"); } catch {}
   rec({ step: "server.stopped", fixturePath, results });
-  process.exit(0);
+  process.exit(fatal ? 1 : 0);
 }

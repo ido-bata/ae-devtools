@@ -17,9 +17,8 @@
  * these functions — callers never see JSX source or wire envelopes.
  */
 
-import { OPERATIONS, getOperation, registryReport } from "../scripting-adapters/registry.mjs";
+import { OPERATIONS, getOperation, opsForDomain, registryReport } from "../scripting-adapters/registry.mjs";
 import { runOperation } from "../scripting-adapters/execute.mjs";
-import { opsForDomain } from "../scripting-adapters/registry.mjs";
 
 export const DEVLOOP_SCHEMA = "ae-devtools.dev-loop/v1";
 
