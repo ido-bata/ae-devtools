@@ -36,6 +36,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
+import { createDispatchStore, defaultDispatchStoreDir } from "../trusted-execution/dispatch-store.mjs";
 import { createA8nTransport } from "./transport.mjs";
 import { resolveAeA8n } from "./ae-a8n-resolve.mjs";
 import {
@@ -197,6 +198,18 @@ export async function openSliceSession(options = {}) {
     const transport = createA8nTransport({
       ae,
       callTimeoutMs: options.callTimeoutMs ?? 9_500,
+    });
+    // Cross-instance dispatch dedup/quarantine (Issue #255): attach the
+    // store to the TRANSPORT, not the runner — every createJsxRunner()
+    // built on this session's transport (the session runner, the
+    // conformance short-deadline runner, agent-loop runners) shares the
+    // same dedup identity space. Entries are keyed by the session pin,
+    // so unrelated sessions never collide. Dir: AE_DEVTOOLS_DISPATCH_
+    // STORE_DIR override or the tmpdir default (survives process
+    // restarts — the case this store exists for). A transport without
+    // the property (fake sessions, tests) stays instance-local.
+    transport.dispatchStore = createDispatchStore({
+      dir: options.dispatchStoreDir ?? defaultDispatchStoreDir(),
     });
     const runner = createJsxRunner({
       transport,
