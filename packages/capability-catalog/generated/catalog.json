@@ -43,7 +43,7 @@
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
-      "sha256": "11dcc1db89689278237e245c247bcf1e60ad68debbd7a261ceb18ddf9b7b4d09"
+      "sha256": "15f2fdb4a61f068d3e8b53afeb05123626e857e2551dd6d64dc512e8a0e7c014"
     }
   ],
   "records": [
@@ -22214,7 +22214,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -22307,7 +22307,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -22400,7 +22400,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -22573,7 +22573,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -22626,7 +22626,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -26903,7 +26903,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -28724,7 +28724,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -39745,7 +39745,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]
@@ -39838,7 +39838,7 @@
           },
           {
             "kind": "real-host",
-            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-020",
+            "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-18-ae2026-a8n-021",
             "platform": "darwin"
           }
         ]

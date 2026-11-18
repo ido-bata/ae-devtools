@@ -66,11 +66,12 @@ release gate 実施途中で中断した場合、途中までの green を full 
 
 - **claim 集合** = catalog の `coverage.verification: verified-real-host` 行 ∪ `release-scope.json` の `claimedCapabilities`。宣言 claim は catalog row の存在と `compatibility.os` 宣言を cross-check され、catalog が宣言しない platform の claim は `platform-not-declared` で fail する。
 - **evidence record** は `evidence/conformance/<runId>/record.json` + cited artifacts として commit され、`artifactHashes` が release candidate と same-bytes で再計算できる場合のみ有効（`design/conformance-evidence.md` §3）。claim を満たせるのは `verified-real-host` の `PASS` record のみ。
+- **candidate binding（same-bytes の厳密化、Issue #221）**: artifact hash の再計算は evidence tree の自己整合しか証明しない。gate はさらに各 record の `sourceSha` が candidate head の ancestor であること、および `sourceSha..head` 間で evidence-scope path（`CONFORMANCE_EVIDENCE_SCOPE`: exercised runtime `packages/ae-devtools-cli/` と op semantics を定義する `inventories/scripting/`・`inventories/tools/`。tests/docs/evidence/packaging は除外）が変更されていないことを要求する。いずれかを満たさない record は `staleEvidence` として証拠から除外され、それだけに依存する claim は `no-evidence` violation になる — 旧証拠を残したまま候補コードを変更しても PASS は継続しない。gate/claim 定義（`release-scope.json`、`real-host-claims.json`、catalog source、gate 自体）は計測対象ではないため scope 外であり、毎回の gate 実行で再評価される。
 - **verdict の意味**:
   - `pass` — 評価対象の全 claim に実機 evidence がある。
   - `violations` — scope / claim 違反あり。check は fail する。
   - `no-claims` — claim 集合が空。**verified conformance の pass ではなく、実用性の証明でもない**。`supportedRelease` 未記録のまま CI が green になる現状を「対応環境が検証済み」と読み替えない。
-- **`supportedRelease` の記録は owner decision**（`specs/ae-capability-coverage/plan.md` §6.1）。`not-recorded` は gate の diagnostic であり blocker ではないが、release 受入時には「どの AE build / SDK / OS を supported と主張し、何を範囲外とするか」を release PR 本文で明示する。
+- **`supportedRelease` の記録は owner decision**（`specs/ae-capability-coverage/plan.md` §6.1）。`not-recorded` は gate の diagnostic であり blocker ではない。記録する場合は `releases`（AE release line）に加えて任意の `scope`（`os`/`arch`/`verification`/`note`）で証拠が支持する範囲を明示する — `releases` だけでは OS・arch・機能範囲を表現できず、未検証範囲を supported と読ませる余地が残るため。0.4.0 では Issue #21 の evidence-bounded 記録として `releases: ["26.5"]` + `scope: darwin/arm64, verified-real-host` を採用した（Windows・AE 27.0 capability claims・native load・CEP/UXP は UNVERIFIED のまま）。release 受入時には「どの AE build / SDK / OS を supported と主張し、何を範囲外とするか」を release PR 本文でも明示する。
 - **未検証 platform を claim に追加して gate を阻止することもしない**。Windows が UNVERIFIED のままなら claim しないことが正直な状態であり、release notes / PR 本文に `UNVERIFIED` と明記する。逆に、検証済み evidence のない capability を `claimedCapabilities` に書いて通すこともできない（evidence record がなければ violation）。
 
 Release PR 本文は少なくとも (a) conformance gate verdict、(b) claimed capabilities と各々の evidence level、(c) UNVERIFIED platform・未対応 SDK の一覧、を明示する。`no-claims` を実機検証済みと表現しない。

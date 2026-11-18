@@ -70,9 +70,23 @@ export type CoverageGroup = {
   percentages?: GroupPercentages;
 };
 
+/**
+ * Evidence bounds for a recorded supported-release set. `releases`
+ * lists AE release lines; `scope` records what the evidence actually
+ * covers so OS/arch/feature limits are not lost. Absent `scope` means
+ * the declaration is unscoped — consumers must not infer coverage.
+ */
+export type SupportedReleaseScope = {
+  os?: string[];
+  arch?: string[];
+  /** e.g. "verified-real-host" — the verification level the scope is bounded by. */
+  verification?: string;
+  note?: string;
+};
+
 export type SupportedRelease =
   | { state: "not-recorded" }
-  | { state: "recorded"; releases: string[] };
+  | { state: "recorded"; releases: string[]; scope?: SupportedReleaseScope };
 
 export type CoverageState =
   | { state: "undetermined"; reason: "supported-release-set-not-recorded" }

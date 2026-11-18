@@ -76,7 +76,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Full history: `bun run verify` includes the conformance gate, which
+      # binds evidence sourceSha ancestry against the candidate head.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Detect package
         id: detect
         run: |
