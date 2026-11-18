@@ -56,7 +56,7 @@ static A_Err CallIdle(FakeHost& h)
 
 static void SuitesBalanced(FakeHost& h)
 {
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < 10; i++)
     {
         CHECK(h.acquireCount[i] == h.releaseCount[i]);
     }
@@ -1068,6 +1068,175 @@ static void TestProbeNoMRUComp()
 
 /* ------------------------------------------------------------------ */
 
+/* Issue #64 layer slice: per-comp layer enumeration + read-only
+   layer getters. Layers are probed only inside COMP items; every
+   getter is op-recorded and mem handles (layer/source names) are
+   freed. */
+static void TestProbeLayerSlice()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("LayerProj");
+    h->numProjects = 1;
+    h->SetItemNames(0, {
+        h->MakeNameSpec(FakeHost::U16("CompA")),
+        h->MakeNameSpec(FakeHost::U16("FootageB")),
+    });
+    p.itemTypes[0] = AEGP_ItemType_COMP;
+    p.itemTypes[1] = AEGP_ItemType_FOOTAGE;
+    p.itemMeta.resize(2);
+    p.itemMeta[0].compMeta.layers.resize(2);
+    FakeLayerMeta& l0 = p.itemMeta[0].compMeta.layers[0];
+    l0.name = h->MakeNameSpec(FakeHost::U16("Layer One"));
+    l0.sourceName = h->MakeNameSpec(FakeHost::U16("src0"));
+    l0.flags = 0x11;
+    l0.quality = AEGP_LayerQual_DRAFT;
+    l0.objectType = AEGP_ObjectType_TEXT;
+    l0.is3D = TRUE;
+    l0.is2D = FALSE;
+    l0.currentTime = {15, 30};
+    l0.inPoint = {2, 30};
+    l0.duration = {48, 30};
+    l0.id = 4242;
+    l0.label = 3;
+    l0.samplingQuality = AEGP_LayerSamplingQual_BICUBIC;
+    l0.sourceItemID = 77;
+    l0.videoOn = FALSE;
+    l0.audioOn = TRUE;
+    l0.hasTrackMatte = TRUE;
+    l0.isTrackMatte = FALSE;
+    l0.trackMatteLayerIndex = 1;
+    FakeLayerMeta& l1 = p.itemMeta[0].compMeta.layers[1];
+    l1.name = h->MakeNameSpec(FakeHost::U16("Layer Two"));
+    l1.sourceName = h->MakeNameSpec(FakeHost::U16("src1"));
+    l1.id = 4343;
+    l1.trackMatteLayerIndex = -1;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("project.items[0].comp.numLayers=2"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].index=0"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].name: Layer One"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].sourceName: src0"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].flags=17"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].quality=1"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].objectType=3"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].is3D=1"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].is2D=0"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].currentTime=15/30"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].inPoint=2/30"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].duration=48/30"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].id=4242"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].label=3"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].samplingQuality=1"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].sourceItemID=77"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].parentComp=present"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].videoOn=0"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].audioOn=1"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].hasTrackMatte=1"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].isTrackMatte=0"));
+    CHECK(h->LogContains("project.items[0].comp.layers[0].trackMatteLayer=present"));
+    CHECK(h->LogContains("project.items[0].comp.layers[1].name: Layer Two"));
+    CHECK(h->LogContains("project.items[0].comp.layers[1].trackMatteLayer=none"));
+    /* footage item: no layer slice */
+    CHECK(!h->LogContains("project.items[1].comp.layers"));
+    CHECK(h->LogContains("op AEGP_LayerSuite9.AEGP_GetCompNumLayers err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_LayerSuite9.AEGP_GetLayerName err=0 i=0 l=0"));
+    CHECK(AllMemFreed(*h) == 0);
+    SuitesBalanced(*h);
+    CHECK(h->acquireCount[9] == 1);
+    CHECK(h->releaseCount[9] == 1);
+}
+
+/* Issue #64 layer slice: layer suite acquisition failure is
+   non-fatal — comp slice still runs, layer slice stays silent. */
+static void TestProbeLayerSuiteUnavailable_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("C"))});
+    p.itemTypes[0] = AEGP_ItemType_COMP;
+    p.itemMeta.resize(1);
+    p.itemMeta[0].compMeta.layers.resize(1);
+    h->failAcquireLayer = true;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("probe.error: AEGP Layer suite unavailable"));
+    CHECK(h->LogContains("project.items[0].comp=present"));
+    CHECK(!h->LogContains(".comp.layers"));
+    CHECK(!h->LogContains("comp.numLayers"));
+    SuitesBalanced(*h);
+}
+
+/* Issue #64 layer slice: acquired layer suite with a missing entry
+   degrades the slice (suite still released), never the run. */
+static void TestProbeLayerEntriesMissing_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("C"))});
+    p.itemTypes[0] = AEGP_ItemType_COMP;
+    p.itemMeta.resize(1);
+    p.itemMeta[0].compMeta.layers.resize(1);
+    h->nullLayerEntry = 1; /* GetCompNumLayers NULL */
+    h->PopulateSuites();
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.error: AEGP Layer suite unavailable"));
+    CHECK(!h->LogContains("comp.numLayers"));
+    SuitesBalanced(*h);
+    CHECK(h->acquireCount[9] == h->releaseCount[9]);
+    CHECK(h->acquireCount[9] == 1);
+}
+
+/* Issue #64 layer slice: per-call layer getter failures are
+   tolerated; enumeration failure skips the layer walk for that comp. */
+static void TestProbeLayerQueryFailuresNonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("C"))});
+    p.itemTypes[0] = AEGP_ItemType_COMP;
+    p.itemMeta.resize(1);
+    p.itemMeta[0].compMeta.layers.resize(1);
+    h->layerQueryErr = A_Err_GENERIC;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("project.items[0].comp.numLayers err=1"));
+    CHECK(!h->LogContains("comp.layers[0]"));
+    CHECK(h->LogContains("op AEGP_LayerSuite9.AEGP_GetCompNumLayers err=1 i=0"));
+    SuitesBalanced(*h);
+}
+
+/* Issue #64 layer slice: a comp with zero layers logs numLayers=0
+   and no per-layer records. */
+static void TestProbeCompNoLayers()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("C"))});
+    p.itemTypes[0] = AEGP_ItemType_COMP;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->LogContains("project.items[0].comp.numLayers=0"));
+    CHECK(!h->LogContains("comp.layers["));
+    SuitesBalanced(*h);
+}
+
 int main()
 {
     TestEntryRegistersIdleHook();
@@ -1110,7 +1279,13 @@ int main()
     TestProbeCompSuiteUnavailable_NonFatal();
     TestProbeCompEntriesMissing_NonFatal();
     TestProbeCompQueryFailuresNonFatal();
+
     TestProbeNoMRUComp();
+    TestProbeLayerSlice();
+    TestProbeLayerSuiteUnavailable_NonFatal();
+    TestProbeLayerEntriesMissing_NonFatal();
+    TestProbeLayerQueryFailuresNonFatal();
+    TestProbeCompNoLayers();
 
     printf("----\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
