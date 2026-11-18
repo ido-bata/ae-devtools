@@ -22,4 +22,16 @@ describe("release identity", () => {
     expect(pkg.name).toBe("@ido-bata/ae-devtools-cli");
     expect(scope.release).toBe(pkg.version);
   });
+
+  test("package-lock.json version matches package.json version", () => {
+    const pkg = JSON.parse(
+      readFileSync(join(REPO_ROOT, "packages/ae-devtools-cli/package.json"), "utf8"),
+    ) as { version: string };
+    const lock = JSON.parse(
+      readFileSync(join(REPO_ROOT, "packages/ae-devtools-cli/package-lock.json"), "utf8"),
+    ) as { version: string; packages: Record<string, { version?: string }> };
+
+    expect(lock.version).toBe(pkg.version);
+    expect(lock.packages[""]?.version).toBe(pkg.version);
+  });
 });
