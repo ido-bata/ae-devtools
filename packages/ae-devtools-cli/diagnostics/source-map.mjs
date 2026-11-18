@@ -311,6 +311,17 @@ export function resolveDiagnosticsSource(record, opts = {}) {
     return base;
   }
   const source = record.source;
+  // CAP064 scope: only jsx-script positions have a source-map path today
+  // (panel-asset consumers are still pending). plugin-binary positions
+  // come from native code with no symbol source — there is nothing a
+  // Source Map v3 lookup could resolve, so report unsupported-with-reason
+  // instead of pretending map discovery ran.
+  if (source.assetKind === "plugin-binary") {
+    base.status = "unsupported-with-reason";
+    base.reason =
+      "plugin-binary positions have no symbol source; native plugin offsets cannot be mapped to source";
+    return base;
+  }
   if (!Number.isInteger(source.line) || source.line < 1) {
     base.reason = "record source has no usable line";
     return base;
