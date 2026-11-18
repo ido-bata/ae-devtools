@@ -95,18 +95,63 @@ describe("findFunctionPointers", () => {
         int notAFunction;
       } S;`;
     const code = blankNonCode(src);
-    const names = findFunctionPointers(code, 0, code.length, lineIndexAt(code)).map((f) => f.name);
+    const lineAt = lineIndexAt(code);
+    const [block] = findStructBlocks(code, lineAt);
+    const names = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt, true).map(
+      (f) => f.name,
+    );
     expect(names).toEqual(["Alpha", "Beta"]);
   });
 
   test("reports the line of each slot", () => {
     const src = "typedef struct S {\n  A_Err (*Alpha)(void);\n  A_Err (*Beta)(void);\n} S;";
     const code = blankNonCode(src);
-    const found = findFunctionPointers(code, 0, code.length, lineIndexAt(code));
+    const lineAt = lineIndexAt(code);
+    const [block] = findStructBlocks(code, lineAt);
+    const found = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt, true);
     expect(found.map((f) => [f.name, f.line])).toEqual([
       ["Alpha", 2],
       ["Beta", 3],
     ]);
+  });
+
+  test("ignores callback parameters nested inside a member signature", () => {
+    // Regression for #207: a `(*name)(` inside a member's parameter list is
+    // a callback argument the caller supplies, not a struct member. Only
+    // declarators at struct depth-1 may be reported.
+    const src = `
+      typedef struct SynthSuite1
+      {
+        A_Err (*RealMember)(int a);
+        A_Err (*iterate)(int a,
+                         A_Err (*fn_func)(int x, void *y));
+        int plain_field;
+      } SynthSuite1;`;
+    const code = blankNonCode(src);
+    const lineAt = lineIndexAt(code);
+    const [block] = findStructBlocks(code, lineAt);
+    const names = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt, true).map(
+      (f) => f.name,
+    );
+    expect(names).toEqual(["RealMember", "iterate"]);
+  });
+
+  test("ignores function pointers inside a nested struct member", () => {
+    const src = `
+      typedef struct SynthSuite2
+      {
+        A_Err (*Top)(void);
+        struct {
+          A_Err (*Nested)(void);
+        } inner;
+      } SynthSuite2;`;
+    const code = blankNonCode(src);
+    const lineAt = lineIndexAt(code);
+    const [block] = findStructBlocks(code, lineAt);
+    const names = findFunctionPointers(code, block.bodyStart, block.bodyEnd, lineAt, true).map(
+      (f) => f.name,
+    );
+    expect(names).toEqual(["Top"]);
   });
 });
 

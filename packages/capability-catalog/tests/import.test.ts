@@ -217,8 +217,8 @@ describe("SDK import (#10)", () => {
   });
 
   test("preserves the reported aggregate, its caveats and redistribution limits as provenance", () => {
-    expect(sdk.aggregate?.totals.symbols).toBe(4677);
-    expect(sdk.aggregate?.denominatorCaveats.length).toBe(5);
+    expect(sdk.aggregate?.totals.symbols).toBe(4660);
+    expect(sdk.aggregate?.denominatorCaveats.length).toBe(6);
     expect(sdk.aggregate?.redistribution.committedContent).toContain("Aggregate counts");
     expect(sdk.aggregate?.totals.unknown).toBe(552);
     expect(sdk.provenance.acquisition.archiveSha256).toBe(
