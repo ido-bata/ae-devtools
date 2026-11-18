@@ -80,11 +80,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      # Full history: `bun run verify` includes the conformance gate, which
-      # binds evidence sourceSha ancestry against the candidate head.
+      # Ticket-stage verify only: manifest/domain-coverage freshness + drift
+      # gate. The candidate-bound conformance gate runs at the release stage
+      # in release-source-check.yml (`bun run conformance-gate`), so this job
+      # does not need full history.
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - name: Detect package
         id: detect
         run: |
