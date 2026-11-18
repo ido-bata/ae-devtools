@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 import { buildFile } from "./src/build.mjs";
 import { lookup } from "./src/sourcemap.mjs";
 import { arg } from "../devtools-cli/argv.mjs";
-import { createEvalDispatch } from "../devtools-cli/real-run-kit.mjs";
+import { createEvalDispatch, aeDevtoolsSourceRef } from "../devtools-cli/real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, "fixtures");
@@ -43,10 +43,15 @@ const OPERATION_ID = "op.a8n-transport.eval";
 const PROJECT_IDENTITY = "jsx-toolchain-real-run";
 
 const outPath = arg("--out") ?? join(HERE, "evidence", `run-${Date.now()}.json`);
+// Commit binding (Issue #235 / ADR-0017): nulls outside the repo
+// checkout — records without a non-null sourceSha are informational.
+const sourceRef = await aeDevtoolsSourceRef(HERE);
 const evidence = {
   schema: "ae-devtools.jsx-toolchain.real-run/v1",
   issue: 52,
   startedAt: new Date().toISOString(),
+  sourceSha: sourceRef.head,
+  sourceDirty: sourceRef.dirty,
   steps: [],
 };
 

@@ -29,7 +29,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { arg } from "../devtools-cli/argv.mjs";
-import { spawnMcpStdio, withTimeout } from "../devtools-cli/real-run-kit.mjs";
+import { spawnMcpStdio, withTimeout, aeDevtoolsSourceRef } from "../devtools-cli/real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = process.env.AE_DEVTOOLS_CLI ?? join(HERE, "..");
@@ -50,6 +50,11 @@ const rec = (o) => {
   log.push({ t: new Date().toISOString(), ...o });
   writeFileSync(OUT, JSON.stringify(log, null, 2));
 };
+// Commit binding (Issue #235 / ADR-0017): the NDJSON log has no envelope
+// object, so the first record carries the run's source provenance.
+// Nulls outside the repo checkout — unbound records are informational.
+const sourceRef = await aeDevtoolsSourceRef(HERE);
+rec({ event: "source", sourceSha: sourceRef.head, sourceDirty: sourceRef.dirty });
 
 // NDJSON stdio client harness shared with conformance/mcp-real-run.mjs
 // (Issue #197).
