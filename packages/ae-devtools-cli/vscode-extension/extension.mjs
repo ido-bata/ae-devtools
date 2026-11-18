@@ -10,13 +10,6 @@ import * as vscode from "vscode";
 import { createController } from "./controller.mjs";
 import { normalizedOutcome } from "../dev-loop/outcomes.mjs";
 
-const COMMANDS = [
-  "ae-devtools.discover",
-  "ae-devtools.inspect",
-  "ae-devtools.execute",
-  "ae-devtools.verify",
-];
-
 const SEVERITY_MAP = {
   error: vscode.DiagnosticSeverity.Error,
   warning: vscode.DiagnosticSeverity.Warning,

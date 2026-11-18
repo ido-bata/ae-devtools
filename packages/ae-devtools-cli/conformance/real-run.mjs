@@ -49,7 +49,6 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -60,6 +59,7 @@ import { runOperation } from "../scripting-adapters/execute.mjs";
 import { buildFile } from "../jsx-toolchain/src/build.mjs";
 import { lookup } from "../jsx-toolchain/src/sourcemap.mjs";
 import { arg } from "../devtools-cli/argv.mjs";
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
 import {
   MAIN_EXE,
   aeProcessSnapshot,
@@ -490,16 +490,7 @@ export async function main() {
   if (evidence.ok === false) process.exitCode = 1;
 }
 
-function isMainEntry() {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  try {
-    return realpathSync(resolve(entry)) === realpathSync(new URL(import.meta.url).pathname);
-  } catch {
-    return false;
-  }
-}
-if (isMainEntry()) {
+if (isMainEntry(import.meta.url)) {
   main().catch((error) => {
     console.error(`conformance real-run failed: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

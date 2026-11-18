@@ -13,6 +13,8 @@
  *   FAKE_A8N_OMIT    — comma-separated export names stubbed to `undefined`,
  *                      used to prove cli.mjs fails loudly on a build that
  *                      lacks a required export
+ *   FAKE_A8N_NULL    — comma-separated export names stubbed to `null`,
+ *                      the typeof-null-is-object hole (Issue #234)
  *   FAKE_A8N_STATE_ROOT — lease state root override (default: a tmp dir)
  *
  * Liveness is NOT faked: `defaultPidAlive` / `defaultPidStartedAt` run the
@@ -31,7 +33,13 @@ const OMIT = new Set(
     .map((s) => s.trim())
     .filter(Boolean),
 );
-const omit = (name, value) => (OMIT.has(name) ? undefined : value);
+const NULLS = new Set(
+  (process.env.FAKE_A8N_NULL ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+const omit = (name, value) => (OMIT.has(name) ? undefined : NULLS.has(name) ? null : value);
 
 const DEFAULTS = {
   // The login session readGuiSession reports. null → "no session".

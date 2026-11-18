@@ -155,19 +155,3 @@ export function classifyWriteResult(input) {
   };
 }
 
-/**
- * Undo is a separate named operation (design §4): its failure is FAILED and
- * is never folded into the original operation's success. This helper
- * produces the trace record for an undo attempt; callers must not merge it
- * into the mutation's outcome.
- */
-export function undoTraceRecord(input) {
-  const { operationId, undoResult } = input ?? {};
-  return {
-    kind: "undo",
-    operationId,
-    outcome: undoResult?.outcome ?? "UNKNOWN",
-    mayHaveMutated: undoResult?.mayHaveMutated ?? null,
-    foldedInto: null, // explicit: never merged into the original op
-  };
-}

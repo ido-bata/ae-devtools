@@ -41,8 +41,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
 
@@ -888,4 +888,3 @@ export function censusSummary(census, pid) {
   };
 }
 
-export { basename, existsSync };

@@ -19,6 +19,7 @@
 
 import { OPERATIONS, getOperation, registryReport } from "../scripting-adapters/registry.mjs";
 import { runOperation } from "../scripting-adapters/execute.mjs";
+import { opsForDomain } from "../scripting-adapters/registry.mjs";
 
 export const DEVLOOP_SCHEMA = "ae-devtools.dev-loop/v1";
 
@@ -26,7 +27,7 @@ export const DEVLOOP_SCHEMA = "ae-devtools.dev-loop/v1";
  *  inventory members are NOT listed as executable — discovery shows
  *  ops only; coverage gaps live in the catalog/domain reports. */
 export function discover({ domain = null } = {}) {
-  const ops = OPERATIONS.filter((o) => !domain || o.domain === domain);
+  const ops = domain ? opsForDomain(domain) : OPERATIONS;
   return {
     schema: DEVLOOP_SCHEMA,
     operationCount: ops.length,

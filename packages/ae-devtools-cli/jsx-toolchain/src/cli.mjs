@@ -89,6 +89,8 @@ function findMaps(target) {
   return null;
 }
 
+let dispatchError = null;
+try {
 switch (cmd) {
   case "lint": {
     const f = needFile();
@@ -143,7 +145,7 @@ switch (cmd) {
     break;
   }
   case "map": {
-    const [mapPath, line, col] = args;
+    const [mapPath, line, col] = positionalArgs();
     if (!mapPath || line === undefined) { console.error("usage: map <file.jsx.map> <line> [col]"); process.exit(2); }
     const map = JSON.parse(readFileSync(mapPath, "utf8"));
     const pos = lookup(map, Number(line), Number(col ?? 0));
@@ -151,7 +153,7 @@ switch (cmd) {
     break;
   }
   case "resolve": {
-    const [target, line, col] = args;
+    const [target, line, col] = positionalArgs();
     if (!target || line === undefined) { console.error("usage: resolve <outdir|file-prefix> <line> [col]"); process.exit(2); }
     const maps = findMaps(target);
     if (!maps) {
@@ -174,4 +176,17 @@ switch (cmd) {
   default:
     console.error("usage: jsx-toolchain <lint|build|build-project|check|watch|map|resolve> ...");
     process.exit(2);
+}
+} catch (e) {
+  // Filesystem/JSON failures (missing input, malformed sourcemap) are
+  // usage-level errors: report a structured payload and exit 2 instead
+  // of dumping a stack trace (Issue #234).
+  dispatchError = e;
+}
+if (dispatchError !== null) {
+  out({
+    schema: "ae-devtools.jsx-toolchain.error/v1",
+    command: cmd ?? null,
+    error: String(dispatchError?.message ?? dispatchError),
+  }, 2);
 }
