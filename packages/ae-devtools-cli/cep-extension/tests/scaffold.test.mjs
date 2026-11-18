@@ -124,7 +124,10 @@ test("manifest validates against the vendored official XSD", async (t) => {
     // a missing xmllint there is a broken environment, not a skippable
     // condition — fail instead of silently un-verifying the contract
     // (Issue #232). Elsewhere the skip stays explicit via t.skip.
-    if (process.env.AE_DEVTOOLS_REQUIRE_XMLLINT === "1") {
+    const requireXmllint = ["1", "true", "yes", "on"].includes(
+      (process.env.AE_DEVTOOLS_REQUIRE_XMLLINT ?? "").trim().toLowerCase()
+    );
+    if (requireXmllint) {
       assert.fail("xmllint required by AE_DEVTOOLS_REQUIRE_XMLLINT but not available");
     }
     t.skip("xmllint not available; XSD validation skipped (structure assertions still apply)");
