@@ -22,12 +22,14 @@
  * scope violations, or claim violations.
  */
 
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { REPO_ROOT } from "./inputs.ts";
 import {
   parseReleaseScope,
   evaluateReleaseGate,
+  type CandidateBinding,
   type LoadedConformanceRecord,
   type ReleaseGateReport,
 } from "../src/release-gate.ts";
@@ -111,6 +113,40 @@ function loadRecordSources(): {
   return { sources, rejected };
 }
 
+/**
+ * Real candidate binding against the checkout's git history. Fails
+ * closed: any git error propagates as a fatal gate error rather than
+ * silently skipping the binding check.
+ */
+function gitBinding(): CandidateBinding {
+  const git = (args: string[]) =>
+    execFileSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+  const head = git(["rev-parse", "HEAD"]);
+  return {
+    head,
+    isAncestor: (sha) => {
+      try {
+        execFileSync("git", ["merge-base", "--is-ancestor", sha, head], {
+          cwd: REPO_ROOT,
+          stdio: "ignore",
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    changedPathsSince: (sha) => {
+      try {
+        const out = git(["diff", "--name-only", `${sha}..${head}`]);
+        return out.length === 0 ? [] : out.split("\n").filter(Boolean);
+      } catch {
+        // Fail closed: an in-scope sentinel path forces stale-evidence.
+        return ["packages/ae-devtools-cli/"];
+      }
+    },
+  };
+}
+
 export function runConformanceGate(): ConformanceGateResult {
   if (!existsSync(SCOPE_PATH)) {
     return { ok: false, fatalError: `release scope declaration missing: ${SCOPE_PATH}` };
@@ -132,6 +168,7 @@ export function runConformanceGate(): ConformanceGateResult {
     scope: scopeParsed.scope,
     manifest,
     recordSources: sources,
+    candidate: gitBinding(),
   });
   // Load-time rejections (unparseable JSON / runId mismatch) are gate
   // findings too — merge them into rejectedRecords for one report.

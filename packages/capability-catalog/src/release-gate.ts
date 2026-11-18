@@ -50,6 +50,59 @@ export type DeclaredCapabilityClaim = {
   os: "win32" | "darwin";
 };
 
+/* ------------------------------------------------------------------ */
+/* Candidate binding (same-bytes vs the release candidate)             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Repo-relative path prefixes whose modification invalidates real-host
+ * evidence: the exercised runtime, the claim/scope definitions, and the
+ * operation registry the claims are measured against. Tests, docs,
+ * evidence trees, harness snapshots, packaging metadata and generated
+ * catalogs are excluded — they neither implement nor redefine what was
+ * verified (the harness bytes are already pinned by artifactHashes).
+ */
+export const CONFORMANCE_EVIDENCE_SCOPE: readonly string[] = [
+  "packages/ae-devtools-cli/",
+  "packages/capability-catalog/src/",
+  "packages/capability-catalog/scripts/",
+  "packages/capability-catalog/release-scope.json",
+  "packages/capability-catalog/real-host-claims.json",
+  "inventories/scripting/",
+];
+
+const EVIDENCE_SCOPE_EXCLUDE =
+  /(?:^|\/)(?:tests?|__tests__|docs?|evidence|fixtures?|generated)\/|\.(?:test|spec)\.[^/]+$|(?:^|\/)[^/]*\.md$|(?:^|\/)package-lock\.json$|(?:^|\/)node_modules\//;
+
+/** True when `path` is inside the evidence scope (change ⇒ stale). */
+export function isEvidenceScopePath(path: string): boolean {
+  if (EVIDENCE_SCOPE_EXCLUDE.test(path)) return false;
+  return CONFORMANCE_EVIDENCE_SCOPE.some((prefix) => path.startsWith(prefix));
+}
+
+/**
+ * Binds evidence to the release candidate being gated. `sourceSha` alone
+ * is self-reported; the gate must prove the run happened on this release
+ * line AND that no evidence-scope path changed between that SHA and the
+ * candidate — otherwise "same-bytes artifacts" only prove the evidence
+ * tree is internally consistent, not that it describes this candidate.
+ */
+export type CandidateBinding = {
+  /** git SHA of the candidate under evaluation (e.g. HEAD). */
+  head: string;
+  /** true when `sha` is `head` or an ancestor of it. */
+  isAncestor: (sha: string) => boolean;
+  /** repo-relative paths that differ between `sha` and `head`. */
+  changedPathsSince: (sha: string) => string[];
+};
+
+export type StaleEvidence = {
+  runId: string;
+  sourceSha: string;
+  reason: "source-sha-not-ancestor" | "evidence-scope-changed";
+  paths?: string[];
+};
+
 export type ReleaseScope = {
   schema: typeof RELEASE_SCOPE_SCHEMA;
   /** Release line this scope describes, e.g. "0.3.0". */
@@ -206,6 +259,11 @@ export type ReleaseGateReport = {
   /** Records that failed structural validation — surfaced, never used
    *  as evidence and never silently upgraded. */
   rejectedRecords: Array<{ runId: string; errors: string[] }>;
+  /** Records excluded because their sourceSha does not bind to the
+   *  candidate (not an ancestor, or evidence-scope paths changed since). */
+  staleEvidence: StaleEvidence[];
+  /** The candidate head the binding was evaluated against. */
+  candidateHead: string;
   diagnostics: string[];
 };
 
@@ -219,11 +277,43 @@ export function evaluateReleaseGate(input: {
   scope: ReleaseScope;
   manifest: CatalogManifest;
   recordSources: readonly LoadedConformanceRecord[];
+  /** Required: binds records to the candidate under evaluation. Without
+   *  it the gate could only prove evidence-tree self-consistency. */
+  candidate: CandidateBinding;
 }): ReleaseGateReport {
-  const { scope, manifest, recordSources } = input;
+  const { scope, manifest, recordSources, candidate } = input;
   const resolution = resolveReleaseClaims(scope, manifest);
 
-  const evaluation = evaluateConformanceClaimSources(resolution.claims, recordSources);
+  // Candidate binding: a record is evidence for THIS candidate only when
+  // its run happened on an ancestor of the candidate head and no
+  // evidence-scope path changed in between. Stale records are excluded
+  // before claim evaluation — claims they alone covered surface as
+  // no-evidence/stale violations, never as passes.
+  const staleEvidence: StaleEvidence[] = [];
+  const freshSources = recordSources.filter((s) => {
+    const parsed = parseConformanceRecord(s.record);
+    if (!parsed.ok) return true; // invalid records are reported separately
+    const sha = parsed.record.sourceSha;
+    if (!candidate.isAncestor(sha)) {
+      staleEvidence.push({ runId: s.runId, sourceSha: sha, reason: "source-sha-not-ancestor" });
+      return false;
+    }
+    const scopePaths = candidate
+      .changedPathsSince(sha)
+      .filter(isEvidenceScopePath);
+    if (scopePaths.length > 0) {
+      staleEvidence.push({
+        runId: s.runId,
+        sourceSha: sha,
+        reason: "evidence-scope-changed",
+        paths: scopePaths,
+      });
+      return false;
+    }
+    return true;
+  });
+
+  const evaluation = evaluateConformanceClaimSources(resolution.claims, freshSources);
 
   // Surface structurally invalid records: they cannot support a claim,
   // and their presence in the evidence tree is itself worth reporting.
@@ -259,6 +349,8 @@ export function evaluateReleaseGate(input: {
     scopeViolations: resolution.violations,
     violations: evaluation.violations,
     rejectedRecords,
+    staleEvidence,
+    candidateHead: candidate.head,
     diagnostics,
   };
 }

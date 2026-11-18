@@ -6,6 +6,8 @@ import {
   resolveReleaseClaims,
   evaluateReleaseGate,
   RELEASE_SCOPE_SCHEMA,
+  isEvidenceScopePath,
+  type CandidateBinding,
   type ReleaseScope,
 } from "../src/release-gate.ts";
 import {
@@ -82,6 +84,15 @@ const source = (record: unknown, readArtifact = readOk) => ({
   runId: "run-1",
   record,
   readArtifact: () => readArtifact(),
+});
+
+// Default candidate binding: every record SHA is an ancestor of head and
+// nothing in the evidence scope changed — i.e. evidence is fresh.
+const freshCandidate = (over: Partial<CandidateBinding> = {}): CandidateBinding => ({
+  head: "c0ffee00000000000000000000000000000000",
+  isAncestor: () => true,
+  changedPathsSince: () => [],
+  ...over,
 });
 
 describe("parseReleaseScope", () => {
@@ -181,6 +192,7 @@ describe("evaluateReleaseGate", () => {
       scope: scope(),
       manifest: manifest([catalogRecord()]),
       recordSources: [],
+      candidate: freshCandidate(),
     });
     expect(report.verdict).toBe("no-claims");
     expect(report.ok).toBe(true);
@@ -194,6 +206,7 @@ describe("evaluateReleaseGate", () => {
       scope: scope({ supportedRelease: { state: "recorded", releases: ["ae-2027", "ae-2026"] } }),
       manifest: manifest([catalogRecord()]),
       recordSources: [],
+      candidate: freshCandidate(),
     });
     expect(report.diagnostics).not.toContain("supported-release-set-not-recorded");
   });
@@ -203,6 +216,7 @@ describe("evaluateReleaseGate", () => {
       scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
       manifest: manifest([catalogRecord()]),
       recordSources: [],
+      candidate: freshCandidate(),
     });
     expect(report.verdict).toBe("violations");
     expect(report.ok).toBe(false);
@@ -214,6 +228,7 @@ describe("evaluateReleaseGate", () => {
       scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
       manifest: manifest([catalogRecord()]),
       recordSources: [source(conformanceRecord())],
+      candidate: freshCandidate(),
     });
     expect(report.verdict).toBe("pass");
     expect(report.ok).toBe(true);
@@ -225,6 +240,7 @@ describe("evaluateReleaseGate", () => {
       scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
       manifest: manifest([catalogRecord()]),
       recordSources: [source(conformanceRecord(), () => new TextEncoder().encode("tampered"))],
+      candidate: freshCandidate(),
     });
     expect(report.verdict).toBe("violations");
     expect(report.violations[0]?.reason).toBe("artifact-mismatch");
@@ -235,6 +251,7 @@ describe("evaluateReleaseGate", () => {
       scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
       manifest: manifest([catalogRecord()]),
       recordSources: [source(conformanceRecord({ recordVersion: 42 }))],
+      candidate: freshCandidate(),
     });
     expect(report.verdict).toBe("violations");
     expect(report.rejectedRecords).toHaveLength(1);
@@ -246,10 +263,67 @@ describe("evaluateReleaseGate", () => {
       scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.nope.x", os: "darwin" }] }),
       manifest: manifest([catalogRecord()]),
       recordSources: [],
+      candidate: freshCandidate(),
     });
     expect(report.verdict).toBe("violations");
     expect(report.ok).toBe(false);
     expect(report.scopeViolations[0]?.reason).toBe("unknown-capability");
     expect(report.claimsEvaluated).toBe(0);
+  });
+
+  test("stale evidence: sourceSha not an ancestor of candidate is excluded", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord())],
+      candidate: freshCandidate({ isAncestor: () => false }),
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.staleEvidence[0]?.reason).toBe("source-sha-not-ancestor");
+    expect(report.violations[0]?.reason).toBe("no-evidence");
+  });
+
+  test("stale evidence: evidence-scope change since sourceSha is excluded (negative control)", () => {
+    // Candidate kept the old evidence tree but touched exercised code —
+    // the PASS must NOT carry over.
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord())],
+      candidate: freshCandidate({
+        changedPathsSince: () => ["packages/ae-devtools-cli/dev-loop/outcomes.mjs"],
+      }),
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.staleEvidence[0]?.reason).toBe("evidence-scope-changed");
+    expect(report.staleEvidence[0]?.paths).toContain("packages/ae-devtools-cli/dev-loop/outcomes.mjs");
+  });
+
+  test("non-scope changes since sourceSha keep evidence fresh", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({ claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }] }),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord())],
+      candidate: freshCandidate({
+        changedPathsSince: () => [
+          "packages/ae-devtools-cli/dev-loop/tests/run.mjs",
+          "docs/release.md",
+          "packages/capability-catalog/generated/catalog.json",
+        ],
+      }),
+    });
+    expect(report.verdict).toBe("pass");
+    expect(report.staleEvidence).toHaveLength(0);
+  });
+
+  test("isEvidenceScopePath: scope prefixes in, tests/docs/evidence out", () => {
+    expect(isEvidenceScopePath("packages/ae-devtools-cli/dev-loop/outcomes.mjs")).toBe(true);
+    expect(isEvidenceScopePath("packages/ae-devtools-cli/package.json")).toBe(true);
+    expect(isEvidenceScopePath("inventories/scripting/ops.json")).toBe(true);
+    expect(isEvidenceScopePath("packages/ae-devtools-cli/dev-loop/tests/run.mjs")).toBe(false);
+    expect(isEvidenceScopePath("packages/ae-devtools-cli/docs/adoption.md")).toBe(false);
+    expect(isEvidenceScopePath("packages/capability-catalog/evidence/conformance/x/record.json")).toBe(false);
+    expect(isEvidenceScopePath("packages/capability-catalog/generated/catalog.json")).toBe(false);
+    expect(isEvidenceScopePath("README.md")).toBe(false);
   });
 });
