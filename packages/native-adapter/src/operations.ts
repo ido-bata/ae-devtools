@@ -5,9 +5,10 @@
  * The coverage matrix's five classes are reporting buckets, not
  * capabilities. Dispatchability is per concrete suite/API operation:
  * each `OperationEntry` carries its own `implemented` /
- * `verifiedOnRealHost` evidence and derives its state from them.
+ * `verifiedOnRealHost` / `externalDispatchVerified` evidence and
+ * derives its state from all three.
  *
- *   dispatchable            ⇔ implemented === true AND verifiedOnRealHost === true
+ *   dispatchable            ⇔ implemented AND verifiedOnRealHost AND externalDispatchVerified
  *   implemented-unverified  ⇔ implemented === true, real-host proof missing
  *   inventory-only          ⇔ structurally attributed, no implementation
  *   unsupported-or-unknown  ⇔ cannot be attributed or called
