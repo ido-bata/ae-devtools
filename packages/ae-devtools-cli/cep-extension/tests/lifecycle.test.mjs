@@ -147,3 +147,19 @@ test("playerDebugModeStatus is honest off-darwin", async () => {
   assert.equal(r.supported, false);
   assert.match(r.note, /UNVERIFIED/);
 });
+
+test("extension id path traversal is refused on every entry point (Issue #227)", async () => {
+  const src = await makeExt();
+  const target = await makeTarget();
+  // Hostile manifest Id escapes the extensions dir.
+  const evil = await makeExt("../../escape");
+  await assert.rejects(() => install({ sourceDir: evil, targetDir: target }), /invalid extension id/);
+  // Caller-supplied ids on uninstall/status get the same guard.
+  await assert.rejects(() => uninstall({ extensionId: "../x", targetDir: target }), /invalid extension id/);
+  await assert.rejects(() => status({ extensionId: "..", targetDir: target }), /escapes|invalid extension id/);
+  await assert.rejects(() => status({ extensionId: "/abs", targetDir: target }), /invalid extension id/);
+  await assert.rejects(() => uninstall({ extensionId: "a/b", targetDir: target }), /invalid extension id/);
+  // Nothing was created outside (or inside) the target.
+  const { readdir } = await import("node:fs/promises");
+  assert.deepEqual(await readdir(target), []);
+});

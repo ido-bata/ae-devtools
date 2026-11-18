@@ -20,7 +20,7 @@
 import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 
 export const OWNED_MARKER = ".ae-devtools-owned.json";
 export const MANIFEST_PATH = join("CSXS", "manifest.xml");
@@ -97,6 +97,25 @@ export async function readManifestId(sourceDir) {
   return hit[1];
 }
 
+/**
+ * Resolve an extension id to its install path strictly inside `target`.
+ * Manifest Ids and caller-supplied ids are untrusted input: reject path
+ * separators and anything that resolves outside the extensions dir
+ * (Issue #227 — `../../x` must never reach mkdir/cp/rm).
+ */
+export function extensionDest(target, id) {
+  if (typeof id !== "string" || id.length === 0 || /[/\\\0]/.test(id)) {
+    throw new Error(`invalid extension id: ${JSON.stringify(id)}`);
+  }
+  const root = resolve(target);
+  const dest = resolve(root, id);
+  const prefix = root.endsWith(sep) ? root : root + sep;
+  if (!dest.startsWith(prefix)) {
+    throw new Error(`extension id escapes the CEP extensions dir: ${JSON.stringify(id)}`);
+  }
+  return dest;
+}
+
 async function readMarker(dest) {
   try {
     return JSON.parse(await readFile(join(dest, OWNED_MARKER), "utf8"));
@@ -117,7 +136,7 @@ export async function install({ sourceDir, extensionId = null, targetDir = null,
     throw new Error(`manifest Extension Id '${manifestId}' != requested '${extensionId}'`);
   }
   const target = resolve(targetDir ?? cepExtensionsDir({ platform }));
-  const dest = join(target, manifestId);
+  const dest = extensionDest(target, manifestId);
   await mkdir(target, { recursive: true });
 
   const marker = await readMarker(dest);
@@ -153,7 +172,7 @@ export async function install({ sourceDir, extensionId = null, targetDir = null,
  *  missing dir → {status:"absent"}. */
 export async function uninstall({ extensionId, targetDir = null, platform = process.platform } = {}) {
   const target = resolve(targetDir ?? cepExtensionsDir({ platform }));
-  const dest = join(target, extensionId);
+  const dest = extensionDest(target, extensionId);
   if (!(await exists(dest))) return { status: "absent", dest };
   const marker = await readMarker(dest);
   if (!marker || marker.extensionId !== extensionId) {
@@ -166,7 +185,7 @@ export async function uninstall({ extensionId, targetDir = null, platform = proc
 /** Inspect install state without modifying anything. */
 export async function status({ extensionId, targetDir = null, platform = process.platform, sourceDir = null } = {}) {
   const target = resolve(targetDir ?? cepExtensionsDir({ platform }));
-  const dest = join(target, extensionId);
+  const dest = extensionDest(target, extensionId);
   if (!(await exists(dest))) return { status: "absent", dest };
   const marker = await readMarker(dest);
   const owned = marker?.extensionId === extensionId;

@@ -58,7 +58,7 @@ import {
   runTimeoutRecovery,
   verifyHostExit,
 } from "./orchestrator.mjs";
-import { RUNS_DIR } from "../devtools-cli/session-guard.mjs";
+import { RUNS_DIR, RUN_ID_RE } from "../devtools-cli/session-guard.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
 
 // --reports-dir/--sentry-dir are repeatable (Issue #197 shared parser).
@@ -300,6 +300,11 @@ async function main() {
     const method = typeof flags.method === "string" ? flags.method : null;
     if (!requestId || !method) {
       return fail("USAGE", "recover requires --request-id and --method matching a timed-out request recorded in the run marker");
+    }
+    // run-id names a marker file inside runsDir — only canonical
+    // run-* ids may resolve there (Issue #227 path-traversal guard).
+    if (!RUN_ID_RE.test(flags["run-id"])) {
+      return fail("RUN_MARKER_INVALID", `run-id must match run-* marker naming: ${flags["run-id"]}`);
     }
     const runsDir = typeof flags["runs-dir"] === "string" ? flags["runs-dir"] : RUNS_DIR;
     const markerFile = join(runsDir, `${flags["run-id"]}.json`);

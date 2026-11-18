@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -635,6 +635,20 @@ t("cli recover refuses a missing run marker", () => {
   ]);
   assert.equal(code, 2);
   assert.equal(body.code, "RUN_MARKER_INVALID");
+  rmSync(root, { recursive: true, force: true });
+});
+
+t("cli recover refuses a non-run-* run-id before touching the filesystem (Issue #227)", () => {
+  const root = tmp();
+  const victim = join(root, "victim.json");
+  writeFileSync(victim, JSON.stringify({ schema: "ae-devtools.cli.run-guard/v1" }));
+  const { code, body } = cliJson([
+    "recover", "--run-id", "../victim", "--request-id", "req-1", "--method", "op.x",
+    "--runs-dir", root,
+  ]);
+  assert.equal(code, 2);
+  assert.equal(body.code, "RUN_MARKER_INVALID");
+  assert.ok(existsSync(victim), "recover read a marker outside runs-dir naming");
   rmSync(root, { recursive: true, force: true });
 });
 
