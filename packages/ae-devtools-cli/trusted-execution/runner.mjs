@@ -49,7 +49,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { authorizeExecution } from "./permissions.mjs";
+import { authorizeExecution, evalConsentArgs } from "./permissions.mjs";
 import { classifyWriteResult, toContractOutcome } from "./outcomes.mjs";
 import { retryDecision } from "./mutation-guard.mjs";
 
@@ -201,7 +201,7 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
       permission: "execute",
       pin: input.pin,
       operationId: input.operationId,
-      args: { source, dispatchArgs: input.args ?? null },
+      args: evalConsentArgs(source, input.args),
       projectIdentity: input.projectIdentity,
       consent: input.consent,
       trustedScriptOptIn: input.trustedScriptOptIn,

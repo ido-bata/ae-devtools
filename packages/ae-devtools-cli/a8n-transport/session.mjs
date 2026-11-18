@@ -32,71 +32,34 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
 import { createA8nTransport } from "./transport.mjs";
+import { resolveAeA8n } from "./ae-a8n-resolve.mjs";
 import {
   missingContractExports,
   aeA8nContractError,
   aeA8nHandshakeError,
 } from "./compat.mjs";
 import { runHandshakeContractChecks } from "./contract.mjs";
-
-// Local copy of the provenance probe — kept here (not imported from
-// devtools-cli/real-run-kit.mjs) so a8n-transport does not depend on the
-// CLI layer above it (Issue #248).
-async function gitHead(root) {
-  try {
-    const { stdout } = await execFileAsync("git", ["-C", root, "rev-parse", "HEAD"], { timeout: 5_000 });
-    return stdout.trim() || null;
-  } catch {
-    return null;
-  }
-}
+import { DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
 
 const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXTENSION_MODULE = join(HERE, "extension.mjs");
 
 /**
- * Resolve the ae-a8n API + CLI. Default: the pinned npm dependency.
- * `aeA8nRoot` points at a local checkout's `dist/` build instead — used to
- * exercise unreleased fixes (e.g. ae-a8n#103) before they are published;
- * the evidence record carries the root so the run is never mistaken for a
+ * Resolve the ae-a8n API + CLI — delegated to the shared resolver
+ * (Issue #253): a8n-transport/session.mjs, compat.mjs's probeAeA8n and
+ * recovery-orchestrator/cli.mjs previously copy-adapted the same
+ * root-vs-npm / dist-layout / version-read mechanics. `aeA8nRoot`
+ * points at a local checkout's `dist/` build — used to exercise
+ * unreleased fixes (e.g. ae-a8n#103) before they are published; the
+ * evidence record carries the root so the run is never mistaken for a
  * released-package verification.
  */
-async function loadAeA8n(aeA8nRoot) {
-  if (typeof aeA8nRoot === "string" && aeA8nRoot.length > 0) {
-    const indexUrl = pathToFileURL(join(aeA8nRoot, "dist", "index.js")).href;
-    const mod = await import(indexUrl);
-    return {
-      AfterEffects: mod.AfterEffects,
-      mod,
-      cliPath: join(aeA8nRoot, "dist", "cli.js"),
-      source: `local:${aeA8nRoot}`,
-      head: await gitHead(aeA8nRoot),
-    };
-  }
-  const { createRequire } = await import("node:module");
-  const require = createRequire(import.meta.url);
-  const mod = await import("@ido-bata/ae-a8n");
-  const { AfterEffects } = mod;
-  const entry = require.resolve("@ido-bata/ae-a8n");
-  let version = null;
-  try {
-    version = require(join(dirname(entry), "..", "package.json")).version ?? null;
-  } catch { /* version stays null */ }
-  return {
-    AfterEffects,
-    mod,
-    // dist/index.js and dist/cli.js are siblings.
-    cliPath: join(dirname(entry), "cli.js"),
-    source: "npm:@ido-bata/ae-a8n",
-    head: version,
-  };
-}
 
 /**
  * @param {object} options
@@ -109,7 +72,7 @@ async function loadAeA8n(aeA8nRoot) {
  */
 export async function openSliceSession(options = {}) {
   const { AfterEffects, mod: aeA8nMod, cliPath, source: aeA8nSource, head: aeA8nHead } =
-    await loadAeA8n(options.aeA8nRoot);
+    await resolveAeA8n({ aeA8nRoot: options.aeA8nRoot });
   // Contract gate (Issue #138): refuse BEFORE extension build / launch when
   // the resolved ae-a8n lacks the handshake exports that post-date the
   // #103/#105 real-host fixes. ae-a8n <=0.1.0-alpha.2 fails here with an
@@ -260,8 +223,8 @@ export async function openSliceSession(options = {}) {
     };
   } catch (error) {
     // Close on EVERY post-launch failure — bounded (a hung transport
-    // close must not pin this path forever; same 20s budget as
-    // dev-loop/session-close.mjs), guarded (ae.close may be absent or
+    // close must not pin this path forever; the bound is the shared
+    // DEFAULT_CLOSE_TIMEOUT_MS from dev-loop/session-close.mjs, Issue #253), guarded (ae.close may be absent or
     // non-promise on older ae-a8n), and REPORTED: a refused close leaves
     // an owned AE process alive with no run-guard marker, so the close
     // outcome is attached to the thrown error instead of swallowed
@@ -275,9 +238,9 @@ export async function openSliceSession(options = {}) {
         let timedOut = false;
         await Promise.race([
           closePromise,
-          new Promise((resolve) => setTimeout(() => { timedOut = true; resolve(); }, 20_000)),
+          new Promise((resolve) => setTimeout(() => { timedOut = true; resolve(); }, DEFAULT_CLOSE_TIMEOUT_MS)),
         ]);
-        if (timedOut) closeError = new Error("ae.close timed out after 20s");
+        if (timedOut) closeError = new Error(`ae.close timed out after ${DEFAULT_CLOSE_TIMEOUT_MS}ms`);
       }
     } catch (e) {
       closeError = e;

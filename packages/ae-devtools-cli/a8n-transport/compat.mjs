@@ -22,12 +22,8 @@
  * This is a contract probe, not a version compare — a local
  * `--ae-a8n-root` build is judged by the same exports.
  */
-import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
-
 import { runHandshakeContractChecks } from "./contract.mjs";
+import { resolveAeA8n } from "./ae-a8n-resolve.mjs";
 
 /** Exports the resolved ae-a8n module must provide for this transport. */
 export const REQUIRED_AE_A8N_CONTRACT = {
@@ -100,18 +96,13 @@ export function aeA8nHandshakeError({ source, version, failures }) {
   return error;
 }
 
-function packageVersion(dir) {
-  try {
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-    return typeof pkg.version === "string" ? pkg.version : null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Resolve ae-a8n and report its contract status WITHOUT launching AE.
  * Never throws: resolution failures come back as `{ resolvable: false }`.
+ * Resolution itself is delegated to the shared resolver
+ * (ae-a8n-resolve.mjs, Issue #253) — the same root-vs-npm mechanics
+ * session.mjs uses, so the probe can never disagree with the launcher
+ * about which ae-a8n a run would bind.
  *
  * @param {object} [options]
  *   aeA8nRoot — local ae-a8n checkout root with a built dist/; overrides
@@ -120,61 +111,16 @@ function packageVersion(dir) {
  */
 export async function probeAeA8n(options = {}) {
   const aeA8nRoot = options.aeA8nRoot;
-  if (typeof aeA8nRoot === "string" && aeA8nRoot.length > 0) {
-    const root = aeA8nRoot;
-    try {
-      const indexUrl = pathToFileURL(join(root, "dist", "index.js")).href;
-      const mod = await import(indexUrl);
-      const missing = missingContractExports(mod);
-      // Export presence is necessary, not sufficient (Issue #144): when the
-      // required exports exist, the handshake battery verifies the actual
-      // negotiation/refusal/ownership/dispatch semantics before the probe
-      // reports contractOk. Pure functions — no AE is contacted.
-      const battery = missing.length === 0 ? runHandshakeContractChecks(mod) : null;
-      return {
-        resolvable: true,
-        source: `local:${root}`,
-        version: packageVersion(root),
-        contractOk: missing.length === 0 && battery.ok,
-        missing,
-        checks: battery?.checks ?? null,
-        required: CONTRACT_DESCRIPTION,
-      };
-    } catch (e) {
-      return {
-        resolvable: false,
-        source: `local:${root}`,
-        version: packageVersion(root),
-        contractOk: false,
-        missing: Object.keys(REQUIRED_AE_A8N_CONTRACT),
-        required: CONTRACT_DESCRIPTION,
-        error: String(e?.message ?? e),
-      };
-    }
-  }
+  const source = typeof aeA8nRoot === "string" && aeA8nRoot.length > 0
+    ? `local:${aeA8nRoot}`
+    : "npm:@ido-bata/ae-a8n";
+  let resolved;
   try {
-    const require = createRequire(import.meta.url);
-    const entry = require.resolve("@ido-bata/ae-a8n");
-    const mod = await import("@ido-bata/ae-a8n");
-    const missing = missingContractExports(mod);
-    const battery = missing.length === 0 ? runHandshakeContractChecks(mod) : null;
-    let version = null;
-    try {
-      version = packageVersion(dirname(dirname(entry)));
-    } catch { /* version stays null */ }
-    return {
-      resolvable: true,
-      source: "npm:@ido-bata/ae-a8n",
-      version,
-      contractOk: missing.length === 0 && battery.ok,
-      missing,
-      checks: battery?.checks ?? null,
-      required: CONTRACT_DESCRIPTION,
-    };
+    resolved = await resolveAeA8n({ aeA8nRoot });
   } catch (e) {
     return {
       resolvable: false,
-      source: "npm:@ido-bata/ae-a8n",
+      source,
       version: null,
       contractOk: false,
       missing: Object.keys(REQUIRED_AE_A8N_CONTRACT),
@@ -182,4 +128,20 @@ export async function probeAeA8n(options = {}) {
       error: String(e?.message ?? e),
     };
   }
+  const mod = resolved.mod;
+  const missing = missingContractExports(mod);
+  // Export presence is necessary, not sufficient (Issue #144): when the
+  // required exports exist, the handshake battery verifies the actual
+  // negotiation/refusal/ownership/dispatch semantics before the probe
+  // reports contractOk. Pure functions — no AE is contacted.
+  const battery = missing.length === 0 ? runHandshakeContractChecks(mod) : null;
+  return {
+    resolvable: true,
+    source: resolved.source,
+    version: resolved.version,
+    contractOk: missing.length === 0 && battery.ok,
+    missing,
+    checks: battery?.checks ?? null,
+    required: CONTRACT_DESCRIPTION,
+  };
 }
