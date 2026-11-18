@@ -13,6 +13,15 @@ import {
   attachEvidence, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
 import { failureOutcome, isFailureResult } from "../../dev-loop/outcomes.mjs";
+import { parseArgs, arg as argvArg, hasFlag } from "../argv.mjs";
+import {
+  aeProcessSnapshot,
+  createEvalDispatch,
+  gitHeadAndDirty,
+  spawnMcpStdio,
+  withTimeout,
+} from "../real-run-kit.mjs";
+import { consentScopeFor } from "../../trusted-execution/permissions.mjs";
 import { t, at, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -593,6 +602,128 @@ t("diagnose recognizes a CLI error document explicitly", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---- Issue #197: shared argv parser + real-run kit -------------------
+
+t("argv: --flag value / --flag=value / boolean / positional", () => {
+  const { pos, flags } = parseArgs([
+    "cmd", "tail", "--out", "ev.json", "--name=My Comp", "--force",
+    "--empty=", "--next", "--other",
+  ]);
+  assert.deepEqual(pos, ["cmd", "tail"]);
+  assert.equal(flags.out, "ev.json");
+  assert.equal(flags.name, "My Comp");
+  assert.equal(flags.force, true);
+  assert.equal(flags.empty, "");
+  // --next is followed by another flag → boolean, not a value
+  assert.equal(flags.next, true);
+  assert.equal(flags.other, true);
+});
+
+t("argv: multi collects repeated flags; singles stay last-wins", () => {
+  const { flags, multi } = parseArgs(
+    ["--reports-dir", "a", "--reports-dir=b", "--sentry-dir", "s", "--once", "1", "--once", "2"],
+    { multi: ["reports-dir", "sentry-dir"] },
+  );
+  assert.deepEqual(multi["reports-dir"], ["a", "b"]);
+  assert.deepEqual(multi["sentry-dir"], ["s"]);
+  assert.equal(flags.once, "2");
+  assert.equal(flags["reports-dir"], undefined);
+});
+
+t("argv: arg() returns string values only; hasFlag sees bare flags", () => {
+  const argv = ["--install-dir", "/Applications/AE.app", "--force", "--empty="];
+  assert.equal(argvArg("--install-dir", argv), "/Applications/AE.app");
+  assert.equal(argvArg("--install-dir=/x", argv), undefined);
+  assert.equal(argvArg("--missing", argv), undefined);
+  // bare boolean is not a value
+  assert.equal(argvArg("--force", argv), undefined);
+  assert.equal(argvArg("--empty", argv), "");
+  assert.equal(hasFlag("--force", argv), true);
+  assert.equal(hasFlag("--missing", argv), false);
+  // --flag=value form
+  assert.equal(argvArg("--out", ["--out=/tmp/e.json"]), "/tmp/e.json");
+});
+
+await at("kit: createEvalDispatch binds consent scope and runScript args shape", async () => {
+  const pin = { sessionId: "sess-1", aeVersion: "26.0", dispatchId: "d1" };
+  const seen = [];
+  const runner = { runScript: async (input) => { seen.push(input); return { outcome: "COMPLETED" }; } };
+  let identity = "proj-a";
+  const dispatch = createEvalDispatch({
+    runner, pin,
+    projectIdentity: () => identity,
+    operationId: "op.test.eval",
+    scriptProvenance: "test",
+  });
+  const r1 = await dispatch("source-one", "req-1");
+  assert.equal(r1.outcome, "COMPLETED");
+  const expectedScope = consentScopeFor({
+    pin, operationId: "op.test.eval",
+    args: { source: "source-one", dispatchArgs: null },
+    projectIdentity: "proj-a",
+  });
+  assert.deepEqual(seen[0].consent.scope, expectedScope);
+  assert.equal(seen[0].source, "source-one");
+  assert.equal(seen[0].args, null);
+  assert.equal(seen[0].projectIdentity, "proj-a");
+  assert.equal(seen[0].trustedScriptOptIn, true);
+  assert.equal(seen[0].scriptProvenance, "test");
+  assert.equal(seen[0].requestId, "req-1");
+  // lazy projectIdentity: re-bound identity is used on the next dispatch
+  identity = "proj-b";
+  await dispatch("source-two", "req-2", { extra: 1 });
+  assert.equal(seen[1].projectIdentity, "proj-b");
+  assert.deepEqual(seen[1].args, { extra: 1 });
+  assert.deepEqual(seen[1].consent.scope, consentScopeFor({
+    pin, operationId: "op.test.eval",
+    args: { source: "source-two", dispatchArgs: { extra: 1 } },
+    projectIdentity: "proj-b",
+  }));
+});
+
+await at("kit: withTimeout rejects with TIMEOUT tag", async () => {
+  await assert.rejects(
+    withTimeout(new Promise(() => {}), 20, "probe"),
+    /TIMEOUT probe/,
+  );
+  assert.equal(await withTimeout(Promise.resolve(7), 1000, "ok"), 7);
+});
+
+await at("kit: spawnMcpStdio round-trips NDJSON against a stub server", async () => {
+  const records = [];
+  const stub = [
+    "const rl = require('node:readline').createInterface({ input: process.stdin });",
+    "rl.on('line', (l) => {",
+    "  const m = JSON.parse(l);",
+    "  if (m.id !== undefined) process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: m.id, result: { echo: m.method } }) + '\\n');",
+    "});",
+  ].join(" ");
+  const { child, send, notify, call } = spawnMcpStdio({
+    scriptArgs: ["-e", stub],
+    cwd: tmpdir(),
+    onRecord: (o) => records.push(o),
+    onStderr: () => {},
+  });
+  try {
+    const res = await withTimeout(send("ping", {}), 5000, "stub");
+    assert.equal(res.result.echo, "ping");
+    notify("notifications/initialized");
+    const tool = await withTimeout(call("ae_discover", {}), 5000, "stub-call");
+    assert.equal(tool.result.echo, "tools/call");
+    assert.ok(records.some((r) => r.rx && r.rx.result));
+  } finally {
+    child.kill("SIGKILL");
+  }
+});
+
+t("kit: aeProcessSnapshot and gitHeadAndDirty degrade honestly", async () => {
+  const snap = await aeProcessSnapshot("ae-devtools-definitely-no-such-proc-197");
+  assert.ok(Array.isArray(snap), JSON.stringify(snap));
+  const git = await gitHeadAndDirty(HERE);
+  assert.ok("head" in git && "dirty" in git);
+  assert.ok(git.head === null || typeof git.head === "string");
 });
 
 await finish("tests passed");

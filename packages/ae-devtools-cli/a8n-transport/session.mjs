@@ -43,20 +43,11 @@ import {
   aeA8nHandshakeError,
 } from "./compat.mjs";
 import { runHandshakeContractChecks } from "./contract.mjs";
+import { gitHead } from "../devtools-cli/real-run-kit.mjs";
 
 const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXTENSION_MODULE = join(HERE, "extension.mjs");
-
-/** git HEAD of a local ae-a8n checkout, or null when unavailable. */
-async function gitHead(root) {
-  try {
-    const { stdout } = await execFileAsync("git", ["-C", root, "rev-parse", "HEAD"], { timeout: 5_000 });
-    return stdout.trim() || null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Resolve the ae-a8n API + CLI. Default: the pinned npm dependency.

@@ -60,6 +60,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseArgs } from "./argv.mjs";
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
 import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
@@ -69,21 +70,6 @@ import { failureOutcome } from "../dev-loop/outcomes.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
-
-function parseArgs(argv) {
-  const pos = [];
-  const flags = {};
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      const eq = a.indexOf("=");
-      if (eq >= 0) { flags[a.slice(2, eq)] = a.slice(eq + 1); }
-      else if (i + 1 < argv.length && !argv[i + 1].startsWith("--")) { flags[a.slice(2)] = argv[++i]; }
-      else { flags[a.slice(2)] = true; }
-    } else pos.push(a);
-  }
-  return { pos, flags };
-}
 
 /** Write the JSON result. Never exits — callers decide the exit code. */
 function emit(obj) {

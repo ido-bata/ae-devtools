@@ -25,18 +25,15 @@
  * --fixture may be a directory (a Conformance-MCP-Disposable.aep is
  * created inside it) or a direct .aep path.
  */
-import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { arg } from "../devtools-cli/argv.mjs";
+import { spawnMcpStdio, withTimeout } from "../devtools-cli/real-run-kit.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..");
-
-function arg(flag) {
-  const i = process.argv.indexOf(flag);
-  return i >= 0 ? process.argv[i + 1] : undefined;
-}
 
 const session = arg("--session") ?? "a8n";
 const fixtureArg = arg("--fixture");
@@ -60,41 +57,14 @@ const serverArgs = ["mcp-server/server.mjs", "--session", session];
 const installDir = arg("--install-dir");
 if (installDir) serverArgs.push("--install-dir", installDir);
 
-const child = spawn(process.execPath, serverArgs, { cwd: CLI, stdio: ["pipe", "pipe", "pipe"] });
-child.stderr.on("data", (d) => rec({ stderr: String(d).slice(0, 800) }));
-let buf = "";
-const pending = new Map();
-let nextId = 1;
-child.stdout.on("data", (d) => {
-  buf += d;
-  let i;
-  while ((i = buf.indexOf("\n")) >= 0) {
-    const line = buf.slice(0, i).trim();
-    buf = buf.slice(i + 1);
-    if (!line) continue;
-    try {
-      const msg = JSON.parse(line);
-      rec({ rx: msg });
-      if (msg.id !== undefined && pending.has(msg.id)) {
-        pending.get(msg.id)(msg);
-        pending.delete(msg.id);
-      }
-    } catch {
-      rec({ rxRaw: line.slice(0, 300) });
-    }
-  }
+// NDJSON stdio client harness shared with mcp-server/real-run.mjs
+// (Issue #197).
+const { child, send, notify, call } = spawnMcpStdio({
+  scriptArgs: serverArgs,
+  cwd: CLI,
+  onRecord: rec,
+  onStderr: (d) => rec({ stderr: d.slice(0, 800) }),
 });
-const send = (method, params) =>
-  new Promise((res) => {
-    const id = nextId++;
-    pending.set(id, res);
-    child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
-  });
-const notify = (method) =>
-  child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method }) + "\n");
-const call = (name, args) => send("tools/call", { name, arguments: args });
-const timeout = (p, ms, tag) =>
-  Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT " + tag)), ms))]);
 
 const COMP_NAME = "MCP Conformance Comp";
 const results = {};
@@ -113,7 +83,7 @@ const recordToolResult = (tag, msg) => {
 
 try {
   rec({ step: "initialize", argv: serverArgs, fixturePath });
-  const init = await timeout(
+  const init = await withTimeout(
     send("initialize", {
       protocolVersion: "2024-11-05",
       capabilities: {},
@@ -126,29 +96,29 @@ try {
   rec({ step: "initialized", serverInfo: init?.result?.serverInfo ?? null });
 
   rec({ step: "ae_discover" });
-  recordToolResult("ae_discover", await timeout(call("ae_discover", {}), 60000, "discover"));
+  recordToolResult("ae_discover", await withTimeout(call("ae_discover", {}), 60000, "discover"));
 
   // Pre-state read-back: whatever project AE restored is observed,
   // never mutated — project.new replaces it only if it is clean.
   rec({ step: "ae_verify.pre-state" });
-  recordToolResult("ae_verify.pre", await timeout(call("ae_verify", { consent: "grant" }), 300000, "verify-pre"));
+  recordToolResult("ae_verify.pre", await withTimeout(call("ae_verify", { consent: "grant" }), 300000, "verify-pre"));
 
   rec({ step: "ae_execute.project.new (launches owned AE)" });
-  recordToolResult("project.new", await timeout(
+  recordToolResult("project.new", await withTimeout(
     call("ae_execute", { opId: "project.new", args: {}, consent: "grant", confirmDestructive: true }),
     300000,
     "project.new",
   ));
 
   rec({ step: "ae_execute.project.save" });
-  recordToolResult("project.save", await timeout(
+  recordToolResult("project.save", await withTimeout(
     call("ae_execute", { opId: "project.save", args: { path: fixturePath }, consent: "grant" }),
     120000,
     "project.save",
   ));
 
   rec({ step: "ae_execute.item.addComp" });
-  recordToolResult("item.addComp", await timeout(
+  recordToolResult("item.addComp", await withTimeout(
     call("ae_execute", {
       opId: "item.addComp",
       args: { name: COMP_NAME, width: 1920, height: 1080, pixelAspect: 1, duration: 5, frameRate: 30 },
@@ -159,10 +129,10 @@ try {
   ));
 
   rec({ step: "ae_verify.readback" });
-  recordToolResult("ae_verify.readback", await timeout(call("ae_verify", { consent: "grant" }), 120000, "verify"));
+  recordToolResult("ae_verify.readback", await withTimeout(call("ae_verify", { consent: "grant" }), 120000, "verify"));
 
   rec({ step: "ae_execute.item.remove" });
-  recordToolResult("item.remove", await timeout(
+  recordToolResult("item.remove", await withTimeout(
     call("ae_execute", {
       opId: "item.remove",
       args: { name: COMP_NAME, type: "CompItem" },
@@ -174,12 +144,12 @@ try {
   ));
 
   rec({ step: "ae_verify.final" });
-  recordToolResult("ae_verify.final", await timeout(call("ae_verify", { consent: "grant" }), 120000, "verify-final"));
+  recordToolResult("ae_verify.final", await withTimeout(call("ae_verify", { consent: "grant" }), 120000, "verify-final"));
 
   // item.remove leaves AE's dirty flag set even though content matches
   // the saved fixture — re-save so session close can quit cleanly.
   rec({ step: "ae_execute.project.save.resave" });
-  recordToolResult("project.save.resave", await timeout(
+  recordToolResult("project.save.resave", await withTimeout(
     call("ae_execute", { opId: "project.save", args: { path: fixturePath }, consent: "grant" }),
     120000,
     "project.save.resave",

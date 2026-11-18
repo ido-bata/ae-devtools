@@ -23,12 +23,16 @@ import { buildAttachConfig, writeLaunchJson } from "./gen.mjs";
 import { validateLaunchJson, hasErrors } from "./schema.mjs";
 import { parseJsonc, printParseErrorCode } from "./jsonc.mjs";
 import { runPreflight } from "./preflight.mjs";
+import { parseArgs } from "../../devtools-cli/argv.mjs";
 
-const [cmd, ...args] = process.argv.slice(2);
+const [cmd, ...rest] = process.argv.slice(2);
+const { pos, flags } = parseArgs(rest);
 
+// String value of a --flag, or null when absent/bare (Issue #197 shared
+// parser; also accepts --flag=value which indexOf lookups missed).
 function arg(flag) {
-  const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : null;
+  const v = flags[flag.startsWith("--") ? flag.slice(2) : flag];
+  return typeof v === "string" ? v : null;
 }
 
 function out(obj, code) {
@@ -66,7 +70,7 @@ switch (cmd) {
     break;
   }
   case "validate": {
-    const file = args.find((a) => !a.startsWith("-"));
+    const file = pos[0];
     if (!file) { console.error("validate requires a launch.json path"); process.exit(2); }
     let doc;
     try {

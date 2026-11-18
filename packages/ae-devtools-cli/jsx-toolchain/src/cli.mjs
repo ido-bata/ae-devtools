@@ -28,6 +28,7 @@ import { checkFile, checkProject } from "./check.mjs";
 import { lintSource, hasErrors } from "./es3-lint.mjs";
 import { lookup } from "./sourcemap.mjs";
 import { resolvePosition } from "./bundle.mjs";
+import { arg } from "../../devtools-cli/argv.mjs";
 
 const [cmd, ...args] = process.argv.slice(2);
 
@@ -105,8 +106,7 @@ switch (cmd) {
   }
   case "build-project": {
     const f = needFile();
-    const ni = args.indexOf("--name");
-    const name = ni >= 0 ? args[ni + 1] : null;
+    const name = arg("--name", args) ?? null;
     const r = await buildProject(f, { outDir: outDirArg(), name });
     const { output, map, bundleMap, ...rest } = r;
     out({
@@ -118,8 +118,7 @@ switch (cmd) {
   }
   case "watch": {
     const f = needFile();
-    const ni = args.indexOf("--name");
-    const name = ni >= 0 ? args[ni + 1] : null;
+    const name = arg("--name", args) ?? null;
     const { watchProject } = await import("./watch.mjs");
     const handle = watchProject(f, {
       outDir: outDirArg(),
