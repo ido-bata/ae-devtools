@@ -606,6 +606,14 @@ static void ProbeItemViewDetails(
     }
 }
 
+static void ProbeCompLayers(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_LayerSuite9* layerP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id,
+    AEGP_CompH compH,
+    long item_indexL);
+
 /* Read-only comp-detail getters for one comp item (Issue #64).
    compP is the AEGP_CompSuite13 table; compH is the opaque comp
    handle returned by AEGP_GetCompFromItem (borrowed — never freed).
@@ -614,6 +622,9 @@ static void ProbeItemViewDetails(
 static void ProbeCompDetails(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_CompSuite13* compP,
+    const AEGP_LayerSuite9* layerP,   /* NULL when suite unavailable */
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id,
     AEGP_ItemH itemH,
     long item_indexL)
 {
@@ -810,6 +821,317 @@ static void ProbeCompDetails(
                          item_indexL, (int)dropB);
         }
     }
+
+    if (layerP != NULL)
+    {
+        ProbeCompLayers(utilP, layerP, memP, plugin_id, compH, item_indexL);
+    }
+}
+
+
+/* Read-only layer enumeration + per-layer getters for one comp
+   (Issue #64 layer slice). layerH values are opaque borrowed handles —
+   never freed. Every call is op-recorded; per-call failures are
+   logged and skipped. Runs only when the Layer suite was acquired
+   and its entries validated; suite-level failure is non-fatal. */
+static void ProbeCompLayers(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_LayerSuite9* layerP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id,
+    AEGP_CompH compH,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    A_long num_layersL = 0;
+    A_long li;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    err = layerP->AEGP_GetCompNumLayers(compH, &num_layersL);
+    OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetCompNumLayers", (long)err, idx);
+    if (err != A_Err_NONE)
+    {
+        LogFormatted(utilP, "project.items[%ld].comp.numLayers err=%ld",
+                     item_indexL, (long)err);
+        return;
+    }
+    LogFormatted(utilP, "project.items[%ld].comp.numLayers=%ld",
+                 item_indexL, num_layersL);
+
+    for (li = 0; li < num_layersL; li++)
+    {
+        AEGP_LayerH layerH = NULL;
+        char lidx[48];
+        snprintf(lidx, sizeof(lidx), " i=%ld l=%ld", item_indexL, (long)li);
+        lidx[sizeof(lidx) - 1] = '\0';
+
+        err = layerP->AEGP_GetCompLayerByIndex(compH, li, &layerH);
+        OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
+                  (long)err, lidx);
+        if (err != A_Err_NONE || !layerH)
+        {
+            LogFormatted(utilP,
+                         "project.items[%ld].comp.layers[%ld]: unavailable err=%ld",
+                         item_indexL, li, (long)err);
+            continue;
+        }
+
+        {
+            A_long layer_indexL = -1;
+            err = layerP->AEGP_GetLayerIndex(layerH, &layer_indexL);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerIndex",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].index=%ld",
+                             item_indexL, li, layer_indexL);
+            }
+        }
+        {
+            AEGP_MemHandle nameH = NULL;
+            AEGP_MemHandle srcH = NULL;
+            err = layerP->AEGP_GetLayerName(plugin_id, layerH, &nameH, &srcH);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerName",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                char label[96];
+                snprintf(label, sizeof(label),
+                         "project.items[%ld].comp.layers[%ld].name", item_indexL, (long)li);
+                label[sizeof(label) - 1] = '\0';
+                LogMemHandleUtf16(utilP, memP, label, nameH);
+                snprintf(label, sizeof(label),
+                         "project.items[%ld].comp.layers[%ld].sourceName", item_indexL, (long)li);
+                label[sizeof(label) - 1] = '\0';
+                LogMemHandleUtf16(utilP, memP, label, srcH);
+            }
+        }
+        {
+            AEGP_LayerFlags flags = 0;
+            err = layerP->AEGP_GetLayerFlags(layerH, &flags);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerFlags",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].flags=%ld",
+                             item_indexL, li, (long)flags);
+            }
+        }
+        {
+            AEGP_LayerQuality quality = AEGP_LayerQual_NONE;
+            err = layerP->AEGP_GetLayerQuality(layerH, &quality);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerQuality",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].quality=%d",
+                             item_indexL, li, (int)quality);
+            }
+        }
+        {
+            AEGP_ObjectType obj = AEGP_ObjectType_NONE;
+            err = layerP->AEGP_GetLayerObjectType(layerH, &obj);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].objectType=%ld",
+                             item_indexL, li, (long)obj);
+            }
+        }
+        {
+            A_Boolean is3dB = FALSE;
+            err = layerP->AEGP_IsLayer3D(layerH, &is3dB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayer3D",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].is3D=%d",
+                             item_indexL, li, (int)is3dB);
+            }
+        }
+        {
+            A_Boolean is2dB = FALSE;
+            err = layerP->AEGP_IsLayer2D(layerH, &is2dB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayer2D",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].is2D=%d",
+                             item_indexL, li, (int)is2dB);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = layerP->AEGP_GetLayerCurrentTime(layerH,
+                                                   AEGP_LTimeMode_CompTime, &t);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].currentTime=%ld/%lu",
+                             item_indexL, li, (long)t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = layerP->AEGP_GetLayerInPoint(layerH,
+                                               AEGP_LTimeMode_CompTime, &t);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].inPoint=%ld/%lu",
+                             item_indexL, li, (long)t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = layerP->AEGP_GetLayerDuration(layerH,
+                                                AEGP_LTimeMode_CompTime, &t);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerDuration",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].duration=%ld/%lu",
+                             item_indexL, li, (long)t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            AEGP_LayerIDVal idv = AEGP_LayerIDVal_NONE;
+            err = layerP->AEGP_GetLayerID(layerH, &idv);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerID",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].id=%ld",
+                             item_indexL, li, (long)idv);
+            }
+        }
+        {
+            AEGP_LabelID label = 0;
+            err = layerP->AEGP_GetLayerLabel(layerH, &label);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerLabel",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].label=%d",
+                             item_indexL, li, (int)label);
+            }
+        }
+        {
+            AEGP_LayerSamplingQuality sq = 0;
+            err = layerP->AEGP_GetLayerSamplingQuality(layerH, &sq);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].samplingQuality=%d",
+                             item_indexL, li, (int)sq);
+            }
+        }
+        {
+            A_long src_idL = 0;
+            err = layerP->AEGP_GetLayerSourceItemID(layerH, &src_idL);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].sourceItemID=%ld",
+                             item_indexL, li, src_idL);
+            }
+        }
+        {
+            AEGP_CompH parentH = NULL;
+            err = layerP->AEGP_GetLayerParentComp(layerH, &parentH);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerParentComp",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].parentComp=%s",
+                             item_indexL, li, parentH ? "present" : "none");
+            }
+        }
+        {
+            A_Boolean onB = FALSE;
+            err = layerP->AEGP_IsLayerVideoReallyOn(layerH, &onB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].videoOn=%d",
+                             item_indexL, li, (int)onB);
+            }
+        }
+        {
+            A_Boolean onB = FALSE;
+            err = layerP->AEGP_IsLayerAudioReallyOn(layerH, &onB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].audioOn=%d",
+                             item_indexL, li, (int)onB);
+            }
+        }
+        {
+            A_Boolean hasB = FALSE;
+            err = layerP->AEGP_DoesLayerHaveTrackMatte(layerH, &hasB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].hasTrackMatte=%d",
+                             item_indexL, li, (int)hasB);
+            }
+        }
+        {
+            A_Boolean isB = FALSE;
+            err = layerP->AEGP_IsLayerUsedAsTrackMatte(layerH, TRUE, &isB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].isTrackMatte=%d",
+                             item_indexL, li, (int)isB);
+            }
+        }
+        {
+            AEGP_LayerH matteH = NULL;
+            err = layerP->AEGP_GetTrackMatteLayer(layerH, &matteH);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].trackMatteLayer=%s",
+                             item_indexL, li, matteH ? "present" : "none");
+            }
+        }
+    }
 }
 
 /* Most-recently-used comp, once per probe run (app-level). A NULL
@@ -842,6 +1164,7 @@ static void ProbeNamedItem(
     const AEGP_MemorySuite1* memP,
     const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
     const AEGP_CompSuite13* compP,        /* NULL when suite unavailable */
+    const AEGP_LayerSuite9* layerP,       /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     AEGP_ItemH itemH,
     long item_indexL)
@@ -1035,7 +1358,7 @@ static void ProbeNamedItem(
        succeeded as COMP and only when the comp suite is usable. */
     if (compP != NULL && type == AEGP_ItemType_COMP)
     {
-        ProbeCompDetails(utilP, compP, itemH, item_indexL);
+        ProbeCompDetails(utilP, compP, layerP, memP, plugin_id, itemH, item_indexL);
     }
 }
 
@@ -1048,6 +1371,7 @@ static void ProbeProjectItems(
     const AEGP_MemorySuite1* memP,
     const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
     const AEGP_CompSuite13* compP,        /* NULL when suite unavailable */
+    const AEGP_LayerSuite9* layerP,       /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     AEGP_ProjectH projectH)
 {
@@ -1068,7 +1392,7 @@ static void ProbeProjectItems(
     {
         if (named < MAX_ITEM_NAMES)
         {
-            ProbeNamedItem(utilP, itemP, memP, itemViewP, compP, plugin_id, itemH, named);
+            ProbeNamedItem(utilP, itemP, memP, itemViewP, compP, layerP, plugin_id, itemH, named);
             named++;
         }
         count++;
@@ -1132,6 +1456,7 @@ static void ProbeProject(
     const AEGP_MemorySuite1* memP,
     const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
     const AEGP_CompSuite13* compP,        /* NULL when suite unavailable */
+    const AEGP_LayerSuite9* layerP,       /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     A_long num_projectsL)
 {
@@ -1250,7 +1575,7 @@ static void ProbeProject(
         }
 
         ProbeRootFolderName(utilP, projP, itemP, memP, plugin_id, projectH);
-        ProbeProjectItems(utilP, itemP, memP, itemViewP, compP, plugin_id, projectH);
+        ProbeProjectItems(utilP, itemP, memP, itemViewP, compP, layerP, plugin_id, projectH);
     }
 }
 
@@ -1384,6 +1709,24 @@ static A_Boolean CompEntriesOk(const AEGP_CompSuite13* c)
            c->AEGP_GetCompWorkAreaStart && c->AEGP_GetCompWorkAreaDuration &&
            c->AEGP_GetCompDisplayStartTime && c->AEGP_GetCompFrameDuration &&
            c->AEGP_GetMostRecentlyUsedComp && c->AEGP_GetCompDisplayDropFrame;
+}
+
+/* Layer slice (Issue #64): only the read-only entries the probe calls
+   are required; like the comp slice this is auxiliary evidence — a
+   missing entry degrades the section, not the run. */
+static A_Boolean LayerEntriesOk(const AEGP_LayerSuite9* l)
+{
+    return l && l->AEGP_GetCompNumLayers && l->AEGP_GetCompLayerByIndex &&
+           l->AEGP_GetLayerIndex && l->AEGP_GetLayerName &&
+           l->AEGP_GetLayerFlags && l->AEGP_GetLayerQuality &&
+           l->AEGP_GetLayerObjectType && l->AEGP_IsLayer3D &&
+           l->AEGP_IsLayer2D && l->AEGP_GetLayerCurrentTime &&
+           l->AEGP_GetLayerInPoint && l->AEGP_GetLayerDuration &&
+           l->AEGP_GetLayerID && l->AEGP_GetLayerLabel &&
+           l->AEGP_GetLayerSamplingQuality && l->AEGP_GetLayerSourceItemID &&
+           l->AEGP_GetLayerParentComp && l->AEGP_IsLayerVideoReallyOn &&
+           l->AEGP_IsLayerAudioReallyOn && l->AEGP_DoesLayerHaveTrackMatte &&
+           l->AEGP_IsLayerUsedAsTrackMatte && l->AEGP_GetTrackMatteLayer;
 }
 
 /* Read-only render-queue observation. Every call is op-recorded; the
@@ -1544,6 +1887,8 @@ static A_Err ProbeIdleHook(
     const AEGP_ItemViewSuite2* usableItemViewP = NULL;
     const AEGP_CompSuite13* compP = NULL;
     const AEGP_CompSuite13* usableCompP = NULL;
+    const AEGP_LayerSuite9* layerP = NULL;
+    const AEGP_LayerSuite9* usableLayerP = NULL;
     A_Err first_err = A_Err_NONE;
     A_long num_projectsL = 0;
     const char* reasonZ = NULL;
@@ -1829,6 +2174,20 @@ static A_Err ProbeIdleHook(
             LogLine(utilP, "probe.error: AEGP Comp suite unavailable");
         }
 
+        /* Layer slice (Issue #64): auxiliary read-only layer getters
+           inside comps. Same non-fatal degradation model as comp. */
+        if (AcquireSuite(s_basicP, utilP, kAEGPLayerSuite,
+                         kAEGPLayerSuiteVersion9,
+                         (const void**)&layerP) == A_Err_NONE &&
+            LayerEntriesOk(layerP))
+        {
+            usableLayerP = layerP;
+        }
+        else
+        {
+            LogLine(utilP, "probe.error: AEGP Layer suite unavailable");
+        }
+
         ProbeActiveItem(utilP, itemP, memP, s_aegp_plugin_id);
         if (usableCompP)
         {
@@ -1839,7 +2198,7 @@ static A_Err ProbeIdleHook(
            not an error: ProbeProject logs app.numProjects=0 and skips
            per-project queries. */
         ProbeProject(utilP, projP, itemP, memP, usableItemViewP,
-                     usableCompP, s_aegp_plugin_id, num_projectsL);
+                     usableCompP, usableLayerP, s_aegp_plugin_id, num_projectsL);
 
         LogLine(utilP, "probe.end");
     }
@@ -1850,6 +2209,10 @@ done:
     /* Suite releases are op-recorded too: on probe ticks the mode is
        still DIRECT so they land inside this execution's evidence;
        on quiet ticks they stay buffered and are discarded. */
+    if (layerP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+    }
     if (compP)
     {
         ReleaseSuiteSafe(s_basicP, utilP, kAEGPCompSuite, kAEGPCompSuiteVersion13);

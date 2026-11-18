@@ -48,6 +48,12 @@ struct _AEGP_Comp
     int projIndex;
     int itemIndex;
 };
+struct _AEGP_Layer
+{
+    int projIndex;
+    int itemIndex;  /* the comp item this layer belongs to */
+    int layerIndex;
+};
 
 struct FakeMemRec
 {
@@ -66,6 +72,31 @@ struct FakeNameSpec
     AEGP_MemSize sizeBytes = 0;
     bool sizeOverride = false;
     int failMode = 0; /* 0 ok, 1 = size fails, 2 = lock fails, 3 = err return, 4 = NULL handle + NONE */
+};
+
+/* Per-layer read-only metadata returned by the Issue #64
+   AEGP_LayerSuite9 getters. Indexed by layer position in the comp. */
+struct FakeLayerMeta
+{
+    FakeNameSpec name;
+    FakeNameSpec sourceName;
+    AEGP_LayerFlags flags = 0;
+    AEGP_LayerQuality quality = AEGP_LayerQual_BEST;
+    AEGP_ObjectType objectType = AEGP_ObjectType_AV;
+    A_Boolean is3D = FALSE;
+    A_Boolean is2D = TRUE;
+    A_Time currentTime = {0, 30};
+    A_Time inPoint = {0, 30};
+    A_Time duration = {90, 30};
+    AEGP_LayerIDVal id = 0;
+    AEGP_LabelID label = AEGP_Label_NO_LABEL;
+    AEGP_LayerSamplingQuality samplingQuality = AEGP_LayerSamplingQual_BILINEAR;
+    A_long sourceItemID = -1;
+    A_Boolean videoOn = TRUE;
+    A_Boolean audioOn = FALSE;
+    A_Boolean hasTrackMatte = FALSE;
+    A_Boolean isTrackMatte = FALSE;
+    int trackMatteLayerIndex = -1; /* -1 → GetTrackMatteLayer returns NULL */
 };
 
 /* Per-comp read-only metadata returned by the Issue #64
@@ -90,6 +121,7 @@ struct FakeCompMeta
     A_Time workAreaDuration = {90, 30};
     A_Time displayStart = {0, 30};
     A_Boolean displayDropFrame = FALSE;
+    std::vector<FakeLayerMeta> layers;
 };
 
 /* Per-item extended metadata returned by the Issue #63 read-only
@@ -146,6 +178,7 @@ struct FakeHost
     int itemMetaErr = A_Err_NONE; /* all extended ItemSuite9 detail getters fail */
     int itemViewQueryErr = A_Err_NONE; /* ItemViewSuite2 getters fail */
     int compQueryErr = A_Err_NONE;     /* CompSuite13 getters fail */
+    int layerQueryErr = A_Err_NONE;    /* LayerSuite9 getters fail */
     int activeItemProject = -1; /* -1 → GetActiveItem returns NULL item */
     int activeItemIndex = -1;
 
@@ -158,6 +191,7 @@ struct FakeHost
     bool failAcquireRQItem = false;
     bool failAcquireItemView = false;
     bool failAcquireComp = false;
+    bool failAcquireLayer = false;
     bool registerWithAegpFails = false;
     bool registerIdleHookFails = false;
     bool registerIdleHookMissing = false; /* entry left NULL in suite */
@@ -167,13 +201,14 @@ struct FakeHost
     int nullItemEntry = 0; /* 1 = GetItemMRUView NULL, 2 = GetItemComment NULL, 3 = GetActiveItem NULL, 4 = GetTypeName NULL */
     int nullItemViewEntry = 0; /* 1..4 = the four ItemViewSuite2 getters NULL */
     int nullCompEntry = 0; /* 1..18 = the CompSuite13 entries the probe calls NULL */
+    int nullLayerEntry = 0; /* 1..22 = the LayerSuite9 entries the probe calls NULL */
     int mruCompProject = -1; /* -1 → GetMostRecentlyUsedComp returns NULL */
     int mruCompIndex = -1;
 
     /* ---- observed state ---- */
     std::vector<std::string> log; /* raw infoZ strings passed to WriteToDebugLog */
-    int acquireCount[9] = {0};
-    int releaseCount[9] = {0};
+    int acquireCount[10] = {0};
+    int releaseCount[10] = {0};
     int idleHookRegistrations = 0;
     AEGP_IdleHook idleHook = NULL;
     AEGP_PluginID idleHookPluginId = 0;
@@ -195,6 +230,7 @@ struct FakeHost
     AEGP_RQItemSuite4 rqItemSuite;
     AEGP_ItemViewSuite2 itemViewSuite;
     AEGP_CompSuite13 compSuite;
+    AEGP_LayerSuite9 layerSuite;
     SPBasicSuite basicSuite;
 
     FakeHost();

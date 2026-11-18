@@ -215,6 +215,10 @@ static SPErr FakeAcquireSuite(const char* nameZ, int32 versionL, const void** su
     {
         slot = 8; fail = h->failAcquireComp; table = &h->compSuite;
     }
+    else if (strcmp(nameZ, kAEGPLayerSuite) == 0)
+    {
+        slot = 9; fail = h->failAcquireLayer; table = &h->layerSuite;
+    }
     else
     {
         return 1; /* unknown suite: acquisition fails */
@@ -242,6 +246,7 @@ static SPErr FakeReleaseSuite(const char* nameZ, int32 versionL)
     else if (strcmp(nameZ, kAEGPRQItemSuite) == 0) h->releaseCount[6]++;
     else if (strcmp(nameZ, kAEGPItemViewSuite) == 0) h->releaseCount[7]++;
     else if (strcmp(nameZ, kAEGPCompSuite) == 0) h->releaseCount[8]++;
+    else if (strcmp(nameZ, kAEGPLayerSuite) == 0) h->releaseCount[9]++;
     return 0;
 }
 
@@ -1129,6 +1134,280 @@ static A_Err FakeGetCompDisplayDropFrame(AEGP_CompH compH,
     return A_Err_NONE;
 }
 
+
+/* ------------------------------------------------------------------ */
+/* AEGP_LayerSuite9 fakes (Issue #64 layer slice — read-only)          */
+/* ------------------------------------------------------------------ */
+
+static AEGP_LayerH MakeLayerHandle(int projIndex, int itemIndex, int layerIndex)
+{
+    struct _AEGP_Layer* l = new struct _AEGP_Layer;
+    l->projIndex = projIndex;
+    l->itemIndex = itemIndex;
+    l->layerIndex = layerIndex;
+    struct _AEGP_Layer** hp = new struct _AEGP_Layer*;
+    *hp = l;
+    return (AEGP_LayerH)hp;
+}
+
+static FakeProject* ProjectOfLayer(AEGP_LayerH layerH)
+{
+    struct _AEGP_Layer** hp = (struct _AEGP_Layer**)layerH;
+    int pi = (*hp)->projIndex;
+    if (pi < 0 || pi >= (int)g_host->projects.size())
+    {
+        return NULL;
+    }
+    return &g_host->projects[pi];
+}
+
+static int ItemIndexOfLayer(AEGP_LayerH layerH)
+{
+    struct _AEGP_Layer** hp = (struct _AEGP_Layer**)layerH;
+    return (*hp)->itemIndex;
+}
+
+static int LayerIndexOfLayer(AEGP_LayerH layerH)
+{
+    struct _AEGP_Layer** hp = (struct _AEGP_Layer**)layerH;
+    return (*hp)->layerIndex;
+}
+
+static const FakeLayerMeta& LayerMetaFor(AEGP_LayerH layerH)
+{
+    static const FakeLayerMeta kDefault;
+    FakeProject* p = ProjectOfLayer(layerH);
+    if (!p) return kDefault;
+    int ii = ItemIndexOfLayer(layerH);
+    int li = LayerIndexOfLayer(layerH);
+    if (ii < 0 || ii >= (int)p->itemMeta.size()) return kDefault;
+    const std::vector<FakeLayerMeta>& layers = p->itemMeta[ii].compMeta.layers;
+    if (li < 0 || li >= (int)layers.size()) return kDefault;
+    return layers[li];
+}
+
+#define FAKE_LAYER_ERR() \
+    if (g_host->layerQueryErr != A_Err_NONE) return (A_Err)g_host->layerQueryErr
+
+static A_Err FakeGetCompNumLayers(AEGP_CompH compH, A_long* num_layersPL)
+{
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return A_Err_PARAMETER;
+    int ii = ItemIndexOfComp(compH);
+    if (ii < 0 || ii >= (int)p->itemMeta.size()) { *num_layersPL = 0; return A_Err_NONE; }
+    *num_layersPL = (A_long)p->itemMeta[ii].compMeta.layers.size();
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompLayerByIndex(AEGP_CompH compH, A_long layer_indexL,
+                                     AEGP_LayerH* layerPH)
+{
+    *layerPH = NULL;
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return A_Err_PARAMETER;
+    int ii = ItemIndexOfComp(compH);
+    int pi = (int)(p - &g_host->projects[0]);
+    if (ii < 0 || ii >= (int)p->itemMeta.size()) return A_Err_PARAMETER;
+    const std::vector<FakeLayerMeta>& layers = p->itemMeta[ii].compMeta.layers;
+    if (layer_indexL < 0 || layer_indexL >= (A_long)layers.size())
+    {
+        return A_Err_PARAMETER;
+    }
+    *layerPH = MakeLayerHandle(pi, ii, (int)layer_indexL);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerIndex(AEGP_LayerH layerH, A_long* layer_indexPL)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *layer_indexPL = LayerIndexOfLayer(layerH);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerName(AEGP_PluginID pluginID, AEGP_LayerH layerH,
+                              AEGP_MemHandle* utf_layer_namePH0,
+                              AEGP_MemHandle* utf_source_namePH0)
+{
+    (void)pluginID;
+    *utf_layer_namePH0 = NULL;
+    *utf_source_namePH0 = NULL;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    const FakeLayerMeta& m = LayerMetaFor(layerH);
+    *utf_layer_namePH0 = NewMemHandleFromSpec(m.name);
+    *utf_source_namePH0 = NewMemHandleFromSpec(m.sourceName);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerFlags(AEGP_LayerH layerH, AEGP_LayerFlags* flagsP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *flagsP = LayerMetaFor(layerH).flags;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerQuality(AEGP_LayerH layerH, AEGP_LayerQuality* qualityP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *qualityP = LayerMetaFor(layerH).quality;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerObjectType(AEGP_LayerH layerH, AEGP_ObjectType* object_typeP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *object_typeP = LayerMetaFor(layerH).objectType;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayer3D(AEGP_LayerH layerH, A_Boolean* is_3DPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *is_3DPB = LayerMetaFor(layerH).is3D;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayer2D(AEGP_LayerH layerH, A_Boolean* is_2DPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *is_2DPB = LayerMetaFor(layerH).is2D;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerCurrentTime(AEGP_LayerH layerH, AEGP_LTimeMode time_mode,
+                                     A_Time* curr_timePT)
+{
+    (void)time_mode;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *curr_timePT = LayerMetaFor(layerH).currentTime;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerInPoint(AEGP_LayerH layerH, AEGP_LTimeMode time_mode,
+                                 A_Time* in_pointPT)
+{
+    (void)time_mode;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *in_pointPT = LayerMetaFor(layerH).inPoint;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerDuration(AEGP_LayerH layerH, AEGP_LTimeMode time_mode,
+                                  A_Time* durationPT)
+{
+    (void)time_mode;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *durationPT = LayerMetaFor(layerH).duration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerID(AEGP_LayerH layerH, AEGP_LayerIDVal* id_valP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *id_valP = LayerMetaFor(layerH).id;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerLabel(AEGP_LayerH layerH, AEGP_LabelID* labelP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *labelP = LayerMetaFor(layerH).label;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerSamplingQuality(AEGP_LayerH layerH,
+                                         AEGP_LayerSamplingQuality* qualityP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *qualityP = LayerMetaFor(layerH).samplingQuality;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerSourceItemID(AEGP_LayerH layerH, A_long* source_item_idPL)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *source_item_idPL = LayerMetaFor(layerH).sourceItemID;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerParentComp(AEGP_LayerH layerH, AEGP_CompH* compPH)
+{
+    *compPH = NULL;
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfLayer(layerH);
+    if (!p) return A_Err_PARAMETER;
+    *compPH = MakeCompHandle((int)(p - &g_host->projects[0]), ItemIndexOfLayer(layerH));
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayerVideoReallyOn(AEGP_LayerH layerH, A_Boolean* onPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *onPB = LayerMetaFor(layerH).videoOn;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayerAudioReallyOn(AEGP_LayerH layerH, A_Boolean* onPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *onPB = LayerMetaFor(layerH).audioOn;
+    return A_Err_NONE;
+}
+
+static A_Err FakeDoesLayerHaveTrackMatte(AEGP_LayerH layerH,
+                                         A_Boolean* has_track_mattePB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *has_track_mattePB = LayerMetaFor(layerH).hasTrackMatte;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayerUsedAsTrackMatte(AEGP_LayerH layerH,
+                                         A_Boolean fill_must_be_activeB,
+                                         A_Boolean* is_track_mattePB)
+{
+    (void)fill_must_be_activeB;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *is_track_mattePB = LayerMetaFor(layerH).isTrackMatte;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetTrackMatteLayer(const AEGP_LayerH layerH,
+                                    AEGP_LayerH* track_matte_layerPH)
+{
+    *track_matte_layerPH = NULL;
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfLayer((AEGP_LayerH)layerH);
+    if (!p) return A_Err_PARAMETER;
+    const FakeLayerMeta& m = LayerMetaFor((AEGP_LayerH)layerH);
+    if (m.trackMatteLayerIndex >= 0)
+    {
+        *track_matte_layerPH = MakeLayerHandle(
+            (int)(p - &g_host->projects[0]), ItemIndexOfLayer((AEGP_LayerH)layerH),
+            m.trackMatteLayerIndex);
+    }
+    return A_Err_NONE;
+}
+
 /* ------------------------------------------------------------------ */
 /* host construction                                                  */
 /* ------------------------------------------------------------------ */
@@ -1149,6 +1428,7 @@ void FakeHost::PopulateSuites()
     memset(&rqItemSuite, 0, sizeof(rqItemSuite));
     memset(&itemViewSuite, 0, sizeof(itemViewSuite));
     memset(&compSuite, 0, sizeof(compSuite));
+    memset(&layerSuite, 0, sizeof(layerSuite));
     memset(&basicSuite, 0, sizeof(basicSuite));
 
     /* utility */
@@ -1239,6 +1519,30 @@ void FakeHost::PopulateSuites()
     if (nullCompEntry != 16) compSuite.AEGP_GetCompFrameDuration = FakeGetCompFrameDuration;
     if (nullCompEntry != 17) compSuite.AEGP_GetMostRecentlyUsedComp = FakeGetMostRecentlyUsedComp;
     if (nullCompEntry != 18) compSuite.AEGP_GetCompDisplayDropFrame = FakeGetCompDisplayDropFrame;
+
+    /* layer suite (Issue #64) */
+    if (nullLayerEntry != 1) layerSuite.AEGP_GetCompNumLayers = FakeGetCompNumLayers;
+    if (nullLayerEntry != 2) layerSuite.AEGP_GetCompLayerByIndex = FakeGetCompLayerByIndex;
+    if (nullLayerEntry != 3) layerSuite.AEGP_GetLayerIndex = FakeGetLayerIndex;
+    if (nullLayerEntry != 4) layerSuite.AEGP_GetLayerName = FakeGetLayerName;
+    if (nullLayerEntry != 5) layerSuite.AEGP_GetLayerFlags = FakeGetLayerFlags;
+    if (nullLayerEntry != 6) layerSuite.AEGP_GetLayerQuality = FakeGetLayerQuality;
+    if (nullLayerEntry != 7) layerSuite.AEGP_GetLayerObjectType = FakeGetLayerObjectType;
+    if (nullLayerEntry != 8) layerSuite.AEGP_IsLayer3D = FakeIsLayer3D;
+    if (nullLayerEntry != 9) layerSuite.AEGP_IsLayer2D = FakeIsLayer2D;
+    if (nullLayerEntry != 10) layerSuite.AEGP_GetLayerCurrentTime = FakeGetLayerCurrentTime;
+    if (nullLayerEntry != 11) layerSuite.AEGP_GetLayerInPoint = FakeGetLayerInPoint;
+    if (nullLayerEntry != 12) layerSuite.AEGP_GetLayerDuration = FakeGetLayerDuration;
+    if (nullLayerEntry != 13) layerSuite.AEGP_GetLayerID = FakeGetLayerID;
+    if (nullLayerEntry != 14) layerSuite.AEGP_GetLayerLabel = FakeGetLayerLabel;
+    if (nullLayerEntry != 15) layerSuite.AEGP_GetLayerSamplingQuality = FakeGetLayerSamplingQuality;
+    if (nullLayerEntry != 16) layerSuite.AEGP_GetLayerSourceItemID = FakeGetLayerSourceItemID;
+    if (nullLayerEntry != 17) layerSuite.AEGP_GetLayerParentComp = FakeGetLayerParentComp;
+    if (nullLayerEntry != 18) layerSuite.AEGP_IsLayerVideoReallyOn = FakeIsLayerVideoReallyOn;
+    if (nullLayerEntry != 19) layerSuite.AEGP_IsLayerAudioReallyOn = FakeIsLayerAudioReallyOn;
+    if (nullLayerEntry != 20) layerSuite.AEGP_DoesLayerHaveTrackMatte = FakeDoesLayerHaveTrackMatte;
+    if (nullLayerEntry != 21) layerSuite.AEGP_IsLayerUsedAsTrackMatte = FakeIsLayerUsedAsTrackMatte;
+    if (nullLayerEntry != 22) layerSuite.AEGP_GetTrackMatteLayer = FakeGetTrackMatteLayer;
 
     /* basic */
     basicSuite.AcquireSuite = FakeAcquireSuite;

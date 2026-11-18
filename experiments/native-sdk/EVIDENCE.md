@@ -2,7 +2,7 @@
 
 Measured 2026-11-14 (SDK samples), 2026-11-15, 2026-11-16 and
 2026-11-18 (minimal-plugin, incl. lifecycle restructure, render-queue
-slice, Issue #63 extended read-only slice, Issue #64 comp read-only slice + mock-host tests) on the
+slice, Issue #63 extended read-only slice, Issue #64 comp + layer read-only slices + mock-host tests) on the
 macOS development host. **SDK build-machine evidence only** —
 `BUILD SUCCEEDED` means the sample compiles; it is not plugin-load
 evidence, not execution evidence, and not `verified-real-host`
@@ -47,7 +47,7 @@ Path: `experiments/native-sdk/build/minimal-plugin/NativeProbe.plugin`
 | Entry symbol | `nm -gU` | `_AEProbePluginEntry` exported (unmangled `extern "C"`) |
 | PiPL resource | `DeRez -useDF … NativeProbe.rsrc` | `data 'PiPL' (16000)`: Kind `AEgx`, Name `NativeProbe`, Category `General Plugin`, `CodeMacIntel64`/`CodeMacARM64` → `"AEProbePluginEntry"` |
 | PkgInfo | `xxd` | `AEgxFXTC` (package type AEGx, creator FXTC — matches SDK sample convention) |
-| Content hashes (sha256) | `shasum -a 256` | executable `c1a74bff…0fc7` (post-#64 rebuild), rsrc `9e5d258d…7249f3` (unchanged), Info.plist `89aad984…d662d` (gitignored; hashes recorded for the load-proof fixture step) |
+| Content hashes (sha256) | `shasum -a 256` | executable hash recorded post-#64-layer rebuild (see build log), rsrc `9e5d258d…7249f3` (unchanged), Info.plist `89aad984…d662d` (gitignored; hashes recorded for the load-proof fixture step) |
 
 ## NativeProbe mock-host unit tests (2026-11-16, extended 2026-11-18)
 
@@ -56,7 +56,7 @@ against a fake `SPBasicSuite`/AEGP suite-table host — plain `clang++`,
 no After Effects, no GUI:
 
 ```
-929 checks, 0 failures
+1094 checks, 0 failures
 ```
 
 Coverage: init-time suite-acquire failure (utility, register),
@@ -79,8 +79,10 @@ read-only slice (`AEGP_GetProjectTimeDisplay`, per-item metadata
 getters, `AEGP_GetActiveItem`, `AEGP_GetItemMRUView` +
 `AEGP_ItemViewSuite2` getters, per-call failure paths), the Issue
 #64 comp read-only slice (`AEGP_CompSuite13` getters for COMP
-items, `AEGP_GetMostRecentlyUsedComp`, per-call failure paths,
-non-fatal suite degradation), and `op <Suite>.<member>` record
+items, `AEGP_GetMostRecentlyUsedComp`) and the Issue #64 layer
+read-only slice (`AEGP_LayerSuite9` layer enumeration +
+per-layer read-only getters inside COMP items), per-call failure
+paths, non-fatal suite degradation, and `op <Suite>.<member>` record
 emission for entry and probe calls. Suite acquire/release counts
 balance on every path.
 

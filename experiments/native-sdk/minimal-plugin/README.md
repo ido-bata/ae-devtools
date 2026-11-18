@@ -123,6 +123,7 @@ for reads only.
 | `kAEGPRenderQueueSuite` / `kAEGPRQItemSuite` | v1 (1) / v4 (4) | `AEGP_RenderQueueSuite1` / `AEGP_RQItemSuite4` | idle, probe branch only, non-fatal |
 | `kAEGPItemViewSuite` ("AEGP Item View Suite") | `kAEGPItemViewSuiteVersion2` (2) | `AEGP_ItemViewSuite2` | idle, probe branch only, non-fatal |
 | `kAEGPCompSuite` ("AEGP Comp Suite") | `kAEGPCompSuiteVersion13` (27) | `AEGP_CompSuite13` | idle, probe branch only, non-fatal |
+| `kAEGPLayerSuite` ("AEGP Layer Suite") | `kAEGPLayerSuiteVersion9` (15) | `AEGP_LayerSuite9` | idle, probe branch only, non-fatal |
 
 Every `AcquireSuite` is paired with `ReleaseSuite` on all exit paths.
 
@@ -223,9 +224,10 @@ recovery from count/name/path query failures, missing project),
 silent steady-state ticks (no markers, no op records), and op-record
 emission for entry and probe calls, plus the Issue #63 extended
 slice (project time display, per-item metadata, active item, MRU
-view getters) and the Issue #64 comp read-only slice (per-comp
-getters for COMP items, MRU comp, per-call failure paths,
-non-fatal suite degradation). Latest run: **929 checks, 0
+view getters) and the Issue #64 comp and layer
+read-only slices (per-comp getters for COMP items, MRU comp,
+per-layer enumeration + read-only getters, per-call failure
+paths, non-fatal suite degradation). Latest run: **1094 checks, 0
 failures** (see `../EVIDENCE.md`).
 
 These are **unit/mock-level** checks of our own code only — they do
@@ -237,7 +239,7 @@ not exercise real AE dispatch, real suite behaviour, or real timing.
 | --- | --- |
 | Compiles + links on macOS arm64 / Xcode 27.2 | verified on **build host** |
 | `.plugin` bundle structure, arch, linkage, signature | verified on **build host** (see `../EVIDENCE.md`) |
-| Mock-host unit tests (`test/run_tests.sh`) | **automated test** — 929 checks green, fake host only |
+| Mock-host unit tests (`test/run_tests.sh`) | **automated test** — 1094 checks green, fake host only |
 | Load into After Effects | **UNVERIFIED** — needs authorized AE session |
 | Entry-point execution / idle-hook dispatch / AEGP query results | **UNVERIFIED** — same gate |
 | Windows build/load | **UNVERIFIED** — no Windows host |
