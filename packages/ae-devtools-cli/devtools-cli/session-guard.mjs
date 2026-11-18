@@ -16,6 +16,13 @@
  *   endRun("closed")    — clean close: marker removed
  *   endRun("close-failed"|"open-failed") — marker kept, status set
  *
+ * `surface` (Issue #198): which dev-loop surface owns the run —
+ * "cli" (devtools-cli/cli.mjs), "mcp" (mcp-server), "vscode"
+ * (vscode-extension). Non-CLI surfaces record markers for residue
+ * visibility ONLY: they never call noteSessionProcess, so
+ * session.process/attestation stays absent and reap/recover keep
+ * refusing those markers (fail-closed).
+ *
  *   Dead vocabulary note (Issue #196 inventory): "interrupted" and
  *   "error" were documented here historically but no writer ever
  *   emits them — a hard-killed runner simply leaves status "open".
@@ -107,11 +114,14 @@ function readMarker(dir, runId) {
  * The marker exists even if openSession throws, so a launch that leaves an
  * unproven AE behind is still attributable to this runId.
  */
-export async function beginRun({ dir = RUNS_DIR, sessionKind, argv = [], exec = execFileAsync } = {}) {
+export async function beginRun({ dir = RUNS_DIR, sessionKind, argv = [], surface = null, exec = execFileAsync } = {}) {
   const runId = `run-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
   const marker = {
     schema: GUARD_SCHEMA,
     runId,
+    // Which surface owns this run ("cli"|"mcp"|"vscode"). Attribution
+    // only — it grants no recovery authority.
+    surface: typeof surface === "string" && surface.length > 0 ? surface : null,
     pid: process.pid,
     pidStartStamp: await processStartStamp(process.pid, exec),
     startedAt: new Date().toISOString(),

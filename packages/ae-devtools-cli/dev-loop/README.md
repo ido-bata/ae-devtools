@@ -20,3 +20,18 @@ quarantine).
 
 `fake/mock only` until an owned AE session runs the conformance suite —
 see the package README and `scripting-adapters/README.md`.
+
+## Session lifecycle helpers
+
+- `session-open.mjs` — the single fake/a8n session-kind dispatch shared
+  by CLI, MCP and VSCode (ADR-0016).
+- `session-close.mjs` — bounded `session.close()` shared by all
+  surfaces.
+- `surface-guard.mjs` — run-guard residue markers for non-CLI surfaces
+  (Issue #198). MCP/VSCode **a8n** sessions write
+  `ae-devtools.cli.run-guard/v1` markers (`surface: "mcp"|"vscode"`)
+  into the shared runs dir so a crashed/killed server leaves
+  attributable residue. Markers carry **no** `session.process`
+  attestation — the a8n slice handle is stripped upstream — so
+  `reap`/recovery `authorizeRecovery` still refuse them (fail-closed).
+  Fake sessions record nothing (no AE residue is possible).

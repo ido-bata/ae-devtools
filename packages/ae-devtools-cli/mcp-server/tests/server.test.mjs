@@ -16,9 +16,34 @@ import { fileURLToPath } from "node:url";
 
 import { createServer, SERVER_NAME } from "../server.mjs";
 import { loadTrustedCodec, createJsxRunner } from "../../trusted-execution/runner.mjs";
+import { openFakeSession } from "../../devtools-cli/fake-session.mjs";
+import { reapRun } from "../../devtools-cli/session-guard.mjs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = join(HERE, "..", "server.mjs");
+
+function tempRunsDir() {
+  return mkdtempSync(join(tmpdir(), "ae-devtools-mcp-runs-"));
+}
+
+function readOnlyMarker(runsDir) {
+  const files = readdirSync(runsDir).filter((f) => f.endsWith(".json"));
+  assert.equal(files.length, 1, `expected exactly one run marker, got ${files.join(",")}`);
+  return JSON.parse(readFileSync(join(runsDir, files[0]), "utf8"));
+}
+
+/** Session shaped like the stripped a8n session mcp-server/session.mjs returns. */
+function fakeA8nSession() {
+  const s = openFakeSession();
+  return {
+    ...s,
+    kind: "a8n",
+    evidenceLevel: "verified on real host (macOS)",
+    meta: { aeVersion: "26.5-fake", ownership: "owned", aeA8nHead: "deadbeef" },
+  };
+}
 
 /** In-process MCP client over PassThrough streams. */
 function makeClient(serverOpts = {}) {
@@ -381,6 +406,102 @@ test("UNKNOWN outcome is never retried — exactly one transport send", async ()
   assert.equal(payload.outcome, "UNKNOWN");
   assert.equal(sends, 1, "UNKNOWN must not be retried — one dispatch, one send");
   await c.server.close();
+});
+
+// ---- run-guard residue markers for a8n sessions (Issue #198, 案 C) ----
+
+test("a8n session open writes a run-guard marker (surface mcp) with request events and NO attestation", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = makeClient({
+      sessionKind: "a8n",
+      sessionFactory: async () => fakeA8nSession(),
+      runsDir,
+    });
+    const { payload, isError } = toolPayload(await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    }));
+    assert.equal(isError, false);
+    assert.equal(payload.outcome, "COMPLETED");
+
+    const marker = readOnlyMarker(runsDir);
+    assert.equal(marker.schema, "ae-devtools.cli.run-guard/v1");
+    assert.equal(marker.surface, "mcp");
+    assert.equal(marker.sessionKind, "a8n");
+    assert.equal(marker.status, "open");
+    // Ownership KIND is recorded (it is what the stripped session
+    // actually reports via meta) — but as a bare claim, no evidence.
+    assert.equal(marker.session.ownership?.kind, "owned");
+    assert.equal(marker.session.ownership?.evidence ?? null, null);
+    // Fail-closed: no process attestation was recorded — the slice
+    // handle never reaches this surface.
+    assert.equal(marker.session.process, undefined);
+    // Request lifecycle: dispatched then resolved for the dispatch.
+    const dispatched = marker.requests.filter((r) => r.event === "dispatched");
+    const resolved = marker.requests.filter((r) => r.event === "resolved");
+    assert.equal(dispatched.length, 1);
+    assert.equal(resolved.length, 1);
+    assert.equal(dispatched[0].requestId, resolved[0].requestId);
+    assert.match(dispatched[0].requestId, /^req-mcp-/);
+    assert.equal(dispatched[0].method, "read.projectSummary");
+
+    // The marker is residue-visible but NOT recoverable: reap must
+    // refuse at the missing-attestation gate even though the runner
+    // pid is dead and ownership claims "owned".
+    const verdict = await reapRun(marker.runId, {
+      dir: runsDir, aliveFn: () => false,
+    });
+    assert.equal(verdict.verdict, "REFUSED");
+    assert.equal(verdict.reason, "NO_A8N_ATTESTATION");
+
+    // Clean close removes the marker — no residue on the happy path.
+    await c.server.close();
+    assert.equal(existsSync(join(runsDir, `${marker.runId}.json`)), false);
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("fake session opens write NO run-guard marker (no AE residue possible)", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = makeClient({ sessionKind: "fake", runsDir });
+    const { isError } = toolPayload(await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    }));
+    assert.equal(isError, false);
+    assert.deepEqual(readdirSync(runsDir), []);
+    await c.server.close();
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("a8n session open failure leaves an open-failed marker", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = makeClient({
+      sessionKind: "a8n",
+      sessionFactory: async () => { throw new Error("open boom"); },
+      runsDir,
+    });
+    const res = await c.request("tools/call", {
+      name: "ae_execute",
+      arguments: { opId: "read.projectSummary", consent: "grant" },
+    });
+    assert.equal(res.error?.code, -32603);
+    const marker = readOnlyMarker(runsDir);
+    assert.equal(marker.surface, "mcp");
+    assert.equal(marker.status, "open-failed");
+    assert.equal(marker.session, null);
+    // close() must not rewrite the open-failed marker to "closed".
+    await c.server.close();
+    assert.equal(readOnlyMarker(runsDir).status, "open-failed");
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
 });
 
 // ---- spawned stdio smoke test: proves the real NDJSON-over-stdio path ----

@@ -8,9 +8,13 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { createController, EXTENSION_SCHEMA } from "../controller.mjs";
 import { openFakeSession } from "../../devtools-cli/fake-session.mjs";
+import { reapRun } from "../../devtools-cli/session-guard.mjs";
 
 function recordingUi(answers = {}) {
   const prompts = [];
@@ -166,6 +170,90 @@ test("adapter payload failure reports FAILED outcome, never COMPLETED (Issue #19
   } finally {
     if (prev === undefined) delete process.env.AE_DEVTOOLS_CLI_FAKE_REPLY;
     else process.env.AE_DEVTOOLS_CLI_FAKE_REPLY = prev;
+  }
+});
+
+// ---- run-guard residue markers for a8n sessions (Issue #198, 案 C) ----
+
+function tempRunsDir() {
+  return mkdtempSync(join(tmpdir(), "ae-devtools-vscode-runs-"));
+}
+
+function readOnlyMarker(runsDir) {
+  const files = readdirSync(runsDir).filter((f) => f.endsWith(".json"));
+  assert.equal(files.length, 1, `expected exactly one run marker, got ${files.join(",")}`);
+  return JSON.parse(readFileSync(join(runsDir, files[0]), "utf8"));
+}
+
+/** Session shaped like the stripped a8n session mcp-server/session.mjs returns. */
+function fakeA8nSession() {
+  const s = openFakeSession();
+  return {
+    ...s,
+    kind: "a8n",
+    evidenceLevel: "verified on real host (macOS)",
+    meta: { aeVersion: "26.5-fake", ownership: "owned", aeA8nHead: "deadbeef" },
+  };
+}
+
+test("a8n execute writes a run-guard marker (surface vscode) with request events and NO attestation", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = createController({
+      session: "a8n",
+      sessionFactory: async () => fakeA8nSession(),
+      runsDir,
+      ui: recordingUi(),
+    });
+    const res = await c.execute({ opId: "read.projectSummary" });
+    assert.equal(res.isError, false);
+
+    const marker = readOnlyMarker(runsDir);
+    assert.equal(marker.schema, "ae-devtools.cli.run-guard/v1");
+    assert.equal(marker.surface, "vscode");
+    assert.equal(marker.sessionKind, "a8n");
+    assert.equal(marker.status, "open");
+    assert.equal(marker.session.ownership?.kind, "owned");
+    // Fail-closed: no process attestation — the slice handle is
+    // stripped before this surface sees the session.
+    assert.equal(marker.session.process, undefined);
+    const dispatched = marker.requests.filter((r) => r.event === "dispatched");
+    const resolved = marker.requests.filter((r) => r.event === "resolved");
+    assert.equal(dispatched.length, 1);
+    assert.equal(resolved.length, 1);
+    assert.equal(dispatched[0].requestId, resolved[0].requestId);
+    assert.match(dispatched[0].requestId, /^req-mcp-/);
+    assert.equal(dispatched[0].method, "read.projectSummary");
+
+    // Residue-visible but not recoverable: reap refuses at the
+    // missing-attestation gate.
+    const verdict = await reapRun(marker.runId, {
+      dir: runsDir, aliveFn: () => false,
+    });
+    assert.equal(verdict.verdict, "REFUSED");
+    assert.equal(verdict.reason, "NO_A8N_ATTESTATION");
+
+    // Clean close removes the marker.
+    assert.deepEqual(await c.close(), { closed: true });
+    assert.equal(existsSync(join(runsDir, `${marker.runId}.json`)), false);
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+});
+
+test("fake session writes NO run-guard marker", async () => {
+  const runsDir = tempRunsDir();
+  try {
+    const c = createController({
+      sessionFactory: async () => openFakeSession(),
+      runsDir,
+      ui: recordingUi(),
+    });
+    await c.execute({ opId: "read.projectSummary" });
+    assert.deepEqual(readdirSync(runsDir), []);
+    await c.close();
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
   }
 });
 

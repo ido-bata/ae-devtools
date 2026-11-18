@@ -106,7 +106,16 @@ the ae-a8n bytes used were a **pre-0.2.0-rc local build** (`release-0-2-0`
 commit `1dbd4de`, tree `e6003eab`), not the published package.
 
 Known limitations: single shared session per server process; no
-`resources`/`prompts` surfaces; no run-guard residue markers (the CLI's
-`session-guard.mjs` recovery bookkeeping is CLI-specific and was not
-ported — a killed MCP server leaves no reap marker; noted as a
-follow-up, not silently claimed).
+`resources`/`prompts` surfaces.
+
+Run-guard residue markers (Issue #198): `--session a8n` servers write
+`ae-devtools.cli.run-guard/v1` markers (`surface: "mcp"`) into the
+shared runs dir (`devtools-cli/session-guard.mjs`, via
+`dev-loop/surface-guard.mjs`) — before session open, on open, per
+request lifecycle event, and on close — so a killed/crashed server
+leaves attributable residue visible to `ae-devtools runs`/`doctor`.
+**Attestation stays CLI-only**: the a8n slice handle is stripped in
+`session.mjs`, so these markers carry no `session.process` evidence and
+`reap`/recovery-orchestrator `authorizeRecovery` still REFUSE them —
+residue is visible, never recoverable through the attested path.
+Fake sessions write no marker (no AE residue is possible).
