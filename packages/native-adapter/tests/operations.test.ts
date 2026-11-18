@@ -60,7 +60,7 @@ describe("DISPATCH_ENTRIES registry", () => {
       "AEGP_UtilitySuite6",
       "AEGP_ProjSuite6",
       "AEGP_ItemSuite9",
-      "AEGPMemorySuite1",
+      "AEGP_MemorySuite1",
     ]) {
       expect(suites.has(suite), `missing suite ${suite}`).toBe(true);
     }
@@ -71,7 +71,7 @@ describe("DISPATCH_ENTRIES registry", () => {
       "SPBasicSuite.AcquireSuite",
       "AEGP_ProjSuite6.AEGP_GetNumProjects",
       "AEGP_ItemSuite9.AEGP_GetItemName",
-      "AEGPMemorySuite1.AEGP_FreeMemHandle",
+      "AEGP_MemorySuite1.AEGP_FreeMemHandle",
       "AEGP_UtilitySuite6.AEGP_WriteToDebugLog",
     ]) {
       expect(findOperation(id), id).not.toBeNull();

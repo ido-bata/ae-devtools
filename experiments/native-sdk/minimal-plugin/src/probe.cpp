@@ -314,7 +314,7 @@ static void FreeMemHandleTracked(
     AEGP_MemHandle handleH)
 {
     A_Err err = memP->AEGP_FreeMemHandle(handleH);
-    OpRecordV(utilP, "AEGPMemorySuite1.AEGP_FreeMemHandle", (long)err, NULL);
+    OpRecordV(utilP, "AEGP_MemorySuite1.AEGP_FreeMemHandle", (long)err, NULL);
 }
 
 /* Lock/size/convert/unlock/free an AEGP mem handle holding a UTF-16
@@ -348,7 +348,7 @@ static MemHandleStatus ReadMemHandleUtf8(
     }
 
     err = memP->AEGP_GetMemHandleSize(handleH, &size_bytesL);
-    OpRecordV(utilP, "AEGPMemorySuite1.AEGP_GetMemHandleSize", (long)err, NULL);
+    OpRecordV(utilP, "AEGP_MemorySuite1.AEGP_GetMemHandleSize", (long)err, NULL);
     if (err != A_Err_NONE)
     {
         FreeMemHandleTracked(utilP, memP, handleH);
@@ -356,7 +356,7 @@ static MemHandleStatus ReadMemHandleUtf8(
     }
 
     err = memP->AEGP_LockMemHandle(handleH, &ptr);
-    OpRecordV(utilP, "AEGPMemorySuite1.AEGP_LockMemHandle", (long)err, NULL);
+    OpRecordV(utilP, "AEGP_MemorySuite1.AEGP_LockMemHandle", (long)err, NULL);
     if (err != A_Err_NONE || !ptr)
     {
         FreeMemHandleTracked(utilP, memP, handleH);
@@ -367,7 +367,7 @@ static MemHandleStatus ReadMemHandleUtf8(
         AEGP_MemSize unitsL = size_bytesL / sizeof(A_UTF16Char);
         int n = Utf16ToUtf8Bounded((const A_UTF16Char*)ptr, unitsL, dstZ, dstSize);
         A_Err uerr = memP->AEGP_UnlockMemHandle(handleH);
-        OpRecordV(utilP, "AEGPMemorySuite1.AEGP_UnlockMemHandle", (long)uerr, NULL);
+        OpRecordV(utilP, "AEGP_MemorySuite1.AEGP_UnlockMemHandle", (long)uerr, NULL);
         FreeMemHandleTracked(utilP, memP, handleH);
         return n < 0 ? MH_TRUNCATED : MH_OK;
     }
