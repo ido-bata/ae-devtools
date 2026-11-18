@@ -49,6 +49,28 @@ jobs:
           done
           exit "$fail"
 
+  skills-lock:
+    name: skills-lock (vendored skills vs skills-lock.json)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect lock file
+        id: detect
+        run: |
+          if [ -f skills-lock.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "skills-lock.json not on this head; skipping"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - if: steps.detect.outputs.present == 'true'
+        run: node scripts/verify-skills-lock.mjs
+
   capability-catalog:
     name: capability-catalog (bun test / typecheck / verify)
     runs-on: ubuntu-latest

@@ -444,4 +444,5 @@ branch 名は Issue 番号または release version だけを表し、説明責�
 - `herdr-runtime` — Herdr を使う場合の Supervisor/session Practice（採用時のみ）
 - `orca-frontend` — Orca を使う場合の worktree / agent terminal frontend（採用時のみ）
 - `supervisor-boundary` — Supervisor / Worker の権限分離が必要な場合の境界 contract（採用時のみ）
+- `system-quality` — 要求保存・全体再構成・既知アンチケース排除・改善関係の検証と旧構造撤去
 - `worktree-workflow` — Worktrunk を WSL/Linux の worktree 操作 layer として使う契約 / branch base / port allocation

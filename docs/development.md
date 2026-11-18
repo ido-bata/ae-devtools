@@ -117,6 +117,7 @@ ae-devtools は vision.md で多数を「未確定」と記録する design / re
 - **ADR link / status 一貫性**: `docs/architecture/*.md` 内の `Status:` 行とリンクが壊れていないかを simple grep / 派生 check で担保する
 - **citation access date**: research / ADR / docs 内の URL 引用に access date が付与されているか spot check
 - **manifest / XML well-formed**: `experiments/runtime-bridge/cep-panel/CSXS/manifest.xml` を `xmllint --noout` で検証（optional）
+- **vendored skills integrity**: `node scripts/verify-skills-lock.mjs` で `skills-lock.json` の content hash と `skills/` 実体、`metadata.requires-skills` の依存解決を照合する（CI `skills-lock` job）
 
 domain 実装（CEP panel ExtendScript / VSCode Extension / MCP Server いずれか）が始まった時点で、framework / runtime / SDK 別の公式 guidance から **language-specific quality gate** を別途起票し ADR で固定する。
 
