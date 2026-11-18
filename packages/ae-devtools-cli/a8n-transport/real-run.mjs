@@ -33,7 +33,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertSliceOutcomes, runVerticalSlice } from "./scenario.mjs";
-import { openSliceSession } from "./session.mjs";
+import { openRealRunSession } from "../dev-loop/real-run-session.mjs";
 import { arg } from "../devtools-cli/argv.mjs";
 import { ADOBE_HELPER, MAIN_EXE, aeProcessSnapshot, aeDevtoolsSourceRef } from "../devtools-cli/real-run-kit.mjs";
 
@@ -109,11 +109,21 @@ async function main() {
   };
 
   let session = null;
+  let guard = null;
   try {
-    session = await openSliceSession({
-      ...(installDir !== undefined ? { installDir } : {}),
-      ...(aeA8nRoot !== undefined ? { aeA8nRoot } : {}),
+    // Canonical session open + run-guard marker (Issue #252): a killed
+    // driver leaves an attested, reap/recover-visible residue record —
+    // the raw slice handle stays available as `session` for internals.
+    const opened = await openRealRunSession({
+      surface: "a8n-real-run",
+      argv: process.argv.slice(2),
+      sessionOptions: {
+        ...(installDir !== undefined ? { installDir } : {}),
+        ...(aeA8nRoot !== undefined ? { aeA8nRoot } : {}),
+      },
     });
+    guard = opened.guard;
+    session = opened.slice;
   } catch (error) {
     // Launch/session failure: still write evidence. Whatever sessionRoot
     // the failed launch used is attached to the error by openSliceSession.
@@ -260,6 +270,11 @@ async function main() {
         quit: false,
         error: error instanceof Error ? error.message : String(error),
       };
+    }
+    // Settle the run marker with the same contract the CLI cleanup uses:
+    // "closed" removes it, "close-failed" keeps it as residue (Issue #252).
+    if (guard !== null) {
+      guard.end(evidence.close.quit === true ? "closed" : "close-failed");
     }
     // Post-close process state: a surviving process matching the install
     // means the owned host was not actually shut down — quarantine the

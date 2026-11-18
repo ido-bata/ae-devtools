@@ -29,8 +29,10 @@ const EXP = join(HERE, "..");
 
 /**
  * @param {"fake"|"a8n"} kind
- * @param {object} options — { aeA8nRoot, installDir } forwarded to the
- *   a8n opener only; ignored for fake.
+ * @param {object} options — { aeA8nRoot, installDir, workdir } forwarded
+ *   to the a8n opener only; ignored for fake. `workdir` lets real-run
+ *   drivers pin the generated host-script directory (conformance keeps
+ *   it inside its evidence workdir so close() does not delete it).
  * @returns {Promise<object>} session shaped
  *   { kind, evidenceLevel, runner, pin, close, meta, slice } — `slice`
  *   is the raw openSliceSession result (a8n) or null (fake).
@@ -53,6 +55,7 @@ export async function openSession(kind = "fake", options = {}) {
     const s = await openSliceSession({
       aeA8nRoot: typeof options.aeA8nRoot === "string" ? options.aeA8nRoot : undefined,
       installDir: typeof options.installDir === "string" ? options.installDir : undefined,
+      workdir: typeof options.workdir === "string" ? options.workdir : undefined,
     });
     return {
       kind: "a8n",

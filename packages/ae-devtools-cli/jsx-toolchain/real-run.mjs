@@ -27,6 +27,7 @@ import { buildFile } from "./src/build.mjs";
 import { lookup } from "./src/sourcemap.mjs";
 import { arg } from "../devtools-cli/argv.mjs";
 import { createEvalDispatch, aeDevtoolsSourceRef } from "../devtools-cli/real-run-kit.mjs";
+import { openRealRunSession } from "../dev-loop/real-run-session.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, "fixtures");
@@ -37,7 +38,6 @@ if (!existsSync(join(TRANSPORT_DIR, "session.mjs")) || !existsSync(join(TRUSTED_
   console.error("a8n-transport (Issue #49 / PR #50) and trusted-execution (Issue #14 / PR #42) are required; not all present on this branch.");
   process.exit(2);
 }
-const { openSliceSession } = await import(join(TRANSPORT_DIR, "session.mjs"));
 
 const OPERATION_ID = "op.a8n-transport.eval";
 const PROJECT_IDENTITY = "jsx-toolchain-real-run";
@@ -61,16 +61,26 @@ function step(name, data) {
 }
 
 let session;
+let guard;
 // Eval dispatch goes through the shared wrapper (Issue #197): the
 // consent scope and the runner.runScript args shape are hashed
 // together inside runner.mjs — rebuilding them per call site is how
 // they silently drift.
 let dispatch;
 try {
-  session = await openSliceSession({
-    aeA8nRoot: arg("--ae-a8n-root"),
-    installDir: arg("--install-dir"),
+  // Canonical session open + run-guard marker (Issue #252): a killed
+  // driver leaves an attested, reap/recover-visible residue record.
+  // The raw slice handle stays available as `session` for internals.
+  const opened = await openRealRunSession({
+    surface: "jsx-real-run",
+    argv: process.argv.slice(2),
+    sessionOptions: {
+      aeA8nRoot: arg("--ae-a8n-root"),
+      installDir: arg("--install-dir"),
+    },
   });
+  guard = opened.guard;
+  session = opened.slice;
   dispatch = createEvalDispatch({
     runner: session.runner,
     pin: session.pin,
@@ -180,14 +190,21 @@ try {
   evidence.fatal = { name: error?.name ?? "Error", message: error?.message ?? String(error) };
   step("fatal", { ok: false, message: evidence.fatal.message });
 } finally {
+  let closeFailed = false;
   if (session) {
     try {
       await session.close();
       step("session.close", { ok: true });
     } catch (error) {
+      closeFailed = true;
       step("session.close", { ok: false, message: error?.message ?? String(error) });
       evidence.ok = false;
     }
+  }
+  // Settle the run marker with the CLI contract: "closed" removes it,
+  // "close-failed" keeps it as residue (Issue #252).
+  if (guard) {
+    guard.end(closeFailed ? "close-failed" : "closed");
   }
   evidence.finishedAt = new Date().toISOString();
   writeFileSync(outPath, JSON.stringify(evidence, null, 2));

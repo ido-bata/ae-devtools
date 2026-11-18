@@ -12,11 +12,13 @@
  *
  * What is deliberately NOT recorded (fail-closed, unchanged):
  *
- *   - `noteSessionProcess` is never called. The a8n slice handle is
- *     stripped by mcp-server/session.mjs before these surfaces see the
- *     session, so `session.process` (aePid / guiSession / attestation)
- *     stays absent. `reap` and recovery-orchestrator `authorizeRecovery`
- *     therefore still REFUSE these markers — residue is visible, but
+ *   - `noteSessionProcess` is only reachable through `guard.process()`
+ *     (Issue #252): surfaces holding the raw slice session — the
+ *     opt-in real-run drivers via dev-loop/real-run-session.mjs — can
+ *     attest the owned target through ae-a8n's recoveryTarget().
+ *     MCP/VSCode never call it (the slice handle is stripped in
+ *     mcp-server/session.mjs), so their markers stay unattested and
+ *     reap/recover keep refusing them — residue is visible, but
  *     marker-only runs are never recoverable through the attested path.
  *   - No pids, ownership evidence or install paths are invented. Only
  *     what the stripped session actually carries (kind, evidenceLevel,
@@ -28,7 +30,7 @@
  * be noise, not signal.
  */
 import {
-  beginRun, markSession, recordRequestEvent, endRun, RUNS_DIR,
+  beginRun, markSession, recordRequestEvent, endRun, noteSessionProcess, RUNS_DIR,
 } from "../devtools-cli/session-guard.mjs";
 
 /**
@@ -74,6 +76,20 @@ export function createSurfaceGuard({ surface, sessionKind, argv = [], dir = RUNS
         ...session,
         ownership: session.ownership ?? (ownershipKind !== null ? { kind: ownershipKind, evidence: null } : null),
       });
+    },
+
+    /**
+     * Attach attested host-process evidence (Issue #252). Surfaces that
+     * hold the raw slice session — the opt-in real-run drivers — can
+     * prove the owned target via ae-a8n's recoveryTarget(); recording it
+     * here makes a killed driver's residue recoverable through
+     * `runs`/`reap`/`recover` instead of merely visible. Callers that
+     * only have the stripped session (MCP/VSCode) never call this —
+     * their markers stay unattested and recovery keeps refusing them.
+     */
+    process(evidence) {
+      if (run === null || !evidence || typeof evidence !== "object") return;
+      noteSessionProcess(run.dir, run.runId, evidence);
     },
 
     /** Append a request lifecycle event ({requestId, method, event}). */
