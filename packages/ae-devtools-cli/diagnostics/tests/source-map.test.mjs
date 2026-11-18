@@ -181,6 +181,14 @@ test("invalid-map: undecodable mappings VLQ is reported, not thrown", () => {
   assert.match(r.reason, /invalid base64/);
 });
 
+test("unsupported-with-reason: plugin-binary has no symbol source to map", () => {
+  const rec = recordWith({ assetKind: "plugin-binary", path: "/nonexistent/plugin.aex", line: 12 });
+  const r = resolveDiagnosticsSource(rec);
+  assert.equal(r.status, "unsupported-with-reason");
+  assert.equal(r.original, null);
+  assert.match(r.reason, /no symbol source/);
+});
+
 test("no-map: record path has no sibling .jsx.map", () => {
   const rec = recordWith({ assetKind: "jsx-script", path: "/nonexistent/nowhere.jsx", line: 3 });
   const r = resolveDiagnosticsSource(rec);

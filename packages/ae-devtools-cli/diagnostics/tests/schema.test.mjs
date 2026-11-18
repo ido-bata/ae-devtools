@@ -136,9 +136,12 @@ test("fromTransportOutcome refuses missing state", () => {
 });
 
 test("COLLECTOR_STATUS honestly marks unimplemented sources", () => {
+  // Fixture-level collectors implemented under Issue #194; the real-host
+  // gaps stay recorded in each entry's reason.
+  assert.equal(COLLECTOR_STATUS["native-crash"].status, "implemented-fake");
+  assert.equal(COLLECTOR_STATUS["panel-log"].status, "implemented-fake");
+  assert.equal(COLLECTOR_STATUS["render-failure"].status, "implemented-fake");
+  // Input shapes still unverified — must remain pending-real-host.
   assert.equal(COLLECTOR_STATUS["expression-error"].status, "pending-real-host");
-  assert.equal(COLLECTOR_STATUS["panel-log"].status, "pending-real-host");
-  assert.equal(COLLECTOR_STATUS["native-crash"].status, "pending-real-host");
   assert.equal(COLLECTOR_STATUS["plugin-load-failure"].status, "pending-real-host");
-  assert.equal(COLLECTOR_STATUS["render-failure"].status, "pending-real-host");
 });

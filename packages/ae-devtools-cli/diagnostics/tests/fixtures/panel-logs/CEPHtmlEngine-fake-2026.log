@@ -1,0 +1,9 @@
+# FAKE FIXTURE — synthetic CEPHtmlEngine log for diagnostics parser tests.
+# This is NOT a real CEP/AE log; lines are invented to exercise the
+# tolerant parser. Do not treat contents as host evidence.
+2026-01-01T09:00:00Z [INFO] CEP panel engine starting (fixture)
+2026-01-01 09:00:01 [DEBUG] loading fake-extension panel asset
+plain continuation line without a level token
+2026-01-01 09:00:02 [WARNING] slow asset load: fake-panel.html
+2026-01-01 09:00:03 [ERROR] fixture failure: cannot evaluate fake expression
+2026-01-01 09:00:04 [INFO] panel ready
