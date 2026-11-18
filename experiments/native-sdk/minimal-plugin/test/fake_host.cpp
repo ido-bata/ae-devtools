@@ -207,6 +207,10 @@ static SPErr FakeAcquireSuite(const char* nameZ, int32 versionL, const void** su
     {
         slot = 6; fail = h->failAcquireRQItem; table = &h->rqItemSuite;
     }
+    else if (strcmp(nameZ, kAEGPItemViewSuite) == 0)
+    {
+        slot = 7; fail = h->failAcquireItemView; table = &h->itemViewSuite;
+    }
     else
     {
         return 1; /* unknown suite: acquisition fails */
@@ -232,6 +236,7 @@ static SPErr FakeReleaseSuite(const char* nameZ, int32 versionL)
     else if (strcmp(nameZ, kAEGPRegisterSuite) == 0) h->releaseCount[4]++;
     else if (strcmp(nameZ, kAEGPRenderQueueSuite) == 0) h->releaseCount[5]++;
     else if (strcmp(nameZ, kAEGPRQItemSuite) == 0) h->releaseCount[6]++;
+    else if (strcmp(nameZ, kAEGPItemViewSuite) == 0) h->releaseCount[7]++;
     return 0;
 }
 
@@ -683,6 +688,230 @@ static A_Err FakeGetCompFromRQItem(AEGP_RQItemRefH rq_itemH, AEGP_CompH* compPH)
     return A_Err_NONE;
 }
 
+/* ---- Issue #63 extended read-only getters ---- */
+
+static const FakeItemMeta& MetaFor(FakeProject* p, int ii)
+{
+    static const FakeItemMeta kDefault;
+    if (!p || ii < 0 || ii >= (int)p->itemMeta.size())
+    {
+        return kDefault;
+    }
+    return p->itemMeta[ii];
+}
+
+static A_Err FakeGetProjectTimeDisplay(AEGP_ProjectH projH, AEGP_TimeDisplay3* tdP)
+{
+    FakeProject* p = ProjectForHandle(projH);
+    if (!p) return A_Err_PARAMETER;
+    if (g_host->projectTimeDisplayErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->projectTimeDisplayErr;
+    }
+    *tdP = p->timeDisplay;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetActiveItem(AEGP_ItemH* itemPH)
+{
+    *itemPH = NULL;
+    if (g_host->activeItemErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->activeItemErr;
+    }
+    int pi = g_host->activeItemProject;
+    int ii = g_host->activeItemIndex;
+    if (pi < 0 || pi >= (int)g_host->projects.size() || ii < 0)
+    {
+        return A_Err_NONE; /* no active item */
+    }
+    *itemPH = MakeItemHandle(pi, ii);
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsItemSelected(AEGP_ItemH itemH, A_Boolean* selectedPB)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *selectedPB = MetaFor(p, ItemIndexOf(itemH)).selected;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetTypeName(AEGP_ItemType item_type, A_char* nameZ)
+{
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    snprintf(nameZ, AEGP_MAX_TYPE_NAME_SIZE + 1, "fake-type-%d", (int)item_type);
+    nameZ[AEGP_MAX_TYPE_NAME_SIZE] = '\0';
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemID(AEGP_ItemH itemH, A_long* item_idPL)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    int ii = ItemIndexOf(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    const FakeItemMeta& m = MetaFor(p, ii);
+    *item_idPL = m.id >= 0 ? m.id : 1000 + ii;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemFlags(AEGP_ItemH itemH, AEGP_ItemFlags* item_flagsP)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *item_flagsP = MetaFor(p, ItemIndexOf(itemH)).flags;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemParentFolder(AEGP_ItemH itemH, AEGP_ItemH* parentPH)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    if (!p) return A_Err_PARAMETER;
+    int pi = (int)(p - &g_host->projects[0]);
+    *parentPH = MakeItemHandle(pi, -1); /* top-level items live in root */
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemDuration(AEGP_ItemH itemH, A_Time* durationPT)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *durationPT = MetaFor(p, ItemIndexOf(itemH)).duration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemCurrentTime(AEGP_ItemH itemH, A_Time* curr_timePT)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *curr_timePT = MetaFor(p, ItemIndexOf(itemH)).currentTime;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemDimensions(AEGP_ItemH itemH, A_long* widthPL, A_long* heightPL)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    const FakeItemMeta& m = MetaFor(p, ItemIndexOf(itemH));
+    *widthPL = m.width;
+    *heightPL = m.height;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemPixelAspectRatio(AEGP_ItemH itemH, A_Ratio* pix_aspect_ratioPRt)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *pix_aspect_ratioPRt = MetaFor(p, ItemIndexOf(itemH)).par;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemComment(AEGP_ItemH itemH, AEGP_MemHandle* unicodePH)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    *unicodePH = NULL;
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    FakeNameSpec spec = MetaFor(p, ItemIndexOf(itemH)).comment;
+    if (spec.units.empty())
+    {
+        /* No configured comment: return an empty-string handle. */
+        static const A_UTF16Char emptyU16[1] = {0};
+        spec.units.assign(emptyU16, emptyU16 + 1);
+    }
+    if (spec.failMode == 3)
+    {
+        return A_Err_GENERIC;
+    }
+    if (spec.failMode == 4)
+    {
+        return A_Err_NONE; /* success but NULL handle */
+    }
+    *unicodePH = NewMemHandleFromSpec(spec);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemLabel(AEGP_ItemH itemH, AEGP_LabelID* labelP)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *labelP = MetaFor(p, ItemIndexOf(itemH)).label;
+    return A_Err_NONE;
+}
+
+static AEGP_ItemViewP NewItemViewHandle(int index)
+{
+    struct _AEGP_ItemView* v = new struct _AEGP_ItemView;
+    v->index = index;
+    return (AEGP_ItemViewP)v;
+}
+
+static A_Err FakeGetItemMRUView(AEGP_ItemH itemH, AEGP_ItemViewP* mru_viewP)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    int ii = ItemIndexOf(itemH);
+    *mru_viewP = NULL;
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    if (MetaFor(p, ii).hasView)
+    {
+        *mru_viewP = NewItemViewHandle(ii);
+    }
+    return A_Err_NONE;
+}
+
+/* ---- item view suite (read-only getters) ---- */
+
+static A_Err FakeGetItemViewPlaybackTime(AEGP_ItemViewP viewP,
+                                         A_Boolean* is_currently_previewingPB0,
+                                         A_Time* curr_timePT)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *is_currently_previewingPB0 = TRUE;
+    curr_timePT->value = 12;
+    curr_timePT->scale = 30;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemViewGuidesVisible(AEGP_ItemViewP viewP,
+                                          A_Boolean* guides_visiblePB)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *guides_visiblePB = TRUE;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemViewGuidesSnap(AEGP_ItemViewP viewP,
+                                       A_Boolean* guides_snapPB)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *guides_snapPB = FALSE;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemViewGuidesLocked(AEGP_ItemViewP viewP,
+                                         A_Boolean* guides_lockedPB)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *guides_lockedPB = TRUE;
+    return A_Err_NONE;
+}
+
 /* ------------------------------------------------------------------ */
 /* host construction                                                  */
 /* ------------------------------------------------------------------ */
@@ -701,6 +930,7 @@ void FakeHost::PopulateSuites()
     memset(&regSuite, 0, sizeof(regSuite));
     memset(&rqSuite, 0, sizeof(rqSuite));
     memset(&rqItemSuite, 0, sizeof(rqItemSuite));
+    memset(&itemViewSuite, 0, sizeof(itemViewSuite));
     memset(&basicSuite, 0, sizeof(basicSuite));
 
     /* utility */
@@ -722,12 +952,26 @@ void FakeHost::PopulateSuites()
     projSuite.AEGP_ProjectIsDirty = FakeProjectIsDirty;
     projSuite.AEGP_GetProjectBitDepth = FakeGetProjectBitDepth;
     projSuite.AEGP_GetProjectRootFolder = FakeGetProjectRootFolder;
+    if (nullProjEntry != 4) projSuite.AEGP_GetProjectTimeDisplay = FakeGetProjectTimeDisplay;
 
     /* item */
     itemSuite.AEGP_GetFirstProjItem = FakeGetFirstProjItem;
     itemSuite.AEGP_GetNextProjItem = FakeGetNextProjItem;
     itemSuite.AEGP_GetItemType = FakeGetItemType;
     itemSuite.AEGP_GetItemName = FakeGetItemName;
+    if (nullItemEntry != 3) itemSuite.AEGP_GetActiveItem = FakeGetActiveItem;
+    itemSuite.AEGP_IsItemSelected = FakeIsItemSelected;
+    if (nullItemEntry != 4) itemSuite.AEGP_GetTypeName = FakeGetTypeName;
+    itemSuite.AEGP_GetItemID = FakeGetItemID;
+    itemSuite.AEGP_GetItemFlags = FakeGetItemFlags;
+    itemSuite.AEGP_GetItemParentFolder = FakeGetItemParentFolder;
+    itemSuite.AEGP_GetItemDuration = FakeGetItemDuration;
+    itemSuite.AEGP_GetItemCurrentTime = FakeGetItemCurrentTime;
+    itemSuite.AEGP_GetItemDimensions = FakeGetItemDimensions;
+    itemSuite.AEGP_GetItemPixelAspectRatio = FakeGetItemPixelAspectRatio;
+    if (nullItemEntry != 2) itemSuite.AEGP_GetItemComment = FakeGetItemComment;
+    itemSuite.AEGP_GetItemLabel = FakeGetItemLabel;
+    if (nullItemEntry != 1) itemSuite.AEGP_GetItemMRUView = FakeGetItemMRUView;
 
     /* memory */
     memSuite.AEGP_NewMemHandle = FakeNewMemHandle;
@@ -750,6 +994,12 @@ void FakeHost::PopulateSuites()
     rqItemSuite.AEGP_GetNumOutputModulesForRQItem = FakeGetNumOutputModulesForRQItem;
     rqItemSuite.AEGP_GetComment = FakeGetComment;
     rqItemSuite.AEGP_GetCompFromRQItem = FakeGetCompFromRQItem;
+
+    /* item view — read-only getters only */
+    if (nullItemViewEntry != 1) itemViewSuite.AEGP_GetItemViewPlaybackTime = FakeGetItemViewPlaybackTime;
+    if (nullItemViewEntry != 2) itemViewSuite.AEGP_GetItemViewGuidesVisible = FakeGetItemViewGuidesVisible;
+    if (nullItemViewEntry != 3) itemViewSuite.AEGP_GetItemViewGuidesSnap = FakeGetItemViewGuidesSnap;
+    if (nullItemViewEntry != 4) itemViewSuite.AEGP_GetItemViewGuidesLocked = FakeGetItemViewGuidesLocked;
 
     /* basic */
     basicSuite.AcquireSuite = FakeAcquireSuite;

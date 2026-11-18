@@ -32,7 +32,7 @@ AE-host evidence:
 | SDK acquisition & integrity | AE SDK 26.5 macOS archive, operator-supplied | verified on **build host** (not AE) | sha256 in `inventories/sdk/generated/provenance.json`; never vendored |
 | SDK sample **build** | `Sweetie` (AEGP), `Checkout` (Effect/CPU) compile via xcodebuild on macOS arm64 / Xcode 27.2 | **BUILD SUCCEEDED** (local build log) | `build-macos.sh` + `EVIDENCE.md` |
 | Own-plugin **build** | `minimal-plugin/` → `NativeProbe.plugin` (AEGP, read-only) compiles, links, bundles, ad-hoc signs on macOS arm64 | **BUILD SUCCEEDED** (local build + artifact inspection) | `minimal-plugin/build.sh` + `EVIDENCE.md` |
-| Own-plugin **mock-host tests** | `minimal-plugin/test/` runs the real `probe.cpp` against a fake SPBasicSuite/AEGP host | **563 checks, 0 failures** (automated test, fake host only — count grows as coverage is added; `EVIDENCE.md` is the per-run record) | `minimal-plugin/test/run_tests.sh` + `EVIDENCE.md` |
+| Own-plugin **mock-host tests** | `minimal-plugin/test/` runs the real `probe.cpp` against a fake SPBasicSuite/AEGP host | **776 checks, 0 failures** (automated test, fake host only — count grows as coverage is added; `EVIDENCE.md` is the per-run record) | `minimal-plugin/test/run_tests.sh` + `EVIDENCE.md` |
 | Plugin **load** into AE | `.plugin` recognized/registered by After Effects | **UNVERIFIED** | needs owned/dedicated AE session — not run; ad-hoc signing acceptance unknown |
 | Plugin **execution** | AEGP commands / effect render path / probe queries actually run in AE | **UNVERIFIED** | same gate; GPU path additionally blocked (below) |
 | **Windows** SDK build | Win64 toolchain + samples | **UNVERIFIED** | no Windows host; agents never touch Windows (Issue #21) |

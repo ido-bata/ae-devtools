@@ -32,8 +32,9 @@ Original analysis; no sample code is copied.
   persistent allocations). ✔
 - Suites are **never held across callbacks**: init acquires
   Utility+Register and releases before returning; each idle-hook
-  invocation acquires its four suites, uses them, and releases them
-  before returning. This matches `AEGP_SuiteHandler` usage in the
+  invocation acquires the suites it needs (utility/proj/mem always;
+  item + optional render-queue/item-view slices only on probe
+  runs), uses them, and releases them before returning. This matches `AEGP_SuiteHandler` usage in the
   samples (suites re-acquired inside every hook). ✔
 - The idle-hook function pointer is passed to
   `AEGP_RegisterIdleHook` once at init and must remain valid for the

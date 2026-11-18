@@ -1,7 +1,8 @@
 # EVIDENCE — native-sdk build probe
 
-Measured 2026-11-14 (SDK samples), 2026-11-15 and 2026-11-16
-(minimal-plugin, incl. lifecycle restructure + mock-host tests) on the
+Measured 2026-11-14 (SDK samples), 2026-11-15, 2026-11-16 and
+2026-11-18 (minimal-plugin, incl. lifecycle restructure, render-queue
+slice, Issue #63 extended read-only slice + mock-host tests) on the
 macOS development host. **SDK build-machine evidence only** —
 `BUILD SUCCEEDED` means the sample compiles; it is not plugin-load
 evidence, not execution evidence, and not `verified-real-host`
@@ -46,24 +47,25 @@ Path: `experiments/native-sdk/build/minimal-plugin/NativeProbe.plugin`
 | Entry symbol | `nm -gU` | `_AEProbePluginEntry` exported (unmangled `extern "C"`) |
 | PiPL resource | `DeRez -useDF … NativeProbe.rsrc` | `data 'PiPL' (16000)`: Kind `AEgx`, Name `NativeProbe`, Category `General Plugin`, `CodeMacIntel64`/`CodeMacARM64` → `"AEProbePluginEntry"` |
 | PkgInfo | `xxd` | `AEgxFXTC` (package type AEGx, creator FXTC — matches SDK sample convention) |
-| Content hashes (sha256) | `shasum -a 256` | executable `b9229ff7…e53e8`, rsrc `9e5d258d…7249f3` (unchanged), Info.plist `89aad984…d662d` (gitignored; hashes recorded for the load-proof fixture step) |
+| Content hashes (sha256) | `shasum -a 256` | executable `386c42d5…8f55` (post-#63 rebuild), rsrc `9e5d258d…7249f3` (unchanged), Info.plist `89aad984…d662d` (gitignored; hashes recorded for the load-proof fixture step) |
 
-## NativeProbe mock-host unit tests (2026-11-16)
+## NativeProbe mock-host unit tests (2026-11-16, extended 2026-11-18)
 
 `minimal-plugin/test/run_tests.sh` compiles the real `src/probe.cpp`
 against a fake `SPBasicSuite`/AEGP suite-table host — plain `clang++`,
 no After Effects, no GUI:
 
 ```
-563 checks, 0 failures
+776 checks, 0 failures
 ```
 
 Coverage: init-time suite-acquire failure (utility, register),
 null `SPBasicSuite`, idle-hook registration failure,
 `AEGP_RegisterWithAEGP` failure fallback, per-suite acquire failure
 inside the idle hook (utility/proj/memory at fingerprint stage, item
-at probe stage), null function-table entries (proj count/path,
-mem free/size, debug log), `AEGP_GetItemName`
+at probe stage, item-view non-fatal), null function-table entries
+(proj count/path/time-display, mem free/size, debug log, item detail
+entries fail-closed, item-view entries non-fatal), `AEGP_GetItemName`
 alloc/lock/size failures with handle still freed and locks balanced,
 NULL handle with success, unterminated + odd-sized UTF-16 payloads,
 lone-surrogate → U+FFFD, `numProjects` 0/1/2, fingerprint triggers
@@ -72,9 +74,12 @@ same-name/different-path, recovery from `GetNumProjects`/name/path
 query failures and from a missing project), silent steady-state
 ticks (no markers, no op records), read-only render-queue slice
 (`AEGP_RenderQueueSuite1`/`AEGP_RQItemSuite4` getters, non-fatal
-acquire failure, per-item op records), and `op <Suite>.<member>`
-record emission for entry and probe calls. Suite acquire/release
-counts balance on every path.
+acquire failure, per-item op records), the Issue #63 extended
+read-only slice (`AEGP_GetProjectTimeDisplay`, per-item metadata
+getters, `AEGP_GetActiveItem`, `AEGP_GetItemMRUView` +
+`AEGP_ItemViewSuite2` getters, per-call failure paths), and
+`op <Suite>.<member>` record emission for entry and probe calls.
+Suite acquire/release counts balance on every path.
 
 **Level: automated test against a fake host — unit-level evidence
 only.** It exercises our code's control flow and memory discipline;

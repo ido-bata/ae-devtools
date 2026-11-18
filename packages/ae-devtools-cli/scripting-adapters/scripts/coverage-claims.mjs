@@ -39,3 +39,11 @@ const doc = {
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, JSON.stringify(doc, null, 2) + "\n");
 console.log(`coverage-claims: ${Object.keys(claims).length} member claims from ${OPERATIONS.length} ops`);
+// This file is an input to the capability catalog manifest: after
+// regenerating it, packages/capability-catalog/generated/catalog.json
+// and generated/domain-coverage.json are stale until rebuilt there
+// (`bun run generate` + `bun run domain-coverage`). The catalog drift
+// test catches the miss, but only after the fact — see docs/development.md.
+console.error(
+  "note: downstream generated artifacts are now stale — in packages/capability-catalog run `bun run generate` then `bun run domain-coverage` and commit both generated/*.json",
+);
