@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { importScripting } from "../src/import-scripting.ts";
+import { importScripting, parseRealHostClaims, type RealHostClaims } from "../src/import-scripting.ts";
 import {
   buildScriptingIndex,
   importSemanticOperations,
@@ -37,6 +37,34 @@ function sha256(relativePath: string): string {
   return createHash("sha256").update(readFileSync(join(REPO_ROOT, relativePath))).digest("hex");
 }
 
+/**
+ * real-host-claims.json is schema-validated and every evidence ref must
+ * resolve to a committed conformance run directory containing
+ * record.json (Issue #230). A claim pointing at a missing or renamed
+ * run is a generation error — fail closed, never cast-and-hope.
+ */
+function loadRealHostClaims(): RealHostClaims | undefined {
+  const path = join(REPO_ROOT, REAL_HOST_CLAIMS_PATH);
+  if (!existsSync(path)) return undefined;
+  const parsed = parseRealHostClaims(load(REAL_HOST_CLAIMS_PATH));
+  if (!parsed.ok) {
+    throw new Error(`invalid ${REAL_HOST_CLAIMS_PATH}: ${parsed.errors.join("; ")}`);
+  }
+  for (const [id, perOs] of Object.entries(parsed.claims.claims)) {
+    for (const [os, ev] of Object.entries(perOs)) {
+      const ref = ev?.ref;
+      if (typeof ref !== "string") continue; // shape check already reported
+      const recordPath = join(REPO_ROOT, ref, "record.json");
+      if (!ref.startsWith("packages/capability-catalog/evidence/conformance/") || !existsSync(recordPath)) {
+        throw new Error(
+          `real-host claim '${id}'/${os} ref '${ref}' does not resolve to an evidence/conformance/<runId>/record.json`,
+        );
+      }
+    }
+  }
+  return parsed.claims;
+}
+
 export type RepoInputs = {
   scripting: ImportedSource;
   tools: ImportedSource;
@@ -45,9 +73,11 @@ export type RepoInputs = {
   files: Record<string, string>;
 };
 
+const ADAPTER_CLAIMS_PATH = "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json";
+const REAL_HOST_CLAIMS_PATH = "packages/capability-catalog/real-host-claims.json";
+
 export function loadRepoInputs(): RepoInputs {
-  const ADAPTER_CLAIMS_PATH = "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json";
-  const REAL_HOST_CLAIMS_PATH = "packages/capability-catalog/real-host-claims.json";
+  const realHostClaims = loadRealHostClaims();
   const scripting = importScripting({
     symbols: load(INPUT_PATHS.scriptingSymbols),
     summary: load(INPUT_PATHS.scriptingSummary),
@@ -55,9 +85,7 @@ export function loadRepoInputs(): RepoInputs {
     adapterClaims: existsSync(join(REPO_ROOT, ADAPTER_CLAIMS_PATH))
       ? (load(ADAPTER_CLAIMS_PATH) as Parameters<typeof importScripting>[0]["adapterClaims"])
       : undefined,
-    realHostClaims: existsSync(join(REPO_ROOT, REAL_HOST_CLAIMS_PATH))
-      ? (load(REAL_HOST_CLAIMS_PATH) as Parameters<typeof importScripting>[0]["realHostClaims"])
-      : undefined,
+    realHostClaims,
   });
   const operations = load<{ operations: Parameters<typeof importToolOperations>[0]["operations"]["operations"] }>(
     INPUT_PATHS.toolsOperations,

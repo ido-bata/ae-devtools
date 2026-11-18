@@ -139,6 +139,54 @@ export type RealHostClaims = {
   >;
 };
 
+const REAL_HOST_CLAIMS_SCHEMA = "ae-devtools.real-host-claims/v1" as const;
+const REAL_HOST_OS = ["win32", "darwin"] as const;
+
+/**
+ * Structural validation of real-host-claims.json (Issue #230). The file
+ * was previously cast, never parsed: a malformed schema or a ref that
+ * points nowhere would silently shape catalog promotions. Shape errors
+ * are returned, never thrown — the caller decides fatal vs skip.
+ * Ref EXISTENCE (the evidence/conformance/<runId> dir) is a filesystem
+ * concern and is checked by the loading script, not here.
+ */
+export function parseRealHostClaims(
+  json: unknown,
+): { ok: true; claims: RealHostClaims } | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+  const bad = (msg: string) => errors.push(msg);
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+    return { ok: false, errors: ["real-host claims is not an object"] };
+  }
+  const j = json as Record<string, unknown>;
+  if (j.schema !== REAL_HOST_CLAIMS_SCHEMA) {
+    bad(`schema must be ${REAL_HOST_CLAIMS_SCHEMA}`);
+  }
+  if (typeof j.claims !== "object" || j.claims === null || Array.isArray(j.claims)) {
+    bad("claims must be an object mapping capabilityId -> per-OS evidence");
+  } else {
+    for (const [id, perOs] of Object.entries(j.claims as Record<string, unknown>)) {
+      if (id.length === 0) bad("claims contains an empty capability id");
+      if (typeof perOs !== "object" || perOs === null || Array.isArray(perOs)) {
+        bad(`claims['${id}'] must be an object keyed by os`);
+        continue;
+      }
+      for (const [os, ev] of Object.entries(perOs as Record<string, unknown>)) {
+        if (!REAL_HOST_OS.includes(os as (typeof REAL_HOST_OS)[number])) {
+          bad(`claims['${id}'] oss '${os}' must be win32 | darwin`);
+          continue;
+        }
+        const ref = (ev as Record<string, unknown> | null)?.ref;
+        if (typeof ref !== "string" || ref.length === 0) {
+          bad(`claims['${id}'].${os}.ref must be a non-empty string`);
+        }
+      }
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors };
+  return { ok: true, claims: j as unknown as RealHostClaims };
+}
+
 export function importScripting(input: {
   symbols: ScriptingSymbolsFile;
   summary: ScriptingSummaryFile;
@@ -172,7 +220,6 @@ export function importScripting(input: {
   // and implementation never becomes "implemented" (that axis is for
   // catalog-native capabilities).
   if (input.adapterClaims) {
-    let applied = 0;
     for (const record of records) {
       const claim = input.adapterClaims.claims[record.id];
       if (!claim) continue;
@@ -182,11 +229,6 @@ export function importScripting(input: {
         kind: "automated-test",
         ref: `packages/ae-devtools-cli/scripting-adapters (${claim.ops.join(", ")})`,
       });
-      applied += 1;
-    }
-    if (applied > 0) {
-      // surface the applied count for provenance honesty
-      (records as unknown as { __adapterClaimsApplied?: number }).__adapterClaimsApplied = applied;
     }
   }
   // Real-host evidence claims (Issue #177): promote named members to

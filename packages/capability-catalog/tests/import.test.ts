@@ -10,7 +10,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promotionViolations } from "../src/evidence.ts";
-import { importScripting } from "../src/import-scripting.ts";
+import { importScripting, parseRealHostClaims } from "../src/import-scripting.ts";
 import { importSdkAggregate, importSdkRows } from "../src/import-sdk.ts";
 import {
   buildScriptingIndex,
@@ -299,5 +299,45 @@ describe("scripting index for cross-source links", () => {
       "ae.scripting.AVLayer.adjustmentLayer",
     );
     expect(index.size).toBe(656);
+  });
+});
+
+describe("parseRealHostClaims (Issue #230)", () => {
+  const good = {
+    schema: "ae-devtools.real-host-claims/v1",
+    claims: {
+      "ae.scripting.app.open": {
+        darwin: { ref: "packages/capability-catalog/evidence/conformance/run-x" },
+      },
+    },
+  };
+
+  test("accepts a well-formed claims file", () => {
+    const r = parseRealHostClaims(good);
+    expect(r.ok).toBe(true);
+  });
+
+  test("rejects wrong schema, non-object claims, bad os keys, missing refs", () => {
+    expect(parseRealHostClaims({}).ok).toBe(false);
+    expect(parseRealHostClaims({ schema: "other/v9", claims: {} }).ok).toBe(false);
+    expect(parseRealHostClaims({ schema: good.schema, claims: [] }).ok).toBe(false);
+    expect(
+      parseRealHostClaims({
+        schema: good.schema,
+        claims: { "ae.x.y.z": { linux: { ref: "r" } } },
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseRealHostClaims({
+        schema: good.schema,
+        claims: { "ae.x.y.z": { darwin: {} } },
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseRealHostClaims({
+        schema: good.schema,
+        claims: { "ae.x.y.z": { darwin: { ref: "" } } },
+      }).ok,
+    ).toBe(false);
   });
 });

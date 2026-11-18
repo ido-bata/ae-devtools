@@ -32,10 +32,15 @@ if (!result.ok) {
 }
 console.error("gate green (SDK verdict stays 'unknown' without supplied SDK rows)");
 
-// Domain coverage report freshness — only enforced on branches that carry
-// domain definitions (specs/ae-capability-coverage/domains/*.json).
+// Domain coverage report freshness — enforced whenever EITHER side of
+// the pair exists (Issue #230): deleting specs/.../domains/ while a
+// committed report remains must fail, not silently skip the check.
 const domainsDir = join(REPO_ROOT, "specs/ae-capability-coverage/domains");
 const domainReportPath = join(REPO_ROOT, "packages/capability-catalog/generated/domain-coverage.json");
+if (existsSync(domainReportPath) && !existsSync(domainsDir)) {
+  console.error("STALE: generated/domain-coverage.json exists but specs/ae-capability-coverage/domains/ is missing");
+  process.exit(1);
+}
 if (existsSync(domainsDir)) {
   const freshDomain = generateDomainCoverage();
   const committedDomain = existsSync(domainReportPath) ? readFileSync(domainReportPath, "utf8") : "";

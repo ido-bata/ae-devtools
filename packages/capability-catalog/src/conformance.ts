@@ -124,6 +124,8 @@ export function parseConformanceRecord(
     !json.capabilityIds.every(nonEmptyString)
   ) {
     bad("capabilityIds must be a non-empty string array");
+  } else if (new Set(json.capabilityIds).size !== json.capabilityIds.length) {
+    bad("capabilityIds must not contain duplicates");
   }
   const platform = json.platform;
   if (
@@ -133,6 +135,11 @@ export function parseConformanceRecord(
     !nonEmptyString(platform.arch)
   ) {
     bad("platform must carry os/osVersion/arch strings");
+  } else if (!OS_VALUES.includes(platform.os as (typeof OS_VALUES)[number])) {
+    // The claim vocabulary is win32|darwin — a record measured on any
+    // other OS can never satisfy a claim, so accepting it would only
+    // produce evidence that looks usable but is not (Issue #230).
+    bad("platform.os must be win32 | darwin");
   }
   const aeVersion = json.aeVersion;
   if (
@@ -196,7 +203,9 @@ export function parseConformanceRecord(
     // not a conformance record.
     bad("environment must assert disposableProject=true and sideEffects='none-observed'");
   }
-  if (!nonEmptyString(json.recordedAt)) bad("recordedAt must be a timestamp string");
+  if (!nonEmptyString(json.recordedAt) || Number.isNaN(Date.parse(json.recordedAt))) {
+    bad("recordedAt must be a parseable timestamp string");
+  }
 
   // Cross-field honesty rules.
   if (errors.length === 0) {

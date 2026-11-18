@@ -435,11 +435,20 @@ describe("evaluateReleaseGate", () => {
     expect(isEvidenceScopePath("inventories/tools/generated/operations.json")).toBe(true);
     expect(isEvidenceScopePath("packages/ae-devtools-cli/dev-loop/tests/run.mjs")).toBe(false);
     expect(isEvidenceScopePath("packages/ae-devtools-cli/docs/adoption.md")).toBe(false);
+    expect(isEvidenceScopePath("packages/ae-devtools-cli/mcp-server/evidence/run.json")).toBe(false);
     expect(isEvidenceScopePath("packages/capability-catalog/evidence/conformance/x/record.json")).toBe(false);
     expect(isEvidenceScopePath("packages/capability-catalog/generated/catalog.json")).toBe(false);
     // Gate/claim definitions are re-evaluated every run — not measured bytes.
     expect(isEvidenceScopePath("packages/capability-catalog/release-scope.json")).toBe(false);
     expect(isEvidenceScopePath("packages/capability-catalog/src/release-gate.ts")).toBe(false);
     expect(isEvidenceScopePath("README.md")).toBe(false);
+    // Issue #230 anchoring: package-lock.json pins exercised dependency
+    // code — it is IN scope now. docs/evidence dirs are excluded only
+    // inside the CLI package tree; under inventories/ every file is
+    // potential op semantics and stays in scope.
+    expect(isEvidenceScopePath("packages/ae-devtools-cli/package-lock.json")).toBe(true);
+    expect(isEvidenceScopePath("inventories/scripting/docs/spec.json")).toBe(true);
+    expect(isEvidenceScopePath("inventories/tools/evidence/ops.json")).toBe(true);
+    expect(isEvidenceScopePath("inventories/tools/tests/fixture.json")).toBe(false);
   });
 });

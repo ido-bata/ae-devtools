@@ -164,11 +164,20 @@ export function runConformanceGate(): ConformanceGateResult {
 
   const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8")) as CatalogManifest;
   const { sources, rejected: loadRejected } = loadRecordSources();
+  // gitBinding() shells out to git — outside a checkout (or with a
+  // broken git) it throws. Surface that as a clean fatal gate error
+  // instead of an uncaught exception (Issue #230).
+  let candidate: CandidateBinding;
+  try {
+    candidate = gitBinding();
+  } catch (err) {
+    return { ok: false, fatalError: `cannot resolve candidate git binding: ${String(err)}` };
+  }
   const report = evaluateReleaseGate({
     scope: scopeParsed.scope,
     manifest,
     recordSources: sources,
-    candidate: gitBinding(),
+    candidate,
   });
   // Load-time rejections (unparseable JSON / runId mismatch) are gate
   // findings too — merge them into rejectedRecords for one report.
