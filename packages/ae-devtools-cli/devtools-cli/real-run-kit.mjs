@@ -11,8 +11,9 @@
  *
  *   aeProcessSnapshot / MAIN_EXE / ADOBE_HELPER — `ps` snapshot used by
  *     the post-close leak checks (main exe vs known Adobe helpers).
- *   gitHead / gitHeadAndDirty — provenance probes (also used by
- *     a8n-transport/session.mjs for --ae-a8n-root checkouts).
+ *   gitHeadAndDirty — provenance probes for the ae-devtools checkout
+ *     these drivers run from. (The ae-a8n checkout HEAD probe lives in
+ *     a8n-transport/ae-a8n-resolve.mjs — a different provenance domain.)
  *   createEvalDispatch — the eval-dispatch consent wrapper. The consent
  *     scope and the runner.runScript args shape are hashed together
  *     inside trusted-execution/runner.mjs; rebuilding them by hand at
@@ -61,16 +62,6 @@ export async function aeProcessSnapshot(fragment) {
       });
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-/** git HEAD of a local checkout, or null when unavailable. */
-export async function gitHead(root) {
-  try {
-    const { stdout } = await execFileAsync("git", ["-C", root, "rev-parse", "HEAD"], { timeout: 5_000 });
-    return stdout.trim() || null;
-  } catch {
-    return null;
   }
 }
 
@@ -124,11 +115,10 @@ export async function gitHeadAndDirty(root) {
   }
 }
 
-let consentScopeForPromise = null;
-function loadConsentScopeFor() {
-  consentScopeForPromise ??= import("../trusted-execution/permissions.mjs")
-    .then((m) => m.consentScopeFor);
-  return consentScopeForPromise;
+let permissionsPromise = null;
+function loadPermissions() {
+  permissionsPromise ??= import("../trusted-execution/permissions.mjs");
+  return permissionsPromise;
 }
 
 /**
@@ -149,11 +139,11 @@ export function createEvalDispatch({ runner, pin, projectIdentity, operationId =
   const identity = typeof projectIdentity === "function" ? projectIdentity : () => projectIdentity;
   return async (source, requestId, dispatchArgs = null) => {
     const pi = identity();
-    const consentScopeFor = await loadConsentScopeFor();
+    const { consentScopeFor, evalConsentArgs } = await loadPermissions();
     const scope = consentScopeFor({
       pin,
       operationId,
-      args: { source, dispatchArgs },
+      args: evalConsentArgs(source, dispatchArgs),
       projectIdentity: pi,
     });
     return runner.runScript({

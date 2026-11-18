@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
-import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
+import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
@@ -250,11 +250,7 @@ if (isMain) {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     },
-    closeTimeoutMs: (() => {
-      const raw = flags["close-timeout-ms"];
-      const n = typeof raw === "string" ? Number(raw) : NaN;
-      return Number.isFinite(n) && n > 0 ? n : undefined;
-    })(),
+    closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });
   process.stderr.write(
     `mcp-server: ${SERVER_NAME}@${SERVER_VERSION} schema=${MCP_SCHEMA} session=${sessionKind} ` +

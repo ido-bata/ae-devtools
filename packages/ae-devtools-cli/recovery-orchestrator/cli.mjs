@@ -45,7 +45,6 @@
  * logic is covered by tests/run.mjs against fakes.
  */
 
-import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -58,7 +57,13 @@ import {
   runTimeoutRecovery,
   verifyHostExit,
 } from "./orchestrator.mjs";
-import { RUNS_DIR, RUN_ID_RE } from "../devtools-cli/session-guard.mjs";
+import { resolveAeA8n } from "../a8n-transport/ae-a8n-resolve.mjs";
+import {
+  RUNS_DIR,
+  RUN_ID_RE,
+  pidAlive,
+  processStartStampSync,
+} from "../devtools-cli/session-guard.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
 
 // --reports-dir/--sentry-dir are repeatable (Issue #197 shared parser).
@@ -153,9 +158,11 @@ async function loadA8n(root, command) {
       e.code = "AE_A8N_SURFACE_MISSING";
       throw e;
     }
-    return assertA8nSurface(await import(entry), command);
   }
-  const mod = await import("@ido-bata/ae-a8n");
+  // Shared resolver (Issue #253): same root-vs-npm mechanics as
+  // a8n-transport/session.mjs and compat.mjs's probe — this lane keeps
+  // only its own per-command export-surface gate on top.
+  const { mod } = await resolveAeA8n({ aeA8nRoot: root });
   return assertA8nSurface(mod, command);
 }
 
@@ -171,23 +178,13 @@ function sessionFromFlags(a8n, flags) {
   };
 }
 
-/** ps lstart stamp for PID-reuse detection; null when unreadable. */
-function pidStartStamp(pid) {
-  try {
-    const out = execFileSync("ps", ["-o", "lstart=", "-p", String(pid)], {
-      encoding: "utf-8", timeout: 5_000, stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    return out.length === 0 ? null : out;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Confirm the claimed GUI session and the target pid's attribution via
  * ae-a8n's live surfaces. Delegates to orchestrator.confirmGuiSession;
- * the pid-alive probe is pidAliveDefault so dead pids take the
- * "dead — lsappinfo cannot list it" path instead of never confirming.
+ * the pid-alive probe is the shared session-guard pidAlive (Issue #253
+ * item 2: alive only on kill-success/EPERM — stricter than ae-a8n's
+ * ESRCH-only defaultPidAlive, which stays inside ae-a8n's own lease
+ * inspection below).
  */
 function confirmSession(a8n, flags, pid) {
   const uid = Number(flags["session-uid"]);
@@ -196,7 +193,7 @@ function confirmSession(a8n, flags, pid) {
     deps: {
       readGuiSession: (u) => a8n.readGuiSession(u),
       listAppInstances: () => a8n.listAppInstances(),
-      pidAlive: pidAliveDefault,
+      pidAlive,
     },
     uid, asid, pid,
   });
@@ -222,8 +219,8 @@ function guiLeaseState(a8n, session) {
     // Same naming as ae-a8n's gui-lease.ts: gui-<uid>-<asid|none>.json.
     const leasePath = join(dir, `gui-${session.uid}-${session.asid ?? "none"}.json`);
     const state = a8n.inspectGuiLease(leasePath, {
-      pidAlive: typeof a8n.defaultPidAlive === "function" ? a8n.defaultPidAlive : pidAliveDefault,
-      pidStartedAt: typeof a8n.defaultPidStartedAt === "function" ? a8n.defaultPidStartedAt : pidStartStamp,
+      pidAlive: typeof a8n.defaultPidAlive === "function" ? a8n.defaultPidAlive : pidAlive,
+      pidStartedAt: typeof a8n.defaultPidStartedAt === "function" ? a8n.defaultPidStartedAt : processStartStampSync,
     });
     return {
       available: true,
@@ -237,16 +234,6 @@ function guiLeaseState(a8n, session) {
     };
   } catch (error) {
     return { available: false, reason: `lease inspection failed: ${String(error?.message ?? error)}` };
-  }
-}
-
-function pidAliveDefault(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    // Same rule as ae-a8n's defaultPidAlive: only ESRCH proves death.
-    return error?.code !== "ESRCH";
   }
 }
 
@@ -318,7 +305,7 @@ async function main() {
       marker: loaded.marker,
       requestId,
       method,
-      probes: { pidAlive: pidAliveDefault, pidStartStamp },
+      probes: { pidAlive, pidStartStamp: processStartStampSync },
     });
     if (!auth.ok) return fail("RECOVERY_REFUSED", auth.reason, { runId: flags["run-id"] });
 
@@ -399,7 +386,7 @@ async function main() {
     const expectation = flags.expectation === "crash" ? "crash" : "exit";
     const result = verifyHostExit({
       pid,
-      pidAlive: pidAliveDefault,
+      pidAlive,
       census,
       session: sessionCheck.confirmed
         ? {

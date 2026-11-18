@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
-  attachEvidence, ATTESTATION_SOURCE,
+  attachEvidence, pidAlive, processStartStampSync, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
 import { failureOutcome, isFailureResult, normalizedOutcome, isUnknownOutcome } from "../../dev-loop/outcomes.mjs";
 import { parseArgs, arg as argvArg, hasFlag } from "../argv.mjs";
@@ -878,6 +878,32 @@ await at("guard: reap passes the quit target via osascript argv, never interpola
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---- pidAlive canonical semantics (Issue #253 item 2) ----
+// The guard and the recovery orchestrator share this probe; the pinned
+// rule is "alive only on kill-success or EPERM" — stricter than
+// ae-a8n's ESRCH-only defaultPidAlive. A non-ESRCH kill error must NOT
+// count as alive: unproven liveness is the unsafe direction for
+// quit/recovery authorization.
+
+t("guard: pidAlive — success and EPERM alive, ESRCH/other errors dead", () => {
+  assert.equal(pidAlive(1234, () => {}), true);
+  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "EPERM"; throw e; }), true);
+  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "ESRCH"; throw e; }), false);
+  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "EINVAL"; throw e; }), false);
+  assert.equal(pidAlive(1234, () => { throw new Error("no code"); }), false);
+  assert.equal(pidAlive(0, () => {}), false);
+  assert.equal(pidAlive(-1, () => {}), false);
+  assert.equal(pidAlive(1.5, () => {}), false);
+  assert.equal(pidAlive("1234", () => {}), false);
+});
+
+t("guard: processStartStampSync returns trimmed stamp or null", () => {
+  const stamp = processStartStampSync(1, () => "  Mon Jan  1 00:00:00 2024\n");
+  assert.equal(stamp, "Mon Jan  1 00:00:00 2024");
+  assert.equal(processStartStampSync(1, () => "   \n"), null);
+  assert.equal(processStartStampSync(1, () => { throw new Error("no ps"); }), null);
 });
 
 t("diagnose refuses marker-lookup traversal ids", () => {

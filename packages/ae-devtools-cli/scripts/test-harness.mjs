@@ -15,6 +15,7 @@
 import { readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
 
 /**
  * Run every `*.test.mjs` in `dir` under `node --test`.
@@ -51,7 +52,7 @@ export function runTestDir(dir) {
   return failed;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainEntry(import.meta.url)) {
   const dir = process.argv[2];
   if (!dir) {
     console.error("usage: node scripts/test-harness.mjs <tests-dir>");

@@ -44,10 +44,10 @@ import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
+import { ATTESTATION_SOURCE, GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
 
 export const SCHEMA = "ae-devtools.recovery-orchestrator/v2";
-export { GUARD_SCHEMA };
+export { ATTESTATION_SOURCE, GUARD_SCHEMA };
 
 // ------------------------------------------------------------ evidence
 
@@ -516,7 +516,9 @@ export function confirmGuiSession({ deps, uid, asid, pid }) {
  * process; a cross-process signed attestation would have to come from
  * ae-a8n itself.
  */
-export const ATTESTATION_SOURCE = "ae-a8n:AfterEffects.recoveryTarget()";
+// ATTESTATION_SOURCE is owned by devtools-cli/session-guard.mjs and
+// re-exported above (Issue #253) — a second literal here could drift
+// from the value reap/recover actually gate on.
 
 const TERMINAL_MARKER_STATUSES = new Set([
   "closed", "corrupt", "open-failed", "interrupted", "error", "close-failed",

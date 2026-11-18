@@ -31,7 +31,7 @@
  *     is not required)
  */
 
-import { consentScopeFor } from "../trusted-execution/permissions.mjs";
+import { consentScopeFor, evalConsentArgs } from "../trusted-execution/permissions.mjs";
 import { getOperation, buildSource } from "./registry.mjs";
 
 function refused(reason, detail, extra = {}) {
@@ -82,7 +82,7 @@ export async function runOperation(input = {}) {
     scope = consentScopeFor({
       pin,
       operationId: opId,
-      args: { source, dispatchArgs: args },
+      args: evalConsentArgs(source, args),
       projectIdentity,
     });
   } catch (err) {

@@ -23,7 +23,7 @@
  * exercises the gate mechanics (scope binding, opt-in, provenance) but is
  * NOT authenticated authorization — ae-a8n #97–#99 owns token issuance.
  */
-import { consentScopeFor } from "../trusted-execution/permissions.mjs";
+import { consentScopeFor, evalConsentArgs } from "../trusted-execution/permissions.mjs";
 
 export const OPERATION_ID = "op.a8n-transport.eval";
 export const PROJECT_IDENTITY = "a8n-transport-slice";
@@ -40,7 +40,7 @@ function scopeFor(source, pin) {
   return consentScopeFor({
     pin,
     operationId: OPERATION_ID,
-    args: { source, dispatchArgs: null },
+    args: evalConsentArgs(source, null),
     projectIdentity: PROJECT_IDENTITY,
   });
 }

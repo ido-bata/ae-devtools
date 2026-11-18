@@ -142,6 +142,23 @@ export function argumentHash(args) {
 }
 
 /**
+ * The `args` payload every trusted-eval consent scope binds (Issue #253).
+ * Single owner for the {source, dispatchArgs} encoding: the runner
+ * re-computes the scope inside authorizeExecution and refuses on any
+ * difference, so every site that builds a scope for presentation MUST
+ * produce byte-identical args — execute.mjs (adapter layer),
+ * real-run-kit.mjs (real-run drivers) and scenario.mjs (slice harness)
+ * all call this instead of hand-building the object.
+ *
+ * @param {string} source — ExtendScript source being dispatched
+ * @param {*} dispatchArgs — caller dispatch arguments (null when none)
+ * @returns {{source:string, dispatchArgs:*}}
+ */
+export function evalConsentArgs(source, dispatchArgs) {
+  return { source, dispatchArgs: dispatchArgs ?? null };
+}
+
+/**
  * The consent scope a dispatch must present. Session pin binds
  * {sessionId, aeVersion, dispatchId} — the probe's pinned identity.
  * `projectIdentity` is required for write classes (design §3): consent

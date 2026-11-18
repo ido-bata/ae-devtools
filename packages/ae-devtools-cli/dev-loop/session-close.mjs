@@ -24,6 +24,31 @@
 export const DEFAULT_CLOSE_TIMEOUT_MS = 20_000;
 
 /**
+ * Normalize a raw --close-timeout-ms flag value to a positive finite
+ * millisecond bound (Issue #253). Single owner for the surface-layer
+ * parse rule: booleans are rejected on purpose (a bare flag parses to
+ * `true`, and Number(true) === 1 would turn the bound into 1ms);
+ * non-finite/non-positive/unconvertible values fall back to
+ * DEFAULT_CLOSE_TIMEOUT_MS — the only safe bound.
+ *
+ * @param {*} raw — flag value (string from argv, or a programmatic value)
+ * @returns {number} millisecond bound, always finite and > 0
+ */
+export function parseCloseTimeoutMs(raw) {
+  try {
+    if (typeof raw === "number") {
+      if (Number.isFinite(raw) && raw > 0) return raw;
+    } else if (typeof raw === "string" && raw.trim() !== "") {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  } catch {
+    // Unconvertible value (Symbol, throwing valueOf) — fall through.
+  }
+  return DEFAULT_CLOSE_TIMEOUT_MS;
+}
+
+/**
  * @param {object|null} session — session object with an optional
  *   async close() (the shape openSession/session.mjs produce)
  * @param {object} [options]
@@ -38,20 +63,9 @@ export async function closeSessionWithTimeout(session, { timeoutMs = DEFAULT_CLO
   if (session === null || typeof session !== "object" || typeof session.close !== "function") {
     return { attempted: false, ok: null, error: null, result: null, timedOut: false };
   }
-  let ms = DEFAULT_CLOSE_TIMEOUT_MS;
-  try {
-    // Booleans are rejected on purpose: a bare flag parses to `true`,
-    // and Number(true) === 1 would turn the bound into 1ms.
-    if (typeof timeoutMs === "number") {
-      if (Number.isFinite(timeoutMs) && timeoutMs > 0) ms = timeoutMs;
-    } else if (typeof timeoutMs === "string" && timeoutMs.trim() !== "") {
-      const n = Number(timeoutMs);
-      if (Number.isFinite(n) && n > 0) ms = n;
-    }
-  } catch {
-    // Unconvertible value (Symbol, throwing valueOf) — the shared
-    // default is the only safe bound.
-  }
+  // Single parse rule (Issue #253): booleans/non-finite/non-positive
+  // values fall back to the shared default — the only safe bound.
+  const ms = parseCloseTimeoutMs(timeoutMs);
   let timer;
   let timedOut = false;
   try {

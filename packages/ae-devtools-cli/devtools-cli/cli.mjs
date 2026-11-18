@@ -63,7 +63,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "./argv.mjs";
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
-import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
+import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
@@ -163,14 +163,11 @@ function makeCleanup(state, flags) {
       const cleanup = { attempted: false, ok: null, error: null, result: null };
       if (state.session) {
         // Bounded close is shared with MCP/VSCode
-        // (dev-loop/session-close.mjs, Issue #196).
-        // A bare `--close-timeout-ms` parses to boolean true; Number(true)
-        // is 1 — guard on string + finite + positive like the MCP path.
-        const closeTimeoutRaw = flags["close-timeout-ms"];
-        const closeTimeoutNum = typeof closeTimeoutRaw === "string" ? Number(closeTimeoutRaw) : NaN;
-        const timeoutMs = Number.isFinite(closeTimeoutNum) && closeTimeoutNum > 0
-          ? closeTimeoutNum
-          : DEFAULT_CLOSE_TIMEOUT_MS;
+        // (dev-loop/session-close.mjs, Issues #196/#253). The flag
+        // parse rule lives in parseCloseTimeoutMs — a bare
+        // `--close-timeout-ms` parses to boolean true and must never
+        // become a 1ms bound.
+        const timeoutMs = parseCloseTimeoutMs(flags["close-timeout-ms"]);
         Object.assign(cleanup, await closeSessionWithTimeout(state.session, { timeoutMs }));
       }
       if (state.guard) {
