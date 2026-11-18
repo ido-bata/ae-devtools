@@ -17,8 +17,9 @@
  *     not a correctness gate.
  *
  * Scope = the same directories package.json `files` ships (module
- * dirs), including their tests/ — a broken test file is still a broken
- * shipped file.
+ * dirs). tests/ trees are still walked: Issue #196 stopped shipping
+ * them in the tarball (nested tests/.npmignore), but a broken test
+ * file is still a broken source file worth gating.
  */
 import { readdirSync, statSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
