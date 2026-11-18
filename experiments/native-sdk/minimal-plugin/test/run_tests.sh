@@ -22,10 +22,26 @@ HEADERS="$SDK_ROOT/Examples/Headers"
 OUT="$HERE/build-test"
 mkdir -p "$OUT"
 
+# SANITIZE=1 builds the same test binary with ASan+UBSan. Scoped to this
+# C++ memory-safety surface (Issue #64 follow-up): the fake host
+# intentionally never frees AE-owned-style handles, so leak detection
+# is disabled — UAF/OOB/overflow are still fully checked.
+SAN_FLAGS=""
+if [ "${SANITIZE:-0}" = "1" ]; then
+  SAN_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+  OUT="$HERE/build-test-asan"
+  mkdir -p "$OUT"
+fi
+
 clang++ -std=c++17 -O1 -g -Wall -Wextra -Werror \
+  $SAN_FLAGS \
   -D__MACH__=1 \
   -I"$HEADERS" -I"$HEADERS/SP" -I"$HERE" \
   "$HERE/../src/probe.cpp" "$HERE/fake_host.cpp" "$HERE/test_main.cpp" \
   -o "$OUT/probe_test"
 
-"$OUT/probe_test"
+if [ "${SANITIZE:-0}" = "1" ]; then
+  ASAN_OPTIONS=detect_leaks=0 "$OUT/probe_test"
+else
+  "$OUT/probe_test"
+fi
