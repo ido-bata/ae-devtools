@@ -56,7 +56,7 @@ static A_Err CallIdle(FakeHost& h)
 
 static void SuitesBalanced(FakeHost& h)
 {
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 9; i++)
     {
         CHECK(h.acquireCount[i] == h.releaseCount[i]);
     }
@@ -910,6 +910,162 @@ static void TestIdleNullItemEntryFailsClosed()
     SuitesBalanced(*h);
 }
 
+/* Issue #64: comp read-only slice — per-comp getters for COMP items,
+   MRU comp query, op records, balanced suites. */
+static void TestProbeCompSlice()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    FakeProject& p = h->AddProject("CompProj");
+    h->numProjects = 1;
+    h->SetItemNames(0, {
+        h->MakeNameSpec(FakeHost::U16("CompA")),
+        h->MakeNameSpec(FakeHost::U16("FootageB")),
+    });
+    p.itemTypes[0] = AEGP_ItemType_COMP;
+    p.itemTypes[1] = AEGP_ItemType_FOOTAGE;
+    p.itemMeta.resize(2);
+    p.itemMeta[0].compMeta.fps = 24.0;
+    p.itemMeta[0].compMeta.frameDuration = {1001, 24000};
+    p.itemMeta[0].compMeta.dsf = {2, 1};
+    p.itemMeta[0].compMeta.bgColor = {1.0, 0.1, 0.2, 0.3};
+    p.itemMeta[0].compMeta.flags = 0x8;
+    p.itemMeta[0].compMeta.showLayerNames = FALSE;
+    p.itemMeta[0].compMeta.showBlendModes = TRUE;
+    p.itemMeta[0].compMeta.shutterAngle = {180, 1};
+    p.itemMeta[0].compMeta.shutterPhase = {1, 2};
+    p.itemMeta[0].compMeta.shutterStart = {5, 30};
+    p.itemMeta[0].compMeta.shutterDuration = {2, 30};
+    p.itemMeta[0].compMeta.mbSamples = 8;
+    p.itemMeta[0].compMeta.mbAdaptiveLimit = 64;
+    p.itemMeta[0].compMeta.workAreaStart = {10, 30};
+    p.itemMeta[0].compMeta.workAreaDuration = {60, 30};
+    p.itemMeta[0].compMeta.displayStart = {3, 30};
+    p.itemMeta[0].compMeta.displayDropFrame = TRUE;
+    h->mruCompProject = 0;
+    h->mruCompIndex = 0;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("app.mruComp=present"));
+    CHECK(h->LogContains("project.items[0].comp=present"));
+    CHECK(h->LogContains("project.items[0].comp.itemFromComp=present"));
+    CHECK(h->LogContains("project.items[0].comp.fps=24"));
+    CHECK(h->LogContains("project.items[0].comp.frameDuration=1001/24000"));
+    CHECK(h->LogContains("project.items[0].comp.downsample=2x1"));
+    CHECK(h->LogContains("project.items[0].comp.bgColor a=1 r=0.1 g=0.2 b=0.3"));
+    CHECK(h->LogContains("project.items[0].comp.flags=8"));
+    CHECK(h->LogContains("project.items[0].comp.showLayerNames=0"));
+    CHECK(h->LogContains("project.items[0].comp.showBlendModes=1"));
+    CHECK(h->LogContains("project.items[0].comp.shutterAngle=180/1 phase=1/2"));
+    CHECK(h->LogContains("project.items[0].comp.shutterRange start=5/30 duration=2/30"));
+    CHECK(h->LogContains("project.items[0].comp.mbSamples=8"));
+    CHECK(h->LogContains("project.items[0].comp.mbAdaptiveLimit=64"));
+    CHECK(h->LogContains("project.items[0].comp.workAreaStart=10/30"));
+    CHECK(h->LogContains("project.items[0].comp.workAreaDuration=60/30"));
+    CHECK(h->LogContains("project.items[0].comp.displayStart=3/30"));
+    CHECK(h->LogContains("project.items[0].comp.displayDropFrame=1"));
+    /* footage item: no comp slice */
+    CHECK(!h->LogContains("project.items[1].comp"));
+    CHECK(h->LogContains("op AEGP_CompSuite13.AEGP_GetCompFromItem err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_CompSuite13.AEGP_GetCompFramerate err=0 i=0"));
+    CHECK(h->LogContains("op AEGP_CompSuite13.AEGP_GetMostRecentlyUsedComp err=0 hasComp=1"));
+    CHECK(AllMemFreed(*h) == 0);
+    SuitesBalanced(*h);
+    CHECK(h->acquireCount[8] == 1);
+    CHECK(h->releaseCount[8] == 1);
+}
+
+/* Issue #64: comp suite acquisition failure is non-fatal — the core
+   probe still completes and the comp slice stays silent. */
+static void TestProbeCompSuiteUnavailable_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("N"))});
+    h->failAcquireComp = true;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("probe.error: AEGP Comp suite unavailable"));
+    CHECK(!h->LogContains(".comp="));
+    CHECK(!h->LogContains("app.mruComp"));
+    CHECK(h->LogContains("project.items[0].name: N"));
+    SuitesBalanced(*h);
+}
+
+/* Issue #64: acquired comp suite with a missing entry degrades the
+   slice (suite still released), never the run. */
+static void TestProbeCompEntriesMissing_NonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("N"))});
+    h->nullCompEntry = 8; /* GetCompFramerate NULL */
+    h->PopulateSuites();
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.error: AEGP Comp suite unavailable"));
+    CHECK(!h->LogContains(".comp="));
+    SuitesBalanced(*h);
+    CHECK(h->acquireCount[8] == h->releaseCount[8]);
+    CHECK(h->acquireCount[8] == 1);
+}
+
+/* Issue #64: comp getter failures are per-call — the walk and probe
+   completion are unaffected; non-comp GetCompFromItem failure is
+   logged without aborting. */
+static void TestProbeCompQueryFailuresNonFatal()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {
+        h->MakeNameSpec(FakeHost::U16("C")),
+        h->MakeNameSpec(FakeHost::U16("F")),
+    });
+    h->projects[0].itemTypes[0] = AEGP_ItemType_COMP;
+    h->projects[0].itemTypes[1] = AEGP_ItemType_FOOTAGE;
+    h->compQueryErr = A_Err_GENERIC;
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("probe.end"));
+    CHECK(h->LogContains("project.items[0].comp=present"));
+    CHECK(!h->LogContains("project.items[0].comp.fps="));
+    CHECK(h->LogContains("op AEGP_CompSuite13.AEGP_GetCompFramerate err=1 i=0"));
+    /* footage item: the comp slice never runs for it — no comp-suite
+       op records carry i=1. */
+    CHECK(!h->LogContains("op AEGP_CompSuite13.AEGP_GetCompFramerate err=0 i=1"));
+    CHECK(!h->LogContains("project.items[1].comp"));
+    SuitesBalanced(*h);
+}
+
+/* Issue #64: no MRU comp is a normal state, not an error. */
+static void TestProbeNoMRUComp()
+{
+    auto h = MakeFakeHost();
+    CHECK(CallEntry(*h) == A_Err_NONE);
+    h->AddProject("P");
+    h->numProjects = 1;
+    h->SetItemNames(0, {h->MakeNameSpec(FakeHost::U16("N"))});
+    /* mruCompProject stays -1 → NULL comp */
+
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CHECK(h->StartCount() == 1);
+    CHECK(h->LogContains("app.mruComp=none"));
+    CHECK(h->LogContains("project.items[0].comp=present")); /* item itself is a comp */
+    SuitesBalanced(*h);
+}
+
 /* ------------------------------------------------------------------ */
 
 int main()
@@ -950,6 +1106,11 @@ int main()
     TestProbeItemMetaFailuresNonFatal();
     TestProbeProjectLevelQueryFailures();
     TestIdleNullItemEntryFailsClosed();
+    TestProbeCompSlice();
+    TestProbeCompSuiteUnavailable_NonFatal();
+    TestProbeCompEntriesMissing_NonFatal();
+    TestProbeCompQueryFailuresNonFatal();
+    TestProbeNoMRUComp();
 
     printf("----\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
