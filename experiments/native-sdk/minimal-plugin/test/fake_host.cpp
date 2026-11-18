@@ -130,16 +130,34 @@ int FakeHost::StartCount() const
 }
 
 /* ------------------------------------------------------------------ */
+/* opaque-handle allocation                                            */
+/*                                                                     */
+/* Every AEGP handle is a pointer-to-pointer: the fake allocates the   */
+/* payload struct AND the pointer slot on the heap, so callers can     */
+/* never observe a pointer to a stack/local. WrapPayload is the single */
+/* place that performs the two-level allocation — handle makers must   */
+/* use it (or an equivalent heap double-pointer) and must never return */
+/* &local. Payloads are intentionally never freed: the fake mirrors AE */
+/* handle ownership (borrowed by the caller for the call duration).    */
+/* ------------------------------------------------------------------ */
+
+template <typename T>
+static void* WrapPayload(T* payload)
+{
+    T** hp = new T*;
+    *hp = payload;
+    return hp;
+}
+
+/* ------------------------------------------------------------------ */
 /* mem-handle plumbing                                                */
 /* ------------------------------------------------------------------ */
 
 static AEGP_MemHandle MakeMemHandle(FakeMemRec* rec)
 {
     struct _Up_OpaqueMem* inner = new struct _Up_OpaqueMem;
-    struct _Up_OpaqueMem** hp = new struct _Up_OpaqueMem*;
     inner->rec = rec;
-    *hp = inner;
-    return (AEGP_MemHandle)hp;
+    return (AEGP_MemHandle)WrapPayload(inner);
 }
 
 static FakeMemRec* RecFromHandle(AEGP_MemHandle h)
@@ -358,9 +376,7 @@ static A_Err FakeGetProjectByIndex(A_long idxL, AEGP_ProjectH* projPH)
     }
     struct _AEGP_Project* p = new struct _AEGP_Project;
     p->index = (int)idxL;
-    struct _AEGP_Project** hp = new struct _AEGP_Project*;
-    *hp = p;
-    *projPH = (AEGP_ProjectH)hp;
+    *projPH = (AEGP_ProjectH)WrapPayload(p);
     return A_Err_NONE;
 }
 
@@ -421,9 +437,7 @@ static A_Err FakeGetProjectRootFolder(AEGP_ProjectH projH, AEGP_ItemH* itemPH)
     struct _AEGP_Item* it = new struct _AEGP_Item;
     it->projIndex = p - &g_host->projects[0];
     it->itemIndex = -1;
-    struct _AEGP_Item** hp = new struct _AEGP_Item*;
-    *hp = it;
-    *itemPH = (AEGP_ItemH)hp;
+    *itemPH = (AEGP_ItemH)WrapPayload(it);
     return A_Err_NONE;
 }
 
@@ -451,9 +465,7 @@ static AEGP_ItemH MakeItemHandle(int projIndex, int itemIndex)
     struct _AEGP_Item* it = new struct _AEGP_Item;
     it->projIndex = projIndex;
     it->itemIndex = itemIndex;
-    struct _AEGP_Item** hp = new struct _AEGP_Item*;
-    *hp = it;
-    return (AEGP_ItemH)hp;
+    return (AEGP_ItemH)WrapPayload(it);
 }
 
 static A_Err FakeGetFirstProjItem(AEGP_ProjectH projH, AEGP_ItemH* itemPH)
@@ -624,9 +636,7 @@ static AEGP_RQItemRefH NewRQItemHandle(int index)
 {
     struct _AEGP_RenderQueueItem* p = new struct _AEGP_RenderQueueItem;
     p->index = index;
-    struct _AEGP_RenderQueueItem** hp = new struct _AEGP_RenderQueueItem*;
-    *hp = p;
-    return (AEGP_RQItemRefH)hp;
+    return (AEGP_RQItemRefH)WrapPayload(p);
 }
 
 static A_Err FakeGetRQItemByIndex(A_long idxL, AEGP_RQItemRefH* rq_item_refPH)
@@ -929,9 +939,7 @@ static AEGP_CompH MakeCompHandle(int projIndex, int itemIndex)
     struct _AEGP_Comp* c = new struct _AEGP_Comp;
     c->projIndex = projIndex;
     c->itemIndex = itemIndex;
-    struct _AEGP_Comp** hp = new struct _AEGP_Comp*;
-    *hp = c;
-    return (AEGP_CompH)hp;
+    return (AEGP_CompH)WrapPayload(c);
 }
 
 static FakeProject* ProjectOfComp(AEGP_CompH compH)
@@ -1145,9 +1153,7 @@ static AEGP_LayerH MakeLayerHandle(int projIndex, int itemIndex, int layerIndex)
     l->projIndex = projIndex;
     l->itemIndex = itemIndex;
     l->layerIndex = layerIndex;
-    struct _AEGP_Layer** hp = new struct _AEGP_Layer*;
-    *hp = l;
-    return (AEGP_LayerH)hp;
+    return (AEGP_LayerH)WrapPayload(l);
 }
 
 static FakeProject* ProjectOfLayer(AEGP_LayerH layerH)
