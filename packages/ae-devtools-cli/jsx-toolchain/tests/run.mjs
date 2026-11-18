@@ -12,24 +12,11 @@ import { lintSource, lintOutput, hasErrors } from "../src/es3-lint.mjs";
 import { buildFile, buildProject, transpileToEs3 } from "../src/build.mjs";
 import { checkFile, checkProject } from "../src/check.mjs";
 import { lookup, parseMappings } from "../src/sourcemap.mjs";
+import { t, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = join(HERE, "..", "fixtures");
 const CLI = join(HERE, "..", "src", "cli.mjs");
-let passed = 0;
-const pending = [];
-function t(name, fn) {
-  try {
-    const r = fn();
-    if (r && typeof r.then === "function") {
-      pending.push(r.then(() => { passed++; console.log(`ok ${name}`); }).catch((e) => {
-        console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1;
-      }));
-    } else {
-      passed++; console.log(`ok ${name}`);
-    }
-  } catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
 
 t("lint flags ES5 builtins in source", () => {
   const src = readFileSync(join(FIX, "es5.ts"), "utf8");
@@ -520,5 +507,4 @@ t("ae-api.d.ts catches bogus AE member names", () => {
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-await Promise.all(pending);
-console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);
+await finish("tests passed");

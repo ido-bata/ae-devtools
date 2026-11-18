@@ -32,19 +32,11 @@ import {
   timeoutRecoveryToDiagnostics,
 } from "../diagnostics.mjs";
 import { validateDiagnosticsRecord } from "../../diagnostics/schema.mjs";
+import { t, at, finish } from "../../scripts/testkit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "cli.mjs");
-let passed = 0;
 
-function t(name, fn) {
-  try { fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
-async function at(name, fn) {
-  try { await fn(); passed++; console.log(`ok ${name}`); }
-  catch (e) { console.error(`FAIL ${name}: ${e.message}`); process.exitCode = 1; }
-}
 function tmp() { return mkdtempSync(join(tmpdir(), "ae-rec-orch-")); }
 
 const IPS_PROC_PATH = "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects";
@@ -750,4 +742,4 @@ t("diagnostics converters refuse unknown verdicts instead of guessing", () => {
   assert.throws(() => crashEvidenceToDiagnostics({ kind: "other" }, {}), /crash-evidence manifest/);
 });
 
-console.log(`\n${passed} passed`);
+await finish("passed");
