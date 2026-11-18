@@ -68,6 +68,10 @@ export const ATTESTATION_SOURCE = "ae-a8n:AfterEffects.recoveryTarget()";
 export const RUNS_DIR = process.env.AE_DEVTOOLS_CLI_RUNS_DIR
   ?? join(tmpdir(), "ae-devtools-cli-runs");
 
+/** Run ids are `run-<timestamp>-<rand>` from beginRun(); anything else is
+ *  not a marker we own and must never reach a path join (Issue #227). */
+export const RUN_ID_RE = /^run-[A-Za-z0-9-]+$/;
+
 /** pid liveness. EPERM means the process exists but is not ours to signal. */
 export function pidAlive(pid, kill = process.kill.bind(process)) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -100,6 +104,9 @@ function writeMarker(dir, marker) {
 }
 
 function readMarker(dir, runId) {
+  // Only canonical run-* ids may resolve to a marker path — a foreign id
+  // must never escape the runs dir via `../` (Issue #227).
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId)) return null;
   const file = markerPath(dir, runId);
   if (!existsSync(file)) return null;
   try {
@@ -256,6 +263,9 @@ export function latestRequestEvent(marker, requestId) {
  * it so `doctor`/`reap` can still find the residue.
  */
 export function endRun(dir, runId, status) {
+  // A non-canonical runId can never name one of our markers — refuse
+  // before markerPath joins it into a filesystem path (Issue #227).
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId)) return;
   const file = markerPath(dir, runId);
   if (!existsSync(file)) return;
   if (status === "closed") {
@@ -360,6 +370,11 @@ export async function reapRun(runId, {
   now = () => Date.now(),
   wait = sleep,
 } = {}) {
+  // A non-canonical runId can never name one of our markers — refuse
+  // before markerPath joins it into a filesystem path (Issue #227).
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId)) {
+    return { runId, verdict: "REFUSED", reason: "INVALID_RUN_ID" };
+  }
   const marker = readMarker(dir, runId);
   if (marker === null) return { runId, verdict: "NO_MARKER" };
   if (marker.status === "closed") return { runId, verdict: "ALREADY_CLOSED" };
@@ -462,8 +477,13 @@ export async function reapRun(runId, {
 
   const target = appPath ?? `${installDir.replace(/\/$/, "")}.app`;
   try {
+    // Pass the target via argv — never interpolate a marker-controlled
+    // path into an AppleScript string literal (Issue #227).
     await exec("osascript", [
-      "-e", `tell application "${target}" to quit`,
+      "-e", "on run argv",
+      "-e", "tell application (item 1 of argv) to quit",
+      "-e", "end run",
+      target,
     ], { timeout: 30_000 });
   } catch (e) {
     return { runId, verdict: "QUIT_FAILED", candidate: candidates[0], message: String(e?.message ?? e) };

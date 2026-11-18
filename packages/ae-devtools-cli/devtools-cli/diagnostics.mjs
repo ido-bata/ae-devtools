@@ -27,7 +27,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { RUNS_DIR, GUARD_SCHEMA } from "./session-guard.mjs";
+import { RUNS_DIR, RUN_ID_RE, GUARD_SCHEMA } from "./session-guard.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -119,9 +119,15 @@ function resolveTarget(input, { dir = RUNS_DIR } = {}) {
   if (existsSync(direct)) {
     return { path: direct, via: "path" };
   }
-  // Bare runId / marker name: look in the runs dir.
-  for (const cand of [join(dir, `${input}.json`), join(dir, input)]) {
-    if (existsSync(cand)) return { path: cand, via: "run-marker" };
+  // Bare runId / marker name: look in the runs dir — but only for
+  // canonical run-* ids, so `../..` can never escape the runs dir
+  // through the marker lookup (Issue #227). Direct file paths are still
+  // accepted above; diagnose is a read-only file tool by design.
+  const runId = typeof input === "string" ? input.replace(/\.json$/, "") : input;
+  if (typeof runId === "string" && RUN_ID_RE.test(runId)) {
+    for (const cand of [join(dir, `${runId}.json`), join(dir, input)]) {
+      if (existsSync(cand)) return { path: cand, via: "run-marker" };
+    }
   }
   return null;
 }

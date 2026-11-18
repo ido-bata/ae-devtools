@@ -782,4 +782,86 @@ t("kit: aeProcessSnapshot and gitHeadAndDirty degrade honestly", async () => {
   assert.ok(git.head === null || typeof git.head === "string");
 });
 
+
+// ---- Issue #227: runId path-traversal + AppleScript injection guards ----
+
+await at("guard: non-run-* ids can never reach marker paths", async () => {
+  const base = mkdtempSync(join(tmpdir(), "guard-trav-"));
+  const dir = join(base, "runs");
+  try {
+    // A foreign .json in the runs dir is not a marker and is ignored.
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "notes.json"), "{}");
+    assert.equal((await listRuns({ dir, aliveFn: () => false })).length, 0);
+
+    // reap on a traversal id refuses before touching the filesystem.
+    let v = await reapRun("../../etc/passwd", { dir, confirm: true, exec: async () => ({ stdout: "" }) });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "INVALID_RUN_ID");
+    v = await reapRun("run-x/../../y", { dir, confirm: true, exec: async () => ({ stdout: "" }) });
+    assert.equal(v.reason, "INVALID_RUN_ID");
+
+    // endRun on a traversal id must not delete outside the runs dir.
+    const victim = join(base, "victim.json");
+    writeFileSync(victim, "{}");
+    endRun(dir, "../victim", "closed");
+    assert.ok(existsSync(victim), "endRun deleted a file outside the runs dir");
+    rmSync(victim, { force: true });
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+await at("guard: reap passes the quit target via osascript argv, never interpolated", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-osa-"));
+  try {
+    // A marker-controlled path containing a double quote must reach
+    // osascript as an argv element, never inside a script literal.
+    const appPath = "/Applications/AE \"quoted\".app";
+    const { runId } = await beginRun({ dir, sessionKind: "a8n" });
+    markSession(dir, runId, {
+      kind: "a8n", ownership: { kind: "owned", evidence: "t" },
+      installDir: "/x", appPath,
+    });
+    endRun(dir, runId, "close-failed");
+    noteSessionProcess(dir, runId, {
+      aePid: 4242,
+      attestation: {
+        source: ATTESTATION_SOURCE,
+        ownershipKind: "owned",
+        ownershipEvidence: "probe answered in owned session",
+      },
+    });
+    let osaArgs = null;
+    const exec = async (cmd, args) => {
+      if (cmd === "ps" && args[0] === "-axo") {
+        return { stdout: "  4242 " + appPath + "/Contents/MacOS/After Effects\n" };
+      }
+      if (cmd === "ps" && args.includes("4242")) return { stdout: "" };
+      if (cmd === "osascript") { osaArgs = args; return { stdout: "" }; }
+      throw new Error("unexpected exec " + cmd);
+    };
+    const v = await reapRun(runId, {
+      dir, confirm: true, aliveFn: () => false, exec, wait: async () => {},
+    });
+    assert.equal(v.verdict, "REAPED");
+    assert.ok(osaArgs, "osascript was not invoked");
+    assert.equal(osaArgs[osaArgs.length - 1], appPath);
+    assert.ok(osaArgs.includes("on run argv"));
+    assert.ok(!osaArgs.some((a) => a.includes("tell application \"" + appPath)),
+      "target was interpolated into a script literal");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("diagnose refuses marker-lookup traversal ids", () => {
+  freshRunsDir();
+  const r = run(["diagnose", "../outside-marker"]);
+  assert.equal(r.code, 2);
+  assert.equal(r.body.schema, "ae-devtools.cli.diagnose/v1");
+  assert.ok(r.body.notes.some((n) => n.includes("no such file or run marker")), JSON.stringify(r.body.notes));
+});
+
 await finish("tests passed");
