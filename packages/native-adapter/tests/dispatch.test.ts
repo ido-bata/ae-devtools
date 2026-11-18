@@ -14,6 +14,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   DISPATCH_ARG_MAX_DEPTH,
+  NATIVE_INTAKE_OPERATIONS,
   DISPATCH_OUTCOMES,
   DISPATCH_SCHEMA,
   isDispatchArgValue,
@@ -24,7 +25,10 @@ import {
   type DispatchRequest,
   type DispatchResult,
 } from "../src/dispatch.ts";
-import { findOperation } from "../src/operations.ts";
+import {
+  findOperation,
+  isDispatchableEntry,
+} from "../src/operations.ts";
 
 const VALID_REQUEST: DispatchRequest = {
   schema: DISPATCH_SCHEMA,
@@ -194,6 +198,38 @@ describe("outcomeRequiresReconciliation — UNKNOWN/mutated-FAILED non-resend", 
   test("every declared outcome is classified", () => {
     for (const o of DISPATCH_OUTCOMES) {
       expect(typeof outcomeRequiresReconciliation(o)).toBe("boolean");
+    }
+  });
+});
+
+describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable gate", () => {
+  test("every intake operation exists in the registry and is implemented", () => {
+    for (const id of NATIVE_INTAKE_OPERATIONS) {
+      const entry = findOperation(id);
+      expect(entry).not.toBeNull();
+      expect(entry!.implemented).toBe(true);
+    }
+  });
+  test("intake membership never promotes dispatchability", () => {
+    for (const id of NATIVE_INTAKE_OPERATIONS) {
+      const entry = findOperation(id)!;
+      expect(entry.verifiedOnRealHost).toBe(false);
+      expect(entry.externalDispatchVerified ?? false).toBe(false);
+      expect(isDispatchableEntry(entry)).toBe(false);
+      /* the public gate still refuses every committed operation,
+         including intake-allowlisted ones */
+      const res = resolveDispatchOperation(id);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.refusal).toBe("operation-not-dispatchable");
+    }
+  });
+  test("intake allowlist contains only read-only project/version getters", () => {
+    expect(NATIVE_INTAKE_OPERATIONS).toContain("AEGP_ProjSuite6.AEGP_GetNumProjects");
+    expect(NATIVE_INTAKE_OPERATIONS).toContain(
+      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
+    );
+    for (const id of NATIVE_INTAKE_OPERATIONS) {
+      expect(id).toMatch(/Get/);
     }
   });
 });
