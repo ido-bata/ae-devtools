@@ -144,6 +144,25 @@ t("hung close hits --close-timeout-ms and keeps marker", () => {
   assert.equal(run(["runs"]).body.runs[0].status, "close-failed");
 });
 
+t("bare --close-timeout-ms does not collapse the close timeout (Issue #219)", () => {
+  freshRunsDir();
+  // A bare flag parses to boolean true; the buggy path turned that into
+  // a 1ms timeout. With a 150ms fake close, only the default 20s bound
+  // lets cleanup succeed.
+  const r = run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant",
+    "--close-timeout-ms"],
+    { AE_DEVTOOLS_CLI_FAKE_CLOSE: "slow" });
+  assert.equal(r.body.cleanup.ok, true, JSON.stringify(r.body.cleanup));
+});
+
+t("unknown --session is a usage error and leaves no run marker (Issue #219)", () => {
+  freshRunsDir();
+  const r = run(["execute", "read.projectSummary", "--session", "typo", "--consent", "grant"]);
+  assert.equal(r.code, 2);
+  assert.equal(r.body.code, "USAGE");
+  assert.equal(run(["runs"]).body.runs.length, 0);
+});
+
 await at("SIGTERM during execute runs cleanup then exits 143", async () => {
   freshRunsDir();
   const child = spawn("node", [CLI, "execute", "read.projectSummary",
@@ -333,6 +352,27 @@ await at("guard: owned marker without ae-a8n attestation is never reaped", async
     });
     assert.equal(v.verdict, "REFUSED");
     assert.equal(v.reason, "NO_A8N_ATTESTATION");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+await at("guard: listRuns marks unattested owned markers not reapable (Issue #219)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    // Same shape the MCP/VSCode surface guards write: ownership claims
+    // "owned" but session.process attestation is absent by design.
+    const { runId } = await beginRun({ dir, sessionKind: "a8n", surface: "mcp" });
+    markSession(dir, runId, {
+      kind: "a8n", evidenceLevel: "verified on real host (macOS)",
+      meta: { aeVersion: "26.5-fake", ownership: "owned" },
+      ownership: { kind: "owned", evidence: null },
+    });
+    endRun(dir, runId, "close-failed");
+    const runs = await listRuns({ dir, aliveFn: () => false });
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].reapable, false);
+    assert.equal(runs[0].reapBlockReason, "NO_A8N_ATTESTATION");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -713,6 +753,22 @@ await at("kit: spawnMcpStdio round-trips NDJSON against a stub server", async ()
     const tool = await withTimeout(call("ae_discover", {}), 5000, "stub-call");
     assert.equal(tool.result.echo, "tools/call");
     assert.ok(records.some((r) => r.rx && r.rx.result));
+  } finally {
+    child.kill("SIGKILL");
+  }
+});
+
+await at("kit: spawnMcpStdio rejects pending sends when the child exits (Issue #219)", async () => {
+  const { child, send } = spawnMcpStdio({
+    scriptArgs: ["-e", "setTimeout(() => process.exit(0), 50)"],
+    cwd: tmpdir(),
+    onStderr: () => {},
+  });
+  try {
+    await assert.rejects(
+      withTimeout(send("ping", {}), 5000, "dead-child"),
+      /exited with requests in flight/,
+    );
   } finally {
     child.kill("SIGKILL");
   }

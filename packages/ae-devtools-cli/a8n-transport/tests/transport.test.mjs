@@ -86,6 +86,15 @@ test("pin aeVersion mismatch refuses before ae.call", async () => {
   assert.equal(ae.calls.length, 0);
 });
 
+test("pin aeVersion unverifiable refuses before ae.call (fail-closed, Issue #219)", async () => {
+  const ae = createFakeAe();
+  ae.info = () => { throw new Error("probe unavailable"); };
+  const t = createA8nTransport({ ae });
+  const reply = codec.parse(await t.send(envelope()));
+  assert.equal(reply.refusal.code, "SESSION_PIN_UNVERIFIED");
+  assert.equal(ae.calls.length, 0);
+});
+
 test("pin match dispatches; absent pin skips the check", async () => {
   const ae = createFakeAe({ version: "26.5.3" });
   const t = createA8nTransport({ ae });

@@ -79,9 +79,11 @@ export function openFakeSession() {
       // Test seams (never set in real use):
       //   AE_DEVTOOLS_CLI_FAKE_CLOSE=throw → close rejects
       //   AE_DEVTOOLS_CLI_FAKE_CLOSE=hang  → close never resolves
+      //   AE_DEVTOOLS_CLI_FAKE_CLOSE=slow  → close resolves after 150ms
       const mode = process.env.AE_DEVTOOLS_CLI_FAKE_CLOSE;
       if (mode === "throw") throw new Error("injected fake close failure");
       if (mode === "hang") await new Promise(() => {});
+      if (mode === "slow") await new Promise((r) => setTimeout(r, 150));
     },
   };
 }

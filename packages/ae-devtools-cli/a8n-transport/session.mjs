@@ -155,6 +155,34 @@ export async function openSliceSession(options = {}) {
 
   const info = ae.info();
   const ownership = ae.ownership();
+  // Resolve the concrete install identity for run-guard markers
+  // (Issue #219): AfterEffects.launch auto-detects the install when
+  // installDir is not passed, but reap's process matching needs the
+  // real paths — resolveInstall repeats the same discovery cheaply.
+  // Best-effort: launch already succeeded, so a resolution failure
+  // here records nulls rather than failing the session.
+  let installDir = typeof options.installDir === "string" ? options.installDir : null;
+  let appPath = null;
+  try {
+    if (typeof aeA8nMod.resolveInstall === "function") {
+      const install = aeA8nMod.resolveInstall(
+        process.platform,
+        installDir !== null ? { installDir } : {},
+      );
+      const exe = install?.executable;
+      if (typeof exe === "string" && exe.length > 0) {
+        if (process.platform === "darwin") {
+          // <bundle>.app/Contents/MacOS/<exe>
+          appPath = dirname(dirname(dirname(exe)));
+          installDir = installDir ?? dirname(appPath);
+        } else {
+          installDir = installDir ?? dirname(exe);
+        }
+      }
+    }
+  } catch {
+    // marker metadata only — see comment above
+  }
   if (!ownership || ownership.kind !== "owned") {
     await ae.close({ unsavedChanges: "refuse" }).catch(() => {});
     const refusal = new Error(
@@ -194,7 +222,7 @@ export async function openSliceSession(options = {}) {
 
   return {
     ae, transport, runner, pin, info, ownership, close, workdir, aeA8nSource,
-    aeA8nHead, tracePath: ae.tracePath, sessionRoot,
+    aeA8nHead, tracePath: ae.tracePath, sessionRoot, installDir, appPath,
     // Handshake functions from the resolved module, for live-session
     // contract evidence (real-run.mjs). Gate already proved they exist.
     negotiateCapabilities: aeA8nMod.negotiateCapabilities,

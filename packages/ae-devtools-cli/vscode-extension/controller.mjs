@@ -127,11 +127,18 @@ export function createController(options = {}) {
    * Collection is read-only observation of the outcome — it never
    * changes dispatch, consent, or retry behavior.
    */
-  function withDiagnostics(payload) {
+  async function withDiagnostics(payload) {
     const inner = payload?.result;
     if (!inner || typeof inner !== "object") return payload;
+    // payload.session is the serialized sessionBlock (kind/evidenceLevel/
+    // meta) — it carries no pin. The live session object does; without it
+    // the diagnostics record loses the sessionId/dispatchId binding that
+    // CLI and MCP records have (Issue #219).
+    const live = await getSession().catch(() => null);
     const records = recordsFromExecuteResult(inner, {
-      session: payload.session,
+      session: live !== null && typeof live === "object" && "pin" in live
+        ? { kind: live.kind, pin: live.pin }
+        : payload.session,
       requestId: inner.requestId,
     });
     if (records.length === 0) return payload;

@@ -184,7 +184,19 @@ export function createA8nTransport({ ae, method, callTimeoutMs, checkPin } = {})
       } catch {
         liveVersion = null;
       }
-      if (liveVersion !== null && liveVersion !== envelope.pin.aeVersion) {
+      // A pinned aeVersion that cannot be checked against the live host
+      // is NOT a pass — the pin is the session's only host-attestable
+      // drift check, so an unreadable version refuses rather than
+      // silently dispatching (fail-closed, Issue #219).
+      if (liveVersion === null) {
+        return reply(requestId, {
+          refusal: {
+            code: "SESSION_PIN_UNVERIFIED",
+            message: `pin aeVersion ${envelope.pin.aeVersion} cannot be verified: live host version unreadable; nothing was dispatched`,
+          },
+        });
+      }
+      if (liveVersion !== envelope.pin.aeVersion) {
         return reply(requestId, {
           refusal: {
             code: "SESSION_PIN_MISMATCH",

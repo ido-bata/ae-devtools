@@ -158,7 +158,7 @@ export function spawnMcpStdio({ scriptArgs, cwd, onRecord, onStderr }) {
         const msg = JSON.parse(line);
         onRecord?.({ rx: msg });
         if (msg.id !== undefined && pending.has(msg.id)) {
-          pending.get(msg.id)(msg);
+          pending.get(msg.id).res(msg);
           pending.delete(msg.id);
         }
       } catch {
@@ -166,10 +166,19 @@ export function spawnMcpStdio({ scriptArgs, cwd, onRecord, onStderr }) {
       }
     }
   });
+  // Reject every in-flight request when the child dies — otherwise send()
+  // promises hang until the caller's withTimeout fires (Issue #219).
+  const failPending = () => {
+    const err = new Error("mcp stdio child exited with requests in flight");
+    for (const { rej } of pending.values()) rej(err);
+    pending.clear();
+  };
+  child.on("exit", failPending);
+  child.on("error", failPending);
   const send = (method, params) =>
-    new Promise((res) => {
+    new Promise((res, rej) => {
       const id = nextId++;
-      pending.set(id, res);
+      pending.set(id, { res, rej });
       child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
     });
   const notify = (method) =>

@@ -297,16 +297,30 @@ export async function listRuns({
       if (now !== null && now !== marker.pidStartStamp) runnerAlive = false;
     }
     const owned = marker.session?.ownership?.kind === "owned";
+    // reapable must mirror reap()'s gates, not just ownership: without
+    // ae-a8n attestation and an app/install identity reap always
+    // refuses, so reporting reapable:true would lie about exactly the
+    // residue class surface guards (MCP/VSCode) produce (Issue #219).
+    const att = marker.session?.process?.attestation;
+    const attested = att?.source === ATTESTATION_SOURCE &&
+      typeof att?.ownershipEvidence === "string" && att.ownershipEvidence.length > 0 &&
+      Number.isInteger(marker.session?.process?.aePid);
+    const hasAppIdentity = marker.session?.appPath != null || marker.session?.installDir != null;
+    const reapBlockReason = runnerAlive
+      ? "RUNNER_ALIVE"
+      : owned !== true
+        ? "OWNERSHIP_NOT_OWNED"
+        : !attested
+          ? "NO_A8N_ATTESTATION"
+          : !hasAppIdentity
+            ? "NO_APP_IDENTITY"
+            : null;
     runs.push({
       ...marker,
       markerPath: markerPath(dir, runId),
       runnerAlive,
-      reapable: !runnerAlive && owned === true && marker.status !== "closed",
-      reapBlockReason: runnerAlive
-        ? "RUNNER_ALIVE"
-        : owned !== true
-          ? "OWNERSHIP_NOT_OWNED"
-          : null,
+      reapable: reapBlockReason === null && marker.status !== "closed",
+      reapBlockReason,
     });
   }
   return runs;

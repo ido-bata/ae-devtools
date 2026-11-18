@@ -155,6 +155,24 @@ test("unknown method → JSON-RPC method-not-found; bad JSON → parse error", a
   await c.server.close();
 });
 
+test("id-less tools/call is a notification: no dispatch, no response (Issue #219)", async () => {
+  const { factory, calls } = countingSessionFactory();
+  const c = makeClient({ sessionFactory: factory });
+  await c.request("initialize", { protocolVersion: "2025-06-18", capabilities: {} });
+  c.notify("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  await new Promise((r) => setTimeout(r, 200));
+  // No response may be written for a notification, and the session
+  // factory must never have been invoked.
+  assert.equal(c.inbox.length, 0);
+  assert.equal(calls.count, 0);
+  const ping = await c.request("ping");
+  assert.deepEqual(ping.result, {});
+  await c.server.close();
+});
+
 test("ae_discover lists ops with honest evidence; opens no session", async () => {
   const { factory, calls } = countingSessionFactory();
   const c = makeClient({ sessionFactory: factory });

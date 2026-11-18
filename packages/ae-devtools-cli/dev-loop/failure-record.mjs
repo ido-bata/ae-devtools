@@ -91,6 +91,7 @@ export function recordFromExecuteResult({ result, outcome, session, requestId, c
       result?.refusal?.message,
       result?.unknownCategory,
       adapterMsg,
+      typeof result?.error === "string" ? result.error : null,
     ].filter((v) => typeof v === "string" && v.length > 0).join(" ");
     record = collectors.fromTransportOutcome(
       {

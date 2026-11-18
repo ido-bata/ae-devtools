@@ -163,8 +163,12 @@ function makeCleanup(state, flags) {
       if (state.session) {
         // Bounded close is shared with MCP/VSCode
         // (dev-loop/session-close.mjs, Issue #196).
-        const timeoutMs = Number.isFinite(Number(flags["close-timeout-ms"]))
-          ? Number(flags["close-timeout-ms"])
+        // A bare `--close-timeout-ms` parses to boolean true; Number(true)
+        // is 1 — guard on string + finite + positive like the MCP path.
+        const closeTimeoutRaw = flags["close-timeout-ms"];
+        const closeTimeoutNum = typeof closeTimeoutRaw === "string" ? Number(closeTimeoutRaw) : NaN;
+        const timeoutMs = Number.isFinite(closeTimeoutNum) && closeTimeoutNum > 0
+          ? closeTimeoutNum
           : DEFAULT_CLOSE_TIMEOUT_MS;
         Object.assign(cleanup, await closeSessionWithTimeout(state.session, { timeoutMs }));
       }
@@ -304,6 +308,16 @@ async function main() {
           emit({ error: `--args is not valid JSON: ${flags.args}` });
           return 2;
         }
+      }
+
+      // Validate the session kind BEFORE writing the run marker: an
+      // unknown --session would otherwise leave a permanent open-failed
+      // marker that reap can never resolve (OWNERSHIP_NOT_OWNED,
+      // session:null) — noise, not residue (Issue #219).
+      const sessionKind = flags.session ?? "fake";
+      if (sessionKind !== "fake" && sessionKind !== "a8n") {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `unknown --session '${flags.session}' (fake|a8n)` });
+        return 2;
       }
 
       // Marker BEFORE session open: a launch that dies mid-open still
