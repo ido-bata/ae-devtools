@@ -33,6 +33,7 @@ touched.
 | Panel reload / unload / cleanup | — | not run | **UNVERIFIED** |
 | UXP plugin lifecycle | — | not run; Adobe released-build surface absent | **BLOCKED/UNVERIFIED** |
 | Windows anything | — | no Windows host | **UNVERIFIED** |
+| win32 CEP log dir path | Adobe CEP Debugging Handbook (CEP_11.x/12.x), "Logs Folders": Windows CEP logs folder is `%temp%` directly (e.g. `CEPHtmlEngine12-<Host>-<ver>-<ext>.log` in `%TEMP%`), NOT `%APPDATA%\Adobe\CEP\logs` | **source-reviewed**; modeled in `cepLogDir({platform:"win32"})` + unit tests; real Windows host **UNVERIFIED** |
 
 ## Real-host environment observations (non-invasive, 2026-11-14)
 
