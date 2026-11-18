@@ -75,6 +75,8 @@ Result `compatible` returns the granted per-operation states. It asserts version
 
 The structured result a future adapter collects from NativeProbe is specified in [native-probe-result.md](native-probe-result.md) (`ae-devtools/native-probe-result/v1`, implemented as `src/probe-result.ts`). It is **UNVERIFIED**: it describes what the adapter *would* collect, aligned to `probe.cpp`'s debug-log emissions. It does not mean native dispatch is implemented.
 
+The post-negotiation dispatch envelope — the request/result shape an adapter would use to invoke one registry operation against a pinned session — is specified in [native-dispatch.md](native-dispatch.md) (`ae-devtools/native-dispatch/v1`, implemented as `src/dispatch.ts`). Like this contract it is a devtools-owned surface only: transport, authorization issuance, and in-AE intake remain ae-a8n-owned per ADR-0005 D7, and every committed operation currently refuses `operation-not-dispatchable`.
+
 ## 6. Non-goals / explicit limitations
 
 - No SDK plug-in dispatch is implemented; kits are fill-in templates and the operation registry is contract-level.
