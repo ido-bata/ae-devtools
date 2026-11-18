@@ -22,10 +22,13 @@ HEADERS="$SDK_ROOT/Examples/Headers"
 OUT="$HERE/build-test"
 mkdir -p "$OUT"
 
-# SANITIZE=1 builds the same test binary with ASan+UBSan. Scoped to this
-# C++ memory-safety surface (Issue #64 follow-up): the fake host
-# intentionally never frees AE-owned-style handles, so leak detection
-# is disabled — UAF/OOB/overflow are still fully checked.
+# SANITIZE=1 builds the same test binary with ASan+UBSan. Scoped to
+# this C++ memory-safety surface (Issue #64 follow-up). Note: LeakSanitizer
+# does not exist on macOS — LSan is a Linux/Android feature — so leak
+# detection is not available here regardless of flags. The fake host
+# still tracks every handle allocation and reclaims it in ~FakeHost,
+# which keeps teardown deterministic and would surface leaks on
+# platforms where LSan runs.
 SAN_FLAGS=""
 if [ "${SANITIZE:-0}" = "1" ]; then
   SAN_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
@@ -40,8 +43,4 @@ clang++ -std=c++17 -O1 -g -Wall -Wextra -Werror \
   "$HERE/../src/probe.cpp" "$HERE/fake_host.cpp" "$HERE/test_main.cpp" \
   -o "$OUT/probe_test"
 
-if [ "${SANITIZE:-0}" = "1" ]; then
-  ASAN_OPTIONS=detect_leaks=0 "$OUT/probe_test"
-else
-  "$OUT/probe_test"
-fi
+"$OUT/probe_test"

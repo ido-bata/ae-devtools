@@ -125,26 +125,72 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 /**
+ * Depth/node budgets for `isDispatchArgValue`. Untrusted input must be
+ * rejected safely: cyclic structures would recurse forever, deep
+ * nesting would overflow the stack, and huge inputs would burn CPU.
+ * Both limits are far beyond any legitimate AEGP argument shape.
+ */
+export const DISPATCH_ARG_MAX_DEPTH = 64;
+export const DISPATCH_ARG_MAX_NODES = 100_000;
+
+/**
  * True when `value` belongs to the ES3-serializable set: null,
  * boolean, finite number, string, array of serializables, or plain
  * object with serializable values. `undefined`, functions, symbols,
  * non-finite numbers, and non-plain objects are rejected — inside the
  * ES3 host there is no `JSON` to silently collapse them.
+ *
+ * Defensive against hostile input: cycles are detected via the current
+ * recursion path (shared DAG references remain valid), depth and total
+ * node count are bounded, and any exception thrown while inspecting
+ * the value (e.g. a throwing getter or revoked Proxy) rejects rather
+ * than propagates.
  */
 export function isDispatchArgValue(value: unknown): boolean {
-  if (value === null) return true;
-  switch (typeof value) {
-    case "boolean":
-    case "string":
-      return true;
-    case "number":
-      return Number.isFinite(value);
-    case "object":
-      if (Array.isArray(value)) return value.every(isDispatchArgValue);
-      if (!isPlainObject(value)) return false;
-      return Object.values(value).every(isDispatchArgValue);
-    default:
-      return false;
+  const path = new Set<object>();
+  let nodes = 0;
+  const visit = (v: unknown, depth: number): boolean => {
+    if (++nodes > DISPATCH_ARG_MAX_NODES) return false;
+    if (v === null) return true;
+    switch (typeof v) {
+      case "boolean":
+      case "string":
+        return true;
+      case "number":
+        return Number.isFinite(v);
+      case "object": {
+        if (depth >= DISPATCH_ARG_MAX_DEPTH) return false;
+        if (path.has(v)) return false; /* cycle on the current path */
+        if (Array.isArray(v)) {
+          path.add(v);
+          try {
+            for (const e of v) {
+              if (!visit(e, depth + 1)) return false;
+            }
+            return true;
+          } finally {
+            path.delete(v);
+          }
+        }
+        if (!isPlainObject(v)) return false;
+        path.add(v);
+        try {
+          for (const e of Object.values(v)) {
+            if (!visit(e, depth + 1)) return false;
+          }
+          return true;
+        } finally {
+          path.delete(v);
+        }
+      }
+      default:
+        return false;
+    }
+  };
+  try {
+    return visit(value, 0);
+  } catch {
+    return false; /* hostile object (throwing getter, revoked Proxy) */
   }
 }
 
@@ -285,12 +331,22 @@ export function validateDispatchResult(value: unknown): string[] {
 
 /**
  * True when the outcome leaves the request's effect on AE state
- * ambiguous. Such outcomes are NEVER auto-retried: the client records
- * the request artifact and requires manual reconciliation. Only
- * `not-sent` (environment-proven non-dispatch) and terminal
- * `refused`/`completed`/`failed`-without-mutation are unambiguous —
- * and even those are re-issued as NEW requests, never resent.
+ * ambiguous — `unknown` always, and `failed` when the result reports
+ * `mayHaveMutated: true` (atomicity unproven). Such outcomes are NEVER
+ * auto-retried: the client records the request artifact and requires
+ * manual reconciliation. Only `not-sent` (environment-proven
+ * non-dispatch) and terminal `refused`/`completed`/`failed`-without-
+ * mutation are unambiguous — and even those are re-issued as NEW
+ * requests, never resent.
+ *
+ * `mayHaveMutated` is only meaningful for `failed`/`unknown` results
+ * (the validator requires it there); callers pass the result's flag
+ * through. For `unknown` the flag is advisory — reconciliation is
+ * required regardless of its value.
  */
-export function outcomeRequiresReconciliation(outcome: DispatchOutcome): boolean {
-  return outcome === "unknown";
+export function outcomeRequiresReconciliation(
+  outcome: DispatchOutcome,
+  mayHaveMutated?: boolean,
+): boolean {
+  return outcome === "unknown" || (outcome === "failed" && mayHaveMutated === true);
 }

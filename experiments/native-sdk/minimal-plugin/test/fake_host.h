@@ -233,7 +233,22 @@ struct FakeHost
     AEGP_LayerSuite9 layerSuite;
     SPBasicSuite basicSuite;
 
+    /* Every heap allocation the fake hands out as an opaque handle is
+       tracked here so ~FakeHost can release what the probe borrowed
+       but never freed (mirroring AE handle ownership). Mem-handle
+       wrappers freed via FakeFreeMemHandle are untracked at free
+       time; anything still tracked at destruction is reclaimed. */
+    struct TrackedAlloc
+    {
+        void* ptr;
+        void (*destroy)(void*);
+    };
+    std::vector<TrackedAlloc> trackedAllocs;
+    void TrackAlloc(void* ptr, void (*destroy)(void*));
+    void UntrackAlloc(void* ptr);
+
     FakeHost();
+    ~FakeHost();
     /* (Re)populate the suite tables from the current flags. Called by
        the constructor; call again after changing suite-related flags
        (failAcquire*, null*Entry, registerIdleHookMissing,

@@ -13,6 +13,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  DISPATCH_ARG_MAX_DEPTH,
   DISPATCH_OUTCOMES,
   DISPATCH_SCHEMA,
   isDispatchArgValue,
@@ -53,6 +54,41 @@ describe("isDispatchArgValue — ES3 serializable set", () => {
   test("rejects nested non-serializable members", () => {
     expect(isDispatchArgValue({ ok: 1, bad: undefined })).toBe(false);
     expect(isDispatchArgValue([1, Number.NaN])).toBe(false);
+  });
+  test("rejects cyclic structures without hanging", () => {
+    const a: Record<string, unknown> = {};
+    a.self = a;
+    expect(isDispatchArgValue(a)).toBe(false);
+    const arr: unknown[] = [];
+    arr.push(arr);
+    expect(isDispatchArgValue(arr)).toBe(false);
+    const indirect: Record<string, unknown> = { b: {} };
+    (indirect.b as Record<string, unknown>).back = indirect;
+    expect(isDispatchArgValue(indirect)).toBe(false);
+  });
+  test("accepts shared (DAG) references that are not cycles", () => {
+    const shared = { v: 1 };
+    expect(isDispatchArgValue({ a: shared, b: shared })).toBe(true);
+    const arr: unknown[] = [shared, shared];
+    expect(isDispatchArgValue(arr)).toBe(true);
+  });
+  test("rejects excessive depth and node count", () => {
+    let deep: unknown = 1;
+    for (let i = 0; i < DISPATCH_ARG_MAX_DEPTH + 5; i++) deep = [deep];
+    expect(isDispatchArgValue(deep)).toBe(false);
+    const wide: unknown[] = new Array(200_000).fill(0);
+    expect(isDispatchArgValue(wide)).toBe(false);
+  });
+  test("rejects hostile objects that throw during inspection", () => {
+    const throwing = {
+      get boom(): unknown {
+        throw new Error("hostile getter");
+      },
+    };
+    expect(isDispatchArgValue(throwing)).toBe(false);
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    expect(isDispatchArgValue(revoked.proxy)).toBe(false);
   });
 });
 
@@ -138,10 +174,26 @@ describe("validateDispatchResult", () => {
   });
 });
 
-describe("outcomeRequiresReconciliation — UNKNOWN non-resend", () => {
-  test("only unknown requires reconciliation", () => {
+describe("outcomeRequiresReconciliation — UNKNOWN/mutated-FAILED non-resend", () => {
+  test("unknown always requires reconciliation", () => {
+    expect(outcomeRequiresReconciliation("unknown")).toBe(true);
+    expect(outcomeRequiresReconciliation("unknown", false)).toBe(true);
+    expect(outcomeRequiresReconciliation("unknown", true)).toBe(true);
+  });
+  test("failed requires reconciliation only when mayHaveMutated", () => {
+    expect(outcomeRequiresReconciliation("failed", true)).toBe(true);
+    expect(outcomeRequiresReconciliation("failed", false)).toBe(false);
+    expect(outcomeRequiresReconciliation("failed")).toBe(false);
+  });
+  test("terminal unambiguous outcomes never require reconciliation", () => {
+    for (const o of ["completed", "refused", "not-sent"] as const) {
+      expect(outcomeRequiresReconciliation(o)).toBe(false);
+      expect(outcomeRequiresReconciliation(o, true)).toBe(false);
+    }
+  });
+  test("every declared outcome is classified", () => {
     for (const o of DISPATCH_OUTCOMES) {
-      expect(outcomeRequiresReconciliation(o)).toBe(o === "unknown");
+      expect(typeof outcomeRequiresReconciliation(o)).toBe("boolean");
     }
   });
 });

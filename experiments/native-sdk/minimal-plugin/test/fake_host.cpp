@@ -137,16 +137,61 @@ int FakeHost::StartCount() const
 /* never observe a pointer to a stack/local. WrapPayload is the single */
 /* place that performs the two-level allocation — handle makers must   */
 /* use it (or an equivalent heap double-pointer) and must never return */
-/* &local. Payloads are intentionally never freed: the fake mirrors AE */
-/* handle ownership (borrowed by the caller for the call duration).    */
+/* &local. Payloads mirror AE handle ownership (borrowed by the caller */
+/* for the call duration, never freed mid-run); every allocation is    */
+/* registered with the live FakeHost so ~FakeHost reclaims whatever    */
+/* the probe did not free — deterministic teardown that keeps         */
+/* sanitizer runs honest (double-free/UAF still fire under ASan).    */
 /* ------------------------------------------------------------------ */
+
+template <typename T>
+static void DestroyPayload(void* w)
+{
+    T** hp = (T**)w;
+    delete *hp;
+    delete hp;
+}
 
 template <typename T>
 static void* WrapPayload(T* payload)
 {
     T** hp = new T*;
     *hp = payload;
+    if (g_host)
+    {
+        g_host->TrackAlloc(hp, &DestroyPayload<T>);
+    }
     return hp;
+}
+
+void FakeHost::TrackAlloc(void* ptr, void (*destroy)(void*))
+{
+    trackedAllocs.push_back({ptr, destroy});
+}
+
+void FakeHost::UntrackAlloc(void* ptr)
+{
+    for (size_t i = 0; i < trackedAllocs.size(); ++i)
+    {
+        if (trackedAllocs[i].ptr == ptr)
+        {
+            trackedAllocs.erase(trackedAllocs.begin() + (ptrdiff_t)i);
+            return;
+        }
+    }
+}
+
+FakeHost::~FakeHost()
+{
+    for (size_t i = 0; i < trackedAllocs.size(); ++i)
+    {
+        trackedAllocs[i].destroy(trackedAllocs[i].ptr);
+    }
+    trackedAllocs.clear();
+    if (g_host == this)
+    {
+        g_host = NULL; /* never let WrapPayload register into a dead host */
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -569,8 +614,13 @@ static A_Err FakeNewMemHandle(
 static A_Err FakeFreeMemHandle(AEGP_MemHandle memH)
 {
     FakeMemRec* rec = RecFromHandle(memH);
+    if (rec->freed)
+    {
+        return A_Err_GENERIC; /* double-free is an error, not a no-op */
+    }
     rec->freed = true;
     g_host->memHandlesFreed++;
+    g_host->UntrackAlloc(memH);
     struct _Up_OpaqueMem** hp = (struct _Up_OpaqueMem**)memH;
     delete *hp;
     delete hp;
@@ -863,6 +913,13 @@ static AEGP_ItemViewP NewItemViewHandle(int index)
 {
     struct _AEGP_ItemView* v = new struct _AEGP_ItemView;
     v->index = index;
+    /* AEGP_ItemViewP is a single pointer (not pointer-to-pointer), so
+       it cannot go through WrapPayload; track the raw allocation for
+       ~FakeHost reclamation instead. */
+    if (g_host)
+    {
+        g_host->TrackAlloc(v, [](void* p) { delete (struct _AEGP_ItemView*)p; });
+    }
     return (AEGP_ItemViewP)v;
 }
 
