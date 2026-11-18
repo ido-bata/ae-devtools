@@ -2,7 +2,7 @@
 
 <!-- GENERATED FILE — do not edit. Regenerate: cd packages/native-adapter && bun run render -->
 
-> **Coverage-matrix class: `external-command` — reporting metadata only, never dispatchable.** State=`inventory-only`, implemented=`false`, verifiedOnRealHost=`false`, symbols=3766.
+> **Coverage-matrix class: `external-command` — reporting metadata only, never dispatchable.** State=`inventory-only`, implemented=`false`, verifiedOnRealHost=`false`, symbols=3750.
 > Source: `inventories/sdk/generated/aggregate.coverage-matrix.json` (schema `ae-devtools/sdk-coverage-matrix/1`, SDK release 26.5 macOS).
 > Evidence level — inventory: `source-reviewed`, verification: `not-run`, realHost: `not-run`.
 > Selector strings attributed from headers. No adapter, no real-host dispatch evidence.

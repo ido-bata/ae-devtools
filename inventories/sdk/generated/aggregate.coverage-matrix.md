@@ -1,13 +1,13 @@
 # SDK coverage matrix (generated)
 
 Release: 26.5 (macOS)
-Symbols: 4677 across 70 headers; unknown/unsupported: 552
+Symbols: 4660 across 70 headers; unknown/unsupported: 552
 
 | Class | Symbols | State |
 | --- | ---: | --- |
 | build-test-lifecycle | 74 | build-probe-only — Sample projects compile (Sweetie/Checkout, macOS arm64). Load/execution UNVERIFIED. |
-| external-command | 3766 | inventory-only — Selector strings attributed from headers. No adapter, no real-host dispatch evidence. |
-| host-callback | 154 | inventory-only — Callback slots/types enumerated. Lifetime/thread-safety rules documented, unexercised. |
+| external-command | 3750 | inventory-only — Selector strings attributed from headers. No adapter, no real-host dispatch evidence. |
+| host-callback | 153 | inventory-only — Callback slots/types enumerated. Lifetime/thread-safety rules documented, unexercised. |
 | in-host-plugin-command | 131 | inventory-only — In-plugin command surface enumerated. Not reachable from devtools yet. |
 | unsupported-or-unknown | 552 | unsupported-or-unknown — Extractor could not attribute; see unknownByReason. Requires per-family review (CAP047). |
 
@@ -25,8 +25,8 @@ Symbols: 4677 across 70 headers; unknown/unsupported: 552
 | AE_ComputeCacheSuite.h | 19 |
 | AE_CreatorInfo.h | 1 |
 | AE_Effect.h | 234 |
-| AE_EffectCB.h | 84 |
-| AE_EffectCBSuites.h | 148 |
+| AE_EffectCB.h | 83 |
+| AE_EffectCBSuites.h | 134 |
 | AE_EffectGPUSuites.h | 17 |
 | AE_EffectPixelFormat.h | 2 |
 | AE_EffectSuites.h | 73 |
@@ -34,8 +34,8 @@ Symbols: 4677 across 70 headers; unknown/unsupported: 552
 | AE_EffectSuitesOld.h | 38 |
 | AE_EffectUI.h | 46 |
 | AE_EffectVers.h | 4 |
-| AE_GeneralPlug.h | 988 |
-| AE_GeneralPlugOld.h | 2280 |
+| AE_GeneralPlug.h | 987 |
+| AE_GeneralPlugOld.h | 2279 |
 | AE_GeneralPlugPanels.h | 18 |
 | AE_GeneralPlugPost.h | 0 |
 | AE_GeneralPlugPre.h | 0 |
@@ -92,6 +92,7 @@ Symbols: 4677 across 70 headers; unknown/unsupported: 552
 - unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.
 - Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.
 - Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.
+- Struct member extraction is hierarchy-aware: only function-pointer declarators at struct depth-1 count as suite/callback slots. Callback parameters nested inside a member's own parameter list (e.g. per-pixel iterator arguments) are arguments the caller supplies, not struct members, and are not counted.
 - No behavioural claim about any AE build is implied. Nothing here was executed against After Effects.
 
 No row in this matrix is verifiedOnRealHost. Build-probe-only means the SDK sample compiles; it does not mean AE loads the plugin.

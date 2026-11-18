@@ -12,7 +12,7 @@
     "statement": "Symbols were extracted from AE SDK 26.5 macOS headers by a deterministic parser. No After Effects process was started; no plug-in was built or loaded; no symbol was executed. Windows headers were not obtained; Windows ABI/layout claims are UNVERIFIED."
   },
   "totals": {
-    "symbols": 4677,
+    "symbols": 4660,
     "unknown": 552,
     "unknownByReason": {
       "deprecated-header-only": 0,
@@ -31,14 +31,14 @@
       "verifiedOnRealHost": false
     },
     "external-command": {
-      "symbols": 3766,
+      "symbols": 3750,
       "state": "inventory-only",
       "note": "Selector strings attributed from headers. No adapter, no real-host dispatch evidence.",
       "implemented": false,
       "verifiedOnRealHost": false
     },
     "host-callback": {
-      "symbols": 154,
+      "symbols": 153,
       "state": "inventory-only",
       "note": "Callback slots/types enumerated. Lifetime/thread-safety rules documented, unexercised.",
       "implemented": false,
@@ -172,21 +172,21 @@
     },
     {
       "path": "AE_EffectCB.h",
-      "symbols": 84,
+      "symbols": 83,
       "byClass": {
         "build-test-lifecycle": 0,
         "external-command": 0,
-        "host-callback": 69,
+        "host-callback": 68,
         "in-host-plugin-command": 0,
         "unsupported-or-unknown": 15
       }
     },
     {
       "path": "AE_EffectCBSuites.h",
-      "symbols": 148,
+      "symbols": 134,
       "byClass": {
         "build-test-lifecycle": 0,
-        "external-command": 148,
+        "external-command": 134,
         "host-callback": 0,
         "in-host-plugin-command": 0,
         "unsupported-or-unknown": 0
@@ -271,10 +271,10 @@
     },
     {
       "path": "AE_GeneralPlug.h",
-      "symbols": 988,
+      "symbols": 987,
       "byClass": {
         "build-test-lifecycle": 0,
-        "external-command": 832,
+        "external-command": 831,
         "host-callback": 11,
         "in-host-plugin-command": 7,
         "unsupported-or-unknown": 138
@@ -282,10 +282,10 @@
     },
     {
       "path": "AE_GeneralPlugOld.h",
-      "symbols": 2280,
+      "symbols": 2279,
       "byClass": {
         "build-test-lifecycle": 0,
-        "external-command": 2274,
+        "external-command": 2273,
         "host-callback": 1,
         "in-host-plugin-command": 0,
         "unsupported-or-unknown": 5
@@ -836,6 +836,7 @@
     "unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.",
     "Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.",
     "Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.",
+    "Struct member extraction is hierarchy-aware: only function-pointer declarators at struct depth-1 count as suite/callback slots. Callback parameters nested inside a member's own parameter list (e.g. per-pixel iterator arguments) are arguments the caller supplies, not struct members, and are not counted.",
     "No behavioural claim about any AE build is implied. Nothing here was executed against After Effects."
   ],
   "claims": {

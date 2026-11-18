@@ -2,7 +2,7 @@
 
 <!-- GENERATED FILE — do not edit. Regenerate: cd packages/native-adapter && bun run render -->
 
-> **Coverage-matrix class: `host-callback` — reporting metadata only, never dispatchable.** State=`inventory-only`, implemented=`false`, verifiedOnRealHost=`false`, symbols=154.
+> **Coverage-matrix class: `host-callback` — reporting metadata only, never dispatchable.** State=`inventory-only`, implemented=`false`, verifiedOnRealHost=`false`, symbols=153.
 > Source: `inventories/sdk/generated/aggregate.coverage-matrix.json` (schema `ae-devtools/sdk-coverage-matrix/1`, SDK release 26.5 macOS).
 > Evidence level — inventory: `source-reviewed`, verification: `not-run`, realHost: `not-run`.
 > Callback slots/types enumerated. Lifetime/thread-safety rules documented, unexercised.

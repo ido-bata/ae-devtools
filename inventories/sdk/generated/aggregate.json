@@ -45,11 +45,11 @@
     "headerFilesParsed": 70,
     "headerFilesPresent": 70,
     "headersAtTopLevel": 40,
-    "symbols": 4677,
+    "symbols": 4660,
     "byClass": {
       "build-test-lifecycle": 74,
-      "external-command": 3766,
-      "host-callback": 154,
+      "external-command": 3750,
+      "host-callback": 153,
       "in-host-plugin-command": 131,
       "unsupported-or-unknown": 552
     },
@@ -61,27 +61,27 @@
       "unattributed-callable": 13
     },
     "byKind": {
-      "callback-slot": 98,
+      "callback-slot": 97,
       "callback-type": 69,
       "entry-point": 29,
       "entry-point-slot": 58,
       "selector": 49,
       "suite": 227,
-      "suite-slot": 3539,
+      "suite-slot": 3523,
       "type": 534,
       "version-or-pipl": 74
     },
     "byEvidence": {
       "host-dispatches-entry-point": 87,
-      "host-invoked-callback": 154,
+      "host-invoked-callback": 153,
       "host-to-plugin-selector": 30,
       "none": 604,
-      "suite-registration-string": 3728,
+      "suite-registration-string": 3712,
       "version-or-pipl-declaration": 74
     },
     "byRuleFamily": {
       "entry-block": 79,
-      "host-proc-table": 121,
+      "host-proc-table": 120,
       "nested-in-host-proc-table": 19,
       "prototype+entry-point-comment": 8,
       "registered-with-host-via-suite": 2,
@@ -89,13 +89,13 @@
       "selector-enum-undocumented": 14,
       "slot-type-of-suite": 12,
       "suite+registration-string": 225,
-      "suite-slot+registration-string": 3503,
+      "suite-slot+registration-string": 3487,
       "suite-slot-unregistered": 36,
       "suite-unregistered": 2,
       "unknown": 552,
       "version-macro": 74
     },
-    "deprecatedHeaderSymbols": 2318
+    "deprecatedHeaderSymbols": 2317
   },
   "perHeader": [
     {
@@ -253,11 +253,11 @@
       "bytes": 46186,
       "sha256": "b23e7add285ca1fdf41d7a3eabb9c82b75856e9155cb2eb6b3d81f900b1c44b8",
       "notice": "adobe-confidential-no-reproduction",
-      "symbols": 84,
+      "symbols": 83,
       "byClass": {
         "build-test-lifecycle": 0,
         "external-command": 0,
-        "host-callback": 69,
+        "host-callback": 68,
         "in-host-plugin-command": 0,
         "unsupported-or-unknown": 15
       },
@@ -268,10 +268,10 @@
       "bytes": 31635,
       "sha256": "f61e1d9c1d227ec047740957f09745b93c23008670442e34c3a27c0529612065",
       "notice": "adobe-confidential-no-reproduction",
-      "symbols": 148,
+      "symbols": 134,
       "byClass": {
         "build-test-lifecycle": 0,
-        "external-command": 148,
+        "external-command": 134,
         "host-callback": 0,
         "in-host-plugin-command": 0,
         "unsupported-or-unknown": 0
@@ -388,10 +388,10 @@
       "bytes": 242278,
       "sha256": "24414adeae741a2f6328f4eb9aa24c4bb271a1e5214192f7ad927892f7d6a49b",
       "notice": "adobe-confidential-no-reproduction",
-      "symbols": 988,
+      "symbols": 987,
       "byClass": {
         "build-test-lifecycle": 0,
-        "external-command": 832,
+        "external-command": 831,
         "host-callback": 11,
         "in-host-plugin-command": 7,
         "unsupported-or-unknown": 138
@@ -403,10 +403,10 @@
       "bytes": 466823,
       "sha256": "4bbe79112e1d099b3fc020170a4e6b5bead2f5db95e961a42ad312ed1feab637",
       "notice": "adobe-confidential-no-reproduction",
-      "symbols": 2280,
+      "symbols": 2279,
       "byClass": {
         "build-test-lifecycle": 0,
-        "external-command": 2274,
+        "external-command": 2273,
         "host-callback": 1,
         "in-host-plugin-command": 0,
         "unsupported-or-unknown": 5
@@ -1154,6 +1154,7 @@
     "unsupported-or-unknown is dominated by plain data types, which have no call direction to classify. It is not a count of missing callables.",
     "Headers marked deprecated (the *Old.h variants) do not reduce the denominator; their symbols are counted in their functional class and flagged separately.",
     "Classification is rule-based and provisional. Rule tallies are reported so a reviewer can see exactly which rule produced each class.",
+    "Struct member extraction is hierarchy-aware: only function-pointer declarators at struct depth-1 count as suite/callback slots. Callback parameters nested inside a member's own parameter list (e.g. per-pixel iterator arguments) are arguments the caller supplies, not struct members, and are not counted.",
     "No behavioural claim about any AE build is implied. Nothing here was executed against After Effects."
   ]
 }
