@@ -55,6 +55,13 @@ test("manifest is well-formed and uses the official CEP 5+/12 structure", async 
 
 test("manifest validates against the vendored official XSD", async (t) => {
   if (!xmllintAvailable()) {
+    // Same contract as cep-extension/tests/scaffold.test.mjs: CI sets
+    // AE_DEVTOOLS_REQUIRE_XMLLINT=1 after installing libxml2-utils, so a
+    // missing xmllint there is a broken environment — fail instead of
+    // silently un-verifying the XSD contract (Issue #246).
+    if (process.env.AE_DEVTOOLS_REQUIRE_XMLLINT === "1") {
+      assert.fail("xmllint required by AE_DEVTOOLS_REQUIRE_XMLLINT but not available");
+    }
     t.skip("xmllint not available; XSD validation skipped");
     return;
   }

@@ -54,18 +54,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Detect lock file
         id: detect
         run: |
-          if [ -f skills-lock.json ]; then
+          # The verifier needs the lock file AND the vendored skills/
+          # tree AND the script itself — probing only the lock file
+          # would fail with MODULE_NOT_FOUND/ENOENT on a partial head
+          # instead of skipping cleanly (Issue #246).
+          if [ -f skills-lock.json ] && [ -f scripts/verify-skills-lock.mjs ] && [ -d skills ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "skills-lock.json not on this head; skipping"
+            echo "skills-lock surface incomplete on this head; skipping"
           fi
       - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
       - if: steps.detect.outputs.present == 'true'
@@ -91,7 +95,7 @@ jobs:
             echo "packages/capability-catalog not on this head; skipping"
           fi
       - if: steps.detect.outputs.present == 'true'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - if: steps.detect.outputs.present == 'true'
         working-directory: packages/capability-catalog
         run: bun install --frozen-lockfile
@@ -121,7 +125,7 @@ jobs:
             echo "packages/native-adapter not on this head; skipping"
           fi
       - if: steps.detect.outputs.present == 'true'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - if: steps.detect.outputs.present == 'true'
         working-directory: packages/native-adapter
         run: bun install --frozen-lockfile
@@ -158,7 +162,7 @@ jobs:
           done
           echo "any=$any" >> "$GITHUB_OUTPUT"
       - if: steps.detect.outputs.any == 'true'
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - if: steps.detect.outputs.tools == 'true'
         working-directory: inventories/tools
         run: |
@@ -174,26 +178,44 @@ jobs:
       # scripting `verify` rebuilds from the git-ignored .cache/ payloads
       # and falls back to fetching Adobe helpx when they are absent — the
       # CDN 403s CI runners, so this is an explicit, annotated skip where
-      # the cache is not provisioned (never silent; Issue #231).
+      # the cache is not provisioned (never silent; Issue #231). ALL
+      # payload keys declared in scripts/sources.ts are required — a
+      # partial cache would run verify and fail on the missing payloads
+      # (Issue #246).
       - if: steps.detect.outputs.scripting == 'true'
         working-directory: inventories/scripting
         run: |
-          if [ -f .cache/adobe-scripts.payload ]; then
+          missing=""
+          for k in $(grep -oE 'key: "[^"]+"' scripts/sources.ts | sed -E 's/key: "([^"]+)"/\1/'); do
+            [ -f ".cache/$k.payload" ] || missing="$missing $k"
+          done
+          if [ -z "$missing" ]; then
             bun run verify
           else
-            echo "::notice::inventories/scripting verify skipped: .cache payloads not provisioned (byte-identical rebuild deferred to a provisioned host)"
+            echo "::notice::inventories/scripting verify skipped: .cache payloads missing:$missing (byte-identical rebuild deferred to a provisioned host)"
           fi
-      # tools `verify` needs the git-ignored .reference clones
-      # (network-provisioned); CI has none, so this is an explicit,
-      # annotated skip — never silent. On a host with clones provisioned
-      # the same command runs citation + byte-identity verification.
+      # tools `verify` needs the git-ignored .reference clones for every
+      # registry entry (network-provisioned); CI has none, so this is an
+      # explicit, annotated skip — never silent. The required set is
+      # derived from scripts/registry.ts (ae-a8n + every cloneDir) so a
+      # newly registered tool automatically joins the probe (Issue #246).
+      # On a host with all clones provisioned the same command runs
+      # citation + byte-identity verification.
       - if: steps.detect.outputs.tools == 'true'
         working-directory: inventories/tools
         run: |
-          if [ -d ../../.reference/ae-a8n ]; then
+          required="ae-a8n"
+          for d in $(grep -oE 'cloneDir: "[^"]+"' scripts/registry.ts | sed -E 's/cloneDir: "([^"]+)"/\1/'); do
+            required="$required $d"
+          done
+          missing=""
+          for d in $required; do
+            [ -d "../../.reference/$d" ] || missing="$missing $d"
+          done
+          if [ -z "$missing" ]; then
             bun run verify
           else
-            echo "::notice::inventories/tools verify skipped: .reference clones not provisioned (citation + byte-identity checks deferred to a provisioned host)"
+            echo "::notice::inventories/tools verify skipped: .reference clones missing:$missing (citation + byte-identity checks deferred to a provisioned host)"
           fi
       # inventories/sdk has no package.json by design (generated data +
       # scripts only); its two test files are wired here explicitly —
@@ -311,8 +333,22 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         run: |
           node packages/ae-devtools-cli/scripting-adapters/scripts/coverage-claims.mjs
-          node packages/ae-devtools-cli/jsx-toolchain/src/gen-ae-types.mjs
-          git diff --exit-code -- \
+          # gen-ae-types reads inventories/scripting/generated/symbols.json
+          # which lives outside this job's detected surface — skip with a
+          # notice on a head that carries the CLI package but not the
+          # inventory (Issue #246).
+          if [ -f inventories/scripting/generated/symbols.json ]; then
+            node packages/ae-devtools-cli/jsx-toolchain/src/gen-ae-types.mjs
+          else
+            echo "::notice::ae-api.d.ts freshness check skipped: inventories/scripting/generated/symbols.json not on this head"
+          fi
+          # Stage-then-diff so untracked generator outputs and renames
+          # fail too — plain `git diff` only sees tracked modifications
+          # (Issue #246).
+          git add -A -- \
+            packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json \
+            packages/ae-devtools-cli/jsx-toolchain/src/ae-api.d.ts
+          git diff --cached --exit-code -- \
             packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json \
             packages/ae-devtools-cli/jsx-toolchain/src/ae-api.d.ts
 
