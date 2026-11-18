@@ -28,6 +28,7 @@
  * fake/mock results are never presented as real-host verification.
  */
 import { discover, inspect, execute, verify } from "../dev-loop/devloop.mjs";
+import { failureOutcome } from "../dev-loop/outcomes.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
 
@@ -100,9 +101,15 @@ function toolResult(payload, isError = false) {
   };
 }
 
-function isBadOutcome(payload) {
-  const outcome = payload?.outcome ?? payload?.status ?? null;
-  return ["refused", "failed", "BLOCKED", "UNKNOWN"].includes(outcome) || payload?.error !== undefined;
+// Outcome normalization is shared with the CLI diagnostics block and
+// the VSCode collector (dev-loop/outcomes.mjs, Issue #181): adapter
+// `status` spellings and the failure-beats-COMPLETED rule are handled
+// identically on every surface — the previous local check only looked
+// at `outcome ?? status` and reported adapter-level failures as
+// COMPLETED/isError:false.
+function isBadOutcome(result) {
+  if (failureOutcome(result) !== null) return true;
+  return result !== null && typeof result === "object" && result.error !== undefined;
 }
 
 function consentRefusal(opLabel, consent) {

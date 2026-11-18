@@ -229,6 +229,32 @@ test("developer-loop vertical over MCP: discover→inspect→execute→verify on
   await c.server.close();
 });
 
+test("ae_execute adapter-level failure is isError even when wire outcome is COMPLETED (Issue #181)", async () => {
+  // Session whose runner reports a wire COMPLETED dispatch carrying an
+  // adapter ok:false payload — the false-green shape the shared
+  // outcome normalization (dev-loop/outcomes.mjs) now catches.
+  const factory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-adapter-fail" },
+    runner: {
+      runScript: async () => ({
+        outcome: "COMPLETED",
+        result: JSON.stringify({ ok: false, error: { message: "adapter boom" } }),
+      }),
+    },
+  });
+  const c = makeClient({ sessionFactory: factory });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(isError, true, "adapter-level failure must not report isError:false");
+  assert.equal(payload.result.status, "failed");
+  assert.equal(payload.result.adapterError.message, "adapter boom");
+  await c.server.close();
+});
+
 test("ae_execute unknown op is a typed refusal, not a crash", async () => {
   const c = makeClient();
   const { payload, isError } = toolPayload(await c.request("tools/call", {
