@@ -250,9 +250,86 @@ test("ae_execute adapter-level failure is isError even when wire outcome is COMP
     arguments: { opId: "read.projectSummary", consent: "grant" },
   }));
   assert.equal(isError, true, "adapter-level failure must not report isError:false");
+  // Issue #196: the reported outcome is normalized — never COMPLETED.
+  assert.equal(payload.outcome, "FAILED");
   assert.equal(payload.result.status, "failed");
   assert.equal(payload.result.adapterError.message, "adapter boom");
+  // Issue #196: the failure payload carries the canonical
+  // ae-devtools.diagnostics/v1 record — same mapping as CLI/VSCode.
+  assert.equal(payload.diagnostics?.status, "ok");
+  const rec = payload.diagnostics?.records?.[0];
+  assert.equal(rec?.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(rec?.kind, "transport-outcome");
+  assert.equal(rec?.outcome, "FAILED");
+  assert.equal(rec?.evidence, "fake");
   await c.server.close();
+});
+
+test("ae_execute failure payload carries diagnostics record; success payload does not (Issue #196)", async () => {
+  const c = makeClient();
+  // Adapter-level refusal (destructive confirm missing) is a dispatch
+  // failure → record present.
+  const refused = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "project.new", consent: "grant" },
+  }));
+  assert.equal(refused.isError, true);
+  assert.equal(refused.payload.diagnostics?.records?.[0]?.recordVersion, "ae-devtools.diagnostics/v1");
+  assert.equal(refused.payload.diagnostics.records[0].outcome, "REFUSED");
+
+  // Clean completion → no diagnostics block at all.
+  const ok = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(ok.isError, false);
+  assert.equal(ok.payload.diagnostics, undefined);
+  await c.server.close();
+});
+
+test("ae_execute result with error:null is NOT a failure — unified error rule (Issue #196)", async () => {
+  // The old MCP-local `error !== undefined` patch reported error:null
+  // as failure; the shared rule in dev-loop/outcomes.mjs does not.
+  const factory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-null-error" },
+    runner: {
+      runScript: async () => ({
+        outcome: "COMPLETED",
+        error: null,
+        result: JSON.stringify({ ok: true, result: "fine" }),
+      }),
+    },
+  });
+  const c = makeClient({ sessionFactory: factory });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  }));
+  assert.equal(isError, false);
+  assert.equal(payload.outcome, "COMPLETED");
+  assert.equal(payload.diagnostics, undefined);
+  await c.server.close();
+});
+
+test("server close is bounded when session.close hangs (Issue #196)", async () => {
+  const factory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-hang" },
+    runner: { runScript: async () => ({ outcome: "COMPLETED", result: null }) },
+    close: () => new Promise(() => {}), // never resolves
+  });
+  const c = makeClient({ sessionFactory: factory, closeTimeoutMs: 80 });
+  // Open the session via a dispatch, then close — must settle fast.
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const started = Date.now();
+  await c.server.close();
+  assert.ok(Date.now() - started < 10_000, "session close was not bounded");
 });
 
 test("ae_execute unknown op is a typed refusal, not a crash", async () => {

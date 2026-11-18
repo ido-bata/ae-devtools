@@ -62,12 +62,13 @@ import { fileURLToPath } from "node:url";
 
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
+import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
-import { buildFailureDiagnostics, failureOutcome, runDiagnose } from "./diagnostics.mjs";
+import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
+import { failureOutcome } from "../dev-loop/outcomes.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
-const DEFAULT_CLOSE_TIMEOUT_MS = 20_000;
 
 function parseArgs(argv) {
   const pos = [];
@@ -173,27 +174,13 @@ function makeCleanup(state, flags) {
     if (state.cleanupPromise) return state.cleanupPromise;
     state.cleanupPromise = (async () => {
       const cleanup = { attempted: false, ok: null, error: null, result: null };
-      if (state.session && typeof state.session.close === "function") {
-        cleanup.attempted = true;
+      if (state.session) {
+        // Bounded close is shared with MCP/VSCode
+        // (dev-loop/session-close.mjs, Issue #196).
         const timeoutMs = Number.isFinite(Number(flags["close-timeout-ms"]))
           ? Number(flags["close-timeout-ms"])
           : DEFAULT_CLOSE_TIMEOUT_MS;
-        let timer;
-        try {
-          const result = await Promise.race([
-            state.session.close(),
-            new Promise((_, reject) => {
-              timer = setTimeout(() => reject(new Error(`session.close timed out after ${timeoutMs}ms`)), timeoutMs);
-            }),
-          ]);
-          cleanup.ok = true;
-          cleanup.result = result ?? null;
-        } catch (e) {
-          cleanup.ok = false;
-          cleanup.error = String(e?.message ?? e);
-        } finally {
-          clearTimeout(timer);
-        }
+        Object.assign(cleanup, await closeSessionWithTimeout(state.session, { timeoutMs }));
       }
       if (state.guard) {
         // close-failed keeps the marker so `runs`/`reap` can find residue;

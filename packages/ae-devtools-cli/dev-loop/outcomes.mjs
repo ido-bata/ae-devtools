@@ -21,6 +21,15 @@
  * `outcome` is the caller-computed fallback (evidence.outcome). The
  * comparison is normalized — wire "REFUSED" and adapter "refused" are
  * the same state (Issue #127: uppercase REFUSED used to slip through).
+ *
+ * Fail-closed rule (Issue #196): "COMPLETED" is the ONLY success
+ * spelling. Any other non-empty status/outcome spelling — including
+ * ones this module does not know ("error", "cancelled", "timeout",
+ * case variants) — is failure evidence and is returned verbatim
+ * (normalized through wireState) rather than silently passed through.
+ * The `error` field rule is unified here too: any non-nullish value
+ * is failure evidence (an object, a message string, anything a host
+ * chose to report); `error: null`/`undefined` is not.
  */
 
 /** Wire outcomes that mean the dispatch did not complete cleanly. */
@@ -46,10 +55,14 @@ export function failureOutcome(result, outcome) {
     if (typeof c !== "string" || c.length === 0) continue;
     const w = wireState(c);
     if (FAILURE_WIRE_STATES.has(w)) return w;
+    // Fail closed: COMPLETED is the only success spelling. Anything
+    // else non-empty — known or not — is failure evidence, returned
+    // verbatim so the record keeps the host's own wording.
+    if (w !== "COMPLETED") return w;
   }
   if (
     result !== null && typeof result === "object" &&
-    result.error !== null && typeof result.error === "object"
+    result.error !== null && result.error !== undefined
   ) {
     return "FAILED";
   }

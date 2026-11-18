@@ -10,11 +10,19 @@
  * (a later `doctor`/`reap` invocation, a human, ae-a8n #108's adopt path)
  * can use to find the residue.
  *
- * Marker lifecycle:
+ * Marker lifecycle (statuses actually written today):
  *   beginRun()          — before session open (status "opening")
- *   markSession()       — after open, records ownership evidence
+ *   markSession()       — after open (status "open"), records ownership
  *   endRun("closed")    — clean close: marker removed
- *   endRun("close-failed"|"interrupted"|"error") — marker kept, status set
+ *   endRun("close-failed"|"open-failed") — marker kept, status set
+ *
+ *   Dead vocabulary note (Issue #196 inventory): "interrupted" and
+ *   "error" were documented here historically but no writer ever
+ *   emits them — a hard-killed runner simply leaves status "open".
+ *   recovery-orchestrator/orchestrator.mjs accepts a WIDER status list
+ *   on its own side ("closed","corrupt","open-failed","interrupted",
+ *   "error","close-failed"); trimming that list is owned by the
+ *   recovery-orchestrator workstream, not this file.
  *
  * Reap rules (fail-closed, mirrors ae-a8n ownership semantics):
  *   - runner pid alive            → refuse (the owner may still clean up)
@@ -189,8 +197,8 @@ export function noteSessionProcess(dir, runId, evidence = {}) {
 
 /**
  * Link a surviving run marker to the evidence file written for the run
- * (--out). Only markers that outlive cleanup (close-failed/interrupted/
- * error) can carry this — a cleanly closed run removes its marker, so
+ * (--out). Only markers that outlive cleanup (close-failed/open-failed)
+ * can carry this — a cleanly closed run removes its marker, so
  * there is nothing to link. `ae-devtools diagnose <runId>` follows this
  * pointer to re-resolve stored diagnostics (Issue #103).
  */

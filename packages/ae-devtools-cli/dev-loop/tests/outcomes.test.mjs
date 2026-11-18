@@ -34,6 +34,33 @@ test("failureOutcome: adapter status beats a COMPLETED wire outcome", () => {
   assert.equal(isFailureResult({ outcome: "COMPLETED" }, "COMPLETED"), false);
 });
 
+test("failureOutcome is fail-closed: unknown non-empty spellings are failures (Issue #196)", () => {
+  // Spellings that used to pass through unrecognized — none may read
+  // as success on any surface (CLI exit 0 / MCP isError:false).
+  for (const spelling of ["error", "ERROR", "cancelled", "timeout", "bogus"]) {
+    assert.notEqual(failureOutcome({ outcome: spelling }, spelling), null, spelling);
+    assert.equal(isFailureResult({ outcome: spelling }, spelling), true, spelling);
+    assert.notEqual(failureOutcome({ status: spelling }, null), null, `status:${spelling}`);
+  }
+  // The failure-bearing spelling is preserved verbatim for the record.
+  assert.equal(failureOutcome({ outcome: "cancelled" }, null), "cancelled");
+  // "COMPLETED" (any case) remains the only success spelling.
+  assert.equal(failureOutcome({ outcome: "completed" }, null), null);
+  assert.equal(failureOutcome({ outcome: "Completed" }, "COMPLETED"), null);
+  // No outcome spelling at all is still not a failure by itself.
+  assert.equal(failureOutcome({}, null), null);
+  assert.equal(failureOutcome(null, null), null);
+});
+
+test("failureOutcome: error-field rule is unified — any non-nullish value is evidence", () => {
+  assert.equal(failureOutcome({ outcome: "COMPLETED", error: { message: "x" } }, "COMPLETED"), "FAILED");
+  assert.equal(failureOutcome({ outcome: "COMPLETED", error: "host said no" }, "COMPLETED"), "FAILED");
+  // error:null / error:undefined are NOT failure evidence — the old
+  // MCP-local `!== undefined` patch reported error:null as a failure.
+  assert.equal(failureOutcome({ outcome: "COMPLETED", error: null }, "COMPLETED"), null);
+  assert.equal(failureOutcome({ outcome: "COMPLETED", error: undefined }, "COMPLETED"), null);
+});
+
 test("recordFromExecuteResult: adapter-level refusal without wire outcome yields a record", () => {
   // The shape that used to produce ZERO diagnostics on the VSCode
   // surface: status:"refused", no outcome field.

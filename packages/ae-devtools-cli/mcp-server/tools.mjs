@@ -29,6 +29,7 @@
  */
 import { discover, inspect, execute, verify } from "../dev-loop/devloop.mjs";
 import { failureOutcome } from "../dev-loop/outcomes.mjs";
+import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
 
@@ -106,10 +107,52 @@ function toolResult(payload, isError = false) {
 // `status` spellings and the failure-beats-COMPLETED rule are handled
 // identically on every surface — the previous local check only looked
 // at `outcome ?? status` and reported adapter-level failures as
-// COMPLETED/isError:false.
+// COMPLETED/isError:false. The `error`-field rule lives in
+// failureOutcome too (Issue #196): any non-nullish value is failure
+// evidence; `error: null` is not — the old local `!== undefined` patch
+// produced exactly that false positive.
 function isBadOutcome(result) {
-  if (failureOutcome(result) !== null) return true;
-  return result !== null && typeof result === "object" && result.error !== undefined;
+  return failureOutcome(result) !== null;
+}
+
+// diagnostics/collectors.mjs is loaded lazily and only on the failure
+// path: a damaged/partial install degrades to an honest "unavailable"
+// diagnostics block instead of keeping the whole MCP server from
+// starting (same discipline as devtools-cli/diagnostics.mjs).
+let collectorsPromise = null;
+function diagnosticsCollectors() {
+  collectorsPromise ??= import("../diagnostics/collectors.mjs").then((m) => ({
+    fromAeError: m.fromAeError,
+    fromTransportOutcome: m.fromTransportOutcome,
+  }));
+  return collectorsPromise;
+}
+
+/**
+ * Failure → canonical ae-devtools.diagnostics/v1 record for the tool
+ * payload (Issue #196): the SAME recordFromExecuteResult mapping the
+ * CLI evidence block and the VSCode Problems collector use, so an
+ * ae_execute/ae_verify failure carries identical diagnostics.records
+ * semantics on every surface. Returns null when the result is not
+ * failure-shaped; an "unavailable" block when the packaged
+ * diagnostics/ module cannot be loaded.
+ */
+async function failureDiagnostics({ result, session, requestId }) {
+  const state = failureOutcome(result);
+  if (state === null) return null;
+  try {
+    const collectors = await diagnosticsCollectors();
+    const record = recordFromExecuteResult({
+      result,
+      outcome: state,
+      session: { kind: session.kind, pin: session.pin },
+      requestId,
+      collectors,
+    });
+    return record === null ? null : { status: "ok", records: [record] };
+  } catch (e) {
+    return { status: "unavailable", reason: String(e?.message ?? e), records: [] };
+  }
 }
 
 function consentRefusal(opLabel, consent) {
@@ -180,6 +223,7 @@ export async function callTool(name, args = {}, ctx = {}) {
       // consent === "grant" was verified before the session opened; the
       // provider exists because runOperation requires one for EVERY
       // dispatch — it is not an approval of its own.
+      const requestId = `req-mcp-${++requestCounter}`;
       const result = await execute({
         opId: args.opId,
         args: args.args ?? {},
@@ -189,15 +233,17 @@ export async function callTool(name, args = {}, ctx = {}) {
         consentProvider: async () => ({ approved: true }),
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
-        requestId: `req-mcp-${++requestCounter}`,
+        requestId,
         confirmDestructive: args.confirmDestructive === true,
         confirmRender: args.confirmRender === true,
       });
+      const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
         schema: MCP_SCHEMA,
         session: sessionBlock(session),
         outcome: result.outcome ?? result.status ?? null,
         result,
+        ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));
     }
     case "ae_verify": {
@@ -205,6 +251,7 @@ export async function callTool(name, args = {}, ctx = {}) {
         return toolResult(consentRefusal("ae_verify", args.consent), true);
       }
       const session = await ctx.getSession();
+      const requestId = `req-mcp-${++requestCounter}`;
       const result = await verify({
         readOpId: typeof args.readOpId === "string" && args.readOpId.length > 0 ? args.readOpId : "read.projectSummary",
         readArgs: args.args ?? {},
@@ -214,13 +261,15 @@ export async function callTool(name, args = {}, ctx = {}) {
         consentProvider: async () => ({ approved: true }),
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
-        requestId: `req-mcp-${++requestCounter}`,
+        requestId,
       });
+      const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
         schema: MCP_SCHEMA,
         session: sessionBlock(session),
         outcome: result.outcome ?? result.status ?? null,
         result,
+        ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));
     }
     default:

@@ -139,6 +139,9 @@ export async function runOperation(input = {}) {
   // Adapter payload contract: __adp_json emits {ok:true,...} on success.
   // An explicit ok:false is a host-level logical failure even though the
   // dispatch itself completed — surface it, never report bare COMPLETED.
+  // The reported `outcome` is normalized to FAILED here (Issue #196) so
+  // every consumer (CLI evidence, MCP payload, VSCode summary) agrees;
+  // the wire-level truth stays visible via status/adapterError/result.
   const adapterFailed = result !== null && typeof result === "object" && result.ok === false;
   if (adapterFailed) {
     return {
@@ -146,6 +149,7 @@ export async function runOperation(input = {}) {
       opId,
       mutating: op.mutating === true,
       destructive: op.destructive === true,
+      outcome: "FAILED",
       status: "failed",
       adapterError: result.error ?? result,
       result,
