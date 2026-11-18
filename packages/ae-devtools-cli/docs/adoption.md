@@ -137,7 +137,7 @@ import と clean fixture の 1 dispatch 完了を検証する。
 `rebuildup/Aulymo_v04` に対して tarball install 後に read-only で実行:
 
 - `doctor`: AE 2026/2027 検出、`@ido-bata/ae-a8n` 解決 OK
-- `discover`: 20 ops、evidence level は fake/mock only と正直に表示
+- `discover`: 26 ops、evidence level は fake/mock only と正直に表示
 - `jsx-toolchain check src/api.ts` / `lint src/main.ts`: diagnostics 0
 - `jsx-toolchain check src`（全体）: ScriptUI/host ambient 型の未整備で
   412 diagnostics → Issue #97 で対応中
@@ -147,7 +147,7 @@ source への変更なし）に対して、repo 内 scratch dir `ae-smoke/` へ
 tarball install して実行:
 
 - `doctor`: AE 2026/2027 検出、`@ido-bata/ae-a8n` 解決 OK
-- `discover`: 20 ops、evidence level は fake/mock only と正直に表示
+- `discover`: 26 ops、evidence level は fake/mock only と正直に表示
 - `execute read.projectSummary --session fake --consent grant`:
   COMPLETED（fake/mock evidence）
 - `jsx-toolchain check scripts/node`（唯一の TS source、Node 側

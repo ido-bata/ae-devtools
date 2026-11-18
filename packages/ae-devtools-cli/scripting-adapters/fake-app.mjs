@@ -13,9 +13,10 @@
 
 // Host-object classes so generated `instanceof` checks work exactly
 // like ExtendScript. Display names (typeName) stay for reporting only.
-class CompItem {}
+class AVItem {}
+class CompItem extends AVItem {}
 class FolderItem {}
-class FootageItem {}
+class FootageItem extends AVItem {}
 
 function collection(list, extra = {}) {
   return new Proxy(extra, {
@@ -37,6 +38,21 @@ function makeProperty(value, opts = {}) {
     __keys: [],
     expressionEnabled: false,
     numKeys: 0,
+    isTimeVarying: false,
+    // Real API: keyIndex is the 1-based keyframe INDEX, not a time.
+    keyTime(i) {
+      if (!Number.isInteger(i) || i < 1 || i > this.numKeys) {
+        throw new Error("fake-app: invalid keyframe index " + i);
+      }
+      return this.__keys[i - 1].time;
+    },
+    keyValue(i) {
+      if (!Number.isInteger(i) || i < 1 || i > this.numKeys) {
+        throw new Error("fake-app: invalid keyframe index " + i);
+      }
+      const v = this.__keys[i - 1].value;
+      return Array.isArray(v) ? v.slice() : v;
+    },
     canSetExpression: expressionAllowed,
     expressionError: "",
     setValue(v) { this.value = Array.isArray(v) ? v.slice() : v; },
@@ -61,6 +77,7 @@ function makeProperty(value, opts = {}) {
       }
       this.__keys.push({ time: t, value: Array.isArray(v) ? v.slice() : v });
       this.numKeys = this.__keys.length;
+      this.isTimeVarying = this.numKeys > 0;
       this.value = this.__keys[this.__keys.length - 1].value;
     },
     get expression() { return this.__expr || ""; },
@@ -115,6 +132,9 @@ function makeLayer(name, comp) {
     index: 0,
     __parent: null,
     enabled: true,
+    locked: false,
+    inPoint: 0,
+    outPoint: comp ? comp.duration : 0,
     __pos: makeProperty([0, 0]),
     __fx: null,
     property(group) {
@@ -180,6 +200,7 @@ function makeComp(name, w, h, par, dur, owner) {
       if (i >= 0) owner.splice(i, 1);
     },
     __reindex() { comp.__layers.forEach((l, i) => { l.index = i + 1; }); },
+    resolutionFactor: 1,
     __moveLayer(layer, to) {
       const i = comp.__layers.indexOf(layer);
       if (i < 0) return;
@@ -188,6 +209,7 @@ function makeComp(name, w, h, par, dur, owner) {
       comp.__reindex();
     },
   });
+  Object.defineProperty(comp, "numLayers", { get() { return comp.__layers.length; } });
   comp.layers = collection(comp.__layers, {
     addNull(d) {
       const l = makeLayer("Null " + (comp.__layers.length + 1), comp);
@@ -218,7 +240,13 @@ export function createAdapterFakeApp() {
       __rendered: 0,
       items: collection(renderItems, {
         add(comp) {
-          const it = { comp, index: renderItems.length + 1 };
+          const it = {
+            comp, index: renderItems.length + 1,
+            // RQItemStatus enum value; fake uses the queued constant.
+            status: 1,
+            timeSpanStart: 0,
+            timeSpanDuration: comp.duration,
+          };
           renderItems.push(it);
           return it;
         },
@@ -262,6 +290,7 @@ export function createAdapterFakeApp() {
   app.CompItem = CompItem;
   app.FolderItem = FolderItem;
   app.FootageItem = FootageItem;
+  app.AVItem = AVItem;
   app.__state = {
     items,
     fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.typeName }))),
