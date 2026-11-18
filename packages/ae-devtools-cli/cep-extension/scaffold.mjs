@@ -40,7 +40,6 @@
  * Exit codes: 0 ok, 2 usage/validation error, 3 output refused.
  */
 import { mkdir, readdir, readFile, writeFile, copyFile, stat } from "node:fs/promises";
-import { realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -204,19 +203,8 @@ export async function scaffold(args) {
   return out;
 }
 
-// Installed bins reach this file through npm .bin symlinks, so argv[1]
-// may be the shim path while import.meta.url is already realpath-resolved
-// by Node. Compare realpaths (same fix as mcp-server/server.mjs, #108).
-function isMainEntry() {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  try {
-    return realpathSync(resolve(entry)) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return false;
-  }
-}
-const isMain = isMainEntry();
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
+const isMain = isMainEntry(import.meta.url);
 if (isMain) {
   try {
     const args = validate(parseArgs(process.argv.slice(2)));

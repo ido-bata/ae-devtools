@@ -125,7 +125,11 @@ const A8N_REQUIRED_EXPORTS = {
 
 function assertA8nSurface(mod, command) {
   const required = A8N_REQUIRED_EXPORTS[command] ?? [];
-  const missing = required.filter((name) => typeof mod[name] !== "function" && typeof mod[name] !== "object");
+  const missing = required.filter((name) => {
+    const v = mod[name];
+    // `typeof null === "object"` — a null export must not pass (Issue #234).
+    return v == null || (typeof v !== "function" && typeof v !== "object");
+  });
   if (missing.length > 0) {
     const e = new Error(
       `ae-a8n build is missing exports required by '${command}': ${missing.join(", ")} — ` +

@@ -864,6 +864,19 @@ await at("cli fails loudly when the ae-a8n build lacks a command-required export
   assert.match(vex.body.message, /'verify-exit'.*windowServerCensus/);
 });
 
+await at("cli fails loudly when a required ae-a8n export is null, not just missing (Issue #234)", async () => {
+  // `typeof null === "object"` used to let a null export pass the
+  // surface check — the command would then crash mid-run instead of
+  // refusing up front.
+  const obs = cliJson([
+    "observe", "--pid", "1", "--session-uid", "501", "--session-asid", "42",
+    "--ae-a8n-root", FAKE_A8N,
+  ], { FAKE_A8N_NULL: "readGuiSession" });
+  assert.equal(obs.code, 2);
+  assert.equal(obs.body.code, "AE_A8N_SURFACE_MISSING");
+  assert.match(obs.body.message, /'observe'.*readGuiSession/);
+});
+
 // ---- Issue #155: recovery verdicts -> diagnostics records ----
 
 const EXPECTED = {

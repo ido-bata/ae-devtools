@@ -507,4 +507,29 @@ t("ae-api.d.ts catches bogus AE member names", () => {
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+t("cli map on a missing file reports a structured error, exit 2 (Issue #234)", () => {
+  try {
+    execFileSync(process.execPath, [CLI, "map", "/nonexistent-dir/nope.jsx.map", "1"], { encoding: "utf8" });
+    assert.fail("expected non-zero exit");
+  } catch (e) {
+    assert.equal(e.status, 2);
+    const body = JSON.parse(e.stdout);
+    assert.equal(body.schema, "ae-devtools.jsx-toolchain.error/v1");
+    assert.equal(body.command, "map");
+    assert.match(body.error, /ENOENT|no such file/);
+  }
+});
+
+t("cli map treats flag-looking args as flags, not operands (Issue #234)", () => {
+  // `-o` is a value option; `--bogus` is skipped — neither may become
+  // the map path operand.
+  try {
+    execFileSync(process.execPath, [CLI, "map", "--bogus", "1"], { encoding: "utf8" });
+    assert.fail("expected usage error");
+  } catch (e) {
+    // usage errors print to stderr and exit 2 before any file read
+    assert.equal(e.status, 2);
+  }
+});
+
 await finish("tests passed");

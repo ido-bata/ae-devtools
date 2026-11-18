@@ -45,6 +45,7 @@ const installDir = arg("--install-dir") ?? process.env.AE_INSTALL_DIR;
 if (installDir) serverArgs.push("--install-dir", installDir);
 
 const log = [];
+let fatal = false;
 const rec = (o) => {
   log.push({ t: new Date().toISOString(), ...o });
   writeFileSync(OUT, JSON.stringify(log, null, 2));
@@ -94,12 +95,16 @@ try {
   rec({ step: "ae_verify-done" });
 } catch (e) {
   rec({ fatal: String(e?.message ?? e) });
+  fatal = true;
 } finally {
   child.kill("SIGTERM");
   setTimeout(() => {
     try {
       child.kill("SIGKILL");
     } catch {}
-    process.exit(0);
+    // A recorded `fatal` is a failed verification run — exit nonzero so
+    // callers/CI cannot read it as success (Issue #234). The evidence
+    // JSON remains the verdict record either way.
+    process.exit(fatal ? 1 : 0);
   }, 5000).unref();
 }

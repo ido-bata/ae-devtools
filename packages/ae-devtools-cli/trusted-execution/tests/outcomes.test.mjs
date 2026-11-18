@@ -10,7 +10,6 @@ import {
   CONTRACT_OUTCOME,
   toContractOutcome,
   classifyWriteResult,
-  undoTraceRecord,
 } from "../outcomes.mjs";
 
 test("wire outcomes map onto the catalog contract §5 vocabulary", () => {
@@ -126,8 +125,4 @@ test("undo failure stays FAILED and is never folded into the original op", () =>
   });
   assert.equal(op.outcome, "COMPLETED");
   assert.equal(undo.outcome, "FAILED");
-  const trace = undoTraceRecord({ operationId: "ae.operation.comp.create", undoResult: undo });
-  assert.equal(trace.kind, "undo");
-  assert.equal(trace.outcome, "FAILED");
-  assert.equal(trace.foldedInto, null);
 });

@@ -28,7 +28,7 @@
  * session via ../a8n-transport.
  */
 import { createInterface } from "node:readline";
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -234,20 +234,8 @@ export function createServer(opts = {}) {
 // ---- CLI entry ----
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Installed bins are symlinks into node_modules/.bin, so argv[1] is the
-// shim path while import.meta.url is already realpath-resolved by Node.
-// Compare realpaths or the packaged `ae-devtools-mcp` bin would never
-// start the server.
-function isMainEntry() {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  try {
-    return realpathSync(resolve(entry)) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return false;
-  }
-}
-const isMain = isMainEntry();
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
+const isMain = isMainEntry(import.meta.url);
 
 if (isMain) {
   const { flags } = parseArgs(process.argv.slice(2));

@@ -214,6 +214,13 @@ jsx-toolchain resolve dist/panel.jsx.map 12 4   # JSX位置→TS位置
   fake session での CLI 実行を検証
 - real-host: `--session a8n` 経路は opt-in。AE 実機・Windows は
   別途 evidence 記録（未検証は未検証と表示）
+- platform scope: `engines` は `node >=22` のみを要求し、fake-level の
+  全 surface（discover/execute/verify/doctor、jsx-toolchain、MCP、
+  CEP scaffold、VSCode 拡張）は Node が動く OS で利用できる。一方
+  real-host session 系（`AfterEffects.launch`、run-marker の
+  `osascript`/`ps` ベースの process probe、`~/Library` 配下の
+  DiagnosticReports 収集）は macOS 前提で実装されており、Windows
+  実機では UNVERIFIED（Issue #224 で追跡）
 
 ## Docs
 
