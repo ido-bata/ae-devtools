@@ -158,7 +158,10 @@ export function createServer(opts = {}) {
     const { id, method, params } = msg;
     const isNotification = id === undefined || id === null;
 
-    // Notifications never get a response — consume and drop.
+    // Notifications never get a response — consume and drop. This must
+    // precede the method dispatch: an id-less tools/call is a
+    // notification and must not execute (Issue #219).
+    if (isNotification) return null;
     if (typeof method === "string" && method.startsWith("notifications/")) {
       return null;
     }
@@ -197,7 +200,6 @@ export function createServer(opts = {}) {
           return rpcResult(id, result);
         }
         default:
-          if (isNotification) return null;
           return rpcError(id, METHOD_NOT_FOUND, `Method not found: ${String(method)}`);
       }
     } catch (e) {
@@ -260,7 +262,11 @@ if (isMain) {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     },
-    closeTimeoutMs: typeof flags["close-timeout-ms"] === "string" ? Number(flags["close-timeout-ms"]) : undefined,
+    closeTimeoutMs: (() => {
+      const raw = flags["close-timeout-ms"];
+      const n = typeof raw === "string" ? Number(raw) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    })(),
   });
   process.stderr.write(
     `mcp-server: ${SERVER_NAME}@${SERVER_VERSION} schema=${MCP_SCHEMA} session=${sessionKind} ` +

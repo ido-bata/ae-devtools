@@ -90,6 +90,18 @@ test("recordFromExecuteResult: adapter ok:false payload beats COMPLETED wire out
   assert.match(record.message, /adapter boom/);
 });
 
+test("recordFromExecuteResult: string result.error lands in the diagnostics detail", () => {
+  // Host-reported error text arrives as a bare string (not an aeError
+  // object); it must not be dropped from the record message (Issue #219).
+  const record = recordFromExecuteResult({
+    result: { outcome: "FAILED", error: "host said: boom" },
+    collectors: COLLECTORS,
+  });
+  assert.ok(record);
+  assert.equal(record.outcome, "FAILED");
+  assert.match(record.message, /host said: boom/);
+});
+
 test("recordFromExecuteResult: host error becomes script-exception; clean outcome yields null", () => {
   const rec = recordFromExecuteResult({
     result: { outcome: "FAILED", error: { name: "ReferenceError", message: "x is undefined", line: 3, file: "a.jsx" } },
