@@ -169,12 +169,16 @@ tarball install して実行:
 - evidence level は常に記録される。fake-level を real-host verified と
   見做さない。
 - 実行・認可・transport の正本は ae-a8n。この CLI はその consumer。
-- `ae-devtools-recover` の `observe` / `recover` / `verify-exit` は
-  ae-a8n repo の #109/#111 export（`readGuiSession` /
-  `listAppInstances` / `censusRunnerInSession` / `MacGuiRecovery` /
-  `MacHostRecovery` / GUI lease）を含む **ローカル build** を
-  `--ae-a8n-root` で指す必要がある。公開版 `@ido-bata/ae-a8n` には
-  未搭載であり、実機 GUI 経路は未検証（fake-level のみ）。
+- `ae-devtools-recover` の `observe` / `recover` / `verify-exit` が
+  必要とする ae-a8n surface（`readGuiSession` / `listAppInstances` /
+  `censusRunnerInSession` / `windowServerCensus` / `MacGuiRecovery` /
+  `MacHostRecovery` / GUI lease 関連 export）は、公開版
+  `@ido-bata/ae-a8n@0.2.0` が全て ship しているため、pinned
+  dependency のまま動作する。`--ae-a8n-root` は別 build / 開発版の
+  ae-a8n を指したい場合の override であり必須ではない。コマンド別に
+  必要 export が検証され、欠落時は `AE_A8N_SURFACE_MISSING` で
+  明示的に失敗する（silent degradation しない）。実機 GUI 経路は
+  未検証（fake-level の `tests/fixtures/fake-a8n` のみ）。
   `evidence` サブコマンドは AE / GUI 不要で動作する。
 - `ae-devtools-cep` の scaffold / validate は static / fake-level の
   証拠のみ。実機 CEP panel load → `evalScript` round trip → reload →

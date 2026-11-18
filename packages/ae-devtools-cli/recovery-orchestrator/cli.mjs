@@ -86,17 +86,72 @@ function fail(code, message, extra = {}) {
   return 2;
 }
 
-const A8N_REQUIRED_EXPORTS = [
-  "MacGuiRecovery",
-  "MacHostRecovery",
-  "readUsername",
-  "assessGuiObservation",
-  "acquireGuiLease",
-  "inspectGuiLease",
-  "reapGuiLease",
-];
+/**
+ * Exports each subcommand needs from the ae-a8n surface, checked after the
+ * module resolves — for BOTH `--ae-a8n-root` builds and the pinned
+ * `@ido-bata/ae-a8n` dependency. A build missing a required export fails
+ * loudly with AE_A8N_SURFACE_MISSING instead of silently degrading to
+ * `unavailable`/`unknown` mid-command.
+ *
+ *   observe       — session claim + GUI observation only; still requires
+ *                   the session surfaces so a session that cannot be
+ *                   resolved is refused up front, not mid-observation.
+ *   verify-exit   — session confirmation + session-scoped WindowServer
+ *                   census; no GUI mutation surface needed.
+ *   recover       — the full surface: GUI observation, host recovery and
+ *                   the lease/pid probes guiLeaseState() reports.
+ */
+const A8N_REQUIRED_EXPORTS = {
+  observe: [
+    "MacGuiRecovery",
+    "readUsername",
+    "readGuiSession",
+    "listAppInstances",
+    "assessGuiObservation",
+    "acquireGuiLease",
+    "inspectGuiLease",
+    "reapGuiLease",
+  ],
+  "verify-exit": [
+    "readUsername",
+    "readGuiSession",
+    "listAppInstances",
+    "censusRunnerInSession",
+    "windowServerCensus",
+  ],
+  recover: [
+    "MacGuiRecovery",
+    "MacHostRecovery",
+    "readUsername",
+    "readGuiSession",
+    "listAppInstances",
+    "assessGuiObservation",
+    "acquireGuiLease",
+    "inspectGuiLease",
+    "reapGuiLease",
+    "guiLeasePaths",
+    "defaultGuiLeaseRoot",
+    "defaultPidAlive",
+    "defaultPidStartedAt",
+  ],
+};
 
-async function loadA8n(root) {
+function assertA8nSurface(mod, command) {
+  const required = A8N_REQUIRED_EXPORTS[command] ?? [];
+  const missing = required.filter((name) => typeof mod[name] !== "function" && typeof mod[name] !== "object");
+  if (missing.length > 0) {
+    const e = new Error(
+      `ae-a8n build is missing exports required by '${command}': ${missing.join(", ")} — ` +
+        "pass --ae-a8n-root pointing at a compatible ae-a8n build " +
+        "(the pinned @ido-bata/ae-a8n dependency ships the #109/#111 exports since 0.2.0)",
+    );
+    e.code = "AE_A8N_SURFACE_MISSING";
+    throw e;
+  }
+  return mod;
+}
+
+async function loadA8n(root, command) {
   if (root) {
     const entry = join(root, "dist", "index.js");
     if (!existsSync(entry)) {
@@ -107,19 +162,10 @@ async function loadA8n(root) {
       e.code = "AE_A8N_SURFACE_MISSING";
       throw e;
     }
-    return import(entry);
+    return assertA8nSurface(await import(entry), command);
   }
   const mod = await import("@ido-bata/ae-a8n");
-  const missing = A8N_REQUIRED_EXPORTS.filter((name) => typeof mod[name] !== "function" && typeof mod[name] !== "object");
-  if (missing.length > 0) {
-    const e = new Error(
-      `resolved ae-a8n is missing recovery exports: ${missing.join(", ")} — ` +
-        "pass --ae-a8n-root pointing at a built ae-a8n checkout",
-    );
-    e.code = "AE_A8N_SURFACE_MISSING";
-    throw e;
-  }
-  return mod;
+  return assertA8nSurface(mod, command);
 }
 
 function sessionFromFlags(a8n, flags) {
@@ -280,7 +326,7 @@ async function main() {
     });
     if (!auth.ok) return fail("RECOVERY_REFUSED", auth.reason, { runId: flags["run-id"] });
 
-    const a8n = await loadA8n(typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined);
+    const a8n = await loadA8n(typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined, "recover");
     // Cross-check the recorded GUI session against live attribution before
     // constructing any GUI object: the marker's claim must match what
     // lsappinfo says about the AE pid right now.
@@ -327,7 +373,7 @@ async function main() {
     return result.verdict === "await-original" ? 0 : 1;
   }
 
-  const a8n = await loadA8n(typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined);
+  const a8n = await loadA8n(typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined, cmd);
   const pid = Number(flags.pid);
   if (!Number.isFinite(pid)) return fail("USAGE", "--pid is required");
   const session = sessionFromFlags(a8n, flags);
