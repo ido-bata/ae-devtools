@@ -211,6 +211,10 @@ static SPErr FakeAcquireSuite(const char* nameZ, int32 versionL, const void** su
     {
         slot = 7; fail = h->failAcquireItemView; table = &h->itemViewSuite;
     }
+    else if (strcmp(nameZ, kAEGPCompSuite) == 0)
+    {
+        slot = 8; fail = h->failAcquireComp; table = &h->compSuite;
+    }
     else
     {
         return 1; /* unknown suite: acquisition fails */
@@ -237,6 +241,7 @@ static SPErr FakeReleaseSuite(const char* nameZ, int32 versionL)
     else if (strcmp(nameZ, kAEGPRenderQueueSuite) == 0) h->releaseCount[5]++;
     else if (strcmp(nameZ, kAEGPRQItemSuite) == 0) h->releaseCount[6]++;
     else if (strcmp(nameZ, kAEGPItemViewSuite) == 0) h->releaseCount[7]++;
+    else if (strcmp(nameZ, kAEGPCompSuite) == 0) h->releaseCount[8]++;
     return 0;
 }
 
@@ -912,6 +917,218 @@ static A_Err FakeGetItemViewGuidesLocked(AEGP_ItemViewP viewP,
     return A_Err_NONE;
 }
 
+/* ---- comp suite (Issue #64 read-only getters) ---- */
+
+static AEGP_CompH MakeCompHandle(int projIndex, int itemIndex)
+{
+    struct _AEGP_Comp* c = new struct _AEGP_Comp;
+    c->projIndex = projIndex;
+    c->itemIndex = itemIndex;
+    struct _AEGP_Comp** hp = new struct _AEGP_Comp*;
+    *hp = c;
+    return (AEGP_CompH)hp;
+}
+
+static FakeProject* ProjectOfComp(AEGP_CompH compH)
+{
+    struct _AEGP_Comp** hp = (struct _AEGP_Comp**)compH;
+    int pi = (*hp)->projIndex;
+    if (pi < 0 || pi >= (int)g_host->projects.size())
+    {
+        return NULL;
+    }
+    return &g_host->projects[pi];
+}
+
+static int ItemIndexOfComp(AEGP_CompH compH)
+{
+    struct _AEGP_Comp** hp = (struct _AEGP_Comp**)compH;
+    return (*hp)->itemIndex;
+}
+
+static A_Err FakeGetCompFromItem(AEGP_ItemH itemH, AEGP_CompH* compPH)
+{
+    *compPH = NULL;
+    FakeProject* p = ProjectOfItem(itemH);
+    int ii = ItemIndexOf(itemH);
+    if (!p || ii < 0) return A_Err_PARAMETER;
+    AEGP_ItemType t = AEGP_ItemType_COMP;
+    if (ii < (int)p->itemTypes.size()) t = p->itemTypes[ii];
+    if (t != AEGP_ItemType_COMP) return A_Err_GENERIC; /* not a comp */
+    int pi = (int)(p - &g_host->projects[0]);
+    *compPH = MakeCompHandle(pi, ii);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemFromComp(AEGP_CompH compH, AEGP_ItemH* itemPH)
+{
+    *itemPH = NULL;
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return A_Err_PARAMETER;
+    int pi = (int)(p - &g_host->projects[0]);
+    *itemPH = MakeItemHandle(pi, ItemIndexOfComp(compH));
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetMostRecentlyUsedComp(AEGP_CompH* compPH)
+{
+    *compPH = NULL;
+    int pi = g_host->mruCompProject;
+    int ii = g_host->mruCompIndex;
+    if (pi >= 0 && pi < (int)g_host->projects.size() && ii >= 0)
+    {
+        *compPH = MakeCompHandle(pi, ii);
+    }
+    return A_Err_NONE;
+}
+
+#define FAKE_COMP_ERR() \
+    if (g_host->compQueryErr != A_Err_NONE) return (A_Err)g_host->compQueryErr
+
+static const FakeCompMeta& CompMetaFor(AEGP_CompH compH)
+{
+    static const FakeCompMeta kDefault;
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return kDefault;
+    return MetaFor(p, ItemIndexOfComp(compH)).compMeta;
+}
+
+static A_Err FakeGetCompFramerate(AEGP_CompH compH, A_FpLong* fpsPF)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *fpsPF = CompMetaFor(compH).fps;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompFrameDuration(AEGP_CompH compH, A_Time* timeP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *timeP = CompMetaFor(compH).frameDuration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompDownsampleFactor(AEGP_CompH compH,
+                                         AEGP_DownsampleFactor* dsfP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *dsfP = CompMetaFor(compH).dsf;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompBGColor(AEGP_CompH compH, AEGP_ColorVal* bgP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *bgP = CompMetaFor(compH).bgColor;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompFlags(AEGP_CompH compH, AEGP_CompFlags* flagsP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *flagsP = CompMetaFor(compH).flags;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetShowLayerNameOrSourceName(AEGP_CompH compH,
+                                              A_Boolean* shownPB)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *shownPB = CompMetaFor(compH).showLayerNames;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetShowBlendModes(AEGP_CompH compH, A_Boolean* shownPB)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *shownPB = CompMetaFor(compH).showBlendModes;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompShutterAnglePhase(AEGP_CompH compH,
+                                          A_Ratio* angleP, A_Ratio* phaseP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    const FakeCompMeta& m = CompMetaFor(compH);
+    *angleP = m.shutterAngle;
+    *phaseP = m.shutterPhase;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompShutterFrameRange(AEGP_CompH compH,
+                                          const A_Time* comp_timeP,
+                                          A_Time* startPT, A_Time* durationPT)
+{
+    (void)comp_timeP;
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    const FakeCompMeta& m = CompMetaFor(compH);
+    *startPT = m.shutterStart;
+    *durationPT = m.shutterDuration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompSuggestedMotionBlurSamples(AEGP_CompH compH,
+                                                   A_long* samplesPL)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *samplesPL = CompMetaFor(compH).mbSamples;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompMotionBlurAdaptiveSampleLimit(AEGP_CompH compH,
+                                                      A_long* samplesPL)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *samplesPL = CompMetaFor(compH).mbAdaptiveLimit;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompWorkAreaStart(AEGP_CompH compH,
+                                      A_Time* work_area_startPT)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *work_area_startPT = CompMetaFor(compH).workAreaStart;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompWorkAreaDuration(AEGP_CompH compH,
+                                         A_Time* work_area_durationPT)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *work_area_durationPT = CompMetaFor(compH).workAreaDuration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompDisplayStartTime(AEGP_CompH compH,
+                                         A_Time* start_timePT)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *start_timePT = CompMetaFor(compH).displayStart;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompDisplayDropFrame(AEGP_CompH compH,
+                                         A_Boolean* dropFramePB)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *dropFramePB = CompMetaFor(compH).displayDropFrame;
+    return A_Err_NONE;
+}
+
 /* ------------------------------------------------------------------ */
 /* host construction                                                  */
 /* ------------------------------------------------------------------ */
@@ -931,6 +1148,7 @@ void FakeHost::PopulateSuites()
     memset(&rqSuite, 0, sizeof(rqSuite));
     memset(&rqItemSuite, 0, sizeof(rqItemSuite));
     memset(&itemViewSuite, 0, sizeof(itemViewSuite));
+    memset(&compSuite, 0, sizeof(compSuite));
     memset(&basicSuite, 0, sizeof(basicSuite));
 
     /* utility */
@@ -1000,6 +1218,27 @@ void FakeHost::PopulateSuites()
     if (nullItemViewEntry != 2) itemViewSuite.AEGP_GetItemViewGuidesVisible = FakeGetItemViewGuidesVisible;
     if (nullItemViewEntry != 3) itemViewSuite.AEGP_GetItemViewGuidesSnap = FakeGetItemViewGuidesSnap;
     if (nullItemViewEntry != 4) itemViewSuite.AEGP_GetItemViewGuidesLocked = FakeGetItemViewGuidesLocked;
+
+    /* comp — read-only getters only; nullCompEntry 1..18 nulls one
+       entry each (order matches probe.cpp CompEntriesOk). */
+    if (nullCompEntry != 1) compSuite.AEGP_GetCompFromItem = FakeGetCompFromItem;
+    if (nullCompEntry != 2) compSuite.AEGP_GetItemFromComp = FakeGetItemFromComp;
+    if (nullCompEntry != 3) compSuite.AEGP_GetCompDownsampleFactor = FakeGetCompDownsampleFactor;
+    if (nullCompEntry != 4) compSuite.AEGP_GetCompBGColor = FakeGetCompBGColor;
+    if (nullCompEntry != 5) compSuite.AEGP_GetCompFlags = FakeGetCompFlags;
+    if (nullCompEntry != 6) compSuite.AEGP_GetShowLayerNameOrSourceName = FakeGetShowLayerNameOrSourceName;
+    if (nullCompEntry != 7) compSuite.AEGP_GetShowBlendModes = FakeGetShowBlendModes;
+    if (nullCompEntry != 8) compSuite.AEGP_GetCompFramerate = FakeGetCompFramerate;
+    if (nullCompEntry != 9) compSuite.AEGP_GetCompShutterAnglePhase = FakeGetCompShutterAnglePhase;
+    if (nullCompEntry != 10) compSuite.AEGP_GetCompShutterFrameRange = FakeGetCompShutterFrameRange;
+    if (nullCompEntry != 11) compSuite.AEGP_GetCompSuggestedMotionBlurSamples = FakeGetCompSuggestedMotionBlurSamples;
+    if (nullCompEntry != 12) compSuite.AEGP_GetCompMotionBlurAdaptiveSampleLimit = FakeGetCompMotionBlurAdaptiveSampleLimit;
+    if (nullCompEntry != 13) compSuite.AEGP_GetCompWorkAreaStart = FakeGetCompWorkAreaStart;
+    if (nullCompEntry != 14) compSuite.AEGP_GetCompWorkAreaDuration = FakeGetCompWorkAreaDuration;
+    if (nullCompEntry != 15) compSuite.AEGP_GetCompDisplayStartTime = FakeGetCompDisplayStartTime;
+    if (nullCompEntry != 16) compSuite.AEGP_GetCompFrameDuration = FakeGetCompFrameDuration;
+    if (nullCompEntry != 17) compSuite.AEGP_GetMostRecentlyUsedComp = FakeGetMostRecentlyUsedComp;
+    if (nullCompEntry != 18) compSuite.AEGP_GetCompDisplayDropFrame = FakeGetCompDisplayDropFrame;
 
     /* basic */
     basicSuite.AcquireSuite = FakeAcquireSuite;

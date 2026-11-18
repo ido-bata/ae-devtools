@@ -122,6 +122,7 @@ for reads only.
 | `kAEGPMemorySuite` ("AEGP Memory Suite") | `kAEGPMemorySuiteVersion1` (1) | `AEGP_MemorySuite1` | idle only |
 | `kAEGPRenderQueueSuite` / `kAEGPRQItemSuite` | v1 (1) / v4 (4) | `AEGP_RenderQueueSuite1` / `AEGP_RQItemSuite4` | idle, probe branch only, non-fatal |
 | `kAEGPItemViewSuite` ("AEGP Item View Suite") | `kAEGPItemViewSuiteVersion2` (2) | `AEGP_ItemViewSuite2` | idle, probe branch only, non-fatal |
+| `kAEGPCompSuite` ("AEGP Comp Suite") | `kAEGPCompSuiteVersion13` (27) | `AEGP_CompSuite13` | idle, probe branch only, non-fatal |
 
 Every `AcquireSuite` is paired with `ReleaseSuite` on all exit paths.
 
@@ -136,6 +137,7 @@ Every `AcquireSuite` is paired with `ReleaseSuite` on all exit paths.
 | `AEGP_GetNumProjects` / `AEGP_GetProjectByIndex` / `AEGP_GetProjectName` / `AEGP_ProjectIsDirty` / `AEGP_GetProjectBitDepth` / `AEGP_GetProjectRootFolder` / `AEGP_GetProjectPath` / `AEGP_GetProjectTimeDisplay` | Proj | Project enumeration getters. `AEGP_GetProjectPath` is queried for the fingerprint **and** logged as `project[i].path` — it writes local paths to the AE debug log, so evidence excerpts must be redacted before sharing. |
 | `AEGP_GetFirstProjItem` / `AEGP_GetNextProjItem` / `AEGP_GetItemType` / `AEGP_GetItemName` / `AEGP_GetActiveItem` / `AEGP_IsItemSelected` / `AEGP_GetTypeName` / `AEGP_GetItemID` / `AEGP_GetItemFlags` / `AEGP_GetItemParentFolder` / `AEGP_GetItemDuration` / `AEGP_GetItemCurrentTime` / `AEGP_GetItemDimensions` / `AEGP_GetItemPixelAspectRatio` / `AEGP_GetItemComment` / `AEGP_GetItemLabel` / `AEGP_GetItemMRUView` | Item | Top-level item iteration + per-item metadata getters (capped at 4096 items walked / 8 named items detailed). All are queries; the extended set runs only for the first `MAX_ITEM_NAMES` items. |
 | `AEGP_GetItemViewPlaybackTime` / `AEGP_GetItemViewGuidesVisible` / `AEGP_GetItemViewGuidesSnap` / `AEGP_GetItemViewGuidesLocked` | Item View | Read-only viewer-state getters, called only for a non-NULL MRU view handle; the whole slice is skipped when the suite is unavailable (non-fatal, like the render-queue slice). |
+| `AEGP_GetCompFromItem` / `AEGP_GetItemFromComp` / `AEGP_GetCompFramerate` / `AEGP_GetCompFrameDuration` / `AEGP_GetCompDownsampleFactor` / `AEGP_GetCompBGColor` / `AEGP_GetCompFlags` / `AEGP_GetShowLayerNameOrSourceName` / `AEGP_GetShowBlendModes` / `AEGP_GetCompShutterAnglePhase` / `AEGP_GetCompShutterFrameRange` / `AEGP_GetCompSuggestedMotionBlurSamples` / `AEGP_GetCompMotionBlurAdaptiveSampleLimit` / `AEGP_GetCompWorkAreaStart` / `AEGP_GetCompWorkAreaDuration` / `AEGP_GetCompDisplayStartTime` / `AEGP_GetCompDisplayDropFrame` / `AEGP_GetMostRecentlyUsedComp` | Comp | Read-only comp getters, called only for `AEGP_ItemType_COMP` items (plus one MRU-comp query per run). The whole slice is skipped when the suite is unavailable (non-fatal). `AEGP_GetCompShutterFrameRange` is evaluated at comp time zero. Comp handles are borrowed — never freed. |
 | `AEGP_GetRenderQueueState` and the `AEGP_RQItemSuite4` getters | Render Queue / RQ Item | Read-only queue observation; suite acquisition failure is non-fatal. |
 | `AEGP_GetMemHandleSize` / `AEGP_LockMemHandle` / `AEGP_UnlockMemHandle` / `AEGP_FreeMemHandle` | Memory | Bounded read + mandatory disposal of AE-allocated name/comment strings. Lock/read/free only. |
 
@@ -221,8 +223,9 @@ recovery from count/name/path query failures, missing project),
 silent steady-state ticks (no markers, no op records), and op-record
 emission for entry and probe calls, plus the Issue #63 extended
 slice (project time display, per-item metadata, active item, MRU
-view getters, per-call failure paths, missing-entry fail-closed vs
-non-fatal suite degradation). Latest run: **776 checks, 0
+view getters) and the Issue #64 comp read-only slice (per-comp
+getters for COMP items, MRU comp, per-call failure paths,
+non-fatal suite degradation). Latest run: **929 checks, 0
 failures** (see `../EVIDENCE.md`).
 
 These are **unit/mock-level** checks of our own code only — they do
@@ -234,7 +237,7 @@ not exercise real AE dispatch, real suite behaviour, or real timing.
 | --- | --- |
 | Compiles + links on macOS arm64 / Xcode 27.2 | verified on **build host** |
 | `.plugin` bundle structure, arch, linkage, signature | verified on **build host** (see `../EVIDENCE.md`) |
-| Mock-host unit tests (`test/run_tests.sh`) | **automated test** — 776 checks green, fake host only |
+| Mock-host unit tests (`test/run_tests.sh`) | **automated test** — 929 checks green, fake host only |
 | Load into After Effects | **UNVERIFIED** — needs authorized AE session |
 | Entry-point execution / idle-hook dispatch / AEGP query results | **UNVERIFIED** — same gate |
 | Windows build/load | **UNVERIFIED** — no Windows host |

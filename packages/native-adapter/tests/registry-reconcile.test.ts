@@ -54,6 +54,7 @@ const RECEIVER_TO_SUITE: Record<string, string> = {
   rqP: "AEGP_RenderQueueSuite1",
   rqItemP: "AEGP_RQItemSuite4",
   itemViewP: "AEGP_ItemViewSuite2",
+  compP: "AEGP_CompSuite13",
 };
 
 /** Members that count as suite calls for reconciliation. */

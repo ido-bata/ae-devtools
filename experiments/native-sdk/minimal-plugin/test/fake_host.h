@@ -43,6 +43,11 @@ struct _AEGP_ItemView
 {
     int index;
 };
+struct _AEGP_Comp
+{
+    int projIndex;
+    int itemIndex;
+};
 
 struct FakeMemRec
 {
@@ -63,6 +68,30 @@ struct FakeNameSpec
     int failMode = 0; /* 0 ok, 1 = size fails, 2 = lock fails, 3 = err return, 4 = NULL handle + NONE */
 };
 
+/* Per-comp read-only metadata returned by the Issue #64
+   AEGP_CompSuite13 getters. Parallel to itemMeta by item index;
+   defaults are sane comp values. */
+struct FakeCompMeta
+{
+    A_FpLong fps = 30.0;
+    A_Time frameDuration = {1, 30};
+    AEGP_DownsampleFactor dsf = {1, 1};
+    AEGP_ColorVal bgColor = {1.0, 0.0, 0.0, 0.0};
+    AEGP_CompFlags flags = 0;
+    A_Boolean showLayerNames = TRUE;
+    A_Boolean showBlendModes = FALSE;
+    A_Ratio shutterAngle = {180, 1};
+    A_Ratio shutterPhase = {0, 1};
+    A_Time shutterStart = {0, 30};
+    A_Time shutterDuration = {1, 30};
+    A_long mbSamples = 16;
+    A_long mbAdaptiveLimit = 128;
+    A_Time workAreaStart = {0, 30};
+    A_Time workAreaDuration = {90, 30};
+    A_Time displayStart = {0, 30};
+    A_Boolean displayDropFrame = FALSE;
+};
+
 /* Per-item extended metadata returned by the Issue #63 read-only
    getters. Parallel to itemNames/itemTypes by index; missing entries
    fall back to FakeItemMeta defaults. */
@@ -79,6 +108,7 @@ struct FakeItemMeta
     A_Ratio par = {1, 1};
     bool hasView = false;      /* AEGP_GetItemMRUView returns a view */
     FakeNameSpec comment;      /* empty units → empty-string handle */
+    FakeCompMeta compMeta;     /* meaningful only for COMP items */
 };
 
 struct FakeProject
@@ -115,6 +145,7 @@ struct FakeHost
     int activeItemErr = A_Err_NONE;         /* GetActiveItem fails */
     int itemMetaErr = A_Err_NONE; /* all extended ItemSuite9 detail getters fail */
     int itemViewQueryErr = A_Err_NONE; /* ItemViewSuite2 getters fail */
+    int compQueryErr = A_Err_NONE;     /* CompSuite13 getters fail */
     int activeItemProject = -1; /* -1 → GetActiveItem returns NULL item */
     int activeItemIndex = -1;
 
@@ -126,6 +157,7 @@ struct FakeHost
     bool failAcquireRQ = false;
     bool failAcquireRQItem = false;
     bool failAcquireItemView = false;
+    bool failAcquireComp = false;
     bool registerWithAegpFails = false;
     bool registerIdleHookFails = false;
     bool registerIdleHookMissing = false; /* entry left NULL in suite */
@@ -134,11 +166,14 @@ struct FakeHost
     int nullMemEntry = 0;  /* 1 = FreeMemHandle NULL, 2 = GetMemHandleSize NULL */
     int nullItemEntry = 0; /* 1 = GetItemMRUView NULL, 2 = GetItemComment NULL, 3 = GetActiveItem NULL, 4 = GetTypeName NULL */
     int nullItemViewEntry = 0; /* 1..4 = the four ItemViewSuite2 getters NULL */
+    int nullCompEntry = 0; /* 1..18 = the CompSuite13 entries the probe calls NULL */
+    int mruCompProject = -1; /* -1 → GetMostRecentlyUsedComp returns NULL */
+    int mruCompIndex = -1;
 
     /* ---- observed state ---- */
     std::vector<std::string> log; /* raw infoZ strings passed to WriteToDebugLog */
-    int acquireCount[8] = {0};
-    int releaseCount[8] = {0};
+    int acquireCount[9] = {0};
+    int releaseCount[9] = {0};
     int idleHookRegistrations = 0;
     AEGP_IdleHook idleHook = NULL;
     AEGP_PluginID idleHookPluginId = 0;
@@ -159,6 +194,7 @@ struct FakeHost
     AEGP_RenderQueueSuite1 rqSuite;
     AEGP_RQItemSuite4 rqItemSuite;
     AEGP_ItemViewSuite2 itemViewSuite;
+    AEGP_CompSuite13 compSuite;
     SPBasicSuite basicSuite;
 
     FakeHost();
