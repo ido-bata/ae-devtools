@@ -30,6 +30,13 @@ test("platform dirs: darwin/win32 paths, others refused", () => {
   assert.match(cepExtensionsDir({ platform: "win32", appData: "C:\\AppData\\Roaming" }), /CEP.*extensions$/);
   assert.throws(() => cepExtensionsDir({ platform: "linux" }), /unsupported/);
   assert.match(cepLogDir({ platform: "darwin", home: "/h" }), /Library.*Logs.*CSXS$/);
+  // win32: Adobe CEP Debugging Handbook documents the logs folder as
+  // %temp% directly (not %APPDATA%\Adobe\CEP\logs). Modeled path only.
+  assert.equal(
+    cepLogDir({ platform: "win32", temp: "C:\\Users\\u\\AppData\\Local\\Temp" }),
+    "C:\\Users\\u\\AppData\\Local\\Temp");
+  assert.throws(() => cepLogDir({ platform: "win32", temp: null }), /TEMP/);
+  assert.equal(cepLogDir({ platform: "linux", temp: "/tmp" }), null);
 });
 
 test("install → status → idempotent reinstall → drift reinstall", async () => {
@@ -104,6 +111,18 @@ test("collectLogs lists CEPHtmlEngine logs with sizes; empty dir ok", async () =
   assert.equal(r.logs[0].bytes, 100);
   const empty = await collectLogs({ logDir: join(dir, "nope") });
   assert.deepEqual(empty.logs, []);
+});
+
+test("collectLogs resolves the modeled win32 log dir via platform/temp", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "cep-logs-win-"));
+  await writeFile(join(dir, "CEPHtmlEngine12-AEFT-26.5.3-com.example.panel.log"), "x");
+  const r = await collectLogs({ platform: "win32", temp: dir });
+  assert.equal(r.dir, dir);
+  assert.equal(r.logs.length, 1);
+  // unsupported platform → no dir, empty result, no throw
+  const none = await collectLogs({ platform: "linux", temp: dir });
+  assert.equal(none.dir, null);
+  assert.deepEqual(none.logs, []);
 });
 
 test("playerDebugModeStatus reports set/unset per CSXS domain without writing", async () => {

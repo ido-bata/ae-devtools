@@ -40,13 +40,25 @@ export function cepExtensionsDir({ platform = process.platform, home = process.e
   throw new Error(`unsupported platform for CEP extensions dir: ${platform}`);
 }
 
-/** CEPHtmlEngine log dir (panel/JSX-side evidence lives here). */
-export function cepLogDir({ platform = process.platform, home = process.env.HOME } = {}) {
+/** CEPHtmlEngine log dir (panel/JSX-side evidence lives here).
+ *  darwin: ~/Library/Logs/CSXS (verified on real host — EVIDENCE.md).
+ *  win32: the user's temp dir. Adobe's CEP Debugging Handbook
+ *  (CEP_11.x/CEP_12.x, "Logs Folders") documents the Windows CEP logs
+ *  folder as `%temp%` — files like CEP12-<Host>.log and
+ *  CEPHtmlEngine12-<Host>-<ver>-<ext>.log sit directly in
+ *  %TEMP% (typically C:\Users\<user>\AppData\Local\Temp), NOT under
+ *  %APPDATA%\Adobe\CEP. Modeled path only: never exercised on a real
+ *  Windows host (UNVERIFIED).
+ *  Other platforms: null (unsupported). */
+export function cepLogDir({ platform = process.platform, home = process.env.HOME, temp = process.env.TEMP ?? process.env.TMP } = {}) {
   if (platform === "darwin") {
     if (!home) throw new Error("HOME is required for darwin CEP log dir");
     return join(home, "Library", "Logs", "CSXS");
   }
-  if (platform === "win32") return null; // %APPDATA%/Adobe/CEP/logs — not modeled here
+  if (platform === "win32") {
+    if (!temp) throw new Error("TEMP/TMP is required for win32 CEP log dir");
+    return temp;
+  }
   return null;
 }
 
@@ -189,8 +201,8 @@ export async function cleanup({ targetDir = null, platform = process.platform } 
 
 /** List CEPHtmlEngine log files (names + sizes). Reading panel logs is
  *  evidence collection, not AE interaction. */
-export async function collectLogs({ logDir = null, home = process.env.HOME } = {}) {
-  const dir = logDir ?? cepLogDir({ home });
+export async function collectLogs({ logDir = null, home = process.env.HOME, platform = process.platform, temp = process.env.TEMP ?? process.env.TMP } = {}) {
+  const dir = logDir ?? cepLogDir({ platform, home, temp });
   if (!dir || !(await exists(dir))) return { dir, logs: [] };
   const logs = [];
   for (const e of await readdir(dir)) {
