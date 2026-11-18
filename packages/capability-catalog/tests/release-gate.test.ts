@@ -340,6 +340,94 @@ describe("evaluateReleaseGate", () => {
     expect(report.staleEvidence).toHaveLength(0);
   });
 
+  // ---- supportedRelease scope binding (Issue #229) ----
+
+  const recordedScope = (scopeOver: Record<string, unknown> = {}) =>
+    scope({
+      supportedRelease: {
+        state: "recorded",
+        releases: ["26.5"],
+        scope: { os: ["darwin"], arch: ["arm64"], verification: "verified-real-host" },
+        ...scopeOver,
+      },
+      claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }],
+    });
+  const inScopeRecord = (over: Record<string, unknown> = {}) =>
+    conformanceRecord({
+      aeVersion: { version: "26.5.3x9", build: "9" },
+      platform: { os: "darwin", osVersion: "27.2.1", arch: "arm64" },
+      ...over,
+    });
+
+  test("recorded scope: in-scope PASS record still passes", () => {
+    const report = evaluateReleaseGate({
+      scope: recordedScope(),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(inScopeRecord())],
+      candidate: freshCandidate(),
+    });
+    expect(report.verdict).toBe("pass");
+    expect(report.outOfScopeEvidence).toHaveLength(0);
+  });
+
+  test("recorded scope: AE 27.0 record cannot satisfy a 26.5 claim", () => {
+    const report = evaluateReleaseGate({
+      scope: recordedScope(),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(conformanceRecord())], // fixture: aeVersion 27.0
+      candidate: freshCandidate(),
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.violations[0]?.reason).toBe("no-evidence");
+    expect(report.outOfScopeEvidence[0]?.reason).toBe("ae-version-out-of-scope");
+    expect(report.diagnostics).toContain("supported-scope-excluded-evidence");
+  });
+
+  test("recorded scope: wrong arch/os records are excluded", () => {
+    for (const [over, reason] of [
+      [{ platform: { os: "darwin", osVersion: "27.2.1", arch: "x64" } }, "platform-out-of-scope"],
+      [{ platform: { os: "win32", osVersion: "11", arch: "arm64" } }, "platform-out-of-scope"],
+      [{ verification: "automated-fake", result: "NOT_RUN" }, "verification-out-of-scope"],
+    ] as const) {
+      const report = evaluateReleaseGate({
+        scope: recordedScope(),
+        manifest: manifest([catalogRecord()]),
+        recordSources: [source(inScopeRecord(over))],
+        candidate: freshCandidate(),
+      });
+      expect(report.verdict).toBe("violations");
+      expect(report.outOfScopeEvidence[0]?.reason).toBe(reason);
+    }
+  });
+
+  test("recorded scope without scope fields constrains only the release line", () => {
+    const report = evaluateReleaseGate({
+      scope: scope({
+        supportedRelease: { state: "recorded", releases: ["26.5"] },
+        claimedCapabilities: [{ capabilityId: "ae.operation.app.version-info", os: "darwin" }],
+      }),
+      manifest: manifest([catalogRecord()]),
+      // arch/os outside any declared bound still count — only the AE
+      // release line is constrained when scope.os/arch are absent.
+      recordSources: [source(inScopeRecord({
+        platform: { os: "darwin", osVersion: "27.2.1", arch: "x64" },
+      }))],
+      candidate: freshCandidate(),
+    });
+    expect(report.verdict).toBe("pass");
+  });
+
+  test("unparseable aeVersion is out of scope, never assumed in", () => {
+    const report = evaluateReleaseGate({
+      scope: recordedScope(),
+      manifest: manifest([catalogRecord()]),
+      recordSources: [source(inScopeRecord({ aeVersion: { version: "unknown", build: "?" } }))],
+      candidate: freshCandidate(),
+    });
+    expect(report.verdict).toBe("violations");
+    expect(report.outOfScopeEvidence[0]?.reason).toBe("ae-version-out-of-scope");
+  });
+
   test("isEvidenceScopePath: scope prefixes in, tests/docs/evidence out", () => {
     expect(isEvidenceScopePath("packages/ae-devtools-cli/dev-loop/outcomes.mjs")).toBe(true);
     expect(isEvidenceScopePath("packages/ae-devtools-cli/package.json")).toBe(true);
