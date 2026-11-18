@@ -28,7 +28,8 @@
   "exports": {
     "./agent-loop": "./agent-loop/loop.mjs",
     "./agent-loop/fake-host": "./agent-loop/fake-host.mjs",
-    "./*": "./*"
+    "./trusted-execution/runner.mjs": "./trusted-execution/runner.mjs",
+    "./trusted-execution/permissions.mjs": "./trusted-execution/permissions.mjs"
   },
   "files": [
     "devtools-cli",
