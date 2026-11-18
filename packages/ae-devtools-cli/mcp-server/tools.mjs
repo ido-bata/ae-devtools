@@ -180,9 +180,13 @@ let requestCounter = 0;
 /**
  * @param {string} name — tool name
  * @param {object} args — tool arguments
- * @param {{getSession: () => Promise<object>}} ctx — lazy session accessor;
- *   only ae_execute/ae_verify (and only after the consent pre-gate passes)
- *   call it, so discover/inspect/denied calls never open a session.
+ * @param {{getSession: () => Promise<object>,
+ *   onRequestEvent?: (ev:{requestId:string,method:string|null,event:string})=>*}} ctx
+ *   — lazy session accessor; only ae_execute/ae_verify (and only after
+ *   the consent pre-gate passes) call it, so discover/inspect/denied
+ *   calls never open a session. `onRequestEvent` is an optional sink
+ *   for run-guard request lifecycle events (Issue #198); surfaces
+ *   without a marker simply omit it.
  */
 export async function callTool(name, args = {}, ctx = {}) {
   if (!TOOL_NAMES.has(name)) {
@@ -224,6 +228,11 @@ export async function callTool(name, args = {}, ctx = {}) {
       // provider exists because runOperation requires one for EVERY
       // dispatch — it is not an approval of its own.
       const requestId = `req-mcp-${++requestCounter}`;
+      // Request lifecycle → run-guard marker when the surface keeps one
+      // (a8n sessions, Issue #198). "timeout" is recorded only for a
+      // wire UNKNOWN outcome — the same recoverable-state rule the CLI
+      // uses; these events are residue visibility, never authority.
+      ctx.onRequestEvent?.({ requestId, method: args.opId, event: "dispatched" });
       const result = await execute({
         opId: args.opId,
         args: args.args ?? {},
@@ -236,6 +245,10 @@ export async function callTool(name, args = {}, ctx = {}) {
         requestId,
         confirmDestructive: args.confirmDestructive === true,
         confirmRender: args.confirmRender === true,
+      });
+      ctx.onRequestEvent?.({
+        requestId, method: args.opId,
+        event: (result?.outcome ?? result?.status ?? null) === "UNKNOWN" ? "timeout" : "resolved",
       });
       const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({
@@ -251,9 +264,11 @@ export async function callTool(name, args = {}, ctx = {}) {
         return toolResult(consentRefusal("ae_verify", args.consent), true);
       }
       const session = await ctx.getSession();
+      const readOpId = typeof args.readOpId === "string" && args.readOpId.length > 0 ? args.readOpId : "read.projectSummary";
       const requestId = `req-mcp-${++requestCounter}`;
+      ctx.onRequestEvent?.({ requestId, method: readOpId, event: "dispatched" });
       const result = await verify({
-        readOpId: typeof args.readOpId === "string" && args.readOpId.length > 0 ? args.readOpId : "read.projectSummary",
+        readOpId,
         readArgs: args.args ?? {},
         runner: session.runner,
         pin: session.pin,
@@ -262,6 +277,10 @@ export async function callTool(name, args = {}, ctx = {}) {
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
         requestId,
+      });
+      ctx.onRequestEvent?.({
+        requestId, method: readOpId,
+        event: (result?.outcome ?? result?.status ?? null) === "UNKNOWN" ? "timeout" : "resolved",
       });
       const diagnostics = await failureDiagnostics({ result, session, requestId });
       return toolResult({

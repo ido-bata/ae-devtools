@@ -310,7 +310,7 @@ async function main() {
       // leaves an attributable residue record.
       const guard = await beginRun({
         dir: RUNS_DIR, sessionKind: flags.session ?? "fake",
-        argv: [cmd, ...rest],
+        argv: [cmd, ...rest], surface: "cli",
       });
       state.guard = { dir: RUNS_DIR, runId: guard.runId };
 

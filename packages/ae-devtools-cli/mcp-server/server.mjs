@@ -36,6 +36,7 @@ import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
 import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
+import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
 // Single source of truth for the published version — avoids the drift
@@ -75,6 +76,8 @@ function rpcError(id, code, message, data) {
  *   closeTimeoutMs — bound for session.close() (default: the shared
  *                    dev-loop close timeout); a hung close is reported,
  *                    never awaited forever (Issue #196)
+ *   runsDir        — run-guard marker dir for a8n sessions (default:
+ *                    devtools-cli RUNS_DIR; Issue #198 residue markers)
  * @returns {{close: () => Promise<void>}}
  */
 export function createServer(opts = {}) {
@@ -85,6 +88,16 @@ export function createServer(opts = {}) {
   const sessionOptions = opts.sessionOptions ?? {};
   const closeTimeoutMs = opts.closeTimeoutMs;
 
+  // Run-guard residue markers for a8n sessions only (Issue #198, 案 C):
+  // a SIGKILLed/crashed server leaves an attributable "open" marker in
+  // the shared runs dir. The guard records NO session.process
+  // attestation — the slice handle is stripped in session.mjs — so
+  // reap/recover keep refusing these markers (fail-closed). Fake
+  // sessions launch no AE and get no marker.
+  const guard = createSurfaceGuard({
+    surface: "mcp", sessionKind, dir: opts.runsDir,
+  });
+
   // Lazy single-flight session: opened on first dispatch-capable call,
   // shared by every later call, closed by close().
   let sessionPromise = null;
@@ -92,14 +105,27 @@ export function createServer(opts = {}) {
   const getSession = () => {
     if (!sessionPromise) {
       sessionPromise = Promise.resolve()
-        .then(() => sessionFactory(sessionKind, sessionOptions))
-        .then((s) => { resolvedSession = s; return s; });
+        .then(async () => {
+          // Marker BEFORE open: a launch that dies mid-open still
+          // leaves an attributable residue record.
+          await guard.begin();
+          try {
+            const s = await sessionFactory(sessionKind, sessionOptions);
+            guard.mark(s);
+            resolvedSession = s;
+            return s;
+          } catch (e) {
+            guard.failOpen();
+            throw e;
+          }
+        });
     }
     return sessionPromise;
   };
 
   async function close() {
     if (!sessionPromise) return;
+    let closeFailed = false;
     try {
       const s = await sessionPromise;
       // Bounded close — shared with CLI/VSCode
@@ -108,11 +134,16 @@ export function createServer(opts = {}) {
       if (s) {
         const r = await closeSessionWithTimeout(s, { timeoutMs: closeTimeoutMs });
         if (r.ok === false) {
+          closeFailed = true;
           process.stderr.write(`mcp-server: session close failed: ${r.error}\n`);
         }
       }
     } catch (e) {
       process.stderr.write(`mcp-server: session close failed: ${e?.message ?? e}\n`);
+    } finally {
+      // "closed" removes the marker; "close-failed" keeps it as
+      // residue — the same contract the CLI cleanup path uses.
+      guard.end(closeFailed ? "close-failed" : "closed");
     }
   }
 
@@ -157,7 +188,12 @@ export function createServer(opts = {}) {
           if (typeof name !== "string" || name.length === 0) {
             return rpcError(id, INVALID_PARAMS, "tools/call requires params.name (string)");
           }
-          const result = await callTool(name, args, { getSession });
+          const result = await callTool(name, args, {
+            getSession,
+            // Request lifecycle events land in the a8n run-guard marker
+            // when one exists (Issue #198); inert for fake sessions.
+            onRequestEvent: (ev) => guard.request(ev),
+          });
           return rpcResult(id, result);
         }
         default:

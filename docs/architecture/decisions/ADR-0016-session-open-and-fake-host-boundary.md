@@ -95,10 +95,45 @@ responsibility questions that were answered only implicitly in code:
 
 - Session-open behavior (missing transport, unknown kind, fake/a8n
   selection) is identical on CLI, MCP and VSCode by construction.
-- The run-marker attestation stays CLI-owned; MCP/VSCode sessions do
-  not gain recovery-marker fields they do not use.
+- The run-marker **attestation** stays CLI-owned; MCP/VSCode sessions
+  do not gain recovery-marker fields they do not use. Since Issue #198
+  they DO write residue markers (see Addendum below) — visibility
+  without authority.
 - Fake-host consolidation, if ever wanted, is a public-API change
   (both modules are packaged exports' dependencies) and requires a
   deprecation/migration path — not a silent merge.
 - Consent-rule changes land in `permissions.mjs` once and apply to all
   surfaces; surface tests must not encode divergent consent semantics.
+
+---
+
+## Addendum — run-guard residue markers on MCP/VSCode (Issue #198)
+
+The consequence above originally read as "MCP/VSCode write no run
+markers at all". Issue #198 adopted design **案 C** (marker recording
+only): `dev-loop/surface-guard.mjs` wraps the shared
+`devtools-cli/session-guard.mjs` lifecycle for the two non-CLI
+surfaces.
+
+- `--session a8n` MCP servers and VSCode controllers write
+  `ae-devtools.cli.run-guard/v1` markers with an honest `surface` label
+  (`"mcp"` / `"vscode"`) into the same runs dir the CLI's
+  `runs`/`doctor`/`reap` already read — a SIGKILLed or crashed surface
+  now leaves attributable residue instead of an invisible orphaned AE.
+- Request lifecycle events (`dispatched`/`resolved`/`timeout`) are
+  recorded at the surfaces' natural request boundary: the `req-mcp-N`
+  dispatch requestId minted in `mcp-server/tools.mjs` (shared by the
+  VSCode controller, which delegates to `callTool`).
+- **Attestation is unchanged and CLI-only.** `mcp-server/session.mjs`
+  still strips the a8n `slice` handle, so `session.process`
+  (aePid/guiSession/`recoveryTarget()` attestation) is never recorded
+  on these surfaces. `reapRun` and `authorizeRecovery` therefore keep
+  refusing MCP/VSCode markers — `NO_A8N_ATTESTATION` — preserving the
+  fail-closed boundary. Only the ownership *kind* string reported via
+  `session.meta` is recorded, as a bare claim with no evidence.
+- Fake sessions write no marker: they launch no AE and can leave no
+  host residue.
+- Rejected alternative (案 B): re-exposing the slice for attestation
+  was deferred — it would make MCP/VSCode runs recoverable and force a
+  per-surface ownership/attribution design whose cost outweighs the
+  residue-visibility benefit.
