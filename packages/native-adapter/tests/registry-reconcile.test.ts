@@ -49,7 +49,7 @@ const RECEIVER_TO_SUITE: Record<string, string> = {
   utilP: "AEGP_UtilitySuite6",
   projP: "AEGP_ProjSuite6",
   itemP: "AEGP_ItemSuite9",
-  memP: "AEGPMemorySuite1",
+  memP: "AEGP_MemorySuite1",
   regP: "AEGP_RegisterSuite5",
   rqP: "AEGP_RenderQueueSuite1",
   rqItemP: "AEGP_RQItemSuite4",
@@ -128,7 +128,7 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
   test("known-tricky members are present (regression pins)", () => {
     // These were missing/false in the pre-audit registry.
     for (const id of [
-      "AEGPMemorySuite1.AEGP_GetMemHandleSize",
+      "AEGP_MemorySuite1.AEGP_GetMemHandleSize",
       "AEGP_RegisterSuite5.AEGP_RegisterIdleHook",
       "AEGP_ProjSuite6.AEGP_GetProjectPath",
     ]) {
@@ -138,7 +138,7 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
     // Members probe.cpp never calls may be registered inventory-only
     // (CAP047 clusters) but must NEVER be marked implemented.
     for (const id of [
-      "AEGPMemorySuite1.AEGP_NewMemHandle",
+      "AEGP_MemorySuite1.AEGP_NewMemHandle",
       "SPBasicSuite.IsEqual",
     ]) {
       const entry = DISPATCH_ENTRIES.find((e) => e.id === id);
