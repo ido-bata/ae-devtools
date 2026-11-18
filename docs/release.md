@@ -62,7 +62,7 @@ release gate 実施途中で中断した場合、途中までの green を full 
 
 ### conformance gate（capability evidence、Issue #21 / CAP056）
 
-`release-x-y-z → main` の release-source check は `packages/capability-catalog` の conformance release gate（`bun run conformance-gate`、`.github/workflows/release-source-check.yml`）を必須 check として実行する。判定規則と release 受入との接続は次の通り。
+`release-x-y-z → main` の release-source check は `packages/capability-catalog` の conformance release gate（`bun run conformance-gate`、`.github/workflows/release-source-check.yml`）を必須 check として実行する。ticket 段階の `bun run verify` は生成物 freshness と drift gate のみを対象とし、この gate を含まない — stale real-host evidence は ticket PR を fail させず、release candidate で検出される。判定規則と release 受入との接続は次の通り。
 
 - **claim 集合** = catalog の `coverage.verification: verified-real-host` 行 ∪ `release-scope.json` の `claimedCapabilities`。宣言 claim は catalog row の存在と `compatibility.os` 宣言を cross-check され、catalog が宣言しない platform の claim は `platform-not-declared` で fail する。
 - **evidence record** は `evidence/conformance/<runId>/record.json` + cited artifacts として commit され、`artifactHashes` が release candidate と same-bytes で再計算できる場合のみ有効（`design/conformance-evidence.md` §3）。claim を満たせるのは `verified-real-host` の `PASS` record のみ。

@@ -146,4 +146,4 @@ evidence.
   `AE_A8N_ROOT`, `AE_DEVTOOLS_CLI`, `AE_INSTALL_DIR`,
   `AE_DEVTOOLS_REQUIRE_XMLLINT`, `MCP_OUT`.
 - Verification commands: `node --check`, `npm test`, `bun test`,
-  `bun run verify`.
+  `bun run verify`, `bun run conformance-gate`.

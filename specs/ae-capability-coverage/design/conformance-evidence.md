@@ -112,10 +112,15 @@ not a per-record flag.
   support only when Windows rows carry real evidence; until then the
   honest gate output is `BLOCKED (windows: UNVERIFIED)`, matching Issue
   #21's standing constraint.
-- CI wiring: layer 2 runs as a catalog script (`verify`-adjacent) so PR
-  checks enforce it before release-branch integration; real-host evidence
-  upload is a manual, owner-authorized step — CI never claims real-host
-  levels it did not observe.
+- CI wiring (stage-separated): layer 2 runs as the dedicated
+  `conformance-gate` script at the **release-candidate** stage —
+  `release-source-check.yml` executes `bun run conformance-gate` for
+  `release-* → main` PRs. The ticket-stage `bun run verify` covers only
+  generated-artifact freshness and the drift gate, so ordinary PRs are not
+  failed by evidence that can only be refreshed in an authorized
+  real-host session. Real-host evidence upload remains a manual,
+  owner-authorized step — CI never claims real-host levels it did not
+  observe.
 
 ## 5. Explicit non-goals
 
