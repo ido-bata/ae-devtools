@@ -28,6 +28,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { RUNS_DIR, GUARD_SCHEMA } from "./session-guard.mjs";
+import { failureOutcome, isFailureResult } from "../dev-loop/outcomes.mjs";
+import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
+
+// Outcome normalization + failure-record construction live in
+// dev-loop/ (Issue #181) so the CLI, MCP and VSCode consumers share one
+// implementation; re-exported here for existing import sites.
+export { failureOutcome, isFailureResult };
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // packages/ae-devtools-cli/devtools-cli → packaged diagnostics/
@@ -62,111 +69,6 @@ export function loadDiagnosticsLibs() {
   return libsPromise;
 }
 
-/** Wire outcomes that mean the dispatch did not complete cleanly. */
-const FAILURE_WIRE_STATES = new Set(["REFUSED", "FAILED", "BLOCKED", "UNKNOWN"]);
-
-/** Normalize any outcome spelling to the wire vocabulary for severity. */
-function wireState(raw) {
-  const s = String(raw ?? "").toLowerCase();
-  return { refused: "REFUSED", failed: "FAILED", completed: "COMPLETED", blocked: "BLOCKED", unknown: "UNKNOWN" }[s] ?? String(raw ?? "UNKNOWN");
-}
-
-/**
- * First failure-bearing outcome across a result's spellings, normalized
- * to the wire vocabulary, or null when nothing failure-shaped exists.
- *
- * Spellings seen in the wild:
- *   - wire results: uppercase `outcome` (FAILED/REFUSED/BLOCKED/UNKNOWN)
- *   - adapter-level refusals: lowercase `status` ("refused"/"failed")
- *     with NO wire `outcome` — the dispatch never reached the runner
- *   - adapter payload failures: wire `outcome` "COMPLETED" PLUS
- *     `status` "failed" — the failure-bearing status MUST win over the
- *     completed wire outcome
- *   - a host-reported `error` object is failure evidence even when every
- *     outcome spelling looks clean
- *
- * `outcome` is the caller-computed fallback (evidence.outcome). The
- * comparison is normalized — wire "REFUSED" and adapter "refused" are
- * the same state (Issue #127: uppercase REFUSED used to slip through).
- */
-export function failureOutcome(result, outcome) {
-  const candidates = [];
-  if (result !== null && typeof result === "object") {
-    candidates.push(result.status, result.outcome);
-  }
-  candidates.push(outcome);
-  for (const c of candidates) {
-    if (typeof c !== "string" || c.length === 0) continue;
-    const w = wireState(c);
-    if (FAILURE_WIRE_STATES.has(w)) return w;
-  }
-  if (
-    result !== null && typeof result === "object" &&
-    result.error !== null && typeof result.error === "object"
-  ) {
-    return "FAILED";
-  }
-  return null;
-}
-
-/**
- * Whether a execute/verify result deserves a diagnostics block.
- */
-export function isFailureResult(result, outcome) {
-  return failureOutcome(result, outcome) !== null;
-}
-
-/** Session pin → diagnostics `session` block (strings only, absent stays absent). */
-function pinSession(pin) {
-  if (pin === null || typeof pin !== "object") return undefined;
-  const s = {};
-  for (const k of ["sessionId", "aeVersion", "dispatchId"]) {
-    if (typeof pin[k] === "string") s[k] = pin[k];
-  }
-  return Object.keys(s).length > 0 ? s : undefined;
-}
-
-/**
- * Pick the diagnostics record for one failure. A host-reported error
- * (runner `error` field: name/message/line?/file?/hostReported) becomes a
- * script-exception via fromAeError; everything else becomes a
- * transport-outcome record carrying the refusal/failure detail.
- */
-function recordForFailure(libs, { result, outcome, session, requestId }) {
-  const ctx = {
-    session: pinSession(session?.pin),
-    requestId: typeof requestId === "string" ? requestId : undefined,
-    outcome: typeof outcome === "string" ? outcome : undefined,
-  };
-  const hostErr = result?.error;
-  if (hostErr !== null && typeof hostErr === "object" && typeof hostErr.message === "string" && hostErr.message.length > 0) {
-    // runner.mjs already normalized the codec aeError wrapper to inner
-    // fields; fromAeError accepts either shape.
-    return libs.collectors.fromAeError(hostErr, { ctx });
-  }
-  // The failure-bearing status wins over a COMPLETED wire outcome
-  // (adapter ok:false payloads); failureOutcome normalizes every
-  // spelling to the wire vocabulary.
-  const state = failureOutcome(result, outcome) ?? wireState(result?.outcome ?? outcome ?? result?.status);
-  const adapterMsg =
-    result?.adapterError?.error?.message ??
-    (typeof result?.adapterError?.message === "string" ? result.adapterError.message : null) ??
-    (typeof result?.adapterError === "string" ? result.adapterError : null);
-  // `code` carries the machine reason exactly once (reason / wire
-  // refusal code); `detail` carries the human-readable fields —
-  // including the host's refusal message, which used to be dropped.
-  const detail = [
-    result?.detail,
-    result?.refusal?.message,
-    result?.unknownCategory,
-    adapterMsg,
-  ].filter((v) => typeof v === "string" && v.length > 0).join(" ");
-  return libs.collectors.fromTransportOutcome(
-    { outcome: state, code: result?.reason ?? result?.refusal?.code ?? null, detail: detail || null },
-    { ctx },
-  );
-}
-
 /**
  * Build the additive `diagnostics` block for a failed execute/verify
  * evidence record. Never throws: a missing diagnostics checkout degrades
@@ -190,27 +92,19 @@ export async function buildFailureDiagnostics({ result, outcome, session, reques
     return block;
   }
   try {
-    const record = recordForFailure(libs, { result, outcome, session, requestId });
-    // Evidence label honesty: "fake" only for fake sessions; "real-host"
-    // only when the failure was actually observed through the host /
-    // transport on an owned AE session (a wire outcome or a host error
-    // reply). A client-side refusal never reached the host, and an
-    // absent/unknown session proves nothing — leave `evidence` absent
-    // rather than claim an observation that did not happen.
-    const hostObserved =
-      (result !== null && typeof result === "object" && typeof result.outcome === "string") ||
-      (result !== null && typeof result === "object" && result.error !== null && typeof result.error === "object");
-    if (session?.kind === "fake") {
-      record.evidence = "fake";
-    } else if (session?.kind === "a8n" && hostObserved) {
-      record.evidence = "real-host";
-    } else {
-      delete record.evidence;
+    // Shared failure→record mapping (dev-loop/failure-record.mjs) —
+    // includes the evidence-label honesty rule, so no post-hoc fixup
+    // is needed here.
+    const record = recordFromExecuteResult({
+      result, outcome, session, requestId,
+      collectors: libs.collectors,
+    });
+    if (record !== null) {
+      block.records.push(record);
+      const opts = {};
+      if (typeof mapDir === "string" && mapDir.length > 0) opts.mapDir = mapDir;
+      block.resolutions.push(libs.sourceMap.resolveDiagnosticsSource(record, opts));
     }
-    block.records.push(record);
-    const opts = {};
-    if (typeof mapDir === "string" && mapDir.length > 0) opts.mapDir = mapDir;
-    block.resolutions.push(libs.sourceMap.resolveDiagnosticsSource(record, opts));
   } catch (e) {
     block.status = "error";
     block.reason = String(e?.message ?? e);
