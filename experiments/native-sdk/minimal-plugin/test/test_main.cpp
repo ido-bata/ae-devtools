@@ -2438,6 +2438,171 @@ static void TestIntakeEnumerateUndescribableName()
     }
 }
 
+static void TestIntakeItemGetters()
+{
+    /* Issue #318 / #63: {projectIndex, item:<aeRefItem>} → shared
+       resolver → typed ItemSuite9 detail getter on the resolved
+       handle. Covers representative payload shapes plus stale,
+       op-error, and missing-entry paths. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Clip", AEGP_ItemType_COMP, 7001 },
+    });
+    p.itemMeta[0].flags = 0x4;
+    p.itemMeta[0].selected = TRUE;
+    p.itemMeta[0].label = AEGP_Label_5;
+    p.itemMeta[0].duration = {120, 24};
+    p.itemMeta[0].currentTime = {10, 24};
+    p.itemMeta[0].width = 1920;
+    p.itemMeta[0].height = 1080;
+    p.itemMeta[0].par = {16, 15};
+    p.itemMeta[0].comment = h->MakeNameSpec(FakeHost::U16("selects ring"));
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* itemRef =
+        "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\","
+        "\"name\":\"Clip\",\"path\":[0],\"itemId\":7001,"
+        "\"projectName\":\"Shot01\",\"projectPath\":\"/tmp/shot01.aep\"}}}";
+
+    struct { const char* id; const char* op; const char* key; } cases[] = {
+        { "it",  "AEGP_ItemSuite9.AEGP_GetItemType",        "itemType" },
+        { "if",  "AEGP_ItemSuite9.AEGP_GetItemFlags",       "flags" },
+        { "il",  "AEGP_ItemSuite9.AEGP_GetItemLabel",       "label" },
+        { "id",  "AEGP_ItemSuite9.AEGP_GetItemDuration",    NULL },
+        { "ict", "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", NULL },
+        { "iw",  "AEGP_ItemSuite9.AEGP_GetItemDimensions",  NULL },
+        { "ip",  "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", NULL },
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        char fname[64];
+        snprintf(fname, sizeof(fname), "inbox/%s.request.json", cases[i].id);
+        WriteReq0600(c.Path(fname),
+                     ReqJsonArgs(cases[i].id, kTok, 30000, cases[i].op,
+                                 "26.5", itemRef));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, cases[i].id, &doc);
+        CHECK(pay != NULL);
+        if (pay)
+        {
+            if (cases[i].key && strcmp(cases[i].key, "itemType") == 0)
+            {
+                JVal* t = PayloadNum(pay, "itemType");
+                CHECK(t != NULL && t->num == 2.0);
+            }
+            else if (cases[i].key && strcmp(cases[i].key, "flags") == 0)
+            {
+                JVal* f = PayloadNum(pay, "flags");
+                CHECK(f != NULL && f->num == 4.0);
+            }
+            else if (cases[i].key && strcmp(cases[i].key, "label") == 0)
+            {
+                JVal* l = PayloadNum(pay, "label");
+                CHECK(l != NULL && l->num == (double)AEGP_Label_5);
+            }
+            else if (strcmp(cases[i].id, "id") == 0)
+            {
+                JVal* d = JGet(pay, "duration");
+                JVal* val = d ? PayloadNum(d, "value") : NULL;
+                JVal* scl = d ? PayloadNum(d, "scale") : NULL;
+                CHECK(val != NULL && val->num == 120.0);
+                CHECK(scl != NULL && scl->num == 24.0);
+            }
+            else if (strcmp(cases[i].id, "ict") == 0)
+            {
+                JVal* t = JGet(pay, "currentTime");
+                JVal* val = t ? PayloadNum(t, "value") : NULL;
+                JVal* scl = t ? PayloadNum(t, "scale") : NULL;
+                CHECK(val != NULL && val->num == 10.0);
+                CHECK(scl != NULL && scl->num == 24.0);
+            }
+            else if (strcmp(cases[i].id, "iw") == 0)
+            {
+                JVal* w = PayloadNum(pay, "width");
+                JVal* hh = PayloadNum(pay, "height");
+                CHECK(w != NULL && w->num == 1920.0);
+                CHECK(hh != NULL && hh->num == 1080.0);
+            }
+            else if (strcmp(cases[i].id, "ip") == 0)
+            {
+                JVal* par = JGet(pay, "pixelAspectRatio");
+                JVal* num = par ? PayloadNum(par, "num") : NULL;
+                JVal* den = par ? PayloadNum(par, "den") : NULL;
+                CHECK(num != NULL && num->num == 16.0);
+                CHECK(den != NULL && den->num == 15.0);
+            }
+        }
+        if (doc) JFree(doc);
+        CheckResultDoc(c, cases[i].id, "completed", NULL);
+    }
+
+    /* selected flag + comment string */
+    WriteReq0600(c.Path("inbox/is.request.json"),
+                 ReqJsonArgs("is", kTok, 30000,
+                    "AEGP_ItemSuite9.AEGP_IsItemSelected", "26.5", itemRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "is", &doc);
+        JVal* s = pay ? JGet(pay, "selected") : NULL;
+        CHECK(s != NULL && s->kind == JK_TRUE);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "is", "completed", NULL);
+    }
+    WriteReq0600(c.Path("inbox/ic.request.json"),
+                 ReqJsonArgs("ic", kTok, 30000,
+                    "AEGP_ItemSuite9.AEGP_GetItemComment", "26.5", itemRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "ic"));
+        CHECK(r.find("\"comment\":\"selects ring\"") != std::string::npos);
+        CheckResultDoc(c, "ic", "completed", NULL);
+    }
+
+    /* stale itemId → STALE_REFERENCE */
+    {
+        std::string stale = itemRef;
+        size_t pos = stale.find("7001");
+        stale.replace(pos, 4, "7999");
+        WriteReq0600(c.Path("inbox/st.request.json"),
+                     ReqJsonArgs("st", kTok, 30000,
+                        "AEGP_ItemSuite9.AEGP_GetItemDuration", "26.5",
+                        stale.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "st", "refused", "STALE_REFERENCE");
+
+    /* itemMetaErr → all detail getters fail, mayHaveMutated=false */
+    h->itemMetaErr = A_Err_GENERIC;
+    WriteReq0600(c.Path("inbox/ie.request.json"),
+                 ReqJsonArgs("ie", kTok, 30000,
+                    "AEGP_ItemSuite9.AEGP_GetItemDuration", "26.5", itemRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->itemMetaErr = A_Err_NONE;
+    {
+        std::string r = Slurp(ResultPath(c, "ie"));
+        CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
+        CHECK(r.find("\"mayHaveMutated\":false") != std::string::npos);
+        CheckResultDoc(c, "ie", "failed", NULL);
+    }
+
+    /* GetItemComment entry NULL → not-sent (nullItemEntry 2) */
+    h->nullItemEntry = 2;
+    h->PopulateSuites();
+    WriteReq0600(c.Path("inbox/in.request.json"),
+                 ReqJsonArgs("in", kTok, 30000,
+                    "AEGP_ItemSuite9.AEGP_GetItemComment", "26.5", itemRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->nullItemEntry = 0;
+    h->PopulateSuites();
+    CheckResultDoc(c, "in", "not-sent", NULL);
+}
+
 static void TestIntakeCompGetters()
 {
     /* Issue #318 / #64: aeRef item descriptor → shared resolver →
@@ -3031,6 +3196,7 @@ int main(int argc, char** argv)
     TestIntakeIdentityMalformed();
     TestIntakeEnumerateUndescribableName();
     TestIntakeCompGetters();
+    TestIntakeItemGetters();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();
