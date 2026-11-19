@@ -9,6 +9,7 @@
 import * as vscode from "vscode";
 import { createController } from "./controller.mjs";
 import { normalizedOutcome } from "../dev-loop/outcomes.mjs";
+import { diffPublishPlan } from "./diagnostics.mjs";
 
 const SEVERITY_MAP = {
   error: vscode.DiagnosticSeverity.Error,
@@ -47,21 +48,16 @@ function rangeForItem(item) {
  * location.
  */
 function publishDiagnostics(plan) {
-  if (!diagnosticCollection || !plan?.items?.length) return;
-  const byUri = new Map();
-  for (const item of plan.items) {
-    const uri = uriForItem(item);
-    if (!byUri.has(uri.toString())) byUri.set(uri.toString(), { uri, items: [] });
-    byUri.get(uri.toString()).items.push(item);
+  if (!diagnosticCollection || !plan || !Array.isArray(plan.items)) return;
+  // A present plan is authoritative for the ae-devtools collection:
+  // empty plans clear every previously published URI (Issue #302).
+  const diff = diffPublishPlan(plan, publishedUris, (item) => uriForItem(item).toString());
+  for (const key of diff.clear) {
+    diagnosticCollection.delete(vscode.Uri.parse(key));
+    publishedUris.delete(key);
   }
-  const nextUris = new Set(byUri.keys());
-  for (const key of publishedUris) {
-    if (!nextUris.has(key)) {
-      diagnosticCollection.delete(vscode.Uri.parse(key));
-      publishedUris.delete(key);
-    }
-  }
-  for (const { uri, items } of byUri.values()) {
+  for (const { key, items } of diff.publish) {
+    const uri = vscode.Uri.parse(key);
     const diags = items.map((item) => {
       const d = new vscode.Diagnostic(
         rangeForItem(item),
@@ -78,7 +74,7 @@ function publishDiagnostics(plan) {
       return d;
     });
     diagnosticCollection.set(uri, diags);
-    publishedUris.add(uri.toString());
+    publishedUris.add(key);
   }
 }
 

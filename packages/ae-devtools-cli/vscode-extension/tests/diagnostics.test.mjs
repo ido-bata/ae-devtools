@@ -15,6 +15,7 @@ import {
   recordsFromExecuteResult,
   recordsFromLoopReport,
   buildPublishPlan,
+  diffPublishPlan,
   DIAGNOSTICS_PUBLISH_SCHEMA,
 } from "../diagnostics.mjs";
 import { makeDiagnosticsRecord } from "../../diagnostics/schema.mjs";
@@ -161,6 +162,28 @@ test("publish plan summarizes positioned/unmapped/no-position honestly", () => {
   assert.equal(plan.summary.positioned, 2);
   assert.equal(plan.summary.noPosition, 1);
   assert.equal(plan.summary.unmapped, 1);
+});
+
+test("diffPublishPlan groups items by key and clears only stale keys", () => {
+  const records = [
+    recordWith({ assetKind: "jsx-script", path: SINGLE_JSX, line: 3 }),
+    recordWith({ assetKind: "transport" }),
+  ];
+  const plan = buildPublishPlan(records, { sourceMapOpts: { mapDir: SINGLE_DIR } });
+  const keyForItem = (item) => item.range?.file ?? item.file ?? "no-file";
+  const mappedKey = keyForItem(plan.items[0]);
+  const noFileKey = keyForItem(plan.items[1]);
+  const diff = diffPublishPlan(plan, new Set(["stale.ts", mappedKey]), keyForItem);
+  assert.deepEqual(diff.clear, ["stale.ts"]);
+  assert.deepEqual(diff.publish.map((p) => p.key).sort(), [mappedKey, noFileKey].sort());
+  assert.ok(diff.publish.every((p) => p.items.length >= 1));
+});
+
+test("diffPublishPlan treats an empty plan as authoritative and clears all previous keys", () => {
+  const plan = buildPublishPlan([]);
+  const diff = diffPublishPlan(plan, new Set(["a.ts", "b.ts"]), () => "unused");
+  assert.deepEqual(diff.publish, []);
+  assert.deepEqual(diff.clear.sort(), ["a.ts", "b.ts"]);
 });
 
 // --- controller integration ----------------------------------------------

@@ -203,3 +203,31 @@ export function buildPublishPlan(records, opts = {}) {
   }
   return { schema: DIAGNOSTICS_PUBLISH_SCHEMA, items, summary };
 }
+
+/**
+ * Diff a publish plan against previously published keys.
+ *
+ * vscode-free publish/clear decision for the Problems panel: the caller
+ * supplies `keyForItem` (extension uses the vscode Uri string), and this
+ * returns the URIs to publish now plus the previously published keys that
+ * are absent from the current plan. An empty plan therefore clears every
+ * stale key — the plan is authoritative for the ae-devtools collection.
+ */
+export function diffPublishPlan(plan, previousKeys, keyForItem) {
+  const items = Array.isArray(plan?.items) ? plan.items : [];
+  const publish = new Map();
+  for (const item of items) {
+    const key = keyForItem(item);
+    if (!publish.has(key)) publish.set(key, []);
+    publish.get(key).push(item);
+  }
+  const prev = previousKeys instanceof Set ? previousKeys : new Set(previousKeys ?? []);
+  const clear = [];
+  for (const key of prev) {
+    if (!publish.has(key)) clear.push(key);
+  }
+  return {
+    publish: [...publish.entries()].map(([key, group]) => ({ key, items: group })),
+    clear,
+  };
+}
