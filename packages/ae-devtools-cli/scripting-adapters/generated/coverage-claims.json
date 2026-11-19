@@ -175,8 +175,8 @@
       "ops": [
         "render.queueComp",
         "read.renderQueueStatus",
-        "render.removeFromQueue",
-        "render.setTimeSpan"
+        "render.setTimeSpan",
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     },
@@ -184,8 +184,8 @@
       "ops": [
         "render.queueComp",
         "read.renderQueueStatus",
-        "render.removeFromQueue",
-        "render.setTimeSpan"
+        "render.setTimeSpan",
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     },
@@ -275,8 +275,8 @@
     "ae.scripting.RenderQueueItem.comp": {
       "ops": [
         "read.renderQueueStatus",
-        "render.removeFromQueue",
-        "render.setTimeSpan"
+        "render.setTimeSpan",
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     },

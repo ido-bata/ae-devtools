@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "169a24c784750b3760b52c1acf6513a79579900c104c9b3239b7c01fd2335dc2"
+      "sha256": "9bca5fc5432876cfd7f770ed05840b17da38c5b3c45f81be53a0f050198b0578"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -28596,7 +28596,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.removeFromQueue, render.setTimeSpan)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue)"
           }
         ]
       }
@@ -33441,7 +33441,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.removeFromQueue, render.setTimeSpan)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue)"
           }
         ]
       }
@@ -33853,7 +33853,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.removeFromQueue, render.setTimeSpan)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue)"
           }
         ]
       }
