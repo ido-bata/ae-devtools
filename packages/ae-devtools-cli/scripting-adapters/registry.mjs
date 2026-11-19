@@ -605,6 +605,7 @@ return __adp_json({ ok: true, comp: comp.name, count: layers.length, layers: lis
       S("Layer", "parent"), S("Layer", "locked"),
       S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
       S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
+      S("AVLayer", "source"), S("AVLayer", "replaceSource"),
       S("PropertyGroup", "property"), S("Property", "value"),
     ],
     args: ["compName", "layerName"],
@@ -630,6 +631,7 @@ return __adp_json({
     preserveTransparency: layer.preserveTransparency !== false,
     frameBlending: layer.frameBlending === true,
     collapseTransformation: layer.collapseTransformation === true,
+    source: layer.source === null || layer.source === undefined ? null : String(layer.source.name),
     parent: layer.parent === null || layer.parent === undefined ? null : String(layer.parent.name),
     position: pos
   }
@@ -698,6 +700,8 @@ return __adp_json({ ok: true, numKeys: n, keyframes: keys });
       S("RenderQueue", "items"), S("RenderQueue", "rendering"),
       S("RenderQueueItem", "comp"), S("RenderQueueItem", "status"),
       S("RenderQueueItem", "timeSpanStart"), S("RenderQueueItem", "timeSpanDuration"),
+      S("RenderQueueItem", "startTime"), S("RenderQueueItem", "skipFrames"),
+      S("RenderQueueItem", "logType"), S("RenderQueueItem", "elapsedSeconds"),
     ],
     args: [],
     source: () => `${PRELUDE}
@@ -711,7 +715,11 @@ for (var i = 1; i <= items.length; i++) {
     comp: it.comp === null ? null : String(it.comp.name),
     status: it.status,
     timeSpanStart: it.timeSpanStart,
-    timeSpanDuration: it.timeSpanDuration
+    timeSpanDuration: it.timeSpanDuration,
+    startTime: it.startTime,
+    skipFrames: it.skipFrames,
+    logType: it.logType,
+    elapsedSeconds: it.elapsedSeconds
   });
 }
 return __adp_json({ ok: true, rendering: rq.rendering === true, count: items.length, items: list });
@@ -1921,6 +1929,158 @@ if (typeof layer.canSetTimeRemapEnabled === "function" && !layer.canSetTimeRemap
 }
 layer.timeRemapEnabled = ${a.enabled ? "true" : "false"};
 return __adp_json({ ok: true, layer: layer.name, timeRemapEnabled: layer.timeRemapEnabled === true });
+`,
+  },
+  {
+    id: "comp.setSettings",
+    title: "Set comp settings (bg/shutter/display/motion-blur flags) — partial update",
+    domain: "project-items-comps-layers",
+    issue: "289",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("CompItem", "bgColor"), S("CompItem", "displayStartTime"),
+      S("CompItem", "displayStartFrame"), S("CompItem", "shutterAngle"),
+      S("CompItem", "shutterPhase"), S("CompItem", "motionBlur"),
+      S("CompItem", "frameBlending"), S("CompItem", "draft3d"),
+      S("CompItem", "hideShyLayers"), S("CompItem", "preserveNestedFrameRate"),
+      S("CompItem", "dropFrame"),
+    ],
+    args: ["name", "bgColor", "displayStartTime", "displayStartFrame", "shutterAngle", "shutterPhase",
+      "motionBlur", "frameBlending", "draft3d", "hideShyLayers", "preserveNestedFrameRate", "dropFrame"],
+    validate: (a) => {
+      requireArgs(a, ["name"]);
+      const numFields = ["displayStartTime", "displayStartFrame", "shutterAngle", "shutterPhase"];
+      const boolFields = ["motionBlur", "frameBlending", "draft3d", "hideShyLayers", "preserveNestedFrameRate", "dropFrame"];
+      const set = [...numFields, ...boolFields, "bgColor"].filter((k) => a[k] !== undefined);
+      if (set.length === 0) throw new Error("comp.setSettings: at least one setting is required");
+      for (const k of numFields) {
+        if (a[k] !== undefined && !(typeof a[k] === "number" && Number.isFinite(a[k]))) {
+          throw new Error(`comp.setSettings: ${k} must be a finite number`);
+        }
+      }
+      if (a.displayStartFrame !== undefined && (!Number.isInteger(a.displayStartFrame) || a.displayStartFrame < 0)) {
+        throw new Error("comp.setSettings: displayStartFrame must be a non-negative integer");
+      }
+      if (a.shutterAngle !== undefined && (a.shutterAngle < 0 || a.shutterAngle > 360)) {
+        throw new Error("comp.setSettings: shutterAngle must be in 0..360");
+      }
+      for (const k of boolFields) {
+        if (a[k] !== undefined && typeof a[k] !== "boolean") {
+          throw new Error(`comp.setSettings: ${k} must be a boolean`);
+        }
+      }
+      if (a.bgColor !== undefined) {
+        if (!Array.isArray(a.bgColor) || a.bgColor.length !== 3 ||
+            a.bgColor.some((c) => typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 1)) {
+          throw new Error("comp.setSettings: bgColor must be [r,g,b] with components in 0..1");
+        }
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.name)}, CompItem);
+${a.bgColor !== undefined ? `comp.bgColor = [${a.bgColor.join(", ")}];` : ""}
+${a.displayStartTime !== undefined ? `comp.displayStartTime = ${a.displayStartTime};` : ""}
+${a.displayStartFrame !== undefined ? `comp.displayStartFrame = ${a.displayStartFrame};` : ""}
+${a.shutterAngle !== undefined ? `comp.shutterAngle = ${a.shutterAngle};` : ""}
+${a.shutterPhase !== undefined ? `comp.shutterPhase = ${a.shutterPhase};` : ""}
+${a.motionBlur !== undefined ? `comp.motionBlur = ${a.motionBlur ? "true" : "false"};` : ""}
+${a.frameBlending !== undefined ? `comp.frameBlending = ${a.frameBlending ? "true" : "false"};` : ""}
+${a.draft3d !== undefined ? `comp.draft3d = ${a.draft3d ? "true" : "false"};` : ""}
+${a.hideShyLayers !== undefined ? `comp.hideShyLayers = ${a.hideShyLayers ? "true" : "false"};` : ""}
+${a.preserveNestedFrameRate !== undefined ? `comp.preserveNestedFrameRate = ${a.preserveNestedFrameRate ? "true" : "false"};` : ""}
+${a.dropFrame !== undefined ? `comp.dropFrame = ${a.dropFrame ? "true" : "false"};` : ""}
+return __adp_json({
+  ok: true, comp: comp.name,
+  bgColor: comp.bgColor, displayStartTime: comp.displayStartTime,
+  displayStartFrame: comp.displayStartFrame, shutterAngle: comp.shutterAngle,
+  shutterPhase: comp.shutterPhase, motionBlur: comp.motionBlur === true,
+  frameBlending: comp.frameBlending === true, draft3d: comp.draft3d === true,
+  hideShyLayers: comp.hideShyLayers === true,
+  preserveNestedFrameRate: comp.preserveNestedFrameRate !== false,
+  dropFrame: comp.dropFrame === true
+});
+`,
+  },
+  {
+    id: "read.compSettings",
+    title: "Read comp settings (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "289",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Item", "name"),
+      S("CompItem", "bgColor"), S("CompItem", "displayStartTime"),
+      S("CompItem", "displayStartFrame"), S("CompItem", "shutterAngle"),
+      S("CompItem", "shutterPhase"), S("CompItem", "motionBlur"),
+      S("CompItem", "frameBlending"), S("CompItem", "draft3d"),
+      S("CompItem", "hideShyLayers"), S("CompItem", "preserveNestedFrameRate"),
+      S("CompItem", "dropFrame"),
+    ],
+    args: ["name"],
+    validate: (a) => requireArgs(a, ["name"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.name)}, CompItem);
+return __adp_json({
+  ok: true, comp: comp.name,
+  bgColor: comp.bgColor, displayStartTime: comp.displayStartTime,
+  displayStartFrame: comp.displayStartFrame, shutterAngle: comp.shutterAngle,
+  shutterPhase: comp.shutterPhase, motionBlur: comp.motionBlur === true,
+  frameBlending: comp.frameBlending === true, draft3d: comp.draft3d === true,
+  hideShyLayers: comp.hideShyLayers === true,
+  preserveNestedFrameRate: comp.preserveNestedFrameRate !== false,
+  dropFrame: comp.dropFrame === true
+});
+`,
+  },
+  {
+    id: "layer.replaceSource",
+    title: "Replace an AV layer's source footage",
+    domain: "project-items-comps-layers",
+    issue: "289",
+    permission: "execute",
+    mutating: true,
+    members: [S("AVLayer", "replaceSource"), S("AVLayer", "source")],
+    args: ["compName", "layerName", "footageName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName", "footageName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var footage = __adp_findItem(${js(a.footageName)}, FootageItem);
+layer.replaceSource(footage);
+return __adp_json({
+  ok: true, layer: layer.name,
+  source: layer.source === null ? null : String(layer.source.name)
+});
+`,
+  },
+  {
+    id: "render.duplicateQueueItem",
+    title: "Duplicate a render queue item for a comp",
+    domain: "animation-effects-render",
+    issue: "289",
+    permission: "execute",
+    mutating: true,
+    members: [S("RenderQueueItem", "duplicate"), S("RenderQueueItem", "comp"), S("RenderQueue", "items")],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var rq = app.project.renderQueue;
+var found = null;
+var count = 0;
+for (var i = 1; i <= rq.items.length; i++) {
+  var it = rq.items[i];
+  if (it.comp !== null && it.comp.name === ${js(a.compName)}) { found = it; count++; }
+}
+if (count === 0) __adp_fail("no queued item for comp '" + ${js(a.compName)} + "'");
+if (count > 1) __adp_fail("ambiguous: " + count + " queued items for comp '" + ${js(a.compName)} + "'");
+var d = found.duplicate();
+return __adp_json({
+  ok: true, index: d.index, comp: String(d.comp.name),
+  timeSpanStart: d.timeSpanStart, timeSpanDuration: d.timeSpanDuration,
+  remaining: rq.items.length
+});
 `,
   },
 ];

@@ -174,6 +174,11 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     inType: "LINEAR", outType: "HOLD",
     inEase: { speed: 0, influence: 50 }, outEase: { speed: 0, influence: 50 },
     matteLayerName: "Text 1", matteType: "ALPHA",
+    bgColor: [0, 0, 0], displayStartTime: 0, displayStartFrame: 0,
+    shutterAngle: 180, shutterPhase: 0,
+    motionBlur: false, frameBlending: false, draft3d: false,
+    hideShyLayers: false, preserveNestedFrameRate: true, dropFrame: false,
+    footageName: "x.aep",
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -186,10 +191,10 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "item.addFolder") args.name = "F";
     if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
     if (op.id === "read.itemDetail") args.name = "C";
-    if (["comp.duplicate", "item.setLabel", "item.setComment", "comp.setResolutionFactor"].includes(op.id)) args.name = "C";
+    if (["comp.duplicate", "item.setLabel", "item.setComment", "comp.setResolutionFactor", "comp.setSettings", "read.compSettings"].includes(op.id)) args.name = "C";
     if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
-    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText"].includes(op.id)) args.compName = "C";
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText","layer.replaceSource","render.duplicateQueueItem"].includes(op.id)) args.compName = "C";
     // Batch-3 layer creators get distinct names so text.setText can
     // resolve the text layer unambiguously.
     if (op.id === "layer.addSolid") args.name = "Solid 1";
@@ -620,4 +625,65 @@ test("issue #287 batch: interpolation/ease + track matte + time remap", async ()
   assert.equal(tr.result.timeRemapEnabled, true);
   const cl2 = await go("read.compLayers", { compName: "C" });
   assert.equal(cl2.result.layers.find((l) => l.name === "N1").timeRemapEnabled, true);
+});
+
+test("issue #289 batch: comp settings + replaceSource + queue duplicate", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  assert.equal((await go("project.new", {}, { confirmDestructive: true })).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "N1" })).outcome, "COMPLETED");
+  assert.equal((await go("item.import", { path: "/tmp/clip.mov" })).outcome, "COMPLETED");
+  assert.equal((await go("item.import", { path: "/tmp/clip2.mov" })).outcome, "COMPLETED");
+
+  // comp.setSettings: validation + partial update + read.compSettings.
+  assert.equal((await go("comp.setSettings", { name: "C" })).reason, "INVALID_ARGS");
+  assert.equal((await go("comp.setSettings", { name: "C", shutterAngle: 400 })).reason, "INVALID_ARGS");
+  assert.equal((await go("comp.setSettings", { name: "C", bgColor: [1, 0] })).reason, "INVALID_ARGS");
+  assert.equal((await go("comp.setSettings", { name: "C", motionBlur: "yes" })).reason, "INVALID_ARGS");
+  const cs = await go("comp.setSettings", {
+    name: "C", bgColor: [0.1, 0.2, 0.3], shutterAngle: 90, shutterPhase: -45,
+    motionBlur: true, displayStartFrame: 12,
+  });
+  assert.equal(cs.outcome, "COMPLETED");
+  assert.deepEqual(cs.result.bgColor, [0.1, 0.2, 0.3]);
+  const rs = await go("read.compSettings", { name: "C" });
+  assert.equal(rs.outcome, "COMPLETED");
+  assert.equal(rs.result.shutterAngle, 90);
+  assert.equal(rs.result.motionBlur, true);
+  assert.equal(rs.result.frameBlending, false); // untouched default
+  assert.equal(rs.result.preserveNestedFrameRate, true);
+
+  // layer.replaceSource: footage swap + read-back via read.layerDetail.
+  const rs1 = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip.mov" });
+  assert.equal(rs1.outcome, "COMPLETED");
+  assert.equal(rs1.result.source, "clip.mov");
+  const ld = await go("read.layerDetail", { compName: "C", layerName: "N1" });
+  assert.equal(ld.result.layer.source, "clip.mov");
+  // Wrong-type footage name refuses (FolderItem/comp not FootageItem).
+  const bad = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "C" });
+  assert.notEqual(bad.outcome, "COMPLETED");
+  // Re-replace works (relink scenario).
+  const rs2 = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip2.mov" });
+  assert.equal(rs2.result.source, "clip2.mov");
+
+  // render.duplicateQueueItem: duplicate copies settings; ambiguous after dup is refused.
+  await go("render.queueComp", { compName: "C" });
+  await go("render.setTimeSpan", { compName: "C", timeSpanStart: 1, timeSpanDuration: 2 });
+  const dq = await go("render.duplicateQueueItem", { compName: "C" });
+  assert.equal(dq.outcome, "COMPLETED");
+  assert.equal(dq.result.timeSpanStart, 1);
+  assert.equal(dq.result.timeSpanDuration, 2);
+  assert.equal(dq.result.remaining, 2);
+  // Now two items for "C" — a second duplicate must refuse as ambiguous.
+  const dq2 = await go("render.duplicateQueueItem", { compName: "C" });
+  assert.notEqual(dq2.outcome, "COMPLETED");
+  // Queue status exposes the new fields.
+  const rq = await go("read.renderQueueStatus");
+  assert.equal(rq.result.count, 2);
+  assert.ok(rq.result.items.every((i) => i.startTime === 0 && i.skipFrames === 0));
 });
