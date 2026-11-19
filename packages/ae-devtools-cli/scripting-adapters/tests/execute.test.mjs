@@ -165,6 +165,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     label: 3, startTime: 0, stretch: 100, timeSpanStart: 0, timeSpanDuration: 5,
     audioEnabled: true, enabled: true, comment: "note", setting: "Output File Info",
     resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", lightType: 2, intensity: 100,
+    section: "S", key: "K", default: "d",
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -191,6 +192,11 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     // Footage detail reads the item imported earlier by item.import
     // (path /tmp/x.aep → footage name "x.aep").
     if (op.id === "read.footageDetail") args.name = "x.aep";
+    // pref.* ops share the `type` arg name with item.* ops but need a
+    // preference type token, and pref.set needs a string value.
+    if (op.id.startsWith("pref.")) { args.type = "string"; args.section = "S"; args.key = "K"; }
+    if (op.id === "pref.set") args.value = "v";
+    if (op.id === "pref.get") args.default = "d";
     // Output-module ops need "C" back in the queue: render.removeFromQueue
     // (earlier batch) already dequeued it. Re-queue exactly once — a second
     // queueComp would make the comp-name match ambiguous.
@@ -435,4 +441,53 @@ test("issue #281 batch: layer creation + text + footage/project read detail", as
   assert.equal(ps.result.settings.bitsPerChannel, 16);
   assert.equal(ps.result.settings.framesUseFeetFrames, false);
   assert.equal(ps.result.settings.file, "/tmp/fake.aep");
+});
+
+test("issue #283 batch: preferences get/set/delete + app info", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  // pref.get on an unset key returns the caller default + exists:false.
+  const miss = await go("pref.get", { section: "General", key: "Nope", type: "string", default: "fallback" });
+  assert.equal(miss.outcome, "COMPLETED");
+  assert.equal(miss.result.exists, false);
+  assert.equal(miss.result.value, "fallback");
+
+  // pref.set → pref.get read-back for each type.
+  for (const [type, value] of [["string", "hello"], ["bool", true], ["long", 42], ["float", 1.5]]) {
+    const set = await go("pref.set", { section: "S", key: "K" + type, type, value });
+    assert.equal(set.outcome, "COMPLETED", type);
+    const got = await go("pref.get", { section: "S", key: "K" + type, type, default: type === "string" ? "" : type === "bool" ? false : 0 });
+    assert.equal(got.result.exists, true, type);
+    assert.equal(got.result.value, value, type);
+  }
+  // Type/value mismatch refuses before dispatch.
+  assert.equal((await go("pref.set", { section: "S", key: "X", type: "long", value: "nan" })).reason, "INVALID_ARGS");
+  assert.equal((await go("pref.set", { section: "S", key: "X", type: "bogus", value: 1 })).reason, "INVALID_ARGS");
+
+  // pref.delete is destructive: needs confirmDestructive, then havePref=false.
+  const delNoConfirm = await go("pref.delete", { section: "S", key: "Kstring" });
+  assert.equal(delNoConfirm.reason, "DESTRUCTIVE_CONFIRMATION_REQUIRED");
+  const del = await go("pref.delete", { section: "S", key: "Kstring" }, { confirmDestructive: true });
+  assert.equal(del.outcome, "COMPLETED");
+  assert.equal(del.result.exists, false);
+  const gone = await go("pref.get", { section: "S", key: "Kstring", type: "string", default: "d" });
+  assert.equal(gone.result.exists, false);
+  assert.equal(gone.result.value, "d");
+
+  // pref.saveToDisk flushes (fake no-op, but the op must dispatch).
+  const flush = await go("pref.saveToDisk");
+  assert.equal(flush.outcome, "COMPLETED");
+  assert.equal(flush.result.saved, true);
+
+  // read.appInfo: version/build + effects matchNames + font names.
+  const info = await go("read.appInfo");
+  assert.equal(info.outcome, "COMPLETED");
+  assert.equal(info.result.app.version, "99.0-fake");
+  assert.equal(info.result.app.buildName, "fake-build");
+  assert.ok(info.result.app.effects.includes("ADBE Gaussian Blur 2"));
+  assert.ok(info.result.app.fonts.includes("ArialMT"));
 });

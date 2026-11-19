@@ -81,13 +81,13 @@ function sampleArgs(op) {
   for (const n of op.args) {
     if (["x", "y", "width", "height", "pixelAspect", "duration", "frameRate"].includes(n)) a[n] = 30;
     else if (n === "to") a[n] = "top";
-    else if (n === "type") a[n] = "CompItem";
+    else if (n === "type" && !op.id.startsWith("pref.")) a[n] = "CompItem";
     else if (n === "path") a[n] = "/tmp/x.aep";
     else if (n === "parentName") a[n] = null;
     else if (n === "propertyPath") a[n] = ["ADBE Transform Group", "ADBE Position"];
     else if (n === "time") a[n] = 0;
     else if (n === "keyIndex") a[n] = 1;
-    else if (n === "value") a[n] = 1;
+    else if (n === "value" && !op.id.startsWith("pref.")) a[n] = 1;
     else if (n === "effectMatchName") a[n] = "ADBE Gaussian Blur 2";
     else if (n === "label") a[n] = 3;
     else if (n === "startTime" || n === "timeSpanStart") a[n] = 0;
@@ -101,6 +101,11 @@ function sampleArgs(op) {
     else if (n === "text") a[n] = "sample text";
     else if (n === "lightType") a[n] = 2;
     else if (n === "intensity") a[n] = 100;
+    else if (n === "section") a[n] = "General";
+    else if (n === "key") a[n] = "SomeKey";
+    else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";
+    else if (n === "default") a[n] = "d";
+    else if (n === "value" && op.id.startsWith("pref.")) a[n] = "v";
     else a[n] = `sample-${n}`;
   }
   return a;
@@ -207,11 +212,11 @@ test("R2: non-finite numeric args rejected at buildSource, never reach host", ()
 });
 
 test("R3: destructive ops are explicitly flagged for consent/loop gating", () => {
-  for (const id of ["project.new", "project.open", "project.close", "item.remove"]) {
+  for (const id of ["project.new", "project.open", "project.close", "item.remove", "pref.delete"]) {
     assert.equal(getOperation(id).destructive, true, `${id} must be destructive`);
   }
   assert.equal(getOperation("read.projectSummary").destructive, undefined);
-  assert.equal(registryReport().destructive, 4);
+  assert.equal(registryReport().destructive, 5);
 });
 
 test("R4: generated sources only call API surface the fake host actually implements", () => {
@@ -236,9 +241,12 @@ test("contract: generated sources use locale-independent matchName + instanceof,
     const args = {};
     for (const a of op.args) {
       if (a === "name" || a === "compName" || a === "layerName") args[a] = "x";
-      else if (a === "type") args[a] = "CompItem";
+      else if (a === "type" && !op.id.startsWith("pref.")) args[a] = "CompItem";
       else if (a === "to") args[a] = "top";
       else if (["width","height","pixelAspect","duration","frameRate","x","y","durationSeconds"].includes(a)) args[a] = 1;
+      else if (["section","key","type","default","value"].includes(a) && op.id.startsWith("pref.")) {
+        args[a] = a === "type" ? "string" : a === "default" ? "d" : a === "value" ? "v" : "S";
+      }
     }
     let src;
     try { src = op.source(args); } catch { continue; }

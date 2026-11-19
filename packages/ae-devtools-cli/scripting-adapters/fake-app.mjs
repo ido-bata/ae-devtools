@@ -488,8 +488,59 @@ export function createAdapterFakeApp() {
       return f;
     },
   });
+  // Preferences model (Issue #283): section -> key -> typed value.
+  // Getters return the stored value or the caller's default; the fake
+  // does not coerce across types — a mismatched read returns the
+  // default, which is the conservative fake behavior.
+  const prefStore = {};
+  const preferences = {
+    havePref(section, key) {
+      return prefStore[section] !== undefined && prefStore[section][key] !== undefined;
+    },
+    getPrefAsString(section, key, def) {
+      if (!this.havePref(section, key)) return def === undefined ? "" : String(def);
+      const v = prefStore[section][key];
+      return typeof v === "string" ? v : String(v);
+    },
+    getPrefAsBool(section, key, def) {
+      if (!this.havePref(section, key)) return def === undefined ? false : def === true;
+      const v = prefStore[section][key];
+      return typeof v === "boolean" ? v : v === "true" || v === 1;
+    },
+    getPrefAsLong(section, key, def) {
+      if (!this.havePref(section, key)) return def === undefined ? 0 : Math.round(Number(def));
+      const v = prefStore[section][key];
+      return typeof v === "number" ? Math.round(v) : Math.round(Number(v));
+    },
+    getPrefAsFloat(section, key, def) {
+      if (!this.havePref(section, key)) return def === undefined ? 0 : Number(def);
+      const v = prefStore[section][key];
+      return typeof v === "number" ? v : Number(v);
+    },
+    savePrefAsString(section, key, value) { this.__set(section, key, String(value)); },
+    savePrefAsBool(section, key, value) { this.__set(section, key, value === true); },
+    savePrefAsLong(section, key, value) { this.__set(section, key, Math.round(Number(value))); },
+    savePrefAsFloat(section, key, value) { this.__set(section, key, Number(value)); },
+    __set(section, key, value) {
+      if (prefStore[section] === undefined) prefStore[section] = {};
+      prefStore[section][key] = value;
+    },
+    deletePref(section, key) {
+      if (prefStore[section] !== undefined) delete prefStore[section][key];
+    },
+    saveToDisk() {},
+    reload() {},
+  };
   const app = {
     version: "99.0-fake",
+    buildName: "fake-build",
+    buildNumber: 1,
+    isoLanguage: "en_US",
+    preferences,
+    // Effect collection: matchName is the stable identifier adapters use.
+    effects: collection(KNOWN_EFFECTS.map((mn) => ({ matchName: mn, name: mn }))),
+    // Font collection: Font.name is the PostScript name in real AE.
+    fonts: collection([{ name: "ArialMT" }, { name: "HelveticaLTStd-Bold" }]),
     project,
     newProject() { items.length = 0; project.activeItem = null; },
     open(f) { project.file = f; },
