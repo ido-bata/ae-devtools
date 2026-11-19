@@ -172,8 +172,9 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     frameBlending: true, collapseTransformation: false,
     inPoint: 0, outPoint: 5,
     inType: "LINEAR", outType: "HOLD",
-    inEase: { speed: 0, influence: 50 }, outEase: { speed: 0, influence: 50 },
-    matteLayerName: "Text 1", matteType: "ALPHA",
+    inEase: [{ speed: 0, influence: 50 }, { speed: 0, influence: 50 }],
+    outEase: [{ speed: 0, influence: 50 }, { speed: 0, influence: 50 }],
+    matteLayerName: "Text 1", matteType: "ALPHA", fixExpressions: false,
     bgColor: [0, 0, 0], displayStartTime: 0, displayStartFrame: 0,
     shutterAngle: 180, shutterPhase: 0,
     motionBlur: false, frameBlending: false, draft3d: false,
@@ -590,18 +591,23 @@ test("issue #287 batch: interpolation/ease + track matte + time remap", async ()
   const ipBad = await go("anim.setInterpolation", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 9, inType: "LINEAR" });
   assert.notEqual(ipBad.outcome, "COMPLETED");
 
-  // anim.setTemporalEase: ease objects validated, partial update.
+  // anim.setTemporalEase: KeyframeEase arrays validated, partial update.
   assert.equal((await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1 })).reason, "INVALID_ARGS");
   assert.equal((await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, inEase: { speed: "x", influence: 1 } })).reason, "INVALID_ARGS");
+  assert.equal((await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, inEase: [{ speed: 0, influence: 0 }] })).reason, "INVALID_ARGS");
+  assert.notEqual((await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, inEase: [{ speed: 0, influence: 50 }, { speed: 0, influence: 50 }, { speed: 0, influence: 50 }] })).outcome, "COMPLETED"); // length mismatch is host-level for 2D Position
   const ez = await go("anim.setTemporalEase", {
     compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1,
-    inEase: { speed: 10, influence: 25 }, outEase: { speed: 0, influence: 75 },
+    inEase: [{ speed: 10, influence: 25 }, { speed: 10, influence: 25 }],
+    outEase: [{ speed: 0, influence: 75 }, { speed: 0, influence: 75 }],
   });
   assert.equal(ez.outcome, "COMPLETED");
-  assert.deepEqual(ez.result.inEase, { speed: 10, influence: 25 });
-  const ez2 = await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, outEase: { speed: 5, influence: 60 } });
+  assert.equal(ez.result.inEase.length, 2);
+  assert.equal(ez.result.inEase[0].speed, 10);
+  assert.equal(ez.result.inEase[0].influence, 25);
+  const ez2 = await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, outEase: [{ speed: 5, influence: 60 }, { speed: 5, influence: 60 }] });
   assert.equal(ez2.outcome, "COMPLETED");
-  assert.equal(ez2.result.inEase.speed, 10); // inEase preserved
+  assert.equal(ez2.result.inEase[0].speed, 10); // inEase preserved
 
   // layer.setTrackMatte: set → read-back via compLayers → clear.
   assert.equal((await go("layer.setTrackMatte", { compName: "C", layerName: "N1", matteType: "ALPHA" })).reason, "INVALID_ARGS");
@@ -612,10 +618,13 @@ test("issue #287 batch: interpolation/ease + track matte + time remap", async ()
   assert.equal(tm.outcome, "COMPLETED");
   assert.equal(tm.result.hasTrackMatte, true);
   assert.equal(tm.result.trackMatteLayer, "N2");
-  // Matte layer side: N2.isTrackMatte reflected in compLayers? (not exported there) — check via layerDetail not available; verify via re-set symmetry.
+  // Matte layer side: N2.isTrackMatte is exported by read.compLayers.
   const cl = await go("read.compLayers", { compName: "C" });
   const n1 = cl.result.layers.find((l) => l.name === "N1");
+  const n2 = cl.result.layers.find((l) => l.name === "N2");
   assert.equal(n1.hasTrackMatte, true);
+  assert.equal(n1.isTrackMatte, false);
+  assert.equal(n2.isTrackMatte, true);
   assert.equal(n1.trackMatteType, 2); // ALPHA_INVERTED stand-in value — fake-level only
   const clr = await go("layer.setTrackMatte", { compName: "C", layerName: "N1", matteType: "NO_TRACK_MATTE" });
   assert.equal(clr.outcome, "COMPLETED");
@@ -661,17 +670,24 @@ test("issue #289 batch: comp settings + replaceSource + queue duplicate", async 
   assert.equal(rs.result.frameBlending, false); // untouched default
   assert.equal(rs.result.preserveNestedFrameRate, true);
 
-  // layer.replaceSource: footage swap + read-back via read.layerDetail.
-  const rs1 = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip.mov" });
+  // layer.replaceSource: AVItem swap + required fixExpressions + read-back.
+  assert.equal((await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip.mov" })).reason, "INVALID_ARGS");
+  const rs1 = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip.mov", fixExpressions: false });
   assert.equal(rs1.outcome, "COMPLETED");
   assert.equal(rs1.result.source, "clip.mov");
   const ld = await go("read.layerDetail", { compName: "C", layerName: "N1" });
   assert.equal(ld.result.layer.source, "clip.mov");
-  // Wrong-type footage name refuses (FolderItem/comp not FootageItem).
-  const bad = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "C" });
+  // FolderItem is not an AVItem and refuses before mutation.
+  await go("item.addFolder", { name: "F" });
+  const bad = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "F", fixExpressions: false });
   assert.notEqual(bad.outcome, "COMPLETED");
-  // Re-replace works (relink scenario).
-  const rs2 = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip2.mov" });
+  // CompItem is a valid AVItem source too.
+  assert.equal((await go("item.addComp", { name: "D", width: 10, height: 10, pixelAspect: 1, duration: 1, frameRate: 30 })).outcome, "COMPLETED");
+  const rsComp = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "D", fixExpressions: true });
+  assert.equal(rsComp.outcome, "COMPLETED");
+  assert.equal(rsComp.result.source, "D");
+  // Re-replace back to footage works (relink scenario).
+  const rs2 = await go("layer.replaceSource", { compName: "C", layerName: "N1", footageName: "clip2.mov", fixExpressions: false });
   assert.equal(rs2.result.source, "clip2.mov");
 
   // render.duplicateQueueItem: duplicate copies settings; ambiguous after dup is refused.

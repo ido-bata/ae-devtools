@@ -108,7 +108,7 @@ function sampleArgs(op) {
     else if (n === "outPoint") a[n] = 10;
     else if (["adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"].includes(n)) a[n] = true;
     else if (n === "inType" || n === "outType") a[n] = "LINEAR";
-    else if (n === "inEase" || n === "outEase") a[n] = { speed: 0, influence: 50 };
+    else if (n === "inEase" || n === "outEase") a[n] = [{ speed: 0, influence: 50 }, { speed: 0, influence: 50 }];
     else if (n === "matteLayerName") a[n] = "Matte";
     else if (n === "matteType") a[n] = "ALPHA";
     else if (n === "bgColor") a[n] = [0, 0, 0];
@@ -117,6 +117,7 @@ function sampleArgs(op) {
     else if (n === "displayStartFrame") a[n] = 0;
     else if (["motionBlur", "frameBlending", "draft3d", "hideShyLayers", "preserveNestedFrameRate", "dropFrame"].includes(n)) a[n] = true;
     else if (n === "footageName") a[n] = "clip.mov";
+    else if (n === "fixExpressions") a[n] = false;
     else if (n === "parentFolder") a[n] = null;
     else if (n === "selected") a[n] = true;
     else if (n === "id") a[n] = 1;
