@@ -1329,6 +1329,74 @@ static std::string ResultPath(TmpChan& c, const char* id)
     return c.Path((std::string("outbox/") + id + ".result.json").c_str());
 }
 
+/* Byte-level contract check for an outbox result document (Issue #271).
+   The file must be ONE complete JSON document — substring checks alone
+   missed an extra closing brace that made every EmitResult output
+   invalid (Slice B E2E). Structural assertions mirror
+   contracts/native-channel.md §5: wrapper {v,instance,host,result}
+   where result is a DispatchResult. */
+static void CheckResultDoc(TmpChan& c, const char* id,
+                           const char* wantOutcome, const char* wantRefusal)
+{
+    std::string r = Slurp(ResultPath(c, id));
+    JVal* doc = JParseDoc(r.data(), r.size());
+    CHECK(doc != NULL);
+    if (!doc)
+    {
+        printf("FAIL result %s: emitted bytes are not one JSON document\n", id);
+        return;
+    }
+    JVal* v = JGet(doc, "v");
+    CHECK(v != NULL && v->kind == JK_NUM && v->num == 1);
+    CHECK(JNonEmptyStr(JGet(doc, "instance")));
+    CHECK(JGet(doc, "host") != NULL);
+    JVal* res = JGet(doc, "result");
+    CHECK(res != NULL);
+    if (res)
+    {
+        CHECK(JStrEq(JGet(res, "schema"), "ae-devtools/native-dispatch/v1"));
+        CHECK(JStrEq(JGet(res, "requestId"), id));
+        CHECK(JStrEq(JGet(res, "outcome"), wantOutcome));
+        JVal* rc = JGet(res, "refusalCode");
+        if (wantRefusal)
+            CHECK(JStrEq(rc, wantRefusal));
+        else
+            CHECK(rc == NULL);
+    }
+    JFree(doc);
+}
+
+/* Byte-level check for the state.json heartbeat (Issue #271): one
+   complete JSON document with the contract shape and no token. */
+static void CheckHeartbeat(TmpChan& c)
+{
+    std::string r = Slurp(c.Path("state.json"));
+    CHECK(!r.empty());
+    JVal* doc = JParseDoc(r.data(), r.size());
+    CHECK(doc != NULL);
+    if (!doc) return;
+    JVal* v = JGet(doc, "v");
+    CHECK(v != NULL && v->kind == JK_NUM && v->num == 1);
+    CHECK(JNonEmptyStr(JGet(doc, "instance")));
+    JVal* pid = JGet(doc, "pluginId");
+    CHECK(pid != NULL && pid->kind == JK_NUM);
+    JVal* tick = JGet(doc, "lastTick");
+    CHECK(tick != NULL && tick->kind == JK_NUM);
+    JVal* allow = JGet(doc, "allowlist");
+    CHECK(allow != NULL && allow->kind == JK_ARR);
+    if (allow && allow->kind == JK_ARR)
+    {
+        int found = 0;
+        for (size_t i = 0; i < allow->nitems; i++)
+            if (JStrEq(allow->items[i],
+                       "AEGP_ProjSuite6.AEGP_GetNumProjects"))
+                found = 1;
+        CHECK(found);
+    }
+    CHECK(r.find(kTok) == std::string::npos);
+    JFree(doc);
+}
+
 static void IntakeEntry(FakeHost& h, TmpChan& c)
 {
     setenv("AE_DEVTOOLS_NATIVE_CHANNEL", c.root, 1);
@@ -1371,21 +1439,8 @@ static void TestIntakeCompletedGetNumProjects()
     CHECK(r.find("opCalls") != std::string::npos);
     /* the result file must be one complete JSON document — substring
        checks alone missed an extra closing brace (Slice B E2E) */
-    {
-        JVal* rdoc = JParseDoc(r.data(), r.size());
-        CHECK(rdoc != NULL);
-        if (rdoc)
-        {
-            JVal* res = JGet(rdoc, "result");
-            CHECK(res != NULL);
-            if (res)
-            {
-                JVal* outcome = JGet(res, "outcome");
-                CHECK(outcome != NULL && JStrEq(outcome, "completed"));
-            }
-            JFree(rdoc);
-        }
-    }
+    CheckResultDoc(c, "reqA", "completed", NULL);
+    CheckHeartbeat(c);
     CHECK(r.find("AEGP_ProjSuite6.AEGP_GetNumProjects") != std::string::npos);
     CHECK(h->LogContains("native.request id=reqA"));
     CHECK(h->LogContains("native.result id=reqA outcome=completed"));
@@ -1409,6 +1464,7 @@ static void TestIntakeVersionOp()
     std::string r = Slurp(ResultPath(c, "v"));
     CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
     CHECK(r.find("\"major\":26") != std::string::npos);
+    CheckResultDoc(c, "v", "completed", NULL);
 }
 
 static void TestIntakeUnknownOperation()
@@ -1423,6 +1479,7 @@ static void TestIntakeUnknownOperation()
     std::string r = Slurp(ResultPath(c, "u"));
     CHECK(r.find("OPERATION_NOT_DISPATCHABLE") != std::string::npos);
     CHECK(r.find("\"outcome\":\"refused\"") != std::string::npos);
+    CheckResultDoc(c, "u", "refused", "OPERATION_NOT_DISPATCHABLE");
     /* refused before any suite call: no op records for this request */
     CHECK(!h->LogContains("op AEGP_ProjSuite6.AEGP_GetProjectName"));
 }
@@ -1444,6 +1501,7 @@ static void TestIntakeStaleDeadline()
     CHECK(CallIdle(*h) == A_Err_NONE);
     std::string r = Slurp(ResultPath(c, "s"));
     CHECK(r.find("STALE_REQUEST") != std::string::npos);
+    CheckResultDoc(c, "s", "refused", "STALE_REQUEST");
 }
 
 static void TestIntakeDeadlineBounds()
@@ -1470,6 +1528,8 @@ static void TestIntakeDeadlineBounds()
     CHECK(CallIdle(*h) == A_Err_NONE); /* dh next tick */
     CHECK(Slurp(ResultPath(c, "dn")).find("MALFORMED_REQUEST") != std::string::npos);
     CHECK(Slurp(ResultPath(c, "dh")).find("MALFORMED_REQUEST") != std::string::npos);
+    CheckResultDoc(c, "dn", "refused", "MALFORMED_REQUEST");
+    CheckResultDoc(c, "dh", "refused", "MALFORMED_REQUEST");
 }
 
 static void TestIntakeSymlinkRequestNotClaimed()
@@ -1509,6 +1569,7 @@ static void TestIntakePartSymlinkNeverWrittenThrough()
        result. Either way no non-atomic write ever occurred. */
     std::string r = Slurp(ResultPath(c, "y"));
     CHECK(r.empty() || r.find("\"outcome\"") != std::string::npos);
+    if (!r.empty()) CheckResultDoc(c, "y", "completed", NULL);
     CHECK(!Exists(part));
 }
 
@@ -1525,6 +1586,7 @@ static void TestIntakeClaimedLeftoverIgnored()
     CHECK(CallIdle(*h) == A_Err_NONE);
     CHECK(Exists(c.Path("inbox/stale.claimed")));
     CHECK(Slurp(ResultPath(c, "q")).find("completed") != std::string::npos);
+    CheckResultDoc(c, "q", "completed", NULL);
 }
 
 static void TestIntakeTokenMismatch()
@@ -1538,6 +1600,7 @@ static void TestIntakeTokenMismatch()
     CHECK(CallIdle(*h) == A_Err_NONE);
     std::string r = Slurp(ResultPath(c, "t"));
     CHECK(r.find("CHANNEL_TOKEN_MISMATCH") != std::string::npos);
+    CheckResultDoc(c, "t", "refused", "CHANNEL_TOKEN_MISMATCH");
 }
 
 static void TestIntakeSessionMismatch()
@@ -1551,6 +1614,7 @@ static void TestIntakeSessionMismatch()
     CHECK(CallIdle(*h) == A_Err_NONE);
     std::string r = Slurp(ResultPath(c, "m"));
     CHECK(r.find("WRONG_TARGET") != std::string::npos);
+    CheckResultDoc(c, "m", "refused", "WRONG_TARGET");
     /* version attestation ran (op-recorded) before the refusal */
     CHECK(r.find("AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion") != std::string::npos);
 }
@@ -1580,6 +1644,7 @@ static void TestIntakeMalformed()
     CHECK(CallIdle(*h) == A_Err_NONE);
     std::string r = Slurp(ResultPath(c, "bad"));
     CHECK(r.find("MALFORMED_REQUEST") != std::string::npos);
+    CheckResultDoc(c, "bad", "refused", "MALFORMED_REQUEST");
 }
 
 static void TestIntakeDuplicateRequestId()
@@ -1599,6 +1664,7 @@ static void TestIntakeDuplicateRequestId()
     CHECK(CallIdle(*h) == A_Err_NONE);
     std::string r = Slurp(ResultPath(c, "d"));
     CHECK(r.find("DUPLICATE_REQUEST") != std::string::npos);
+    CheckResultDoc(c, "d", "refused", "DUPLICATE_REQUEST");
 }
 
 static void TestIntakeOnePerTick()
@@ -1633,6 +1699,7 @@ static void TestIntakeSuiteFailureGivesFailed()
     std::string r = Slurp(ResultPath(c, "f"));
     CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
     CHECK(r.find("mayHaveMutated\":false") != std::string::npos);
+    CheckResultDoc(c, "f", "failed", NULL);
     CHECK(h->LogContains("op AEGP_ProjSuite6.AEGP_GetNumProjects err="));
 }
 
@@ -1694,6 +1761,7 @@ static void TestIntakeInterruptedBySuiteAcquireFailure()
     h->PopulateSuites();
     CHECK(CallIdle(*h) == A_Err_NONE);
     CHECK(Slurp(ResultPath(c, "i")).find("completed") != std::string::npos);
+    CheckResultDoc(c, "i", "completed", NULL);
 }
 
 static void TestIntakeChannelPrivacyViolation()

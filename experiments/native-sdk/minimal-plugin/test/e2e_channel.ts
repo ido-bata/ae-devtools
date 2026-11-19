@@ -138,6 +138,49 @@ try {
     check(!JSON.stringify(state).includes(token), "token absent from state.json");
   }
 
+  /* Refused path end-to-end (Issue #271): a registry operation outside
+     NATIVE_INTAKE_OPERATIONS must come back as a contract-valid
+     `refused`/`OPERATION_NOT_DISPATCHABLE` result — parsed from the
+     actual emitted bytes, not substring-matched. */
+  const REFUSED_ID = "e2e-req-2";
+  const refusedRequest = {
+    v: 1,
+    token,
+    timeoutMs: TIMEOUT_MS,
+    request: {
+      schema: "ae-devtools/native-dispatch/v1",
+      requestId: REFUSED_ID,
+      session: { sessionId: "e2e-session", aeVersion: "26.5" },
+      operationId: "AEGP_ProjSuite6.AEGP_GetProjectName",
+      args: null,
+      authorizationRef: "e2e-opaque",
+    },
+  };
+  writeFileSync(join(root, "inbox", `${REFUSED_ID}.request.json`), `${JSON.stringify(refusedRequest)}\n`, {
+    mode: 0o600,
+  });
+  const run2 = spawnSync(BIN, ["--channel-server", root, REFUSED_ID, "20000"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+  });
+  check(run2.status === 0, `refused request delivered a result (exit ${run2.status})`);
+  if (run2.status === 0) {
+    const refusedPath = join(root, "outbox", `${REFUSED_ID}.result.json`);
+    const refusedRaw = readFileSync(refusedPath, "utf-8");
+    check(!refusedRaw.includes(token), "token absent from refused result");
+    const refusedDoc = JSON.parse(refusedRaw) as Record<string, any>;
+    const refusedErrors = validateDispatchResult(refusedDoc.result);
+    check(
+      refusedErrors.length === 0,
+      `refused DispatchResult validates (${refusedErrors.join("; ") || "clean"})`,
+    );
+    check(
+      refusedDoc.result?.outcome === "refused" &&
+        refusedDoc.result?.refusalCode === "OPERATION_NOT_DISPATCHABLE",
+      `outcome=refused OPERATION_NOT_DISPATCHABLE (got ${refusedDoc.result?.outcome}/${refusedDoc.result?.refusalCode})`,
+    );
+  }
+
   console.log(failures === 0 ? "\nE2E PASS (fake/mock only)" : `\nE2E FAIL (${failures})`);
   process.exit(failures === 0 ? 0 : 1);
 } finally {
