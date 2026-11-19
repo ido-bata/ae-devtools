@@ -20,10 +20,13 @@
  * `vscode` UI, tests inject a fake. `ui.confirm` must resolve true only
  * on an explicit affirmative user action.
  */
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { callTool } from "../mcp-server/tools.mjs";
 import { openSession } from "../mcp-server/session.mjs";
 import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
+import { lazyConsentAudit } from "../trusted-execution/consent-audit.mjs";
 import { recordsFromExecuteResult, buildPublishPlan } from "./diagnostics.mjs";
 import { buildAttachConfig, writeLaunchJson } from "../vscode-debugger/src/gen.mjs";
 import { validateLaunchJson, hasErrors } from "../vscode-debugger/src/schema.mjs";
@@ -62,6 +65,8 @@ function uiDeclined(detail) {
  * @param {string} [options.runsDir] — run-guard marker dir for a8n
  *   sessions (default: devtools-cli RUNS_DIR; Issue #198 residue
  *   markers — surface "vscode", no attestation, reap/recover refuse)
+ * @param {object} [options.consentAudit] — consent-decision audit sink
+ *   (Issue #277); default lazy store in the shared tmpdir location
  */
 export function createController(options = {}) {
   const {
@@ -72,6 +77,7 @@ export function createController(options = {}) {
     sessionFactory = openSession,
     closeTimeoutMs,
     runsDir,
+    consentAudit: consentAuditOpt,
   } = options;
 
   // Run-guard residue markers for a8n sessions only (Issue #198, 案 C)
@@ -81,6 +87,16 @@ export function createController(options = {}) {
   const guard = createSurfaceGuard({
     surface: "vscode", sessionKind, dir: runsDir,
   });
+
+  // Consent-decision audit (Issue #277): lazy so constructing a
+  // controller never mints the directory; shares the CLI/MCP default
+  // location so decisions correlate across surfaces.
+  const consentAudit = consentAuditOpt !== undefined
+    ? consentAuditOpt
+    : lazyConsentAudit(
+        process.env.AE_DEVTOOLS_CONSENT_AUDIT_DIR
+          ?? join(tmpdir(), "ae-devtools-consent-audit"),
+      );
 
   let sessionPromise = null;
   let resolvedSession = null;
@@ -114,6 +130,7 @@ export function createController(options = {}) {
         failed: sessionFailed,
       }),
       onRequestEvent: (ev) => guard.request(ev),
+      consentAudit,
     });
     // callTool wraps the payload as MCP text content; unwrap it so
     // commands/tests see the honest payload (session.evidenceLevel

@@ -21,14 +21,41 @@ packages/ae-devtools-cli/trusted-execution/
 ├── outcomes.mjs               # CAP028: write-outcome taxonomy + contract mapping
 ├── runner.mjs                 # CAP028: safe eval pipeline — consent gate → codec
 │                              #   envelope → injected transport → outcome + retry
+├── consent-audit.mjs          # CAP052/#277: append-only consent-decision audit
+│                              #   (approved AND refused; fingerprints only)
 └── tests/
     ├── run.mjs                # node:test runner, zero deps
     ├── codec.test.mjs         # differential + refusal tests (node:vm, JSON removed)
     ├── permissions.test.mjs   # class resolution + consent-scope tests
     ├── mutation-guard.test.mjs# STALE_REFERENCE / project mismatch / retry policy
     ├── outcomes.test.mjs      # busy-vs-unknown, mayHaveMutated, undo separation
-    └── runner.test.mjs        # consent-before-send, UNKNOWN no-resend, aeError pass-through
+    ├── runner.test.mjs        # consent-before-send, UNKNOWN no-resend, aeError pass-through
+    └── consent-audit.test.mjs # decision audit: approve/refuse, fail-closed, append-only
 ```
+
+## Consent-decision audit (CAP052, Issue #277)
+
+`consent-audit.mjs` records every consentProvider decision — approved
+AND refused — as append-only JSONL (`consent-audit.jsonl`). Pre-consent
+refusals (unknown op, invalid args, missing provider, confirm gates)
+are NOT events: no decision occurred. Entries carry only
+`decision`/`opId`/`scopeHash`/`dispatchKey`/`requestId`/op flags —
+never source, raw args, tokens, secrets, operator identity, or
+free-text provider reasons. `dispatchKey` equals the dispatch-store
+identity, correlating the decision with the dispatch record.
+
+Failure semantics: an approved decision whose audit write fails is a
+pre-dispatch refusal (`CONSENT_AUDIT_UNAVAILABLE` — nothing is sent);
+a refused decision whose audit write fails still returns the consent
+refusal with `consentAudit.recorded:false` marked honestly. The audit
+is NOT an authorization proof — consent-token authenticity and
+host-side authorization remain ae-a8n-owned non-claims.
+
+Surfaces: `scripting-adapters/execute.mjs` accepts an optional
+`consentAudit` sink; the CLI, MCP server and VSCode controller wire a
+shared lazy store at `$AE_DEVTOOLS_CONSENT_AUDIT_DIR` (default
+`$TMPDIR/ae-devtools-consent-audit`) so decisions correlate across
+surfaces.
 
 ## Runner pipeline (CAP028)
 
