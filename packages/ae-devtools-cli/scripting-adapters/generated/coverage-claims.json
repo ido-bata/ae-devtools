@@ -1000,7 +1000,14 @@
     },
     "ae.scripting.AVItem.useProxy": {
       "ops": [
-        "read.footageDetail"
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "item.setProxyWithSolid",
+        "item.setProxyWithPlaceholder",
+        "item.setProxyToNone",
+        "item.setUseProxy",
+        "read.itemProxy"
       ],
       "evidence": "fake/mock only"
     },
@@ -1012,7 +1019,8 @@
     },
     "ae.scripting.FootageItem.mainSource": {
       "ops": [
-        "read.footageDetail"
+        "read.footageDetail",
+        "read.itemProxy"
       ],
       "evidence": "fake/mock only"
     },
@@ -1024,7 +1032,10 @@
     },
     "ae.scripting.FileSource.file": {
       "ops": [
-        "read.footageDetail"
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "read.itemProxy"
       ],
       "evidence": "fake/mock only"
     },
@@ -1042,7 +1053,10 @@
     },
     "ae.scripting.FootageSource.isStill": {
       "ops": [
-        "read.footageDetail"
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "read.itemProxy"
       ],
       "evidence": "fake/mock only"
     },
@@ -1066,7 +1080,59 @@
     },
     "ae.scripting.FileSource.missingFootagePath": {
       "ops": [
-        "read.footageDetail"
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxy": {
+      "ops": [
+        "item.setProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.proxySource": {
+      "ops": [
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "item.setProxyWithSolid",
+        "item.setProxyWithPlaceholder",
+        "item.setProxyToNone",
+        "item.setUseProxy",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyWithSequence": {
+      "ops": [
+        "item.setProxyWithSequence"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyWithSolid": {
+      "ops": [
+        "item.setProxyWithSolid"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.SolidSource.color": {
+      "ops": [
+        "item.setProxyWithSolid",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyWithPlaceholder": {
+      "ops": [
+        "item.setProxyWithPlaceholder"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyToNone": {
+      "ops": [
+        "item.setProxyToNone"
       ],
       "evidence": "fake/mock only"
     },

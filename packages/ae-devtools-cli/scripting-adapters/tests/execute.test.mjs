@@ -184,6 +184,8 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     motionBlur: false, frameBlending: false, draft3d: false,
     hideShyLayers: false, preserveNestedFrameRate: true, dropFrame: false,
     footageName: "x.aep", parentFolder: null, selected: true, id: 1,
+    solidName: "Proxy Solid", placeholderName: "Proxy Placeholder",
+    forceAlphabetical: true, useProxy: true,
     vertices: [[0, 0], [10, 0], [10, 10]],
     inTangents: [[0, 0], [0, 0], [0, 0]],
     outTangents: [[0, 0], [0, 0], [0, 0]],
@@ -221,8 +223,10 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "layer.addShape") args.name = "N";
     if (op.id.startsWith("shape.")) args.layerName = "N";
     // Footage detail reads the item imported earlier by item.import
-    // (path /tmp/x.aep → footage name "x.aep").
-    if (op.id === "read.footageDetail") args.name = "x.aep";
+    // (path /tmp/x.aep → footage name "x.aep"). Proxy ops target it too.
+    if (["read.footageDetail", "item.setProxy", "item.setProxyWithSequence",
+         "item.setProxyWithSolid", "item.setProxyWithPlaceholder",
+         "item.setProxyToNone", "item.setUseProxy", "read.itemProxy"].includes(op.id)) args.name = "x.aep";
     // pref.* ops share the `type` arg name with item.* ops but need a
     // preference type token, and pref.set needs a string value.
     if (op.id.startsWith("pref.")) { args.type = "string"; args.section = "S"; args.key = "K"; }
@@ -1136,4 +1140,107 @@ test("issue #297 batch: TextDocument residual attributes — box text, paint, ch
   assert.equal((await go("text.setPaint", { compName: "C", layerName: "Box 1", strokeColor: [1, 0] })).reason, "INVALID_ARGS");
   assert.equal((await go("text.setCharAttributes", { compName: "C", layerName: "Box 1" })).reason, "INVALID_ARGS");
   assert.equal((await go("text.setCharAttributes", { compName: "C", layerName: "Box 1", baselineShift: "x" })).reason, "INVALID_ARGS");
+});
+
+test("issue #298 batch: AVItem proxy surface — file/solid/placeholder, main-vs-proxy, counterexamples", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("item.import", { path: "/tmp/clip.mov" })).outcome, "COMPLETED");
+
+  // Initial state: no proxy, mainSource is the imported file.
+  const rd0 = await go("read.itemProxy", { name: "clip.mov" });
+  assert.equal(rd0.outcome, "COMPLETED");
+  assert.equal(rd0.result.useProxy, false);
+  assert.equal(rd0.result.proxy, null);
+  assert.equal(rd0.result.mainSource.kind, "file");
+  assert.equal(rd0.result.mainSource.file, "/tmp/clip.mov");
+
+  // setProxy: file proxy, useProxy flips on, mainSource untouched.
+  const sp = await go("item.setProxy", { name: "clip.mov", path: "/tmp/proxy.mov" });
+  assert.equal(sp.outcome, "COMPLETED");
+  assert.equal(sp.result.useProxy, true);
+  assert.equal(sp.result.proxy.kind, "file");
+  assert.equal(sp.result.proxy.file, "/tmp/proxy.mov");
+  const rd1 = await go("read.itemProxy", { name: "clip.mov" });
+  assert.equal(rd1.result.mainSource.file, "/tmp/clip.mov");
+  assert.equal(rd1.result.proxy.file, "/tmp/proxy.mov");
+
+  // useProxy toggle keeps proxySource assigned (disable/enable cycle).
+  const off = await go("item.setUseProxy", { name: "clip.mov", useProxy: false });
+  assert.equal(off.result.useProxy, false);
+  assert.equal(off.result.proxy.kind, "file");
+  const on = await go("item.setUseProxy", { name: "clip.mov", useProxy: true });
+  assert.equal(on.result.useProxy, true);
+  assert.equal(on.result.proxy.file, "/tmp/proxy.mov");
+
+  // itemRef object form resolves the same footage item.
+  const ref = await go("item.setUseProxy", { name: { name: "clip.mov" }, useProxy: false });
+  assert.equal(ref.outcome, "COMPLETED");
+
+  // Solid proxy replaces the file proxy entirely.
+  const solid = await go("item.setProxyWithSolid", {
+    name: "clip.mov", color: [1, 0, 0], solidName: "Red Proxy",
+    width: 640, height: 480, pixelAspect: 1,
+  });
+  assert.equal(solid.outcome, "COMPLETED");
+  assert.equal(solid.result.proxy.kind, "solid");
+  assert.deepEqual(solid.result.proxy.color, [1, 0, 0]);
+  assert.equal(solid.result.proxy.name, "Red Proxy");
+  assert.equal(solid.result.useProxy, true);
+
+  // Placeholder proxy.
+  const ph = await go("item.setProxyWithPlaceholder", {
+    name: "clip.mov", placeholderName: "Offline", width: 320, height: 240,
+    frameRate: 24, duration: 60,
+  });
+  assert.equal(ph.outcome, "COMPLETED");
+  assert.equal(ph.result.proxy.kind, "placeholder");
+  assert.equal(ph.result.proxy.name, "Offline");
+  assert.equal(ph.result.proxy.frameRate, 24);
+
+  // Sequence proxy is still a FileSource.
+  const seq = await go("item.setProxyWithSequence", { name: "clip.mov", path: "/tmp/seq.####.exr", forceAlphabetical: true });
+  assert.equal(seq.outcome, "COMPLETED");
+  assert.equal(seq.result.proxy.kind, "file");
+  assert.equal(seq.result.proxy.file, "/tmp/seq.####.exr");
+
+  // setProxyToNone clears proxySource AND useProxy; mainSource survives.
+  const none = await go("item.setProxyToNone", { name: "clip.mov" });
+  assert.equal(none.outcome, "COMPLETED");
+  assert.equal(none.result.proxy, null);
+  assert.equal(none.result.useProxy, false);
+  const rd2 = await go("read.itemProxy", { name: "clip.mov" });
+  assert.equal(rd2.result.mainSource.file, "/tmp/clip.mov");
+
+  // Counterexamples: missing proxy file, non-footage targets, bad args.
+  assert.notEqual((await go("item.setProxy", { name: "clip.mov", path: "/tmp/missing.missing" })).outcome, "COMPLETED");
+  assert.notEqual((await go("item.setProxy", { name: "C", path: "/tmp/p.mov" })).outcome, "COMPLETED");
+  assert.notEqual((await go("item.setProxy", { name: "Ghost", path: "/tmp/p.mov" })).outcome, "COMPLETED");
+  assert.equal((await go("item.setProxy", { name: "clip.mov", path: "" })).reason, "INVALID_ARGS");
+  assert.equal((await go("item.setUseProxy", { name: "clip.mov", useProxy: "yes" })).reason, "INVALID_ARGS");
+  assert.equal((await go("item.setProxyWithSolid", { name: "clip.mov", color: [1, 0], solidName: "S", width: 10, height: 10, pixelAspect: 1 })).reason, "INVALID_ARGS");
+  assert.equal((await go("item.setProxyWithSolid", { name: "clip.mov", color: [1, 0, 0], solidName: "S", width: 0, height: 10, pixelAspect: 1 })).reason, "INVALID_ARGS");
+  assert.equal((await go("item.setProxyWithSolid", { name: "clip.mov", color: [1, 0, 0], solidName: "S", width: 10, height: 10, pixelAspect: 200 })).reason, "INVALID_ARGS");
+  assert.equal((await go("item.setProxyWithPlaceholder", { name: "clip.mov", placeholderName: "P", width: 100, height: 100, frameRate: 0, duration: 10 })).reason, "INVALID_ARGS");
+  assert.equal((await go("item.setProxyWithPlaceholder", { name: "clip.mov", placeholderName: "P", width: 100, height: 100, frameRate: 24, duration: 10801 })).reason, "INVALID_ARGS");
+
+  // Ambiguous name: importing the same path twice makes "clip.mov"
+  // unresolvable by bare name.
+  await go("item.import", { path: "/tmp/clip.mov" });
+  assert.notEqual((await go("read.itemProxy", { name: "clip.mov" })).outcome, "COMPLETED");
+  // ...but an itemRef with id still resolves unambiguously.
+  const items = app.project.items;
+  let secondId = null;
+  for (let i = 1; i <= items.length; i++) {
+    if (items[i].name === "clip.mov") secondId = items[i].id;
+  }
+  const byId = await go("read.itemProxy", { name: { id: secondId } });
+  assert.equal(byId.outcome, "COMPLETED");
 });

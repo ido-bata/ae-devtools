@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "c089eadeaeef025ac56081add31110576bd2156a35d21849b1881a1e5164df02"
+      "sha256": "98f3ae93d7dcc2245c563187ab1fabbafef43c55359628e4a7d56725368f172d"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 156,
+          "documented": 149,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 97,
+          "automated-fake-tested": 104,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 104,
+          "adapter-present": 111,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 156
+          "unknown": 149
         },
         "verification": {
-          "not-run": 156,
-          "automated-fake": 97,
+          "not-run": 149,
+          "automated-fake": 104,
           "verified-real-host": 7
         }
       },
@@ -3413,50 +3413,50 @@
         {
           "id": "ae.scripting.AVItem.proxySource",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVItem.setProxy",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVItem.setProxyToNone",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVItem.setProxyWithPlaceholder",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVItem.setProxyWithSequence",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVItem.setProxyWithSolid",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVItem.time",
@@ -5405,10 +5405,10 @@
         {
           "id": "ae.scripting.SolidSource.color",
           "category": "source",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         }
       ],
       "uncovered": [

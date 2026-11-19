@@ -16,7 +16,75 @@
 class AVItem {}
 class CompItem extends AVItem {}
 class FolderItem {}
-class FootageItem extends AVItem {}
+class FootageItem extends AVItem {
+  // Proxy surface (Issue #298). proxySource is read-only per the docs;
+  // all changes go through the setProxy* methods, which also set
+  // useProxy. Only FootageItem is modeled — proxies are a footage
+  // feature and the adapters resolve items as FootageItem.
+  get proxySource() {
+    return this.__proxySource === undefined ? null : this.__proxySource;
+  }
+  __makeFileProxySource(file, isSequence) {
+    const s = new FileSource();
+    Object.assign(s, {
+      file: { fsName: String(file.fsName) },
+      missingFootagePath: "",
+      isStill: false,
+      hasAlpha: false,
+      alphaMode: "IGNORE",
+      loop: false,
+      conformFrameRate: true,
+      nativeFrameRate: 30,
+      reload() {},
+      __sequence: isSequence === true,
+    });
+    return s;
+  }
+  setProxy(file) {
+    if (file === null || file === undefined || file.fsName === undefined) {
+      throw new Error("fake-app: setProxy requires a File");
+    }
+    if (file.exists === false) {
+      throw new Error("fake-app: proxy file not found: " + file.fsName);
+    }
+    this.__proxySource = this.__makeFileProxySource(file, false);
+    this.useProxy = true;
+  }
+  setProxyWithSequence(file, forceAlphabetical) {
+    this.setProxy(file);
+    this.__proxySource.__sequence = true;
+    this.__proxySource.__forceAlphabetical = forceAlphabetical === true;
+  }
+  setProxyWithSolid(color, sname, w, h, par) {
+    const s = new SolidSource();
+    Object.assign(s, {
+      color: Array.isArray(color) ? color.slice() : color,
+      name: sname, width: w, height: h, pixelAspect: par,
+    });
+    this.__proxySource = s;
+    this.useProxy = true;
+  }
+  setProxyWithPlaceholder(pname, w, h, frameRate, duration) {
+    const s = new PlaceholderSource();
+    Object.assign(s, {
+      name: pname, width: w, height: h,
+      frameRate: frameRate, duration: duration,
+    });
+    this.__proxySource = s;
+    this.useProxy = true;
+  }
+  setProxyToNone() {
+    this.__proxySource = null;
+    this.useProxy = false;
+  }
+}
+// FootageSource hierarchy: proxies and mainSource are FootageSource
+// subclass instances so generated `instanceof` checks discriminate
+// file/solid/placeholder exactly like the real host.
+class FootageSource {}
+class FileSource extends FootageSource {}
+class SolidSource extends FootageSource {}
+class PlaceholderSource extends FootageSource {}
 
 function collection(list, extra = {}) {
   return new Proxy(extra, {
@@ -1007,8 +1075,9 @@ function makeFootage(path, owner, parent) {
     frameDuration: 1 / 30,
     useProxy: false,
     // FootageSource model: fields the read ops consume. Fake defaults —
-    // real values depend on the imported media.
-    mainSource: {
+    // real values depend on the imported media. mainSource is a
+    // FileSource instance, distinct from proxySource (Issue #298).
+    mainSource: Object.assign(new FileSource(), {
       file: { fsName: String(path) },
       alphaMode: "IGNORE",
       hasAlpha: false,
@@ -1018,7 +1087,8 @@ function makeFootage(path, owner, parent) {
       nativeFrameRate: 30,
       missingFootagePath: "",
       reload() {},
-    },
+    }),
+    __proxySource: null,
   });
   return f;
 }
@@ -1245,6 +1315,10 @@ export function createAdapterFakeApp() {
   app.FootageItem = FootageItem;
   app.AVItem = AVItem;
   app.ImportOptions = ImportOptions;
+  app.FootageSource = FootageSource;
+  app.FileSource = FileSource;
+  app.SolidSource = SolidSource;
+  app.PlaceholderSource = PlaceholderSource;
   app.__state = {
     items,
     fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.typeName }))),
