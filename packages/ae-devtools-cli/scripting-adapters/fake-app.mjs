@@ -181,13 +181,32 @@ function makeLayer(name, comp, kind) {
     threeDLayer: false,
     motionBlur: false,
     guideLayer: false,
+    // Render/stacking flags (Issue #285). preserveTransparency defaults
+    // true to match the common footage-layer case.
+    adjustmentLayer: false,
+    preserveTransparency: true,
+    frameBlending: false,
+    collapseTransformation: false,
     inPoint: 0,
     outPoint: comp ? comp.duration : 0,
     __pos: makeProperty([0, 0], { matchName: "ADBE Position" }),
     __fx: null,
     // TextDocument model: only text layers carry one. The real API
     // reaches it via the matchName path Text Properties > Text Document.
-    __textDoc: kind === "text" ? { text: "", pointText: true, boxText: false } : null,
+    __textDoc: kind === "text" ? {
+      text: "",
+      pointText: true,
+      boxText: false,
+      // TextDocument style fields (Issue #285). Defaults are the fake's
+      // approximation of AE's defaults — real-host defaults may differ.
+      font: "ArialMT",
+      fontSize: 100,
+      fontStyle: "Regular",
+      justification: 0,
+      fillColor: [0, 0, 0],
+      tracking: 0,
+      leading: 0,
+    } : null,
     property(group) {
       // Real AE resolves both display name and matchName; we only
       // implement the stable matchName path adapters must use.
@@ -222,7 +241,9 @@ function makeLayer(name, comp, kind) {
     moveToEnd() { comp.__moveLayer(layer, "bottom"); },
     duplicate() {
       const l = makeLayer(this.name + " copy", comp, this.kind);
-      if (l.__textDoc !== null && this.__textDoc !== null) l.__textDoc.text = this.__textDoc.text;
+      if (l.__textDoc !== null && this.__textDoc !== null) {
+        for (var k in this.__textDoc) l.__textDoc[k] = this.__textDoc[k];
+      }
       comp.__layers.push(l);
       comp.__reindex();
       return l;

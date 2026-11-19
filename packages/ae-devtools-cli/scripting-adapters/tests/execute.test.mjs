@@ -166,6 +166,11 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     audioEnabled: true, enabled: true, comment: "note", setting: "Output File Info",
     resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", lightType: 2, intensity: 100,
     section: "S", key: "K", default: "d",
+    font: "F", fontStyle: "S", fontSize: 100, justification: 1,
+    fillColor: [1, 0, 0], tracking: 0, leading: 100,
+    adjustmentLayer: true, preserveTransparency: false,
+    frameBlending: true, collapseTransformation: false,
+    inPoint: 0, outPoint: 5,
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -188,7 +193,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "layer.addText") args.name = "Text 1";
     if (op.id === "layer.addCamera") args.name = "Cam 1";
     if (op.id === "layer.addLight") args.name = "Light 1";
-    if (op.id === "text.setText") args.layerName = "Text 1";
+    if (["text.setText", "text.setStyle", "text.readStyle"].includes(op.id)) args.layerName = "Text 1";
     // Footage detail reads the item imported earlier by item.import
     // (path /tmp/x.aep → footage name "x.aep").
     if (op.id === "read.footageDetail") args.name = "x.aep";
@@ -490,4 +495,59 @@ test("issue #283 batch: preferences get/set/delete + app info", async () => {
   assert.equal(info.result.app.buildName, "fake-build");
   assert.ok(info.result.app.effects.includes("ADBE Gaussian Blur 2"));
   assert.ok(info.result.app.fonts.includes("ArialMT"));
+});
+
+test("issue #285 batch: text style + layer flags + in/out points", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  assert.equal((await go("project.new", {}, { confirmDestructive: true })).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("layer.addText", { compName: "C", name: "T1", text: "hi" })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "N1" })).outcome, "COMPLETED");
+
+  // text.setStyle: validation then partial update + read-back.
+  assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", justification: 9 })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", fillColor: [2, 0, 0] })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", fontSize: -1 })).reason, "INVALID_ARGS");
+  const st = await go("text.setStyle", {
+    compName: "C", layerName: "T1",
+    font: "HelveticaLTStd-Bold", fontSize: 48, justification: 2,
+    fillColor: [1, 0, 0], tracking: 20, leading: 60,
+  });
+  assert.equal(st.outcome, "COMPLETED");
+  assert.equal(st.result.font, "HelveticaLTStd-Bold");
+  assert.equal(st.result.justification, 2);
+  const rd = await go("text.readStyle", { compName: "C", layerName: "T1" });
+  assert.equal(rd.outcome, "COMPLETED");
+  assert.equal(rd.result.text, "hi");
+  assert.deepEqual(rd.result.fillColor, [1, 0, 0]);
+  assert.equal(rd.result.leading, 60);
+  // Non-text layer refuses at host level (no TextDocument).
+  const badLayer = await go("text.readStyle", { compName: "C", layerName: "N1" });
+  assert.notEqual(badLayer.outcome, "COMPLETED");
+
+  // layer.setLayerFlags: partial flags + read-back via read.compLayers.
+  assert.equal((await go("layer.setLayerFlags", { compName: "C", layerName: "N1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("layer.setLayerFlags", { compName: "C", layerName: "N1", adjustmentLayer: "yes" })).reason, "INVALID_ARGS");
+  const fl = await go("layer.setLayerFlags", { compName: "C", layerName: "N1", adjustmentLayer: true, frameBlending: true });
+  assert.equal(fl.outcome, "COMPLETED");
+  const cl = await go("read.compLayers", { compName: "C" });
+  const n1 = cl.result.layers.find((l) => l.name === "N1");
+  assert.equal(n1.adjustmentLayer, true);
+  assert.equal(n1.frameBlending, true);
+  assert.equal(n1.collapseTransformation, false);
+
+  // layer.setInOutPoint: bounds validation + read-back.
+  assert.equal((await go("layer.setInOutPoint", { compName: "C", layerName: "N1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("layer.setInOutPoint", { compName: "C", layerName: "N1", inPoint: 4, outPoint: 2 })).reason, "INVALID_ARGS");
+  const io = await go("layer.setInOutPoint", { compName: "C", layerName: "N1", inPoint: 0.5, outPoint: 4.5 });
+  assert.equal(io.outcome, "COMPLETED");
+  const ld = await go("read.layerDetail", { compName: "C", layerName: "N1" });
+  assert.equal(ld.result.layer.inPoint, 0.5);
+  assert.equal(ld.result.layer.outPoint, 4.5);
 });

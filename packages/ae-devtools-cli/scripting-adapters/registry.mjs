@@ -559,6 +559,8 @@ return __adp_json({ ok: true, rendered: true });
       S("CompItem", "layers"),
       S("Layer", "index"), S("Layer", "inPoint"), S("Layer", "outPoint"),
       S("Layer", "parent"), S("Layer", "locked"),
+      S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
+      S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
     ],
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
@@ -575,6 +577,10 @@ for (var i = 1; i <= layers.length; i++) {
     inPoint: l.inPoint,
     outPoint: l.outPoint,
     locked: l.locked === true,
+    adjustmentLayer: l.adjustmentLayer === true,
+    preserveTransparency: l.preserveTransparency !== false,
+    frameBlending: l.frameBlending === true,
+    collapseTransformation: l.collapseTransformation === true,
     parent: l.parent === null || l.parent === undefined ? null : String(l.parent.name)
   });
 }
@@ -591,6 +597,8 @@ return __adp_json({ ok: true, comp: comp.name, count: layers.length, layers: lis
     members: [
       S("Layer", "index"), S("Layer", "inPoint"), S("Layer", "outPoint"),
       S("Layer", "parent"), S("Layer", "locked"),
+      S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
+      S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
       S("PropertyGroup", "property"), S("Property", "value"),
     ],
     args: ["compName", "layerName"],
@@ -612,6 +620,10 @@ return __adp_json({
     inPoint: layer.inPoint,
     outPoint: layer.outPoint,
     locked: layer.locked === true,
+    adjustmentLayer: layer.adjustmentLayer === true,
+    preserveTransparency: layer.preserveTransparency !== false,
+    frameBlending: layer.frameBlending === true,
+    collapseTransformation: layer.collapseTransformation === true,
     parent: layer.parent === null || layer.parent === undefined ? null : String(layer.parent.name),
     position: pos
   }
@@ -1366,6 +1378,167 @@ var layer = __adp_findLayer(comp, ${js(a.layerName)});
 var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
 doc.text = ${js(a.text)};
 return __adp_json({ ok: true, layer: layer.name, text: doc.text });
+`,
+  },
+  {
+    id: "text.setStyle",
+    title: "Set TextDocument style fields (font/size/style/justification/color/tracking/leading)",
+    domain: "project-items-comps-layers",
+    issue: "285",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("TextDocument", "font"), S("TextDocument", "fontSize"),
+      S("TextDocument", "fontStyle"), S("TextDocument", "justification"),
+      S("TextDocument", "fillColor"), S("TextDocument", "tracking"),
+      S("TextDocument", "leading"), S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName", "font", "fontSize", "fontStyle", "justification", "fillColor", "tracking", "leading"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const set = ["font", "fontSize", "fontStyle", "justification", "fillColor", "tracking", "leading"]
+        .filter((k) => a[k] !== undefined);
+      if (set.length === 0) {
+        throw new Error("text.setStyle: at least one style field is required");
+      }
+      if (a.font !== undefined && typeof a.font !== "string") throw new Error("text.setStyle: font must be a string");
+      if (a.fontStyle !== undefined && typeof a.fontStyle !== "string") throw new Error("text.setStyle: fontStyle must be a string");
+      if (a.fontSize !== undefined && !(typeof a.fontSize === "number" && Number.isFinite(a.fontSize) && a.fontSize > 0)) {
+        throw new Error("text.setStyle: fontSize must be a positive finite number");
+      }
+      // ParagraphJustification enum: 0=LEFT, 1=CENTER, 2=RIGHT,
+      // 3-6=FULL_JUSTIFY_LASTLINE_*, 7=MULTIPLE_JUSTIFICATIONS.
+      if (a.justification !== undefined && !(Number.isInteger(a.justification) && a.justification >= 0 && a.justification <= 7)) {
+        throw new Error("text.setStyle: justification must be an integer 0-7 (ParagraphJustification)");
+      }
+      if (a.fillColor !== undefined) {
+        if (!Array.isArray(a.fillColor) || a.fillColor.length !== 3 ||
+            a.fillColor.some((c) => typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 1)) {
+          throw new Error("text.setStyle: fillColor must be [r,g,b] with components in 0..1");
+        }
+      }
+      if (a.tracking !== undefined && !(typeof a.tracking === "number" && Number.isFinite(a.tracking))) {
+        throw new Error("text.setStyle: tracking must be a finite number");
+      }
+      if (a.leading !== undefined && !(typeof a.leading === "number" && Number.isFinite(a.leading) && a.leading >= 0)) {
+        throw new Error("text.setStyle: leading must be a non-negative finite number");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+${a.font !== undefined ? `doc.font = ${js(a.font)};` : ""}
+${a.fontSize !== undefined ? `doc.fontSize = ${a.fontSize};` : ""}
+${a.fontStyle !== undefined ? `doc.fontStyle = ${js(a.fontStyle)};` : ""}
+${a.justification !== undefined ? `doc.justification = ${a.justification};` : ""}
+${a.fillColor !== undefined ? `doc.fillColor = [${a.fillColor.join(", ")}];` : ""}
+${a.tracking !== undefined ? `doc.tracking = ${a.tracking};` : ""}
+${a.leading !== undefined ? `doc.leading = ${a.leading};` : ""}
+return __adp_json({
+  ok: true, layer: layer.name,
+  font: doc.font, fontSize: doc.fontSize, fontStyle: doc.fontStyle,
+  justification: doc.justification, fillColor: doc.fillColor,
+  tracking: doc.tracking, leading: doc.leading
+});
+`,
+  },
+  {
+    id: "text.readStyle",
+    title: "Read a text layer's TextDocument text + style (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "285",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("TextDocument", "text"), S("TextDocument", "font"),
+      S("TextDocument", "fontSize"), S("TextDocument", "fontStyle"),
+      S("TextDocument", "justification"), S("TextDocument", "fillColor"),
+      S("TextDocument", "tracking"), S("TextDocument", "leading"),
+      S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+return __adp_json({
+  ok: true, layer: layer.name, text: doc.text,
+  font: doc.font, fontSize: doc.fontSize, fontStyle: doc.fontStyle,
+  justification: doc.justification, fillColor: doc.fillColor,
+  tracking: doc.tracking, leading: doc.leading
+});
+`,
+  },
+  {
+    id: "layer.setLayerFlags",
+    title: "Set AVLayer stacking/render flags (adjustment/preserveTransparency/frameBlending/collapseTransformation)",
+    domain: "project-items-comps-layers",
+    issue: "285",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
+      S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
+    ],
+    args: ["compName", "layerName", "adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const flags = ["adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"];
+      const set = flags.filter((k) => a[k] !== undefined);
+      if (set.length === 0) {
+        throw new Error("layer.setLayerFlags: at least one flag is required");
+      }
+      for (const k of set) {
+        if (typeof a[k] !== "boolean") throw new Error(`layer.setLayerFlags: ${k} must be a boolean`);
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+${a.adjustmentLayer !== undefined ? `layer.adjustmentLayer = ${a.adjustmentLayer ? "true" : "false"};` : ""}
+${a.preserveTransparency !== undefined ? `layer.preserveTransparency = ${a.preserveTransparency ? "true" : "false"};` : ""}
+${a.frameBlending !== undefined ? `layer.frameBlending = ${a.frameBlending ? "true" : "false"};` : ""}
+${a.collapseTransformation !== undefined ? `layer.collapseTransformation = ${a.collapseTransformation ? "true" : "false"};` : ""}
+return __adp_json({
+  ok: true, layer: layer.name,
+  adjustmentLayer: layer.adjustmentLayer === true,
+  preserveTransparency: layer.preserveTransparency !== false,
+  frameBlending: layer.frameBlending === true,
+  collapseTransformation: layer.collapseTransformation === true
+});
+`,
+  },
+  {
+    id: "layer.setInOutPoint",
+    title: "Set a layer's in/out points (time bounds)",
+    domain: "project-items-comps-layers",
+    issue: "285",
+    permission: "execute",
+    mutating: true,
+    members: [S("Layer", "inPoint"), S("Layer", "outPoint")],
+    args: ["compName", "layerName", "inPoint", "outPoint"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      if (a.inPoint === undefined && a.outPoint === undefined) {
+        throw new Error("layer.setInOutPoint: inPoint and/or outPoint is required");
+      }
+      for (const k of ["inPoint", "outPoint"]) {
+        if (a[k] !== undefined && !(typeof a[k] === "number" && Number.isFinite(a[k]))) {
+          throw new Error(`layer.setInOutPoint: ${k} must be a finite number`);
+        }
+      }
+      if (a.inPoint !== undefined && a.outPoint !== undefined && a.outPoint <= a.inPoint) {
+        throw new Error("layer.setInOutPoint: outPoint must be greater than inPoint");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+${a.inPoint !== undefined ? `layer.inPoint = ${a.inPoint};` : ""}
+${a.outPoint !== undefined ? `layer.outPoint = ${a.outPoint};` : ""}
+return __adp_json({ ok: true, layer: layer.name, inPoint: layer.inPoint, outPoint: layer.outPoint });
 `,
   },
   {
