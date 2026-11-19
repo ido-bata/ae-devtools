@@ -230,6 +230,7 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
        NativeProbe already calls; mutation candidates stay out until
        the FR-07/US3 permission model exists (#270) */
     expect([...NATIVE_INTAKE_OPERATIONS].sort()).toEqual([
+      "AEGP_ItemSuite9.AEGP_GetItemName",
       "AEGP_ItemSuite9.AEGP_GetTypeName",
       "AEGP_ProjSuite6.AEGP_GetNumProjects",
       "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
@@ -282,5 +283,54 @@ describe("NATIVE_INTAKE_ARG_SCHEMAS / validateNativeIntakeArgs — Issue #270 St
     expect(validateNativeIntakeArgs("AEGP_ProjSuite6.AEGP_GetProjectName", null))
       .not.toEqual([]);
     expect(validateNativeIntakeArgs("No.Such.Op", { itemType: 2 })).not.toEqual([]);
+  });
+});
+
+describe("aeRefItem arg — Issue #270 Stage 3 identity descriptor", () => {
+  const IN = "AEGP_ItemSuite9.AEGP_GetItemName";
+  const good = {
+    projectIndex: 0,
+    item: { aeRef: { type: "comp", name: "Plate", path: [0] } },
+  };
+  test("well-formed descriptor passes shape validation", () => {
+    expect(validateNativeIntakeArgs(IN, good)).toEqual([]);
+    for (const t of ["folder", "comp", "footage"]) {
+      const a = { projectIndex: 1, item: { aeRef: { type: t, name: "x", path: [2] } } };
+      expect(validateNativeIntakeArgs(IN, a)).toEqual([]);
+    }
+  });
+  test("arg key set is exact — missing/extra refuse", () => {
+    expect(validateNativeIntakeArgs(IN, { projectIndex: 0 })).not.toEqual([]);
+    expect(validateNativeIntakeArgs(IN, { ...good, extra: 1 })).not.toEqual([]);
+    expect(validateNativeIntakeArgs(IN, { projectIndex: 0, item: good.item, x: 1 }))
+      .not.toEqual([]);
+  });
+  test("aeRef wrapper and inner shape are exact", () => {
+    const bad = [
+      { projectIndex: 0, item: { type: "comp", name: "P", path: [0] } }, // no wrapper
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", path: [0], contentHash: "h" } } },
+      { projectIndex: 0, item: { aeRef: { type: "solid", name: "P", path: [0] } } },
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "", path: [0] } } },
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", path: [] } } },
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", path: [0, 1] } } },
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", path: [-1] } } },
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", path: [0.5] } } },
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", path: "0" } } },
+      { projectIndex: -1, item: good.item },
+      { projectIndex: 1.5, item: good.item },
+      { projectIndex: 0, item: "not-an-object" },
+    ];
+    for (const a of bad) {
+      expect(validateNativeIntakeArgs(IN, a)).not.toEqual([]);
+    }
+  });
+  test("shape pass is not resolution — descriptor semantics stay host-side", () => {
+    // A descriptor naming a nonexistent item still passes shape checks;
+    // STALE_REFERENCE is the plug-in's verdict, not this validator's.
+    const ghost = {
+      projectIndex: 0,
+      item: { aeRef: { type: "comp", name: "DoesNotExist", path: [999] } },
+    };
+    expect(validateNativeIntakeArgs(IN, ghost)).toEqual([]);
   });
 });

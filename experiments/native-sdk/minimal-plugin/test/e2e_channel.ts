@@ -270,6 +270,100 @@ try {
     );
   }
 
+  /* Issue #270 Stage 3: aeRef identity resolution end-to-end. The
+     descriptor {"aeRef":{type,name,path}} is shape-validated client-
+     side conceptually, resolved host-side through the SDK suites, and
+     verified against live item state — external JSON never becomes a
+     host handle. The channel-server fixture provides one project with
+     items "Plate" (index 0) and "Café" (index 1). */
+  const IN_ID = "e2e-req-5";
+  const inRequest = {
+    v: 1,
+    token,
+    timeoutMs: TIMEOUT_MS,
+    request: {
+      schema: "ae-devtools/native-dispatch/v1",
+      requestId: IN_ID,
+      session: { sessionId: "e2e-session", aeVersion: "26.5" },
+      operationId: "AEGP_ItemSuite9.AEGP_GetItemName",
+      args: {
+        projectIndex: 0,
+        item: { aeRef: { type: "comp", name: "Café", path: [1] } },
+      },
+      authorizationRef: "e2e-opaque",
+    },
+  };
+  writeFileSync(join(root, "inbox", `${IN_ID}.request.json`), `${JSON.stringify(inRequest)}\n`, {
+    mode: 0o600,
+  });
+  const run5 = spawnSync(BIN, ["--channel-server", root, IN_ID, "20000", "with-items"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+  });
+  check(run5.status === 0, `aeRef request delivered a result (exit ${run5.status})`);
+  if (run5.status === 0) {
+    const inDoc = JSON.parse(
+      readFileSync(join(root, "outbox", `${IN_ID}.result.json`), "utf-8"),
+    ) as Record<string, any>;
+    const inErrors = validateDispatchResult(inDoc.result);
+    check(
+      inErrors.length === 0,
+      `aeRef DispatchResult validates (${inErrors.join("; ") || "clean"})`,
+    );
+    check(
+      inDoc.result?.outcome === "completed" && inDoc.result?.result?.name === "Café",
+      `GetItemName resolved descriptor → name (got ${JSON.stringify(inDoc.result?.result)})`,
+    );
+    check(
+      Array.isArray(inDoc.result?.opCalls) &&
+        inDoc.result.opCalls.includes("AEGP_ItemSuite9.AEGP_GetItemName"),
+      "opCalls links the resolve+op records",
+    );
+  }
+
+  /* Negative: a well-formed descriptor that no longer matches live
+     state refuses STALE_REFERENCE — never re-resolved, never executed. */
+  const STALE_ID = "e2e-req-6";
+  const staleRequest = {
+    v: 1,
+    token,
+    timeoutMs: TIMEOUT_MS,
+    request: {
+      schema: "ae-devtools/native-dispatch/v1",
+      requestId: STALE_ID,
+      session: { sessionId: "e2e-session", aeVersion: "26.5" },
+      operationId: "AEGP_ItemSuite9.AEGP_GetItemName",
+      args: {
+        projectIndex: 0,
+        item: { aeRef: { type: "comp", name: "Renamed", path: [0] } },
+      },
+      authorizationRef: "e2e-opaque",
+    },
+  };
+  writeFileSync(join(root, "inbox", `${STALE_ID}.request.json`), `${JSON.stringify(staleRequest)}\n`, {
+    mode: 0o600,
+  });
+  const run6 = spawnSync(BIN, ["--channel-server", root, STALE_ID, "20000", "with-items"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+  });
+  check(run6.status === 0, `stale-descriptor request delivered a result (exit ${run6.status})`);
+  if (run6.status === 0) {
+    const staleDoc = JSON.parse(
+      readFileSync(join(root, "outbox", `${STALE_ID}.result.json`), "utf-8"),
+    ) as Record<string, any>;
+    const staleErrors = validateDispatchResult(staleDoc.result);
+    check(
+      staleErrors.length === 0,
+      `stale DispatchResult validates (${staleErrors.join("; ") || "clean"})`,
+    );
+    check(
+      staleDoc.result?.outcome === "refused" &&
+        staleDoc.result?.refusalCode === "STALE_REFERENCE",
+      `name mismatch refused STALE_REFERENCE (got ${staleDoc.result?.outcome}/${staleDoc.result?.refusalCode})`,
+    );
+  }
+
   console.log(failures === 0 ? "\nE2E PASS (fake/mock only)" : `\nE2E FAIL (${failures})`);
   process.exit(failures === 0 ? 0 : 1);
 } finally {

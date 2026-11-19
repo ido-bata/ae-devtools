@@ -71,6 +71,7 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
   "AEGP_UtilitySuite6.AEGP_HostIsActivated",
   "AEGP_ItemSuite9.AEGP_GetTypeName",
+  "AEGP_ItemSuite9.AEGP_GetItemName",
   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
   "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
 ] as const;
@@ -108,12 +109,28 @@ export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
 // host-defined name is returned; whether real AE still names it is a
 // real-host question this fake-level contract does not settle.
 
-export type NativeIntakeArgConstraint = {
-  kind: "integer";
-  /** Inclusive bounds on the integer value. */
-  min: number;
-  max: number;
-};
+export type NativeIntakeArgConstraint =
+  | {
+      kind: "integer";
+      /** Inclusive bounds on the integer value. */
+      min: number;
+      max: number;
+    }
+  | {
+      /* Issue #270 Stage 3 (CAP027 groundwork): a project-item identity
+         descriptor in the trusted-codec `aeRef` wire form —
+         {"aeRef":{"type","name","path":[i]}}. `type` is one of the
+         native-mapped tags "folder"|"comp"|"footage" (AEGP_ItemType
+         1|2|4); `path` is exactly one top-level project-item index
+         (AEGP_GetFirstProjItem/GetNextProjItem order — folder children
+         are not enumerable through AEGP_ItemSuite9, so deeper paths are
+         refused); `contentHash` is NOT accepted by this slice — the
+         host-side resolver cannot verify it cheaply, so its presence is
+         MALFORMED_REQUEST rather than silently ignored. The descriptor
+         is validated for shape here; resolution (name/type/index match)
+         happens host-side and failure is STALE_REFERENCE. */
+      kind: "aeRefItem";
+    };
 
 /** operationId → exact arg-name → constraint map. Absent = zero-arg op. */
 export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
@@ -121,6 +138,10 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
 > = {
   "AEGP_ItemSuite9.AEGP_GetTypeName": {
     itemType: { kind: "integer", min: 1, max: 4 },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemName": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
   },
 };
 
@@ -180,7 +201,43 @@ export function validateNativeIntakeArgs(
       } else if (v < spec.min || v > spec.max) {
         errors.push(`argument "${k}" must be in [${spec.min}, ${spec.max}]`);
       }
+    } else if (spec.kind === "aeRefItem") {
+      errors.push(...validateAeRefItemArg(k, v));
     }
+  }
+  return errors;
+}
+
+/* Shape-check an `aeRefItem` descriptor: {"aeRef":{"type","name","path"}}
+   with exactly those keys (no contentHash — see constraint comment).
+   This proves wire shape only; name/type/index resolution is the
+   plug-in's job and its failure is STALE_REFERENCE, not malformed. */
+function validateAeRefItemArg(argName: string, v: unknown): string[] {
+  const errors: string[] = [];
+  const bad = (m: string): string => {
+    errors.push(`argument "${argName}": ${m}`);
+    return m;
+  };
+  if (!isPlainArgsObject(v)) return [bad("must be an object")];
+  const outerKeys = Object.keys(v);
+  if (outerKeys.length !== 1 || outerKeys[0] !== "aeRef") {
+    return [bad('must be exactly {"aeRef": {...}}')];
+  }
+  const ref = v.aeRef;
+  if (!isPlainArgsObject(ref)) return [bad("aeRef must be a plain object")];
+  const refKeys = Object.keys(ref).sort();
+  if (refKeys.join(",") !== "name,path,type") {
+    return [bad("aeRef must carry exactly type, name, path (contentHash unsupported)")];
+  }
+  if (ref.type !== "folder" && ref.type !== "comp" && ref.type !== "footage") {
+    bad('aeRef.type must be "folder" | "comp" | "footage"');
+  }
+  if (typeof ref.name !== "string" || ref.name.length === 0) {
+    bad("aeRef.name must be a non-empty string");
+  }
+  if (!Array.isArray(ref.path) || ref.path.length !== 1 ||
+      !Number.isInteger(ref.path[0]) || (ref.path[0] as number) < 0) {
+    bad("aeRef.path must be [<non-negative integer>] — one top-level item index");
   }
   return errors;
 }
