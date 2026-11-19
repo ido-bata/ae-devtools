@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "fda54560a27a2efc2b393f60d2054c4b912f6db2acf836657707c5c991ac806b"
+      "sha256": "a067640a5de6b456a8a67a603cd07c67f476092feba950aee5c6700ad1b2365c"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 310,
+          "documented": 303,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 45,
+          "automated-fake-tested": 52,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 45,
+          "adapter-present": 52,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 310
+          "unknown": 303
         },
         "verification": {
-          "not-run": 310,
-          "automated-fake": 45,
+          "not-run": 303,
+          "automated-fake": 52,
           "verified-real-host": 0
         }
       },
@@ -2416,10 +2416,10 @@
         {
           "id": "ae.scripting.TextDocument.fillColor",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.firstLineIndent",
@@ -2432,10 +2432,10 @@
         {
           "id": "ae.scripting.TextDocument.font",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.fontBaselineOption",
@@ -2480,18 +2480,18 @@
         {
           "id": "ae.scripting.TextDocument.fontSize",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.fontStyle",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.hangingRoman",
@@ -2512,10 +2512,10 @@
         {
           "id": "ae.scripting.TextDocument.justification",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.kerning",
@@ -2528,10 +2528,10 @@
         {
           "id": "ae.scripting.TextDocument.leading",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.leadingType",
@@ -2704,10 +2704,10 @@
         {
           "id": "ae.scripting.TextDocument.tracking",
           "category": "text",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.TextDocument.tsume",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 194,
+          "documented": 190,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 59,
+          "automated-fake-tested": 63,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 66,
+          "adapter-present": 70,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 194
+          "unknown": 190
         },
         "verification": {
-          "not-run": 194,
-          "automated-fake": 59,
+          "not-run": 190,
+          "automated-fake": 63,
           "verified-real-host": 7
         }
       },
@@ -3509,10 +3509,10 @@
         {
           "id": "ae.scripting.AVLayer.adjustmentLayer",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.audioActive",
@@ -3581,10 +3581,10 @@
         {
           "id": "ae.scripting.AVLayer.collapseTransformation",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.compPointToSource",
@@ -3613,10 +3613,10 @@
         {
           "id": "ae.scripting.AVLayer.frameBlending",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.frameBlendingType",
@@ -3693,10 +3693,10 @@
         {
           "id": "ae.scripting.AVLayer.preserveTransparency",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.quality",

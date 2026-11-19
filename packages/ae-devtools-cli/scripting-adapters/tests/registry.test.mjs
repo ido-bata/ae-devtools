@@ -101,6 +101,13 @@ function sampleArgs(op) {
     else if (n === "text") a[n] = "sample text";
     else if (n === "lightType") a[n] = 2;
     else if (n === "intensity") a[n] = 100;
+    else if (n === "fontSize") a[n] = 100;
+    else if (n === "justification") a[n] = 1;
+    else if (n === "fillColor") a[n] = [1, 0, 0];
+    else if (n === "tracking" || n === "leading") a[n] = 0;
+    else if (["inPoint"].includes(n)) a[n] = 0;
+    else if (n === "outPoint") a[n] = 10;
+    else if (["adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"].includes(n)) a[n] = true;
     else if (n === "section") a[n] = "General";
     else if (n === "key") a[n] = "SomeKey";
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";
