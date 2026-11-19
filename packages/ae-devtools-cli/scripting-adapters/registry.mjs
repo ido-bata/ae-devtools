@@ -1447,6 +1447,153 @@ return __adp_json({
 });
 `,
   },
+  // ---- Issue #283: coverage batch 4 — Preferences + app info ----
+  {
+    id: "pref.get",
+    title: "Read a preference value by section/key/type",
+    domain: "project-items-comps-layers",
+    issue: "283",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Preferences", "havePref"),
+      S("Preferences", "getPrefAsString"), S("Preferences", "getPrefAsBool"),
+      S("Preferences", "getPrefAsLong"), S("Preferences", "getPrefAsFloat"),
+    ],
+    args: ["section", "key", "type", "default"],
+    validate: (a) => {
+      requireArgs(a, ["section", "key", "type"]);
+      if (!["string", "bool", "long", "float"].includes(a.type)) {
+        throw new Error("pref.get: type must be one of string|bool|long|float");
+      }
+      if (a.type === "bool" && a.default !== undefined && typeof a.default !== "boolean") {
+        throw new Error("pref.get: bool default must be a boolean");
+      }
+      if ((a.type === "long" || a.type === "float") && a.default !== undefined &&
+          (typeof a.default !== "number" || !Number.isFinite(a.default))) {
+        throw new Error(`pref.get: ${a.type} default must be a finite number`);
+      }
+    },
+    source: (a) => `${PRELUDE}
+var p = app.preferences;
+var exists = (typeof p.havePref === "function") ? p.havePref(${js(a.section)}, ${js(a.key)}) : null;
+var v;
+${a.type === "string" ? `v = p.getPrefAsString(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? '""' : js(a.default)});` : ""}
+${a.type === "bool" ? `v = p.getPrefAsBool(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? "false" : js(a.default)});` : ""}
+${a.type === "long" ? `v = p.getPrefAsLong(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? "0" : String(Number(a.default))});` : ""}
+${a.type === "float" ? `v = p.getPrefAsFloat(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? "0" : String(Number(a.default))});` : ""}
+return __adp_json({ ok: true, section: ${js(a.section)}, key: ${js(a.key)}, type: ${js(a.type)}, exists: exists, value: v });
+`,
+  },
+  {
+    id: "pref.set",
+    title: "Write a preference value by section/key/type",
+    domain: "project-items-comps-layers",
+    issue: "283",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Preferences", "savePrefAsString"), S("Preferences", "savePrefAsBool"),
+      S("Preferences", "savePrefAsLong"), S("Preferences", "savePrefAsFloat"),
+    ],
+    args: ["section", "key", "type", "value"],
+    validate: (a) => {
+      requireArgs(a, ["section", "key", "type", "value"]);
+      if (!["string", "bool", "long", "float"].includes(a.type)) {
+        throw new Error("pref.set: type must be one of string|bool|long|float");
+      }
+      const t = a.type;
+      const v = a.value;
+      const okType =
+        (t === "string" && typeof v === "string") ||
+        (t === "bool" && typeof v === "boolean") ||
+        (t === "long" && Number.isInteger(v)) ||
+        (t === "float" && typeof v === "number" && Number.isFinite(v));
+      if (!okType) throw new Error(`pref.set: value type does not match type '${t}'`);
+    },
+    source: (a) => `${PRELUDE}
+var p = app.preferences;
+${a.type === "string" ? `p.savePrefAsString(${js(a.section)}, ${js(a.key)}, ${js(a.value)});` : ""}
+${a.type === "bool" ? `p.savePrefAsBool(${js(a.section)}, ${js(a.key)}, ${a.value ? "true" : "false"});` : ""}
+${a.type === "long" ? `p.savePrefAsLong(${js(a.section)}, ${js(a.key)}, ${a.value});` : ""}
+${a.type === "float" ? `p.savePrefAsFloat(${js(a.section)}, ${js(a.key)}, ${a.value});` : ""}
+return __adp_json({ ok: true, section: ${js(a.section)}, key: ${js(a.key)}, type: ${js(a.type)} });
+`,
+  },
+  {
+    id: "pref.delete",
+    title: "Delete a preference entry",
+    domain: "project-items-comps-layers",
+    issue: "283",
+    permission: "execute",
+    mutating: true,
+    destructive: true,
+    members: [S("Preferences", "deletePref"), S("Preferences", "havePref")],
+    args: ["section", "key"],
+    validate: (a) => requireArgs(a, ["section", "key"]),
+    source: (a) => `${PRELUDE}
+var p = app.preferences;
+p.deletePref(${js(a.section)}, ${js(a.key)});
+return __adp_json({
+  ok: true, section: ${js(a.section)}, key: ${js(a.key)},
+  exists: (typeof p.havePref === "function") ? p.havePref(${js(a.section)}, ${js(a.key)}) : null
+});
+`,
+  },
+  {
+    id: "pref.saveToDisk",
+    title: "Flush preferences to disk",
+    domain: "project-items-comps-layers",
+    issue: "283",
+    permission: "execute",
+    mutating: true,
+    members: [S("Preferences", "saveToDisk")],
+    args: [],
+    source: () => `${PRELUDE}
+app.preferences.saveToDisk();
+return __adp_json({ ok: true, saved: true });
+`,
+  },
+  {
+    id: "read.appInfo",
+    title: "App version/build/language + effects + fonts (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "283",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("app", "version"), S("app", "buildName"), S("app", "buildNumber"),
+      S("app", "isoLanguage"), S("app", "effects"), S("app", "fonts"),
+    ],
+    args: [],
+    source: () => `${PRELUDE}
+var fx = [];
+var effects = app.effects;
+if (effects !== null && effects !== undefined) {
+  for (var i = 1; i <= effects.length; i++) {
+    fx.push(String(effects[i].matchName));
+  }
+}
+var fn = [];
+var fonts = app.fonts;
+if (fonts !== null && fonts !== undefined) {
+  for (var j = 1; j <= fonts.length; j++) {
+    fn.push(String(fonts[j].name));
+  }
+}
+return __adp_json({
+  ok: true,
+  app: {
+    version: String(app.version),
+    buildName: String(app.buildName),
+    buildNumber: app.buildNumber,
+    isoLanguage: String(app.isoLanguage),
+    effects: fx,
+    fonts: fn
+  }
+});
+`,
+  },
 ];
 
 const BY_ID = new Map(OPERATIONS.map((op) => [op.id, op]));

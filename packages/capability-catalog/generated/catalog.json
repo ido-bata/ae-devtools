@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "c75dacef3fd8e199c45f6303deda77dc53cc3157b06e022ca6b5232093c7ba6a"
+      "sha256": "fda54560a27a2efc2b393f60d2054c4b912f6db2acf836657707c5c991ac806b"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -26594,12 +26594,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencesdeletepref"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.delete)"
           }
         ]
       }
@@ -26634,12 +26638,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencesgetprefasbool"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.get)"
           }
         ]
       }
@@ -26674,12 +26682,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencesgetprefasfloat"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.get)"
           }
         ]
       }
@@ -26714,12 +26726,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencesgetprefaslong"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.get)"
           }
         ]
       }
@@ -26754,12 +26770,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencesgetprefasstring"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.get)"
           }
         ]
       }
@@ -26794,12 +26814,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferenceshavepref"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.get, pref.delete)"
           }
         ]
       }
@@ -26874,12 +26898,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencessaveprefasbool"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.set)"
           }
         ]
       }
@@ -26914,12 +26942,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencessaveprefasfloat"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.set)"
           }
         ]
       }
@@ -26954,12 +26986,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencessaveprefaslong"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.set)"
           }
         ]
       }
@@ -26994,12 +27030,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencessaveprefasstring"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.set)"
           }
         ]
       }
@@ -27034,12 +27074,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/preferences/#preferencessavetodisk"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (pref.saveToDisk)"
           }
         ]
       }
@@ -39340,12 +39384,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appbuildname"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.appInfo)"
           }
         ]
       }
@@ -39380,12 +39428,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appbuildnumber"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.appInfo)"
           }
         ]
       }
@@ -39500,12 +39552,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appeffects"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.appInfo)"
           }
         ]
       }
@@ -39820,12 +39876,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appfonts"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.appInfo)"
           }
         ]
       }
@@ -39940,12 +40000,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appisolanguage"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.appInfo)"
           }
         ]
       }
@@ -40726,12 +40790,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/application/#appversion"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.appInfo)"
           }
         ]
       }

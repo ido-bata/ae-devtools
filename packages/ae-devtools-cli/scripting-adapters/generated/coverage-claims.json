@@ -671,6 +671,109 @@
         "read.projectSettings"
       ],
       "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.havePref": {
+      "ops": [
+        "pref.get",
+        "pref.delete"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsString": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsBool": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsLong": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsFloat": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsString": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsBool": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsLong": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsFloat": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.deletePref": {
+      "ops": [
+        "pref.delete"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.saveToDisk": {
+      "ops": [
+        "pref.saveToDisk"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.version": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.buildName": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.buildNumber": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.isoLanguage": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.effects": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.fonts": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
     }
   }
 }
