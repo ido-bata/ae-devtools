@@ -583,6 +583,30 @@ static const AllowEntry S_ALLOWLIST[] = {
       "AEGP_CompSuite13.AEGP_GetCompBGColor", S_COMP_ARGS, 2 },
     { "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
       "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase", S_COMP_ARGS, 2 },
+    /* Issue #318 / #63: ItemSuite9 read-only detail getters that take
+       AEGP_ItemH — same {projectIndex, item:<aeRefItem>} contract as
+       GetItemName; the resolved handle is used directly (no derived
+       handle). GetItemParentFolder and GetItemMRUView stay out: they
+       return host handles of other identity kinds (folder item /
+       item-view) that need their own descriptor story first. */
+    { "AEGP_ItemSuite9.AEGP_GetItemType",
+      "AEGP_ItemSuite9.AEGP_GetItemType", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemFlags",
+      "AEGP_ItemSuite9.AEGP_GetItemFlags", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_IsItemSelected",
+      "AEGP_ItemSuite9.AEGP_IsItemSelected", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemLabel",
+      "AEGP_ItemSuite9.AEGP_GetItemLabel", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemDuration",
+      "AEGP_ItemSuite9.AEGP_GetItemDuration", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemCurrentTime",
+      "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemDimensions",
+      "AEGP_ItemSuite9.AEGP_GetItemDimensions", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
+      "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetItemComment",
+      "AEGP_ItemSuite9.AEGP_GetItemComment", S_AEREF_ARGS, 2 },
     /* Issue #270 Stage 2: zero-arg read-only getters needing no
        identity resolution. The three UtilitySuite members use the
        already-held utilP; the two render-queue members acquire their
@@ -2102,6 +2126,249 @@ static void ExecCompGetter(
     }
 }
 
+/* ---- ItemSuite9 read-only detail getters (Issue #318 / #63) ---------
+   Same {projectIndex, item:<aeRefItem>} contract as GetItemName: the
+   shared resolver produces the item handle; the getter runs on it
+   directly — no derived handle, no extra suite. Missing entry →
+   not-sent; AEGP errors → failed with mayHaveMutated=false. */
+
+#define ITEM_COMMENT_MAX 2048  /* UTF-8 bytes; larger comments fail honestly */
+
+static int ItemGetterEntryPresent(const AEGP_ItemSuite9* c, const char* opIdZ)
+{
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemType") == 0)
+        return c->AEGP_GetItemType != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemFlags") == 0)
+        return c->AEGP_GetItemFlags != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_IsItemSelected") == 0)
+        return c->AEGP_IsItemSelected != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemLabel") == 0)
+        return c->AEGP_GetItemLabel != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemDuration") == 0)
+        return c->AEGP_GetItemDuration != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime") == 0)
+        return c->AEGP_GetItemCurrentTime != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemDimensions") == 0)
+        return c->AEGP_GetItemDimensions != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio") == 0)
+        return c->AEGP_GetItemPixelAspectRatio != NULL;
+    if (strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemComment") == 0)
+        return c->AEGP_GetItemComment != NULL;
+    return 0;
+}
+
+/* Dispatch router for the #63 item-detail getters — explicit id list
+   so a future ItemSuite9 allowlist addition without an executor still
+   reaches OPERATION_NOT_DISPATCHABLE instead of being misrouted. */
+static int IsItemGetterOpId(const char* opIdZ)
+{
+    return strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemType") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemFlags") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_IsItemSelected") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemLabel") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemDuration") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemDimensions") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio") == 0 ||
+           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemComment") == 0;
+}
+
+static void ExecItemGetter(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* itemArg = JGet(args, "item");
+    JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
+    long projIndex = ArgsInt(allow, args, 0);
+    ItemResolution res;
+    A_Err oerr = A_Err_STRUCT;
+    const char* opId = allow->operationId;
+    int commentStatus = -1;
+
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projIndex, ref, 0, " (resolve)", &res, v))
+        return; /* v already carries the verdict */
+
+    if (!ItemGetterEntryPresent(res.itemP, opId))
+    {
+        ReleaseResolution(utilP, basicP, &res);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "item suite entry unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+
+    if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemType") == 0)
+    {
+        AEGP_ItemType t = AEGP_ItemType_NONE;
+        oerr = res.itemP->AEGP_GetItemType(res.itemH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"itemType\":%d}", (int)t);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemFlags") == 0)
+    {
+        AEGP_ItemFlags flags = 0;
+        oerr = res.itemP->AEGP_GetItemFlags(res.itemH, &flags);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"flags\":%ld}", (long)flags);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_IsItemSelected") == 0)
+    {
+        A_Boolean selB = FALSE;
+        oerr = res.itemP->AEGP_IsItemSelected(res.itemH, &selB);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"selected\":%s}", selB ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemLabel") == 0)
+    {
+        AEGP_LabelID label = AEGP_Label_NO_LABEL;
+        oerr = res.itemP->AEGP_GetItemLabel(res.itemH, &label);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"label\":%d}", (int)label);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemDuration") == 0)
+    {
+        A_Time t = {0, 0};
+        oerr = res.itemP->AEGP_GetItemDuration(res.itemH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"duration\":{\"value\":%ld,\"scale\":%lu}}",
+                     (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime") == 0)
+    {
+        A_Time t = {0, 0};
+        oerr = res.itemP->AEGP_GetItemCurrentTime(res.itemH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"currentTime\":{\"value\":%ld,\"scale\":%lu}}",
+                     (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemDimensions") == 0)
+    {
+        A_long w = 0, hgt = 0;
+        oerr = res.itemP->AEGP_GetItemDimensions(res.itemH, &w, &hgt);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"width\":%ld,\"height\":%ld}", (long)w, (long)hgt);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio") == 0)
+    {
+        A_Ratio par = {0, 0};
+        oerr = res.itemP->AEGP_GetItemPixelAspectRatio(res.itemH, &par);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"pixelAspectRatio\":{\"num\":%ld,\"den\":%lu}}",
+                     (long)par.num, (unsigned long)par.den);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemComment") == 0)
+    {
+        AEGP_MemHandle commentH = NULL;
+        char comment[ITEM_COMMENT_MAX + 1];
+        char esc[ITEM_COMMENT_MAX * 2 + 16];
+        oerr = res.itemP->AEGP_GetItemComment(res.itemH, &commentH);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            IntakeMemStatus ms = IntakeReadMemHandleUtf8(
+                utilP, res.memP, commentH, comment, sizeof(comment));
+            commentStatus = (int)ms;
+            if (ms == IMH_OK)
+            {
+                JsonEscape(esc, sizeof(esc), comment);
+                snprintf(v->payload, sizeof(v->payload),
+                         "{\"comment\":\"%s\"}", esc);
+                v->payload[sizeof(v->payload) - 1] = '\0';
+                v->havePayload = 1;
+            }
+            else if (ms == IMH_TRUNCATED)
+            {
+                oerr = A_Err_STRUCT; /* over the declared bound: honest fail */
+            }
+            else
+            {
+                oerr = A_Err_STRUCT;
+            }
+        }
+    }
+    else
+    {
+        oerr = A_Err_STRUCT;
+    }
+
+    ReleaseResolution(utilP, basicP, &res);
+
+    if (oerr == A_Err_NONE && v->havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+        v->publish = 1;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        if (commentStatus == (int)IMH_TRUNCATED)
+            snprintf(v->detail, sizeof(v->detail),
+                     "comment exceeds %d-byte bound", ITEM_COMMENT_MAX);
+        else
+            snprintf(v->detail, sizeof(v->detail),
+                     "%s err=%ld", opId, (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0; /* read-only getter */
+        v->publish = 1;
+    }
+}
+
 /* Execute one claimed request file. Always publishes a result when
    publish==1; the caller removes the .claimed file afterwards.
    `mtimeMs` is the claimed file's mtime — the deadline base, matching
@@ -2527,6 +2794,13 @@ static void ProcessClaimed(
         else if (strncmp(allow->operationId, "AEGP_CompSuite13.", 17) == 0)
         {
             ExecCompGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
+        }
+        /* ---- Issue #318 / #63: ItemSuite9 read-only detail getters --
+           {projectIndex, item:<aeRefItem>} → shared resolver → typed
+           getter on the resolved item handle. */
+        else if (IsItemGetterOpId(allow->operationId))
+        {
+            ExecItemGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
         }
         /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
         else if (strcmp(allow->operationId,

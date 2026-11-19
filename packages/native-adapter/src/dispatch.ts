@@ -92,6 +92,18 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
   "AEGP_CompSuite13.AEGP_GetCompBGColor",
   "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
+  /* Issue #318 / #63: ItemSuite9 read-only detail getters taking
+     AEGP_ItemH — same {projectIndex, item:<aeRefItem>} contract as
+     GetItemName; the resolved handle is used directly. */
+  "AEGP_ItemSuite9.AEGP_GetItemType",
+  "AEGP_ItemSuite9.AEGP_GetItemFlags",
+  "AEGP_ItemSuite9.AEGP_IsItemSelected",
+  "AEGP_ItemSuite9.AEGP_GetItemLabel",
+  "AEGP_ItemSuite9.AEGP_GetItemDuration",
+  "AEGP_ItemSuite9.AEGP_GetItemCurrentTime",
+  "AEGP_ItemSuite9.AEGP_GetItemDimensions",
+  "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
+  "AEGP_ItemSuite9.AEGP_GetItemComment",
   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
   "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
 ] as const;
@@ -238,6 +250,44 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
   "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase": {
     projectIndex: { kind: "integer", min: 0, max: 1000000 },
     comp: { kind: "aeRefItem" },
+  },
+  /* ItemSuite9 detail getters (Issue #318 / #63): identical arg
+     contract to GetItemName — {projectIndex, item:<aeRefItem>}. */
+  "AEGP_ItemSuite9.AEGP_GetItemType": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemFlags": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_IsItemSelected": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemLabel": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemDuration": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemCurrentTime": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemDimensions": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  "AEGP_ItemSuite9.AEGP_GetItemComment": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
   },
 };
 
