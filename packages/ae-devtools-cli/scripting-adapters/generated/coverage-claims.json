@@ -216,7 +216,9 @@
     },
     "ae.scripting.Property.setValueAtTime": {
       "ops": [
-        "anim.setValueAtTime"
+        "anim.setValueAtTime",
+        "marker.setLayerMarker",
+        "marker.setCompMarker"
       ],
       "evidence": "fake/mock only"
     },
@@ -430,7 +432,11 @@
         "read.keyframes",
         "anim.removeKeyframe",
         "read.valueAtTime",
-        "read.propertyDetail"
+        "read.propertyDetail",
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
       ],
       "evidence": "fake/mock only"
     },
@@ -443,13 +449,21 @@
     },
     "ae.scripting.Property.keyTime": {
       "ops": [
-        "read.keyframes"
+        "read.keyframes",
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.keyValue": {
       "ops": [
-        "read.keyframes"
+        "read.keyframes",
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
       ],
       "evidence": "fake/mock only"
     },
@@ -1171,6 +1185,106 @@
     "ae.scripting.RenderQueueItem.duplicate": {
       "ops": [
         "render.duplicateQueueItem"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.class.MarkerValue": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.marker": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.readLayerMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.comment": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.chapter": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.url": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.frameTarget": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.cuePointName": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.duration": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.eventCuePoint": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.setParameters": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.getParameters": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.markerProperty": {
+      "ops": [
+        "marker.setCompMarker",
+        "marker.readCompMarkers"
       ],
       "evidence": "fake/mock only"
     }

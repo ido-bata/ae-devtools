@@ -123,6 +123,9 @@ function sampleArgs(op) {
     else if (n === "id") a[n] = 1;
     else if (n === "section") a[n] = "General";
     else if (n === "key") a[n] = "SomeKey";
+    else if (n === "duration") a[n] = 1;
+    else if (n === "eventCuePoint") a[n] = true;
+    else if (n === "params") a[n] = { cue: "in", label2: "x" };
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";
     else if (n === "default") a[n] = "d";
     else if (n === "value" && op.id.startsWith("pref.")) a[n] = "v";

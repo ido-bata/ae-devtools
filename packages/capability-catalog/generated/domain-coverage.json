@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "9e82093cba6aaf3656c5e011b063fde669458629fe8c7952fac44a4271ea367a"
+      "sha256": "07e0c80ab6382adc3db27c04a6a67dbc163ae319721a836909c65c7ca69f8af8"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 289,
+          "documented": 280,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 66,
+          "automated-fake-tested": 75,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 66,
+          "adapter-present": 75,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 289
+          "unknown": 280
         },
         "verification": {
-          "not-run": 289,
-          "automated-fake": 66,
+          "not-run": 280,
+          "automated-fake": 75,
           "verified-real-host": 0
         }
       },
@@ -584,58 +584,58 @@
         {
           "id": "ae.scripting.MarkerValue.chapter",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.comment",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.cuePointName",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.duration",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.eventCuePoint",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.frameTarget",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.getParameters",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.label",
@@ -656,18 +656,18 @@
         {
           "id": "ae.scripting.MarkerValue.setParameters",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.url",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MaskPropertyGroup.color",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 160,
+          "documented": 158,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 93,
+          "automated-fake-tested": 95,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 100,
+          "adapter-present": 102,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 160
+          "unknown": 158
         },
         "verification": {
-          "not-run": 160,
-          "automated-fake": 93,
+          "not-run": 158,
+          "automated-fake": 95,
           "verified-real-host": 7
         }
       },
@@ -3933,10 +3933,10 @@
         {
           "id": "ae.scripting.CompItem.markerProperty",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.motionBlur",
@@ -4653,10 +4653,10 @@
         {
           "id": "ae.scripting.Layer.marker",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Layer.moveAfter",

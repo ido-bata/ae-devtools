@@ -147,6 +147,28 @@ function __adp_findLayer(comp, name) {
   __adp_fail("layer not found in comp '" + comp.name + "': " + name);
   return null;
 }
+// Marker read-back snapshot (Issue #295): MarkerValue is a host object
+// whose fields are NOT guaranteed enumerable, so serialize explicitly
+// into a plain object — never pass the MarkerValue itself to __adp_json.
+function __adp_markerSnapshot(prop) {
+  var out = [];
+  for (var i = 1; i <= prop.numKeys; i++) {
+    var mv = prop.keyValue(i);
+    out.push({
+      index: i,
+      time: prop.keyTime(i),
+      comment: String(mv.comment),
+      chapter: String(mv.chapter),
+      url: String(mv.url),
+      frameTarget: String(mv.frameTarget),
+      cuePointName: String(mv.cuePointName),
+      duration: mv.duration,
+      eventCuePoint: mv.eventCuePoint === true,
+      params: mv.getParameters()
+    });
+  }
+  return out;
+}
 // Hand-rolled JSON serializer: ExtendScript's JSON support is NOT
 // guaranteed across AE versions, and host objects crash native
 // JSON.stringify on circular refs. Adapter results are plain
@@ -237,6 +259,61 @@ function isItemRef(v) {
 }
 function isFolderSelector(v) {
   return typeof v === "string" || isItemRef(v);
+}
+
+// ---- Issue #295: shared MarkerValue arg validation + source fragment ----
+// Real semantics (docsforadobe): MarkerValue(comment, chapter, url,
+// frameTarget, cuePointName, params) — comment required string; the
+// four link fields are strings; duration is seconds (float >= 0);
+// eventCuePoint is boolean; params is a string->string key-value map
+// applied via setParameters. label/protectedRegion (AE 16.0+) are
+// deliberately not accepted — no version gate exists yet.
+const MARKER_STRING_FIELDS = ["chapter", "url", "frameTarget", "cuePointName"];
+function validateMarkerArgs(a, needsLayer) {
+  requireArgs(a, needsLayer
+    ? ["compName", "layerName", "time", "comment"]
+    : ["compName", "time", "comment"]);
+  if (typeof a.time !== "number" || !Number.isFinite(a.time)) {
+    throw new Error("marker op: time must be a finite number");
+  }
+  if (typeof a.comment !== "string") {
+    throw new Error("marker op: comment must be a string");
+  }
+  for (const k of MARKER_STRING_FIELDS) {
+    if (a[k] !== undefined && typeof a[k] !== "string") {
+      throw new Error(`marker op: ${k} must be a string`);
+    }
+  }
+  if (a.duration !== undefined &&
+      (typeof a.duration !== "number" || !Number.isFinite(a.duration) || a.duration < 0)) {
+    throw new Error("marker op: duration must be a finite number >= 0");
+  }
+  if (a.eventCuePoint !== undefined && typeof a.eventCuePoint !== "boolean") {
+    throw new Error("marker op: eventCuePoint must be a boolean");
+  }
+  if (a.params !== undefined) {
+    if (a.params === null || typeof a.params !== "object" || Array.isArray(a.params)) {
+      throw new Error("marker op: params must be a key-value object");
+    }
+    for (const k of Object.keys(a.params)) {
+      if (k.length === 0 || typeof a.params[k] !== "string") {
+        throw new Error("marker op: params keys must be non-empty strings and values strings");
+      }
+    }
+  }
+}
+
+// Emits ES3 that constructs the MarkerValue and applies optional
+// fields. `mv` is declared here; each op's source is its own function.
+function markerBuildExpr(a) {
+  const lines = [`var mv = new MarkerValue(${js(a.comment)});`];
+  for (const k of MARKER_STRING_FIELDS) {
+    if (a[k] !== undefined) lines.push(`mv.${k} = ${js(a[k])};`);
+  }
+  if (a.duration !== undefined) lines.push(`mv.duration = ${Number(a.duration)};`);
+  if (a.eventCuePoint !== undefined) lines.push(`mv.eventCuePoint = ${a.eventCuePoint ? "true" : "false"};`);
+  if (a.params !== undefined) lines.push(`mv.setParameters(${js(a.params)});`);
+  return lines.join("\n");
 }
 
 export const OPERATIONS = [
@@ -2312,6 +2389,126 @@ return __adp_json({
   ok: true, index: d.index, comp: String(d.comp.name),
   timeSpanStart: d.timeSpanStart, timeSpanDuration: d.timeSpanDuration,
   remaining: rq.items.length
+});
+`,
+  },
+  // ---- Issue #295: MarkerValue layer/comp markers ----
+  // Real API (docsforadobe MarkerValue): new MarkerValue(comment, ...)
+  // with optional string fields; markers are keyframed values on
+  // layer.marker (PropertyGroup) / comp.markerProperty via
+  // setValueAtTime. label/protectedRegion are AE 16.0+ and intentionally
+  // unclaimed — no version gate exists yet.
+  {
+    id: "marker.setLayerMarker",
+    title: "Set a layer marker (MarkerValue) at a time",
+    domain: "project-items-comps-layers",
+    issue: "295",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("class", "MarkerValue"), S("Layer", "marker"),
+      S("MarkerValue", "comment"), S("MarkerValue", "chapter"),
+      S("MarkerValue", "url"), S("MarkerValue", "frameTarget"),
+      S("MarkerValue", "cuePointName"), S("MarkerValue", "duration"),
+      S("MarkerValue", "eventCuePoint"), S("MarkerValue", "setParameters"),
+      S("MarkerValue", "getParameters"),
+      S("Property", "setValueAtTime"), S("Property", "numKeys"),
+      S("Property", "keyTime"), S("Property", "keyValue"),
+    ],
+    args: ["compName", "layerName", "time", "comment", "chapter", "url",
+      "frameTarget", "cuePointName", "duration", "eventCuePoint", "params"],
+    validate: (a) => validateMarkerArgs(a, true),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+${markerBuildExpr(a)}
+layer.marker.setValueAtTime(${Number(a.time)}, mv);
+return __adp_json({
+  ok: true, layer: layer.name, numKeys: layer.marker.numKeys,
+  markers: __adp_markerSnapshot(layer.marker)
+});
+`,
+  },
+  {
+    id: "marker.setCompMarker",
+    title: "Set a composition marker (MarkerValue) at a time",
+    domain: "project-items-comps-layers",
+    issue: "295",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("class", "MarkerValue"), S("CompItem", "markerProperty"),
+      S("MarkerValue", "comment"), S("MarkerValue", "chapter"),
+      S("MarkerValue", "url"), S("MarkerValue", "frameTarget"),
+      S("MarkerValue", "cuePointName"), S("MarkerValue", "duration"),
+      S("MarkerValue", "eventCuePoint"), S("MarkerValue", "setParameters"),
+      S("MarkerValue", "getParameters"),
+      S("Property", "setValueAtTime"), S("Property", "numKeys"),
+      S("Property", "keyTime"), S("Property", "keyValue"),
+    ],
+    args: ["compName", "time", "comment", "chapter", "url",
+      "frameTarget", "cuePointName", "duration", "eventCuePoint", "params"],
+    validate: (a) => validateMarkerArgs(a, false),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+${markerBuildExpr(a)}
+comp.markerProperty.setValueAtTime(${Number(a.time)}, mv);
+return __adp_json({
+  ok: true, comp: comp.name, numKeys: comp.markerProperty.numKeys,
+  markers: __adp_markerSnapshot(comp.markerProperty)
+});
+`,
+  },
+  {
+    id: "marker.readLayerMarkers",
+    title: "List a layer's markers (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "295",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Layer", "marker"),
+      S("MarkerValue", "comment"), S("MarkerValue", "chapter"),
+      S("MarkerValue", "url"), S("MarkerValue", "frameTarget"),
+      S("MarkerValue", "cuePointName"), S("MarkerValue", "duration"),
+      S("MarkerValue", "eventCuePoint"), S("MarkerValue", "getParameters"),
+      S("Property", "numKeys"), S("Property", "keyTime"), S("Property", "keyValue"),
+    ],
+    args: ["compName", "layerName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+return __adp_json({
+  ok: true, layer: layer.name,
+  numKeys: layer.marker.numKeys,
+  markers: __adp_markerSnapshot(layer.marker)
+});
+`,
+  },
+  {
+    id: "marker.readCompMarkers",
+    title: "List a composition's markers (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "295",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("CompItem", "markerProperty"),
+      S("MarkerValue", "comment"), S("MarkerValue", "chapter"),
+      S("MarkerValue", "url"), S("MarkerValue", "frameTarget"),
+      S("MarkerValue", "cuePointName"), S("MarkerValue", "duration"),
+      S("MarkerValue", "eventCuePoint"), S("MarkerValue", "getParameters"),
+      S("Property", "numKeys"), S("Property", "keyTime"), S("Property", "keyValue"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+return __adp_json({
+  ok: true, comp: comp.name,
+  numKeys: comp.markerProperty.numKeys,
+  markers: __adp_markerSnapshot(comp.markerProperty)
 });
 `,
   },
