@@ -1615,6 +1615,87 @@ static void TestIntakeGetTypeNameOpFailure()
     CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetTypeName err="));
 }
 
+/* ---- Issue #270 Stage 2: zero-arg read-only getter expansion -------- */
+
+static void TestIntakeStage2ZeroArgGetters()
+{
+    /* Five new allowlisted ops, all zero-arg; one request per idle
+       tick, claimed in name-sorted order: rq1, rq2, u1, u2, u3. */
+    static const struct { const char* id; const char* op; const char* want; } ops[] = {
+        { "rq1", "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
+          "\"state\":" },
+        { "rq2", "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
+          "\"numRQItems\":3" },
+        { "u1", "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
+          "\"major\":1" },
+        { "u2", "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
+          "\"interactiveUiSuppressed\":false" },
+        { "u3", "AEGP_UtilitySuite6.AEGP_HostIsActivated",
+          "\"hostActivated\":true" },
+    };
+    auto h = MakeFakeHost();
+    h->numRQItems = 3;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    size_t i;
+    for (i = 0; i < sizeof(ops) / sizeof(ops[0]); i++)
+        WriteReq0600(c.Path((std::string("inbox/") + ops[i].id +
+                             ".request.json").c_str()),
+                     ReqJson(ops[i].id, kTok, 30000, ops[i].op, "26.5", NULL, NULL));
+    for (i = 0; i < sizeof(ops) / sizeof(ops[0]); i++)
+    {
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        std::string r = Slurp(ResultPath(c, ops[i].id));
+        CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+        CHECK(r.find(ops[i].want) != std::string::npos);
+        CheckResultDoc(c, ops[i].id, "completed", NULL);
+        CHECK(r.find(ops[i].op) != std::string::npos); /* opCalls linkage */
+    }
+    /* render-queue ops acquired + released their suites inside the
+       request windows */
+    CHECK(h->LogContains("op SPBasicSuite.AcquireSuite"));
+    CHECK(h->LogContains("op AEGP_RQItemSuite4.AEGP_GetNumRQItems err=0 value=3"));
+}
+
+static void TestIntakeStage2RQSuiteFailure()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    h->failAcquireRQItem = true;
+    h->PopulateSuites();
+    WriteReq0600(c.Path("inbox/rqf.request.json"),
+                 ReqJson("rqf", kTok, 30000,
+                         "AEGP_RQItemSuite4.AEGP_GetNumRQItems", "26.5",
+                         NULL, NULL));
+    {
+        A_long ms = 0;
+        (void)h->idleHook(NULL, NULL, &ms);
+    }
+    std::string r = Slurp(ResultPath(c, "rqf"));
+    CHECK(r.find("\"outcome\":\"not-sent\"") != std::string::npos);
+    CHECK(r.find("AEGP_RQItemSuite4.AEGP_GetNumRQItems") == std::string::npos);
+    CheckResultDoc(c, "rqf", "not-sent", NULL);
+}
+
+static void TestIntakeStage2ArgsStillRejected()
+{
+    /* zero-arg Stage-2 ops keep the Slice-A contract: any args value
+       refuses MALFORMED_REQUEST before attestation */
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    WriteReq0600(c.Path("inbox/za.request.json"),
+                 ReqJsonArgs("za", kTok, 30000,
+                             "AEGP_UtilitySuite6.AEGP_HostIsActivated",
+                             "26.5", "{\"x\":1}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "za"));
+    CHECK(r.find("MALFORMED_REQUEST") != std::string::npos);
+    CHECK(r.find("opCalls") == std::string::npos);
+    CheckResultDoc(c, "za", "refused", "MALFORMED_REQUEST");
+}
+
 static void TestIntakeUnknownOperation()
 {
     auto h = MakeFakeHost();
@@ -2015,6 +2096,9 @@ int main(int argc, char** argv)
     TestIntakeArgsOnZeroArgOpRejected();
     TestIntakeGetTypeNameSuiteFailure();
     TestIntakeGetTypeNameOpFailure();
+    TestIntakeStage2ZeroArgGetters();
+    TestIntakeStage2RQSuiteFailure();
+    TestIntakeStage2ArgsStillRejected();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();
