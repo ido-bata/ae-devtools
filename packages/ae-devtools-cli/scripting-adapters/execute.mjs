@@ -32,6 +32,8 @@
  */
 
 import { consentScopeFor, evalConsentArgs } from "../trusted-execution/permissions.mjs";
+import { dispatchIdentity } from "../trusted-execution/dispatch-store.mjs";
+import { scopeFingerprint } from "../trusted-execution/consent-audit.mjs";
 import { getOperation, buildSource } from "./registry.mjs";
 
 function refused(reason, detail, extra = {}) {
@@ -97,6 +99,19 @@ export async function runOperation(input = {}) {
   // to consent — consent approves the scope, this flag acknowledges the
   // operation class. It is a UX/safety gate, not an approval authenticity
   // mechanism (that remains a #14 non-claim).
+  // Consent audit (Issue #277, CAP052): when a consentAudit store is
+  // supplied, BOTH the provider's approved and refused decisions are
+  // durably recorded before the outcome returns. Pre-consent refusals
+  // above (unknown op / bad args / missing provider / confirm gates)
+  // are NOT audit events — no decision occurred. A malformed audit
+  // sink is itself a refusal: auditing that cannot be trusted must
+  // not silently pass.
+  const consentAudit = input.consentAudit ?? null;
+  if (consentAudit !== null && typeof consentAudit.recordConsentDecision !== "function") {
+    return refused("CONSENT_AUDIT_INVALID",
+      "consentAudit must expose recordConsentDecision(entry)", { opId });
+  }
+
   if (op.requiresConfirm === "render" && input.confirmRender !== true) {
     return refused("RENDER_CONFIRMATION_REQUIRED",
       `'${opId}' starts a real render (files, long-running, UNKNOWN-unsafe); pass confirmRender:true only after verifying queue contents and output ownership`, { opId });
@@ -107,12 +122,54 @@ export async function runOperation(input = {}) {
   }
 
   const decision = await input.consentProvider({ opId, args, source, scope });
-  if (!decision || decision.approved !== true) {
+  const approved = decision !== null && typeof decision === "object" && decision.approved === true;
+
+  // Audit the decision itself — approved AND refused. The entry carries
+  // fingerprints/ids only: no source, no raw args, no provider reason
+  // text (unverified free text is not audit material), no operator
+  // identity claims. dispatchKey correlates the decision with the
+  // dispatch-store record when a store is configured on the runner.
+  let auditRecorded = null;
+  let auditError = null;
+  if (consentAudit !== null) {
+    const entry = {
+      decision: approved ? "approved" : "refused",
+      opId,
+      scopeHash: scopeFingerprint(scope),
+      dispatchKey: dispatchIdentity({
+        pin, operationId: opId,
+        args: evalConsentArgs(source, args), projectIdentity,
+      }),
+      requestId: typeof input.requestId === "string" ? input.requestId : null,
+      mutating: op.mutating === true,
+      destructive: op.destructive === true,
+    };
+    try {
+      await consentAudit.recordConsentDecision(entry);
+      auditRecorded = true;
+    } catch (err) {
+      auditRecorded = false;
+      auditError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  if (!approved) {
+    // Refusal audit failure is degradation, not a dispatch blocker —
+    // the decision already happened and nothing was sent. Surface the
+    // loss honestly on the outcome instead of pretending it recorded.
     return {
       status: "refused", stage: "consent", reason: "CONSENT_DENIED",
       detail: decision?.reason ?? "consentProvider did not approve this dispatch",
       opId,
+      ...(auditRecorded === false ? { consentAudit: { recorded: false, error: auditError } } : {}),
     };
+  }
+  if (auditRecorded === false) {
+    // Fail closed: an approval we cannot audit must not dispatch.
+    // This is a pre-dispatch refusal — nothing was sent, no retry.
+    return refused("CONSENT_AUDIT_UNAVAILABLE",
+      `consent approved but audit record failed: ${auditError}`,
+      { opId });
   }
 
   const outcome = await runner.runScript({

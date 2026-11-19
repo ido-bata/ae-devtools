@@ -69,6 +69,29 @@ t("inspect returns metadata without executing", () => {
   assert.equal(run(["inspect", "no.such"]).body.status, "unknown-operation");
 });
 
+t("consent audit records approved and refused decisions (Issue #277)", () => {
+  const auditDir = mkdtempSync(join(tmpdir(), "ca-cli-"));
+  const env = { AE_DEVTOOLS_CONSENT_AUDIT_DIR: auditDir };
+  run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"], env);
+  run(["execute", "read.projectSummary", "--session", "fake", "--consent", "deny"], env);
+  const file = join(auditDir, "consent-audit.jsonl");
+  assert.ok(existsSync(file), "audit file must exist after dispatch commands");
+  const records = readFileSync(file, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  assert.equal(records.length, 2);
+  assert.deepEqual(records.map((r) => r.decision), ["approved", "refused"]);
+  for (const r of records) {
+    assert.equal(r.schema, "ae-devtools.consent-audit/v1");
+    assert.equal(r.opId, "read.projectSummary");
+    assert.match(r.scopeHash, /^[0-9a-f]{64}$/);
+    assert.match(r.dispatchKey, /^[0-9a-f]{64}$/);
+    assert.ok(!("reason" in r) && !("source" in r) && !("args" in r), "audit must not carry reason/source/args");
+  }
+  // Read-only commands must not mint the audit directory.
+  const emptyDir = mkdtempSync(join(tmpdir(), "ca-cli-empty-"));
+  run(["doctor"], { AE_DEVTOOLS_CONSENT_AUDIT_DIR: join(emptyDir, "audit") });
+  assert.ok(!existsSync(join(emptyDir, "audit")), "doctor must not create the audit dir");
+});
+
 t("execute on fake session completes and verify reads back", () => {
   const ex = run(["execute", "project.new", "--session", "fake", "--consent", "grant", "--confirm-destructive"]).body;
   assert.equal(ex.outcome, "COMPLETED");

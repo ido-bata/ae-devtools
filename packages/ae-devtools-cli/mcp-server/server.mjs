@@ -29,7 +29,8 @@
  */
 import { createInterface } from "node:readline";
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
@@ -37,6 +38,7 @@ import { openSession } from "./session.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
 import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
+import { lazyConsentAudit } from "../trusted-execution/consent-audit.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
 // Single source of truth for the published version — avoids the drift
@@ -97,6 +99,17 @@ export function createServer(opts = {}) {
   const guard = createSurfaceGuard({
     surface: "mcp", sessionKind, dir: opts.runsDir,
   });
+
+  // Consent-decision audit (Issue #277): lazy so an idle server never
+  // mints the directory; shares the CLI's default location so decisions
+  // correlate across surfaces. opts.consentAudit overrides for tests.
+  const consentAudit = opts.consentAudit !== undefined
+    ? opts.consentAudit
+    : lazyConsentAudit(
+        opts.consentAuditDir
+          ?? process.env.AE_DEVTOOLS_CONSENT_AUDIT_DIR
+          ?? join(tmpdir(), "ae-devtools-consent-audit"),
+      );
 
   // Lazy single-flight session: opened on first dispatch-capable call,
   // shared by every later call, closed by close().
@@ -211,6 +224,7 @@ export function createServer(opts = {}) {
             // Request lifecycle events land in the a8n run-guard marker
             // when one exists (Issue #198); inert for fake sessions.
             onRequestEvent: (ev) => guard.request(ev),
+            consentAudit,
           });
           return rpcResult(id, result);
         }
