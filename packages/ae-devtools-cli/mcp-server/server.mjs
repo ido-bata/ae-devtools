@@ -102,6 +102,7 @@ export function createServer(opts = {}) {
   // shared by every later call, closed by close().
   let sessionPromise = null;
   let resolvedSession = null;
+  let sessionFailed = false;
   const getSession = () => {
     if (!sessionPromise) {
       sessionPromise = Promise.resolve()
@@ -119,9 +120,21 @@ export function createServer(opts = {}) {
             throw e;
           }
         });
+      // Any open failure — including guard.begin() before the try —
+      // settles the peek state to "failed" instead of stuck "opening".
+      sessionPromise.catch(() => { sessionFailed = true; });
     }
     return sessionPromise;
   };
+
+  // Read-only session state for metadata surfaces (ae_session, CAP049):
+  // reports the already-tracked open session without ever triggering
+  // an open itself.
+  const peekSession = () => ({
+    session: resolvedSession,
+    opening: sessionPromise !== null && resolvedSession === null && !sessionFailed,
+    failed: sessionFailed,
+  });
 
   async function close() {
     if (!sessionPromise) return;
@@ -193,6 +206,8 @@ export function createServer(opts = {}) {
           }
           const result = await callTool(name, args, {
             getSession,
+            sessionKind,
+            peekSession,
             // Request lifecycle events land in the a8n run-guard marker
             // when one exists (Issue #198); inert for fake sessions.
             onRequestEvent: (ev) => guard.request(ev),

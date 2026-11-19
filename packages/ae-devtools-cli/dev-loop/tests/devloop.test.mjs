@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadTrustedCodec, createJsxRunner } from "../../trusted-execution/runner.mjs";
-import { discover, inspect, execute, verify } from "../devloop.mjs";
+import { discover, inspect, execute, verify, sessionStatus } from "../devloop.mjs";
 import { createAdapterFakeApp } from "../../scripting-adapters/fake-app.mjs";
 import { createFakeHostTransport } from "../../scripting-adapters/fake-host.mjs";
 
@@ -51,6 +51,28 @@ test("discover/inspect hand out copies — mutating results cannot corrupt the r
   const i2 = inspect("item.addComp");
   assert.ok(i2.op.members.length > 0);
   assert.ok(!i2.op.args.includes("__mutated__"));
+});
+
+test("sessionStatus reports honest state without opening anything (CAP049)", () => {
+  const closed = sessionStatus({ sessionKind: "fake" });
+  assert.equal(closed.session.state, "closed");
+  assert.equal(closed.session.kind, "fake");
+  assert.equal(closed.session.evidenceLevel, undefined);
+  assert.equal(closed.session.pin, undefined);
+
+  const opening = sessionStatus({ sessionKind: "a8n", opening: true });
+  assert.equal(opening.session.state, "opening");
+  assert.equal(opening.session.kind, "a8n");
+
+  const failed = sessionStatus({ sessionKind: "fake", failed: true });
+  assert.equal(failed.session.state, "failed");
+
+  const open = sessionStatus({
+    session: { kind: "fake", evidenceLevel: "fake/mock only", pin: { sessionId: "s" } },
+  });
+  assert.equal(open.session.state, "open");
+  assert.equal(open.session.evidenceLevel, "fake/mock only");
+  assert.deepEqual(open.session.pin, { sessionId: "s" });
 });
 
 test("developer-loop vertical: discover→inspect→execute→verify", async () => {

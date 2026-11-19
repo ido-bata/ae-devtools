@@ -22,6 +22,38 @@ import { runOperation } from "../scripting-adapters/execute.mjs";
 
 export const DEVLOOP_SCHEMA = "ae-devtools.dev-loop/v1";
 
+/**
+ * Session/API metadata for capability discovery surfaces (Issue #20,
+ * CAP049). Reports the ALREADY-OPEN session's honest state — this
+ * function never opens a session and never upgrades evidence:
+ *
+ *   state "closed"   — no session has been opened in this process
+ *   state "opening"  — a session open is in flight
+ *   state "open"     — session resolved; kind/evidenceLevel/pin are the
+ *                      host-attested values the opener returned
+ *   state "failed"   — the last open attempt rejected
+ *
+ * `kind` prefers the surface's configured session kind so a closed
+ * state still reports WHICH backend would be used. pin is included
+ * only when a session is actually open — a closed/failed state must
+ * not fabricate host identity.
+ */
+export function sessionStatus({ session = null, sessionKind = null, opening = false, failed = false } = {}) {
+  const state = session ? "open" : failed ? "failed" : opening ? "opening" : "closed";
+  return {
+    session: {
+      kind: sessionKind ?? session?.kind ?? null,
+      state,
+      ...(session
+        ? {
+            evidenceLevel: session.evidenceLevel ?? null,
+            pin: session.pin ?? null,
+          }
+        : {}),
+    },
+  };
+}
+
 /** List executable operations with honest metadata. Unimplemented
  *  inventory members are NOT listed as executable — discovery shows
  *  ops only; coverage gaps live in the catalog/domain reports. */
