@@ -31,6 +31,16 @@ function collection(list, extra = {}) {
   });
 }
 
+// ExtendScript enum stand-ins (Issue #287). Numeric values follow the
+// community reference ordering; they are placeholders for round-trip
+// testing only — real-host numeric values must be confirmed during
+// real-host verification (#21/#172). Generated sources reference the
+// enum NAMES via globals, never these literals.
+export const KeyframeInterpolationType = { BEZIER: 1, LINEAR: 2, HOLD: 3 };
+export const TrackMatteType = {
+  NO_TRACK_MATTE: 0, ALPHA: 1, ALPHA_INVERTED: 2, LUMA: 3, LUMA_INVERTED: 4,
+};
+
 function makeProperty(value, opts = {}) {
   const expressionAllowed = opts.expressionAllowed !== false;
   const prop = {
@@ -89,7 +99,11 @@ function makeProperty(value, opts = {}) {
           return;
         }
       }
-      this.__keys.push({ time: t, value: Array.isArray(v) ? v.slice() : v });
+      this.__keys.push({
+        time: t, value: Array.isArray(v) ? v.slice() : v,
+        inType: KeyframeInterpolationType.BEZIER, outType: KeyframeInterpolationType.BEZIER,
+        easeIn: { speed: 0, influence: 33.33 }, easeOut: { speed: 0, influence: 33.33 },
+      });
       this.numKeys = this.__keys.length;
       this.isTimeVarying = this.numKeys > 0;
       this.value = this.__keys[this.__keys.length - 1].value;
@@ -103,6 +117,56 @@ function makeProperty(value, opts = {}) {
       this.__keys.splice(keyIndex - 1, 1);
       this.numKeys = this.__keys.length;
       this.isTimeVarying = this.numKeys > 0;
+    },
+    // Keyframe interpolation (Issue #287). Types are the numeric enum
+    // stand-ins above; invalid types throw like the real host.
+    isInterpolationTypeValid(t) {
+      return t === KeyframeInterpolationType.BEZIER ||
+             t === KeyframeInterpolationType.LINEAR ||
+             t === KeyframeInterpolationType.HOLD;
+    },
+    keyInInterpolationType(i) {
+      if (!Number.isInteger(i) || i < 1 || i > this.numKeys) throw new Error("fake-app: invalid keyframe index " + i);
+      return this.__keys[i - 1].inType;
+    },
+    keyOutInterpolationType(i) {
+      if (!Number.isInteger(i) || i < 1 || i > this.numKeys) throw new Error("fake-app: invalid keyframe index " + i);
+      return this.__keys[i - 1].outType;
+    },
+    setInterpolationTypeAtKey(keyIndex, inType, outType) {
+      if (!Number.isInteger(keyIndex) || keyIndex < 1 || keyIndex > this.numKeys) {
+        throw new Error("fake-app: invalid keyframe index " + keyIndex);
+      }
+      if (!this.isInterpolationTypeValid(inType) || !this.isInterpolationTypeValid(outType)) {
+        throw new Error("fake-app: invalid interpolation type");
+      }
+      const k = this.__keys[keyIndex - 1];
+      k.inType = inType; k.outType = outType;
+    },
+    keyInTemporalEase(i) {
+      if (!Number.isInteger(i) || i < 1 || i > this.numKeys) throw new Error("fake-app: invalid keyframe index " + i);
+      const e = this.__keys[i - 1].easeIn;
+      return { speed: e.speed, influence: e.influence };
+    },
+    keyOutTemporalEase(i) {
+      if (!Number.isInteger(i) || i < 1 || i > this.numKeys) throw new Error("fake-app: invalid keyframe index " + i);
+      const e = this.__keys[i - 1].easeOut;
+      return { speed: e.speed, influence: e.influence };
+    },
+    setTemporalEaseAtKey(keyIndex, inEase, outEase) {
+      if (!Number.isInteger(keyIndex) || keyIndex < 1 || keyIndex > this.numKeys) {
+        throw new Error("fake-app: invalid keyframe index " + keyIndex);
+      }
+      for (const e of [inEase, outEase]) {
+        if (e === null || typeof e !== "object" ||
+            typeof e.speed !== "number" || !isFinite(e.speed) ||
+            typeof e.influence !== "number" || !isFinite(e.influence)) {
+          throw new Error("fake-app: temporal ease requires {speed,influence} numbers");
+        }
+      }
+      const k = this.__keys[keyIndex - 1];
+      k.easeIn = { speed: inEase.speed, influence: inEase.influence };
+      k.easeOut = { speed: outEase.speed, influence: outEase.influence };
     },
     // Approximation: returns the value of the last key at-or-before t
     // (AE interpolates; the fake only needs a deterministic, honest
@@ -187,6 +251,11 @@ function makeLayer(name, comp, kind) {
     preserveTransparency: true,
     frameBlending: false,
     collapseTransformation: false,
+    timeRemapEnabled: false,
+    // Track matte state (Issue #287): {layer, type} or null. The matte
+    // layer's __isTrackMatte flag mirrors the real host behavior.
+    __trackMatte: null,
+    __isTrackMatte: false,
     inPoint: 0,
     outPoint: comp ? comp.duration : 0,
     __pos: makeProperty([0, 0], { matchName: "ADBE Position" }),
@@ -236,6 +305,33 @@ function makeLayer(name, comp, kind) {
         };
       }
       throw new Error("fake-app: no such property group " + group);
+    },
+    // Fake approximation: every modeled AV layer can time-remap.
+    // Real AE restricts this (e.g. no time remap on some layer types);
+    // that gate is a real-host verification item.
+    canSetTimeRemapEnabled() { return true; },
+    hasTrackMatte() { return layer.__trackMatte !== null; },
+    get isTrackMatte() { return layer.__isTrackMatte === true; },
+    get trackMatteLayer() { return layer.__trackMatte === null ? null : layer.__trackMatte.layer; },
+    get trackMatteType() { return layer.__trackMatte === null ? 0 : layer.__trackMatte.type; },
+    setTrackMatte(matteLayer, type) {
+      // Clearing via NO_TRACK_MATTE (0) detaches without a layer arg.
+      if (type === TrackMatteType.NO_TRACK_MATTE || type === 0) {
+        if (layer.__trackMatte !== null) layer.__trackMatte.layer.__isTrackMatte = false;
+        layer.__trackMatte = null;
+        return;
+      }
+      if (matteLayer === null || matteLayer === undefined || matteLayer === layer) {
+        throw new Error("fake-app: setTrackMatte requires a different matte layer");
+      }
+      if (![1, 2, 3, 4].includes(type)) throw new Error("fake-app: invalid track matte type");
+      if (layer.__trackMatte !== null) layer.__trackMatte.layer.__isTrackMatte = false;
+      layer.__trackMatte = { layer: matteLayer, type };
+      matteLayer.__isTrackMatte = true;
+    },
+    removeTrackMatte() {
+      if (layer.__trackMatte !== null) layer.__trackMatte.layer.__isTrackMatte = false;
+      layer.__trackMatte = null;
     },
     moveToBeginning() { comp.__moveLayer(layer, "top"); },
     moveToEnd() { comp.__moveLayer(layer, "bottom"); },

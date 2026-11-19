@@ -561,6 +561,8 @@ return __adp_json({ ok: true, rendered: true });
       S("Layer", "parent"), S("Layer", "locked"),
       S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
       S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
+      S("AVLayer", "hasTrackMatte"), S("AVLayer", "trackMatteType"),
+      S("AVLayer", "trackMatteLayer"), S("AVLayer", "timeRemapEnabled"),
     ],
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
@@ -581,6 +583,10 @@ for (var i = 1; i <= layers.length; i++) {
     preserveTransparency: l.preserveTransparency !== false,
     frameBlending: l.frameBlending === true,
     collapseTransformation: l.collapseTransformation === true,
+    hasTrackMatte: (typeof l.hasTrackMatte === "function") ? l.hasTrackMatte() : l.__trackMatte !== null,
+    trackMatteType: l.trackMatteType === undefined ? 0 : l.trackMatteType,
+    trackMatteLayer: l.trackMatteLayer === null || l.trackMatteLayer === undefined ? null : String(l.trackMatteLayer.name),
+    timeRemapEnabled: l.timeRemapEnabled === true,
     parent: l.parent === null || l.parent === undefined ? null : String(l.parent.name)
   });
 }
@@ -1765,6 +1771,156 @@ return __adp_json({
     fonts: fn
   }
 });
+`,
+  },
+  {
+    id: "anim.setInterpolation",
+    title: "Set keyframe interpolation type (LINEAR/HOLD/BEZIER) at a key index",
+    domain: "animation-effects-render",
+    issue: "287",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Property", "setInterpolationTypeAtKey"), S("Property", "isInterpolationTypeValid"),
+      S("Property", "keyInInterpolationType"), S("Property", "keyOutInterpolationType"),
+      S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName", "propertyPath", "keyIndex", "inType", "outType"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "keyIndex"]);
+      if (!Number.isInteger(a.keyIndex) || a.keyIndex < 1) {
+        throw new Error("anim.setInterpolation: keyIndex must be a positive integer");
+      }
+      if (a.inType === undefined && a.outType === undefined) {
+        throw new Error("anim.setInterpolation: inType and/or outType is required");
+      }
+      for (const k of ["inType", "outType"]) {
+        if (a[k] !== undefined && !["BEZIER", "LINEAR", "HOLD"].includes(a[k])) {
+          throw new Error(`anim.setInterpolation: ${k} must be BEZIER|LINEAR|HOLD`);
+        }
+      }
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+var inT = ${a.inType !== undefined ? `KeyframeInterpolationType[${js(a.inType)}]` : "prop.keyInInterpolationType(" + a.keyIndex + ")"};
+var outT = ${a.outType !== undefined ? `KeyframeInterpolationType[${js(a.outType)}]` : "prop.keyOutInterpolationType(" + a.keyIndex + ")"};
+prop.setInterpolationTypeAtKey(${a.keyIndex}, inT, outT);
+return __adp_json({
+  ok: true,
+  keyIndex: ${a.keyIndex},
+  inType: prop.keyInInterpolationType(${a.keyIndex}),
+  outType: prop.keyOutInterpolationType(${a.keyIndex})
+});
+`,
+  },
+  {
+    id: "anim.setTemporalEase",
+    title: "Set keyframe temporal ease (speed/influence) at a key index",
+    domain: "animation-effects-render",
+    issue: "287",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Property", "setTemporalEaseAtKey"), S("Property", "keyInTemporalEase"),
+      S("Property", "keyOutTemporalEase"), S("PropertyGroup", "property"),
+      S("KeyframeEase", "speed"), S("KeyframeEase", "influence"),
+    ],
+    args: ["compName", "layerName", "propertyPath", "keyIndex", "inEase", "outEase"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "keyIndex"]);
+      if (!Number.isInteger(a.keyIndex) || a.keyIndex < 1) {
+        throw new Error("anim.setTemporalEase: keyIndex must be a positive integer");
+      }
+      if (a.inEase === undefined && a.outEase === undefined) {
+        throw new Error("anim.setTemporalEase: inEase and/or outEase is required");
+      }
+      for (const k of ["inEase", "outEase"]) {
+        const e = a[k];
+        if (e === undefined) continue;
+        if (e === null || typeof e !== "object" ||
+            typeof e.speed !== "number" || !Number.isFinite(e.speed) ||
+            typeof e.influence !== "number" || !Number.isFinite(e.influence)) {
+          throw new Error(`anim.setTemporalEase: ${k} must be {speed:number, influence:number}`);
+        }
+      }
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+var inE = ${a.inEase !== undefined ? `{ speed: ${a.inEase.speed}, influence: ${a.inEase.influence} }` : "prop.keyInTemporalEase(" + a.keyIndex + ")"};
+var outE = ${a.outEase !== undefined ? `{ speed: ${a.outEase.speed}, influence: ${a.outEase.influence} }` : "prop.keyOutTemporalEase(" + a.keyIndex + ")"};
+prop.setTemporalEaseAtKey(${a.keyIndex}, inE, outE);
+return __adp_json({
+  ok: true,
+  keyIndex: ${a.keyIndex},
+  inEase: prop.keyInTemporalEase(${a.keyIndex}),
+  outEase: prop.keyOutTemporalEase(${a.keyIndex})
+});
+`,
+  },
+  {
+    id: "layer.setTrackMatte",
+    title: "Set or clear a layer's track matte",
+    domain: "project-items-comps-layers",
+    issue: "287",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVLayer", "setTrackMatte"), S("AVLayer", "removeTrackMatte"),
+      S("AVLayer", "hasTrackMatte"), S("AVLayer", "trackMatteType"),
+      S("AVLayer", "trackMatteLayer"), S("AVLayer", "isTrackMatte"),
+    ],
+    args: ["compName", "layerName", "matteLayerName", "matteType"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "matteType"]);
+      if (!["NO_TRACK_MATTE", "ALPHA", "ALPHA_INVERTED", "LUMA", "LUMA_INVERTED"].includes(a.matteType)) {
+        throw new Error("layer.setTrackMatte: matteType must be a TrackMatteType name");
+      }
+      if (a.matteType === "NO_TRACK_MATTE") {
+        if (a.matteLayerName !== undefined && a.matteLayerName !== null) {
+          throw new Error("layer.setTrackMatte: matteLayerName must be null when matteType is NO_TRACK_MATTE");
+        }
+      } else if (typeof a.matteLayerName !== "string" || a.matteLayerName.length === 0) {
+        throw new Error("layer.setTrackMatte: matteLayerName is required for a matte type");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+if (${js(a.matteType)} === "NO_TRACK_MATTE") {
+  layer.removeTrackMatte();
+} else {
+  var matte = __adp_findLayer(comp, ${js(a.matteLayerName)});
+  layer.setTrackMatte(matte, TrackMatteType[${js(a.matteType)}]);
+}
+return __adp_json({
+  ok: true, layer: layer.name,
+  hasTrackMatte: layer.hasTrackMatte(),
+  trackMatteType: layer.trackMatteType,
+  trackMatteLayer: layer.trackMatteLayer === null ? null : String(layer.trackMatteLayer.name)
+});
+`,
+  },
+  {
+    id: "layer.setTimeRemap",
+    title: "Enable/disable time remapping on an AV layer",
+    domain: "project-items-comps-layers",
+    issue: "287",
+    permission: "execute",
+    mutating: true,
+    members: [S("AVLayer", "timeRemapEnabled"), S("AVLayer", "canSetTimeRemapEnabled")],
+    args: ["compName", "layerName", "enabled"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "enabled"]);
+      if (typeof a.enabled !== "boolean") throw new Error("layer.setTimeRemap: enabled must be a boolean");
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+if (typeof layer.canSetTimeRemapEnabled === "function" && !layer.canSetTimeRemapEnabled()) {
+  __adp_fail("time remapping is not available on this layer");
+}
+layer.timeRemapEnabled = ${a.enabled ? "true" : "false"};
+return __adp_json({ ok: true, layer: layer.name, timeRemapEnabled: layer.timeRemapEnabled === true });
 `,
   },
 ];

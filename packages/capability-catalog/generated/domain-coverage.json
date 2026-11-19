@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "a067640a5de6b456a8a67a603cd07c67f476092feba950aee5c6700ad1b2365c"
+      "sha256": "2769e5fdf399c6e315c129080821984a1cb487884ad57f6ee6023bee66eb246f"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 303,
+          "documented": 294,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 52,
+          "automated-fake-tested": 61,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 52,
+          "adapter-present": 61,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 303
+          "unknown": 294
         },
         "verification": {
-          "not-run": 303,
-          "automated-fake": 52,
+          "not-run": 294,
+          "automated-fake": 61,
           "verified-real-host": 0
         }
       },
@@ -568,18 +568,18 @@
         {
           "id": "ae.scripting.KeyframeEase.influence",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.KeyframeEase.speed",
           "category": "keyframe",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.MarkerValue.chapter",
@@ -1144,10 +1144,10 @@
         {
           "id": "ae.scripting.Property.isInterpolationTypeValid",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.isSeparationFollower",
@@ -1184,10 +1184,10 @@
         {
           "id": "ae.scripting.Property.keyInInterpolationType",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.keyInSpatialTangent",
@@ -1200,10 +1200,10 @@
         {
           "id": "ae.scripting.Property.keyInTemporalEase",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.keyLabel",
@@ -1216,10 +1216,10 @@
         {
           "id": "ae.scripting.Property.keyOutInterpolationType",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.keyOutSpatialTangent",
@@ -1232,10 +1232,10 @@
         {
           "id": "ae.scripting.Property.keyOutTemporalEase",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.keyRoving",
@@ -1416,10 +1416,10 @@
         {
           "id": "ae.scripting.Property.setInterpolationTypeAtKey",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.setLabelAtKey",
@@ -1504,10 +1504,10 @@
         {
           "id": "ae.scripting.Property.setTemporalEaseAtKey",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.setValue",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 190,
+          "documented": 182,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 63,
+          "automated-fake-tested": 71,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 70,
+          "adapter-present": 78,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 190
+          "unknown": 182
         },
         "verification": {
-          "not-run": 190,
-          "automated-fake": 63,
+          "not-run": 182,
+          "automated-fake": 71,
           "verified-real-host": 7
         }
       },
@@ -3573,10 +3573,10 @@
         {
           "id": "ae.scripting.AVLayer.canSetTimeRemapEnabled",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.collapseTransformation",
@@ -3645,10 +3645,10 @@
         {
           "id": "ae.scripting.AVLayer.hasTrackMatte",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.height",
@@ -3669,10 +3669,10 @@
         {
           "id": "ae.scripting.AVLayer.isTrackMatte",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.motionBlur",
@@ -3709,10 +3709,10 @@
         {
           "id": "ae.scripting.AVLayer.removeTrackMatte",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.replaceSource",
@@ -3733,10 +3733,10 @@
         {
           "id": "ae.scripting.AVLayer.setTrackMatte",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.source",
@@ -3781,26 +3781,26 @@
         {
           "id": "ae.scripting.AVLayer.timeRemapEnabled",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.trackMatteLayer",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.trackMatteType",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.width",
