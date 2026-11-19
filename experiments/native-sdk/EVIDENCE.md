@@ -101,6 +101,19 @@ all at fake-host level only. No intake result promotes any registry
 operation; `verifiedOnRealHost`/`externalDispatchVerified` remain
 false pending the #223 authorized real-host session (Slice C).
 
+Slice B adds a cross-process fake E2E (`test/e2e_channel.ts` +
+`probe_test --channel-server`): a contract-shaped client writes
+`inbox/<id>.request.json`, the real entry/idle/intake path against
+FakeHost claims, validates, executes `AEGP_GetNumProjects`, and
+atomically publishes `outbox/<id>.result.json`; the script then checks
+the wrapper, host attestation, `validateDispatchResult`, `opCalls`
+linkage, heartbeat shape, and token non-leakage. This run caught a real
+defect — `EmitResult` emitted one closing brace too many, producing
+result files that were not valid JSON (substring checks in the unit
+suite had not noticed); fixed and pinned by a `JParseDoc` round-trip
+check. Still `fake/mock only`: the channel peer is a script, the host
+is FakeHost, and nothing here is real-host evidence.
+
 AE load/registration/execution of this bundle: **UNVERIFIED** — see
 blocker 2 below and `LOAD-PROOF.md`.
 

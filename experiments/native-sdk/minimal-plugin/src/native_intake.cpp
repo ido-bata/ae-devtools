@@ -450,7 +450,7 @@ static int EmitResult(
         APP(",\"opCalls\":%s", opCallsJsonZ);
     if (detailZ && detailZ[0])
         APP(",\"detail\":\"%s\"", escDetail);
-    APP("}}}");
+    APP("}}");
     return 0;
 #undef APP
 }
