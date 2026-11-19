@@ -250,7 +250,8 @@
         "read.keyframes",
         "read.valueAtTime",
         "read.propertyDetail",
-        "anim.setExpressionEnabled"
+        "anim.setExpressionEnabled",
+        "text.setText"
       ],
       "evidence": "fake/mock only"
     },
@@ -321,7 +322,8 @@
     },
     "ae.scripting.AVItem.duration": {
       "ops": [
-        "read.itemDetail"
+        "read.itemDetail",
+        "read.footageDetail"
       ],
       "evidence": "fake/mock only"
     },
@@ -510,6 +512,163 @@
     "ae.scripting.Item.comment": {
       "ops": [
         "item.setComment"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addSolid": {
+      "ops": [
+        "layer.addSolid"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addText": {
+      "ops": [
+        "layer.addText"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.text": {
+      "ops": [
+        "layer.addText",
+        "text.setText"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addCamera": {
+      "ops": [
+        "layer.addCamera"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addLight": {
+      "ops": [
+        "layer.addLight"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.hasVideo": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.hasAudio": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.frameDuration": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.useProxy": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.footageMissing": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageItem.mainSource": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageItem.file": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FileSource.file": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.alphaMode": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.hasAlpha": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.isStill": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.loop": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.nativeFrameRate": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.conformFrameRate": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FileSource.missingFootagePath": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.bitsPerChannel": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.expressionEngine": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.displayStartFrame": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.framesUseFeetFrames": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.footageTimecodeDisplayStartType": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.file": {
+      "ops": [
+        "read.projectSettings"
       ],
       "evidence": "fake/mock only"
     }
