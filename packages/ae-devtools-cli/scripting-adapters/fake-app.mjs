@@ -36,7 +36,12 @@ function makeProperty(value, opts = {}) {
   const prop = {
     value,
     __keys: [],
-    expressionEnabled: false,
+    matchName: opts.matchName ?? null,
+    minValue: opts.minValue ?? null,
+    maxValue: opts.maxValue ?? null,
+    // PropertyValueType enum stand-in: null = fake has no type model.
+    propertyValueType: opts.propertyValueType ?? null,
+    __exprEnabled: false,
     numKeys: 0,
     isTimeVarying: false,
     // Real API: keyIndex is the 1-based keyframe INDEX, not a time.
@@ -55,6 +60,15 @@ function makeProperty(value, opts = {}) {
     },
     canSetExpression: expressionAllowed,
     expressionError: "",
+    // expressionEnabled honors canSetExpression like the real host:
+    // enabling on a non-expressionable property throws.
+    get expressionEnabled() { return this.__exprEnabled; },
+    set expressionEnabled(v) {
+      if (v === true && !expressionAllowed) {
+        throw new Error("fake-app: expression not allowed on this property");
+      }
+      this.__exprEnabled = v === true;
+    },
     setValue(v) { this.value = Array.isArray(v) ? v.slice() : v; },
     // Real API: keyIndex is the 1-based keyframe INDEX, not a time.
     // Out-of-range indexes throw; they do not append.
@@ -133,7 +147,7 @@ function makeFxGroup(layer) {
         name: matchName, matchName, enabled: true,
         // Fake fixture: effect params are modeled as non-expressionable
         // to exercise the canSetExpression guard; real params vary.
-        property(n) { return makeProperty(0, { expressionAllowed: false }); },
+        property(n) { return makeProperty(0, { expressionAllowed: false, matchName: n }); },
       };
       fx.push(e);
       this.numProperties = fx.length;
@@ -161,9 +175,13 @@ function makeLayer(name, comp) {
     comment: "",
     startTime: 0,
     stretch: 100,
+    audioEnabled: true,
+    threeDLayer: false,
+    motionBlur: false,
+    guideLayer: false,
     inPoint: 0,
     outPoint: comp ? comp.duration : 0,
-    __pos: makeProperty([0, 0]),
+    __pos: makeProperty([0, 0], { matchName: "ADBE Position" }),
     __fx: null,
     property(group) {
       // Real AE resolves both display name and matchName; we only
@@ -172,7 +190,7 @@ function makeLayer(name, comp) {
         return {
           property(sub) {
             if (sub === "ADBE Position" || sub === "Position") return layer.__pos;
-            if (sub === "ADBE Anchor Point" || sub === "Anchor Point") return makeProperty([0, 0]);
+            if (sub === "ADBE Anchor Point" || sub === "Anchor Point") return makeProperty([0, 0], { matchName: sub });
             throw new Error("fake-app: no such transform property " + sub);
           },
           addProperty(mn) { throw new Error("fake-app: cannot add property to transform group"); },
@@ -343,6 +361,25 @@ export function createAdapterFakeApp() {
               const i = renderItems.indexOf(it);
               if (i >= 0) renderItems.splice(i, 1);
               renderItems.forEach((r, j) => { r.index = j + 1; });
+            },
+            outputModule(idx) {
+              if (idx !== 1) throw new Error("fake-app: only output module 1 is modeled");
+              // One OutputModule instance per queue item — settings must
+              // persist across calls like the real host object.
+              if (this.__om === undefined) {
+                this.__om = {
+                  name: "Lossless",
+                  templates: [],
+                  __settings: { "Output File Info": "[compName].mov" },
+                  getSettings() {
+                    const out = {};
+                    for (const k in this.__settings) out[k] = this.__settings[k];
+                    return out;
+                  },
+                  setSetting(k, v) { this.__settings[k] = v; },
+                };
+              }
+              return this.__om;
             },
           };
           renderItems.push(it);

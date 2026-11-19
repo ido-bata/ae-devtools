@@ -75,7 +75,7 @@ Dependencies: #11, #12, #13. Status: **open — pipeline merged, coverage expans
 
 ### [#15](https://github.com/ido-bata/ae-devtools/issues/15) — Scripting DOM A
 
-Dependencies: #9, #11, #14. Status: **open — metadata + registry merged** (domain coverage metadata, automated test + fake/mock). Registry now carries 35 ops incl. read-side inspection ops and the Issue #275 batch (item.import/comp.duplicate/item.setLabel/layer.setTiming/layer.setState/anim.removeKeyframe/read.valueAtTime/render.setTimeSpan/render.removeFromQueue) (`read.compLayers`/`layerDetail`/`propertyValue`/`keyframes`/`renderQueueStatus`/`itemDetail`, Issue #254) at adapter-present + fake-verified level; real-host execution remains UNVERIFIED.
+Dependencies: #9, #11, #14. Status: **open — metadata + registry merged** (domain coverage metadata, automated test + fake/mock). Registry now carries 42 ops incl. read-side inspection ops and the Issue #275 batch (item.import/comp.duplicate/item.setLabel/layer.setTiming/layer.setState/anim.removeKeyframe/read.valueAtTime/render.setTimeSpan/render.removeFromQueue) (`read.compLayers`/`layerDetail`/`propertyValue`/`keyframes`/`renderQueueStatus`/`itemDetail`, Issue #254) at adapter-present + fake-verified level; real-host execution remains UNVERIFIED.
 
 - [ ] **CAP029** Map project/item/footage/import/save symbols to adapters. ([Issue #15](https://github.com/ido-bata/ae-devtools/issues/15))
 - [ ] **CAP030** Map comp/layer/parent/selection/timing symbols. ([Issue #15](https://github.com/ido-bata/ae-devtools/issues/15))

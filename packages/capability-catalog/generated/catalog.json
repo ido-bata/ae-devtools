@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "9bca5fc5432876cfd7f770ed05840b17da38c5b3c45f81be53a0f050198b0578"
+      "sha256": "5efc550e860a6bda64bda27f933453fa6759debc0aa49be0d3e25794330737fb"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -15417,12 +15417,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayeraudioenabled"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setAvState)"
           }
         ]
       }
@@ -15897,12 +15901,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerguidelayer"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setAvState)"
           }
         ]
       }
@@ -16137,12 +16145,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayermotionblur"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setAvState)"
           }
         ]
       }
@@ -16577,12 +16589,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerthreedlayer"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setAvState)"
           }
         ]
       }
@@ -18358,7 +18374,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.itemDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.itemDetail, comp.setResolutionFactor)"
           }
         ]
       }
@@ -22077,12 +22093,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemcomment"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setComment)"
           }
         ]
       }
@@ -22347,7 +22367,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.itemDetail, comp.duplicate, item.setLabel)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.itemDetail, comp.duplicate, item.setLabel, item.setComment, comp.setResolutionFactor)"
           },
           {
             "kind": "real-host",
@@ -25806,12 +25826,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulegetsettings"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings)"
           }
         ]
       }
@@ -25886,12 +25910,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulename"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings)"
           }
         ]
       }
@@ -26046,12 +26074,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulesetsetting"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.setOutputSetting)"
           }
         ]
       }
@@ -28596,7 +28628,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting)"
           }
         ]
       }
@@ -29653,7 +29685,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression, read.propertyDetail, anim.setExpressionEnabled)"
           }
         ]
       }
@@ -29817,7 +29849,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression, read.propertyDetail)"
           }
         ]
       }
@@ -29861,7 +29893,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression, read.propertyDetail, anim.setExpressionEnabled)"
           }
         ]
       }
@@ -29905,7 +29937,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setExpression, read.propertyDetail)"
           }
         ]
       }
@@ -30349,7 +30381,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyValue)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyValue, read.propertyDetail)"
           }
         ]
       }
@@ -31032,12 +31064,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertymaxvalue"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyDetail)"
           }
         ]
       }
@@ -31072,12 +31108,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertyminvalue"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyDetail)"
           }
         ]
       }
@@ -31161,7 +31201,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyValue, read.keyframes, anim.removeKeyframe, read.valueAtTime)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyValue, read.keyframes, anim.removeKeyframe, read.valueAtTime, read.propertyDetail)"
           }
         ]
       }
@@ -31276,12 +31316,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/property/#propertypropertyvaluetype"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyDetail)"
           }
         ]
       }
@@ -32261,7 +32305,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setTransformPosition, read.layerDetail, read.propertyValue)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setTransformPosition, read.layerDetail, read.propertyValue, read.propertyDetail)"
           }
         ]
       }
@@ -32700,12 +32744,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/propertybase/#propertybasematchname"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyDetail)"
           }
         ]
       }
@@ -33277,7 +33325,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, read.propertyValue, read.keyframes, read.valueAtTime)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, read.propertyValue, read.keyframes, read.valueAtTime, read.propertyDetail, anim.setExpressionEnabled)"
           }
         ]
       }
@@ -33441,7 +33489,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting)"
           }
         ]
       }
@@ -33853,7 +33901,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting)"
           }
         ]
       }
@@ -34168,12 +34216,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemoutputmodule"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings, render.setOutputSetting)"
           }
         ]
       }

@@ -1003,6 +1003,247 @@ found.remove();
 return __adp_json({ ok: true, removed: ${js(a.compName)}, remaining: rq.items.length });
 `,
   },
+  // ---- Issue #279: coverage batch 2 — AVLayer state / property detail /
+  // expression toggle / output module / comment / resolution ----
+  {
+    id: "layer.setAvState",
+    title: "Set AV-layer flags (audio/3D/motion-blur/guide)",
+    domain: "project-items-comps-layers",
+    issue: "279",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVLayer", "audioEnabled"), S("AVLayer", "threeDLayer"),
+      S("AVLayer", "motionBlur"), S("AVLayer", "guideLayer"),
+    ],
+    args: ["compName", "layerName", "audioEnabled", "threeDLayer", "motionBlur", "guideLayer"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const flags = ["audioEnabled", "threeDLayer", "motionBlur", "guideLayer"]
+        .filter((k) => a[k] !== undefined && a[k] !== null);
+      if (flags.length === 0) {
+        throw new Error("layer.setAvState: at least one of audioEnabled/threeDLayer/motionBlur/guideLayer is required");
+      }
+      for (const k of flags) {
+        if (typeof a[k] !== "boolean") throw new Error(`layer.setAvState: ${k} must be a boolean`);
+      }
+    },
+    source: (a) => {
+      const sets = [];
+      for (const k of ["audioEnabled", "threeDLayer", "motionBlur", "guideLayer"]) {
+        if (a[k] !== undefined && a[k] !== null) sets.push(`layer.${k} = ${a[k] ? "true" : "false"};`);
+      }
+      return `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+${sets.join("\n")}
+return __adp_json({
+  ok: true, layer: layer.name,
+  audioEnabled: layer.audioEnabled === true,
+  threeDLayer: layer.threeDLayer === true,
+  motionBlur: layer.motionBlur === true,
+  guideLayer: layer.guideLayer === true
+});
+`;
+    },
+  },
+  {
+    id: "read.propertyDetail",
+    title: "Property metadata by matchName path (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "279",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("PropertyGroup", "property"),
+      S("PropertyBase", "matchName"),
+      S("Property", "value"), S("Property", "numKeys"), S("Property", "isTimeVarying"),
+      S("Property", "expression"), S("Property", "expressionEnabled"),
+      S("Property", "canSetExpression"), S("Property", "expressionError"),
+      S("Property", "minValue"), S("Property", "maxValue"), S("Property", "propertyValueType"),
+    ],
+    args: ["compName", "layerName", "propertyPath"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath"]);
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+return __adp_json({
+  ok: true,
+  property: {
+    matchName: prop.matchName === undefined || prop.matchName === null ? null : String(prop.matchName),
+    value: prop.value,
+    numKeys: prop.numKeys,
+    isTimeVarying: prop.isTimeVarying === true,
+    expression: String(prop.expression || ""),
+    expressionEnabled: prop.expressionEnabled === true,
+    canSetExpression: prop.canSetExpression !== false,
+    expressionError: String(prop.expressionError || ""),
+    minValue: prop.minValue === undefined ? null : prop.minValue,
+    maxValue: prop.maxValue === undefined ? null : prop.maxValue,
+    propertyValueType: prop.propertyValueType === undefined ? null : prop.propertyValueType
+  }
+});
+`,
+  },
+  {
+    id: "anim.setExpressionEnabled",
+    title: "Enable/disable a property's expression without changing it",
+    domain: "animation-effects-render",
+    issue: "279",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Property", "expressionEnabled"), S("Property", "canSetExpression"),
+      S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName", "propertyPath", "enabled"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "enabled"]);
+      if (typeof a.enabled !== "boolean") throw new Error("anim.setExpressionEnabled: enabled must be a boolean");
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+if (prop.canSetExpression === false) {
+  __adp_fail("expression not allowed on this property");
+}
+prop.expressionEnabled = ${a.enabled ? "true" : "false"};
+return __adp_json({
+  ok: true, property: "expression-toggle",
+  expressionEnabled: prop.expressionEnabled === true,
+  expressionError: String(prop.expressionError || "")
+});
+`,
+  },
+  {
+    id: "render.getOutputSettings",
+    title: "Read a queued item's output module settings (non-mutating)",
+    domain: "animation-effects-render",
+    issue: "279",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Project", "renderQueue"),
+      S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "outputModule"),
+      S("OutputModule", "name"), S("OutputModule", "getSettings"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var rq = app.project.renderQueue;
+var items = rq.items;
+var found = null;
+var matches = 0;
+for (var i = 1; i <= items.length; i++) {
+  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
+    found = items[i];
+    matches++;
+  }
+}
+if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
+if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
+var om = found.outputModule(1);
+return __adp_json({
+  ok: true, comp: found.comp.name,
+  outputModule: String(om.name),
+  settings: om.getSettings()
+});
+`,
+  },
+  {
+    id: "render.setOutputSetting",
+    title: "Set one output module setting on a queued item",
+    domain: "animation-effects-render",
+    issue: "279",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"),
+      S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "outputModule"),
+      S("OutputModule", "setSetting"),
+    ],
+    args: ["compName", "setting", "value"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "setting", "value"]);
+      if (typeof a.setting !== "string" || a.setting.length === 0) {
+        throw new Error("render.setOutputSetting: setting must be a non-empty string");
+      }
+      const t = typeof a.value;
+      if (t !== "string" && t !== "number" && t !== "boolean") {
+        throw new Error("render.setOutputSetting: value must be string|number|boolean");
+      }
+      if (t === "number" && !Number.isFinite(a.value)) {
+        throw new Error("render.setOutputSetting: numeric value must be finite");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var rq = app.project.renderQueue;
+var items = rq.items;
+var found = null;
+var matches = 0;
+for (var i = 1; i <= items.length; i++) {
+  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
+    found = items[i];
+    matches++;
+  }
+}
+if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
+if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
+var om = found.outputModule(1);
+om.setSetting(${js(a.setting)}, ${js(a.value)});
+return __adp_json({
+  ok: true, comp: found.comp.name,
+  setting: ${js(a.setting)},
+  value: om.getSettings()[${js(a.setting)}]
+});
+`,
+  },
+  {
+    id: "item.setComment",
+    title: "Set a project item's comment",
+    domain: "project-items-comps-layers",
+    issue: "279",
+    permission: "execute",
+    mutating: true,
+    members: [S("Item", "comment"), S("Item", "name")],
+    args: ["name", "type", "comment"],
+    validate: (a) => {
+      requireArgs(a, ["name", "type", "comment"]);
+      if (["CompItem", "FolderItem", "FootageItem"].indexOf(a.type) === -1) {
+        throw new Error("item.setComment: type must be one of CompItem|FolderItem|FootageItem");
+      }
+      if (typeof a.comment !== "string") throw new Error("item.setComment: comment must be a string");
+    },
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, ${a.type});
+it.comment = ${js(a.comment)};
+return __adp_json({ ok: true, name: it.name, comment: it.comment });
+`,
+  },
+  {
+    id: "comp.setResolutionFactor",
+    title: "Set a comp's resolution factor",
+    domain: "project-items-comps-layers",
+    issue: "279",
+    permission: "execute",
+    mutating: true,
+    members: [S("CompItem", "resolutionFactor"), S("Item", "name")],
+    args: ["name", "resolutionFactor"],
+    validate: (a) => {
+      requireArgs(a, ["name", "resolutionFactor"]);
+      const r = Number(a.resolutionFactor);
+      if (!Number.isFinite(r) || r <= 0) {
+        throw new Error("comp.setResolutionFactor: resolutionFactor must be a finite number > 0");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.name)}, CompItem);
+comp.resolutionFactor = ${Number(a.resolutionFactor)};
+return __adp_json({ ok: true, comp: comp.name, resolutionFactor: comp.resolutionFactor });
+`,
+  },
 ];
 
 const BY_ID = new Map(OPERATIONS.map((op) => [op.id, op]));

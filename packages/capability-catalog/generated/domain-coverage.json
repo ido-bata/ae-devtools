@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "9bca5fc5432876cfd7f770ed05840b17da38c5b3c45f81be53a0f050198b0578"
+      "sha256": "5efc550e860a6bda64bda27f933453fa6759debc0aa49be0d3e25794330737fb"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 330,
+          "documented": 322,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 25,
+          "automated-fake-tested": 33,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 25,
+          "adapter-present": 33,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 330
+          "unknown": 322
         },
         "verification": {
-          "not-run": 330,
-          "automated-fake": 25,
+          "not-run": 322,
+          "automated-fake": 33,
           "verified-real-host": 0
         }
       },
@@ -752,10 +752,10 @@
         {
           "id": "ae.scripting.OutputModule.getSettings",
           "category": "output",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.OutputModule.includeSourceXMP",
@@ -768,10 +768,10 @@
         {
           "id": "ae.scripting.OutputModule.name",
           "category": "output",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.OutputModule.postRenderAction",
@@ -800,10 +800,10 @@
         {
           "id": "ae.scripting.OutputModule.setSetting",
           "category": "output",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.OutputModule.setSettings",
@@ -1312,18 +1312,18 @@
         {
           "id": "ae.scripting.Property.maxValue",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.minValue",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.nearestKeyIndex",
@@ -1360,10 +1360,10 @@
         {
           "id": "ae.scripting.Property.propertyValueType",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.removeKey",
@@ -1640,10 +1640,10 @@
         {
           "id": "ae.scripting.PropertyBase.matchName",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.PropertyBase.moveTo",
@@ -1920,10 +1920,10 @@
         {
           "id": "ae.scripting.RenderQueueItem.outputModule",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.outputModules",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 224,
+          "documented": 219,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 29,
+          "automated-fake-tested": 34,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 36,
+          "adapter-present": 41,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 224
+          "unknown": 219
         },
         "verification": {
-          "not-run": 224,
-          "automated-fake": 29,
+          "not-run": 219,
+          "automated-fake": 34,
           "verified-real-host": 7
         }
       },
@@ -3533,10 +3533,10 @@
         {
           "id": "ae.scripting.AVLayer.audioEnabled",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.blendingMode",
@@ -3629,10 +3629,10 @@
         {
           "id": "ae.scripting.AVLayer.guideLayer",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.hasAudio",
@@ -3677,10 +3677,10 @@
         {
           "id": "ae.scripting.AVLayer.motionBlur",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.openInViewer",
@@ -3765,10 +3765,10 @@
         {
           "id": "ae.scripting.AVLayer.threeDLayer",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.threeDPerChar",
@@ -4389,10 +4389,10 @@
         {
           "id": "ae.scripting.Item.comment",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Item.dynamicLinkGUID",

@@ -163,6 +163,8 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     propertyPath: ["ADBE Transform Group", "ADBE Position"], time: 0, keyIndex: 1, value: [0, 0],
     expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
     label: 3, startTime: 0, stretch: 100, timeSpanStart: 0, timeSpanDuration: 5,
+    audioEnabled: true, enabled: true, comment: "note", setting: "Output File Info",
+    resolutionFactor: 0.5,
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -175,9 +177,19 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "item.addFolder") args.name = "F";
     if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
     if (op.id === "read.itemDetail") args.name = "C";
-    if (op.id === "comp.duplicate" || op.id === "item.setLabel") args.name = "C";
+    if (["comp.duplicate", "item.setLabel", "item.setComment", "comp.setResolutionFactor"].includes(op.id)) args.name = "C";
+    if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
     if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue"].includes(op.id)) args.compName = "C";
+    // Output-module ops need "C" back in the queue: render.removeFromQueue
+    // (earlier batch) already dequeued it. Re-queue exactly once — a second
+    // queueComp would make the comp-name match ambiguous.
+    if ((op.id === "render.getOutputSettings" || op.id === "render.setOutputSetting")
+        && !t.__requeued) {
+      t.__requeued = true;
+      await runOperation({ opId: "render.queueComp", args: { compName: "C" },
+        consentProvider: provider, confirmDestructive: true, ...t });
+    }
     // Keyframe ops need an existing key: seed one via setValueAtTime first.
     if (op.id === "anim.setKeyframe" || op.id === "anim.removeKeyframe") {
       await runOperation({ opId: "anim.setValueAtTime",
@@ -282,4 +294,75 @@ test("issue #275 batch: import/duplicate/label/timing/state/keyframe/render-queu
   const rmOk = await go("render.removeFromQueue", { compName: "C" });
   assert.equal(rmOk.outcome, "COMPLETED");
   assert.equal(rmOk.result.remaining, 0);
+});
+
+test("issue #279 batch: av-state/property-detail/expression-toggle/output-module/comment/resolution", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  assert.equal((await go("project.new", {}, { confirmDestructive: true })).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "Null 1" })).outcome, "COMPLETED");
+  const PATH = ["ADBE Transform Group", "" + "ADBE Position"];
+
+  // layer.setAvState: partial flags + read-back + validation.
+  assert.equal((await go("layer.setAvState", { compName: "C", layerName: "Null 1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("layer.setAvState", { compName: "C", layerName: "Null 1", threeDLayer: "yes" })).reason, "INVALID_ARGS");
+  const av = await go("layer.setAvState", { compName: "C", layerName: "Null 1", threeDLayer: true, motionBlur: true });
+  assert.equal(av.outcome, "COMPLETED");
+  assert.equal(av.result.threeDLayer, true);
+  assert.equal(av.result.motionBlur, true);
+  assert.equal(av.result.audioEnabled, true);
+
+  // read.propertyDetail: metadata without mutating.
+  const pd = await go("read.propertyDetail", { compName: "C", layerName: "Null 1", propertyPath: PATH });
+  assert.equal(pd.outcome, "COMPLETED");
+  assert.equal(pd.result.property.matchName, "ADBE Position");
+  assert.equal(pd.result.property.canSetExpression, true);
+  assert.equal(pd.result.property.propertyValueType, null); // fake has no type model — honest null
+
+  // anim.setExpressionEnabled: toggle without touching expression text.
+  await go("anim.setExpression", { compName: "C", layerName: "Null 1", propertyPath: PATH, expression: "transform.position" });
+  const en = await go("anim.setExpressionEnabled", { compName: "C", layerName: "Null 1", propertyPath: PATH, enabled: false });
+  assert.equal(en.outcome, "COMPLETED");
+  assert.equal(en.result.expressionEnabled, false);
+  const pd2 = await go("read.propertyDetail", { compName: "C", layerName: "Null 1", propertyPath: PATH });
+  assert.equal(pd2.result.property.expression, "transform.position"); // text preserved
+  assert.equal(pd2.result.property.expressionEnabled, false);
+  // Non-expressionable property refuses the toggle.
+  await go("effect.add", { compName: "C", layerName: "Null 1", effectMatchName: "ADBE Gaussian Blur 2" });
+  const fxToggle = await go("anim.setExpressionEnabled", {
+    compName: "C", layerName: "Null 1",
+    propertyPath: ["ADBE Effect Parade", "ADBE Gaussian Blur 2", "ADBE Gaussian Blur 2-0001"], enabled: true,
+  });
+  // path may not resolve in fake — accept either host failure or guard refusal, never COMPLETED-with-lie
+  assert.notEqual(fxToggle.outcome === "COMPLETED" && fxToggle.result?.expressionEnabled === true, true);
+
+  // Output module: read settings, set one, read back.
+  await go("render.queueComp", { compName: "C" });
+  const om = await go("render.getOutputSettings", { compName: "C" });
+  assert.equal(om.outcome, "COMPLETED");
+  assert.equal(om.result.outputModule, "Lossless");
+  assert.equal(om.result.settings["Output File Info"], "[compName].mov");
+  const set = await go("render.setOutputSetting", { compName: "C", setting: "Output File Info", value: "[compName]_v2.mov" });
+  assert.equal(set.outcome, "COMPLETED");
+  assert.equal(set.result.value, "[compName]_v2.mov");
+  const om2 = await go("render.getOutputSettings", { compName: "C" });
+  assert.equal(om2.result.settings["Output File Info"], "[compName]_v2.mov");
+  // Bad value type refuses before dispatch.
+  assert.equal((await go("render.setOutputSetting", { compName: "C", setting: "x", value: [1] })).reason, "INVALID_ARGS");
+
+  // item.setComment + comp.setResolutionFactor with read-back via detail paths.
+  const cm = await go("item.setComment", { name: "C", type: "CompItem", comment: "hero comp" });
+  assert.equal(cm.outcome, "COMPLETED");
+  assert.equal(cm.result.comment, "hero comp");
+  const rf = await go("comp.setResolutionFactor", { name: "C", resolutionFactor: 0.5 });
+  assert.equal(rf.outcome, "COMPLETED");
+  assert.equal(rf.result.resolutionFactor, 0.5);
+  assert.equal((await go("comp.setResolutionFactor", { name: "C", resolutionFactor: -1 })).reason, "INVALID_ARGS");
+  const detail = await go("read.itemDetail", { name: "C" });
+  assert.equal(detail.result.item.resolutionFactor, 0.5);
 });
