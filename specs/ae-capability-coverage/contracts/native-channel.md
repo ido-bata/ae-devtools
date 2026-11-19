@@ -125,11 +125,24 @@ AEGP_ItemSuite9.AEGP_GetTypeName                                     (args: see 
 AEGP_ItemSuite9.AEGP_GetItemName                                     (args: aeRef descriptor, see §7a/§7b)
 AEGP_ItemSuite9.AEGP_GetItemID                                       (args: aeRef descriptor — descriptor issuance, see §7a/§7b)
 AEGP_ItemSuite9.AEGP_GetFirstProjItem                                (args: projectIndex+offset+limit — item discovery, see §7a/§7b)
+AEGP_CompSuite13.AEGP_GetCompFramerate                                (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompFrameDuration                            (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompWorkAreaStart                            (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration                         (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompDisplayStartTime                         (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame                         (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompDownsampleFactor                         (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName                    (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetShowBlendModes                               (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples               (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit            (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompBGColor                                   (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
+AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase                         (args: projectIndex+comp aeRefItem — comp-handle getter, see §7a/§7c)
 AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState                      (zero-arg, #270 stage 2)
 AEGP_RQItemSuite4.AEGP_GetNumRQItems                                 (zero-arg, #270 stage 2)
 ```
 
-All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Every remaining implemented getter takes an `AEGP_*H` host handle and waits for the same descriptor pattern to be extended to its identity kind (project handles, comp/layer handles, RQ-item handles). Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Stage 4 (#318) extends the same pattern to **derived handles**: the thirteen `AEGP_CompSuite13` read-only getters take the item descriptor and derive the `AEGP_CompH` host-side via `AEGP_GetCompFromItem` inside the request window (§7c) — no separate comp resolver exists. `AEGP_GetCompShutterFrameRange` is deliberately excluded: it takes an `A_Time` input argument, and arg-bearing (non-descriptor) inputs are a separate slice. Project/layer/RQ-item handle kinds extend the same §7c pattern in later stages. Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
@@ -148,6 +161,7 @@ The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `pack
 | `AEGP_ItemSuite9.AEGP_GetItemName` | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields. `projectIndex` selects the project via `AEGP_GetProjectByIndex`, bounds-checked against `AEGP_GetNumProjects` at resolution time. `item` is the §7b descriptor (legacy or identity-bearing form). Result `{"name": "<string>"}` — the item's UTF-16 name converted to UTF-8, JSON-escaped, bounded |
 | `AEGP_ItemSuite9.AEGP_GetItemID` | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields, same descriptor contract as `GetItemName`. This is the **issuance** operation: the supplied descriptor is resolved host-side exactly like `GetItemName`, then `AEGP_GetItemID` plus the project identity fields are read and a canonical descriptor is returned. Result `{"itemId": <integer>, "item": {"aeRef": {…}}}` — `result.item` is stored verbatim and reused as `args.item` in later requests; the client never assembles descriptor fields itself |
 | `AEGP_ItemSuite9.AEGP_GetFirstProjItem` | `{"projectIndex": <integer 0..1000000>, "offset": <integer 0..1000000>, "limit": <integer 1..32>}` — exactly these three fields. This is the **discovery/enumeration** operation: walks the project's top-level items in `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` order and emits ready-to-use descriptors. Result `{"project": {"index","name","path"}, "total": <int>, "offset": <int>, "items": [{"item": {"aeRef": {…}}}…], "truncated": <bool>}` — each `items[]` entry's `item` value is a complete §7b descriptor (including `itemId`/`projectName`/`projectPath`) usable verbatim as `args.item`. `truncated:true` means more items exist beyond the emitted window or the result-size budget; page with `offset`. Items whose live name exceeds the identity bound are emitted as `{"index","type","itemId","nameTruncated":true}` without a usable descriptor; live item kinds with no descriptor tag (e.g. solid) are emitted as `{"index","unsupportedType":true}` — never a partial or invalid `aeRef` |
+| `AEGP_CompSuite13.*` (the thirteen getters listed in §7) | `{"projectIndex": <integer 0..1000000>, "comp": <aeRefItem>}` — exactly these two fields. `comp` is the same §7b descriptor; resolution and corroboration are identical to `GetItemName` (the descriptor's `type` must corroborate the live item — a `comp`-typed descriptor against a non-comp item refuses `STALE_REFERENCE`). The resolved `AEGP_ItemH` is then mapped to `AEGP_CompH` via `AEGP_GetCompFromItem` inside the request window (§7c). Result payloads are typed per getter — see §7c |
 
 Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.
 
@@ -198,6 +212,36 @@ Clients never hand-assemble descriptors:
 - **Discovery** — `AEGP_ItemSuite9.AEGP_GetFirstProjItem` with `{projectIndex, offset, limit}` enumerates top-level items and returns per-item `{"item":{"aeRef":{…}}}` entries plus a single `project` block — each entry is a complete usable descriptor.
 
 Issuance/enumeration perform the same project corroboration fetches (`AEGP_GetProjectName`, `AEGP_GetProjectPath`) inside the request window; a project-name/path read failure is `failed` (`mayHaveMutated:false`), never a partially-populated descriptor.
+
+## 7c. Derived comp handles — `AEGP_CompSuite13` getters (Issue #318 / #64)
+
+The thirteen `AEGP_CompSuite13` read-only getters are the first **derived-handle** operations: they need an `AEGP_CompH`, but the wire still carries only the §7b item descriptor. There is exactly one resolver — `ResolveAeRefItem` — and exactly one derivation step:
+
+1. `comp` arg → `ResolveAeRefItem` (identical semantics to `GetItemName`: project bounds + optional name/path corroboration, `itemId`-authoritative or legacy positional item resolution, type + exact-name corroboration). Any failure is the same `STALE_REFERENCE`/`failed`/`not-sent` verdict — no comp-specific resolution path exists.
+2. `AEGP_CompSuite13` (suite `"AEGP Comp Suite"`, `kAEGPCompSuiteVersion13`) is acquired inside the request window via `SPBasicSuite.AcquireSuite`; acquire failure → `not-sent`.
+3. The specific getter entry and `AEGP_GetCompFromItem` must both be present in the suite table — a missing entry is `not-sent` (environment-proven non-dispatch), checked **before** any comp call.
+4. `AEGP_GetCompFromItem(itemH, &compH)` derives the comp handle. `AEGP_CompH` is **borrowed** — it is never freed by the plug-in and never crosses the request boundary; it exists only inside this request's evidence window. An AEGP error (e.g. the resolved item is a footage/folder item — reachable only when the descriptor's `type` legitimately matches a non-comp live item) is `failed` with `mayHaveMutated:false`.
+5. The allowlisted getter runs, its result is emitted as typed JSON, the comp suite is released, and the item/memory suites are released via `ReleaseResolution` — all inside the same `opCalls` evidence window (`AEGP_GetCompFromItem` and `SPBasicSuite.AcquireSuite`/`ReleaseSuite` records bracket the getter record).
+
+Result payloads (all `completed` carry `mayHaveMutated:false` semantics — read-only):
+
+| operationId | result `result` payload |
+| --- | --- |
+| `AEGP_GetCompFramerate` | `{"fps": <number>}` (`A_FpLong`, `%.12g`) |
+| `AEGP_GetCompFrameDuration` | `{"frameDuration": {"value": <int>, "scale": <uint>}}` (`A_Time`) |
+| `AEGP_GetCompWorkAreaStart` | `{"workAreaStart": {"value","scale"}}` |
+| `AEGP_GetCompWorkAreaDuration` | `{"workAreaDuration": {"value","scale"}}` |
+| `AEGP_GetCompDisplayStartTime` | `{"displayStartTime": {"value","scale"}}` |
+| `AEGP_GetCompDisplayDropFrame` | `{"displayDropFrame": <bool>}` |
+| `AEGP_GetCompDownsampleFactor` | `{"downsampleFactor": {"x": <int>, "y": <int>}}` (`A_short` fields) |
+| `AEGP_GetShowLayerNameOrSourceName` | `{"showLayerNameOrSourceName": <bool>}` |
+| `AEGP_GetShowBlendModes` | `{"showBlendModes": <bool>}` |
+| `AEGP_GetCompSuggestedMotionBlurSamples` | `{"suggestedMotionBlurSamples": <int>}` |
+| `AEGP_GetCompMotionBlurAdaptiveSampleLimit` | `{"motionBlurAdaptiveSampleLimit": <int>}` |
+| `AEGP_GetCompBGColor` | `{"bgColor": {"alpha","red","green","blue": <number>}}` (`AEGP_ColorVal`, `%.12g`, range [0,1] per SDK) |
+| `AEGP_GetCompShutterAnglePhase` | `{"shutterAngle": {"num","den"}, "shutterPhase": {"num","den"}}` (`A_Ratio`) |
+
+`AEGP_GetCompShutterFrameRange` is excluded from the allowlist: it takes an `A_Time comp_timeP` input argument. Non-descriptor scalar/struct arguments are a separate arg-schema slice; until then only zero-extra-arg getters are admitted. The same §7c pattern — resolve item descriptor → derive handle via the owning suite → typed getter — is the template for layer and RQ-item handles in later stages; each new handle kind reuses `ResolveAeRefItem` and the suite acquire/release discipline rather than growing a parallel resolver.
 
 ## 8. Non-goals / explicit limitations
 
