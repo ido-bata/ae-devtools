@@ -479,7 +479,9 @@ static int EmitResult(
 enum
 {
     ARGK_INT = 0,   /* bounded integer: min..max inclusive */
-    ARGK_AEREFITEM /* aeRef project-item descriptor (Issue #270 Stage 3) */
+    ARGK_AEREFITEM, /* aeRef project-item descriptor (Issue #270 Stage 3) */
+    ARGK_AEREFLAYER /* aeRef layer descriptor embedding its comp aeRef
+                       (Issue #318 Stage 4 layer slice) */
 };
 
 typedef struct
@@ -532,6 +534,45 @@ static const IntakeArgSpec S_FIRSTITEM_ARGS[] = {
 static const IntakeArgSpec S_COMP_ARGS[] = {
     { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
     { "comp", ARGK_AEREFITEM, 0.0, 0.0 },
+};
+
+/* AEGP_LayerSuite9 comp-scoped enumeration (Issue #318 layer slice):
+   GetCompLayerByIndex is layer-descriptor ISSUANCE — it resolves the
+   comp aeRef, derives compH, reads the layer's live id+name and emits
+   a ready-to-use aeRefLayer descriptor. `layerIndex` is the
+   GetCompLayerByIndex position (0-based). */
+static const IntakeArgSpec S_COMP_INDEX_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "comp", ARGK_AEREFITEM, 0.0, 0.0 },
+    { "layerIndex", ARGK_INT, 0.0, 1000000.0 },
+};
+
+/* AEGP_LayerSuite9 layer-handle getters (Issue #318 layer slice): the
+   layer handle is NEVER taken from the wire — `layer` is an aeRefLayer
+   descriptor {type:"layer", name, layerId, comp:{aeRef:<comp item
+   descriptor>}}; the executor resolves the comp descriptor through the
+   shared item resolver, derives compH via AEGP_GetCompFromItem, then
+   scans the comp's layers for the live AEGP_GetLayerID match with
+   name corroboration — reorder-tolerant, fail-closed. */
+static const IntakeArgSpec S_LAYER_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "layer", ARGK_AEREFLAYER, 0.0, 0.0 },
+};
+
+/* Time-mode variants: AEGP_LTimeMode is {LayerTime=0, CompTime=1} —
+   exposed as a bounded integer, never defaulted silently. */
+static const IntakeArgSpec S_LAYER_TIME_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "layer", ARGK_AEREFLAYER, 0.0, 0.0 },
+    { "timeMode", ARGK_INT, 0.0, 1.0 },
+};
+
+/* IsLayerUsedAsTrackMatte's fill_must_be_active flag — same bounded
+   boolean-as-integer convention. */
+static const IntakeArgSpec S_LAYER_MATTE_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "layer", ARGK_AEREFLAYER, 0.0, 0.0 },
+    { "fillMustBeActive", ARGK_INT, 0.0, 1.0 },
 };
 
 static const AllowEntry S_ALLOWLIST[] = {
@@ -607,6 +648,60 @@ static const AllowEntry S_ALLOWLIST[] = {
       "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", S_AEREF_ARGS, 2 },
     { "AEGP_ItemSuite9.AEGP_GetItemComment",
       "AEGP_ItemSuite9.AEGP_GetItemComment", S_AEREF_ARGS, 2 },
+    /* Issue #318 / #64 layer slice: AEGP_LayerSuite9. The layer handle
+       is never taken from the wire — `layer` is an aeRefLayer descriptor
+       embedding its parent comp's aeRef item descriptor; resolution is
+       comp aeRef → itemH → compH (AEGP_GetCompFromItem) → layer scan by
+       live AEGP_GetLayerID + name corroboration. GetCompNumLayers and
+       GetCompLayerByIndex are comp-scoped: the latter is descriptor
+       ISSUANCE (emits a ready-to-use aeRefLayer). Deferred members:
+       GetActiveLayer (no comp binding arg), GetLayerSourceItem /
+       GetLayerParentComp / GetTrackMatteLayer-returning-handle paths
+       that would put a raw handle on the wire (GetTrackMatteLayer is
+       handled by emitting an aeRefLayer instead), all mutating members,
+       and members needing A_Time/A_FloatRect/stream arguments. */
+    { "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
+      "AEGP_LayerSuite9.AEGP_GetCompNumLayers", S_COMP_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
+      "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex", S_COMP_INDEX_ARGS, 3 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerIndex",
+      "AEGP_LayerSuite9.AEGP_GetLayerIndex", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerName",
+      "AEGP_LayerSuite9.AEGP_GetLayerName", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerFlags",
+      "AEGP_LayerSuite9.AEGP_GetLayerFlags", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerQuality",
+      "AEGP_LayerSuite9.AEGP_GetLayerQuality", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
+      "AEGP_LayerSuite9.AEGP_GetLayerObjectType", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_IsLayer3D",
+      "AEGP_LayerSuite9.AEGP_IsLayer3D", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_IsLayer2D",
+      "AEGP_LayerSuite9.AEGP_IsLayer2D", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
+      "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime", S_LAYER_TIME_ARGS, 3 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
+      "AEGP_LayerSuite9.AEGP_GetLayerInPoint", S_LAYER_TIME_ARGS, 3 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerDuration",
+      "AEGP_LayerSuite9.AEGP_GetLayerDuration", S_LAYER_TIME_ARGS, 3 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerID",
+      "AEGP_LayerSuite9.AEGP_GetLayerID", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerLabel",
+      "AEGP_LayerSuite9.AEGP_GetLayerLabel", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
+      "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
+      "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
+      "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
+      "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
+      "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte", S_LAYER_ARGS, 2 },
+    { "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
+      "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte", S_LAYER_MATTE_ARGS, 3 },
+    { "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
+      "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer", S_LAYER_ARGS, 2 },
     /* Issue #270 Stage 2: zero-arg read-only getters needing no
        identity resolution. The three UtilitySuite members use the
        already-held utilP; the two render-queue members acquire their
@@ -637,6 +732,7 @@ static const AllowEntry* AllowFind(const char* opIdZ, size_t len)
 }
 
 static int ValidateAeRefItem(JVal* v, char* detailZ, size_t detailCap);
+static int ValidateAeRefLayer(JVal* v, char* detailZ, size_t detailCap);
 static int AeRefTypeToItemType(JVal* typeV, AEGP_ItemType* outP);
 
 /* Per-operation args validation (Issue #270 Stage 1). `args` is the
@@ -683,6 +779,11 @@ static int ValidateArgs(
         if (spec->kind == ARGK_AEREFITEM)
         {
             if (!ValidateAeRefItem(v, detailZ, detailCap)) return 0;
+            continue;
+        }
+        if (spec->kind == ARGK_AEREFLAYER)
+        {
+            if (!ValidateAeRefLayer(v, detailZ, detailCap)) return 0;
             continue;
         }
         if (v->kind != JK_NUM || !isfinite(v->num) ||
@@ -815,6 +916,90 @@ static int ValidateAeRefItem(JVal* v, char* detailZ, size_t detailCap)
         snprintf(detailZ, detailCap, "aeRef.projectPath must be a string ≤ 4096 chars");
         return 0;
     }
+    return 1;
+}
+
+/* aeRefLayer descriptor shape check (Issue #318 layer slice; contract
+   native-channel.md §7d). Wire form:
+     {"aeRef":{"type":"layer","name":"<str>","layerId":<int32>,
+               "comp":{"aeRef":{<item descriptor>}}}}
+   All four keys are required — the parent comp binding is part of the
+   layer's identity, so a layer descriptor can never resolve against
+   the wrong comp. `layerId` is the live AEGP_GetLayerID value
+   (AEGP_LayerIDVal = A_long, full int32 range); `name` corroborates.
+   Shape only — resolution is host-side and failure is
+   STALE_REFERENCE. */
+#define AEREF_LAYER_ID_MIN (-2147483648.0)
+#define AEREF_LAYER_ID_MAX 2147483647.0
+
+static int ValidateAeRefLayer(JVal* v, char* detailZ, size_t detailCap)
+{
+    JVal* ref;
+    JVal* typeV;
+    JVal* nameV;
+    JVal* idV;
+    JVal* compV;
+    size_t i;
+    static const char* keys[] = { "type", "name", "layerId", "comp" };
+    if (!v || v->kind != JK_OBJ || v->npairs != 1)
+    {
+        snprintf(detailZ, detailCap, "aeRefLayer arg must be an object with exactly \"aeRef\"");
+        return 0;
+    }
+    ref = JGet(v, "aeRef");
+    if (!ref || ref->kind != JK_OBJ || ref->npairs != 4)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefLayer must carry exactly type,name,layerId,comp");
+        return 0;
+    }
+    for (i = 0; i < ref->npairs; i++)
+    {
+        JPair* p = &ref->pairs[i];
+        size_t k;
+        int ok = 0;
+        for (k = 0; k < sizeof(keys) / sizeof(keys[0]); k++)
+            if (strlen(keys[k]) == p->klen && memcmp(keys[k], p->key, p->klen) == 0)
+            { ok = 1; break; }
+        if (!ok)
+        {
+            snprintf(detailZ, detailCap, "aeRefLayer carries unsupported key");
+            return 0;
+        }
+    }
+    typeV = JGet(ref, "type");
+    nameV = JGet(ref, "name");
+    idV = JGet(ref, "layerId");
+    compV = JGet(ref, "comp");
+    if (!typeV || !nameV || !idV || !compV)
+    {
+        snprintf(detailZ, detailCap, "aeRefLayer requires type, name, layerId, comp");
+        return 0;
+    }
+    if (typeV->kind != JK_STR || !JStrEq(typeV, "layer"))
+    {
+        snprintf(detailZ, detailCap, "aeRefLayer.type must be \"layer\"");
+        return 0;
+    }
+    if (nameV->kind != JK_STR || nameV->slen == 0 ||
+        nameV->slen > AEREF_NAME_MAX)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefLayer.name must be a non-empty string ≤ 1024 UTF-8 bytes");
+        return 0;
+    }
+    if (idV->kind != JK_NUM || !isfinite(idV->num) ||
+        floor(idV->num) != idV->num ||
+        idV->num < AEREF_LAYER_ID_MIN || idV->num > AEREF_LAYER_ID_MAX)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefLayer.layerId must be an integer in [-2147483648, 2147483647]");
+        return 0;
+    }
+    /* comp is the same {"aeRef":{...}} item-descriptor arg shape —
+       recursive shape check; its type must corroborate "comp" at
+       resolution time. */
+    if (!ValidateAeRefItem(compV, detailZ, detailCap)) return 0;
     return 1;
 }
 
@@ -2369,6 +2554,880 @@ static void ExecItemGetter(
     }
 }
 
+/* ---- AEGP_LayerSuite9 (Issue #318 / #64 layer slice) -----------------
+   Vertical slice of the shared identity resolver, one level deeper:
+   the wire carries an aeRefLayer descriptor
+     {"aeRef":{"type":"layer","name":..,"layerId":N,
+               "comp":{"aeRef":{<comp item descriptor>}}}}
+   — the parent comp binding is part of the layer's identity. Resolution:
+   comp aeRef → ResolveAeRefItem → itemH → AEGP_GetCompFromItem →
+   compH → scan AEGP_GetCompNumLayers/GetCompLayerByIndex for the live
+   AEGP_GetLayerID match, then AEGP_GetLayerName corroboration. Layer
+   and comp handles are borrowed — never freed, never on the wire; both
+   suites are released before the request completes. Missing
+   suite/entry → not-sent; AEGP errors → failed; identity mismatch →
+   refused STALE_REFERENCE; all read-only → mayHaveMutated=false. */
+
+#define LAYER_NAME_MAX 1024
+#define LAYER_SCAN_MAX 100000L
+
+typedef struct
+{
+    ItemResolution res;          /* resolved parent comp item */
+    const void* compSuite;
+    const void* layerSuite;
+    const AEGP_CompSuite13* compP;
+    const AEGP_LayerSuite9* layerP;
+    AEGP_CompH compH;            /* borrowed, request-window only */
+    AEGP_LayerH layerH;          /* borrowed, request-window only */
+} LayerResolution;
+
+static void ReleaseLayerResolution(
+    const AEGP_UtilitySuite6* utilP,
+    struct SPBasicSuite* basicP,
+    LayerResolution* lr)
+{
+    if (lr->compSuite)
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    if (lr->layerSuite)
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+    ReleaseResolution(utilP, basicP, &lr->res);
+    memset(lr, 0, sizeof(*lr));
+}
+
+/* Resolve a validated aeRefLayer descriptor to a live layer inside the
+   request window. On success returns 1 with lr filled — caller MUST
+   ReleaseLayerResolution. On failure returns 0 with `v` carrying the
+   verdict. */
+static int ResolveLayerRef(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    long projectIndex,
+    JVal* layerRef,
+    int wantProjectIdentity,
+    const char* nameCallExtraZ,
+    LayerResolution* lr,
+    ReqVerdict* v)
+{
+    JVal* nameV = JGet(layerRef, "name");
+    JVal* idV = JGet(layerRef, "layerId");
+    JVal* compObj = JGet(layerRef, "comp");
+    JVal* compRef = compObj ? JGet(compObj, "aeRef") : NULL;
+    long wantId = 0;
+    const void* compSuite = NULL;
+    const void* layerSuite = NULL;
+    const AEGP_CompSuite13* compP = NULL;
+    const AEGP_LayerSuite9* layerP = NULL;
+    AEGP_CompH compH = NULL;
+    AEGP_LayerH matchH = NULL;
+    A_long numLayers = 0;
+    long matches = 0;
+    long i;
+    A_Err perr;
+
+    memset(lr, 0, sizeof(*lr));
+    if (idV) wantId = (long)idV->num;
+    if (!nameV || !idV || !compRef)
+    {
+        VerdictRefuse(v, "MALFORMED_REQUEST",
+                      "aeRefLayer requires name, layerId, comp.aeRef");
+        return 0;
+    }
+
+    /* parent comp first — full §7b item resolution + corroboration */
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projectIndex, compRef, wantProjectIdentity,
+                          nameCallExtraZ, &lr->res, v))
+        return 0;
+    if (lr->res.type != AEGP_ItemType_COMP)
+    {
+        ReleaseResolution(utilP, basicP, &lr->res);
+        VerdictRefuse(v, "STALE_REFERENCE",
+                      "parent comp descriptor does not resolve to a comp item");
+        return 0;
+    }
+
+    compSuite = IntakeAcquireSuite(utilP, basicP,
+                                   kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    layerSuite = IntakeAcquireSuite(utilP, basicP,
+                                    kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+    if (!compSuite || !layerSuite)
+    {
+        if (compSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        if (layerSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+        ReleaseResolution(utilP, basicP, &lr->res);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "comp/layer suite unavailable for layer resolve");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    compP = (const AEGP_CompSuite13*)compSuite;
+    layerP = (const AEGP_LayerSuite9*)layerSuite;
+    lr->compSuite = compSuite;
+    lr->layerSuite = layerSuite;
+    lr->compP = compP;
+    lr->layerP = layerP;
+
+#define LRES_NOT_SENT(msg) do { \
+        ReleaseLayerResolution(utilP, basicP, lr); \
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
+        snprintf(v->detail, sizeof(v->detail), "%s", msg); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define LRES_FAILED(fmt, err) do { \
+        ReleaseLayerResolution(utilP, basicP, lr); \
+        snprintf(v->outcome, sizeof(v->outcome), "failed"); \
+        snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define LRES_STALE(why) do { \
+        ReleaseLayerResolution(utilP, basicP, lr); \
+        VerdictRefuse(v, "STALE_REFERENCE", why); \
+        return 0; } while (0)
+
+    if (!compP->AEGP_GetCompFromItem || !layerP->AEGP_GetCompNumLayers ||
+        !layerP->AEGP_GetCompLayerByIndex || !layerP->AEGP_GetLayerID ||
+        !layerP->AEGP_GetLayerName)
+        LRES_NOT_SENT("comp/layer suite entries unavailable for layer resolve");
+
+    perr = compP->AEGP_GetCompFromItem(lr->res.itemH, &compH);
+    IntakeOpRecord(utilP, "AEGP_CompSuite13.AEGP_GetCompFromItem",
+                   (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+    if (perr != A_Err_NONE || !compH)
+        LRES_FAILED("AEGP_GetCompFromItem err=%ld", perr);
+    lr->compH = compH;
+
+    perr = layerP->AEGP_GetCompNumLayers(compH, &numLayers);
+    IntakeOpRecord(utilP, "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
+                   (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+    if (perr != A_Err_NONE)
+        LRES_FAILED("AEGP_GetCompNumLayers err=%ld", perr);
+    if (numLayers < 0 || numLayers > LAYER_SCAN_MAX)
+        LRES_FAILED("layer count exceeds scan bound err=%ld", numLayers);
+
+    /* layerId-authoritative scan — reorder-tolerant like the item
+       resolver; every candidate's live id is compared bit-exact. */
+    for (i = 0; i < (long)numLayers; i++)
+    {
+        AEGP_LayerH lh = NULL;
+        AEGP_LayerIDVal lid = 0;
+        perr = layerP->AEGP_GetCompLayerByIndex(compH, (A_long)i, &lh);
+        IntakeOpRecord(utilP,
+            "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex", (long)perr,
+            perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE || !lh)
+            LRES_FAILED("AEGP_GetCompLayerByIndex err=%ld", perr);
+        perr = layerP->AEGP_GetLayerID(lh, &lid);
+        IntakeOpRecord(utilP, "AEGP_LayerSuite9.AEGP_GetLayerID",
+                       (long)perr,
+                       perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE)
+            LRES_FAILED("AEGP_GetLayerID err=%ld", perr);
+        if ((long)lid == wantId) { matches++; matchH = lh; }
+    }
+    if (matches == 0) LRES_STALE("layerId not found");
+    if (matches > 1) LRES_STALE("layerId ambiguous");
+    lr->layerH = matchH;
+
+    /* name corroboration — a renamed layer stales its descriptor
+       (client re-issues via GetCompLayerByIndex). GetLayerName returns
+       TWO mem handles; both are freed (the reader frees the layer
+       name, the source name is freed explicitly). */
+    {
+        AEGP_MemHandle lnH = NULL;
+        AEGP_MemHandle snH = NULL;
+        char lname[LAYER_NAME_MAX + 1];
+        IntakeMemStatus ms;
+        perr = layerP->AEGP_GetLayerName(plugin_id, matchH, &lnH, &snH);
+        IntakeOpRecord(utilP, "AEGP_LayerSuite9.AEGP_GetLayerName",
+                       (long)perr,
+                       perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE)
+        {
+            if (snH) IntakeFreeMemHandle(utilP, lr->res.memP, snH);
+            LRES_FAILED("AEGP_GetLayerName err=%ld", perr);
+        }
+        ms = IntakeReadMemHandleUtf8(utilP, lr->res.memP, lnH,
+                                     lname, sizeof(lname));
+        if (snH) IntakeFreeMemHandle(utilP, lr->res.memP, snH);
+        if (ms == IMH_TRUNCATED)
+            LRES_STALE("layer name exceeds identity bound");
+        if (ms != IMH_OK)
+            LRES_FAILED("layer name mem-handle read failed err=%ld", (long)ms);
+        if (nameV->slen != strlen(lname) ||
+            memcmp(nameV->str, lname, nameV->slen) != 0)
+            LRES_STALE("layer name mismatch");
+    }
+
+#undef LRES_NOT_SENT
+#undef LRES_FAILED
+#undef LRES_STALE
+    return 1;
+}
+
+/* Entry-presence gate for the layer-scoped getters. */
+static int LayerGetterEntryPresent(const AEGP_LayerSuite9* c, const char* opIdZ)
+{
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerIndex") == 0)
+        return c->AEGP_GetLayerIndex != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerName") == 0)
+        return c->AEGP_GetLayerName != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerFlags") == 0)
+        return c->AEGP_GetLayerFlags != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerQuality") == 0)
+        return c->AEGP_GetLayerQuality != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerObjectType") == 0)
+        return c->AEGP_GetLayerObjectType != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayer3D") == 0)
+        return c->AEGP_IsLayer3D != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayer2D") == 0)
+        return c->AEGP_IsLayer2D != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0)
+        return c->AEGP_GetLayerCurrentTime != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerInPoint") == 0)
+        return c->AEGP_GetLayerInPoint != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerDuration") == 0)
+        return c->AEGP_GetLayerDuration != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerID") == 0)
+        return c->AEGP_GetLayerID != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerLabel") == 0)
+        return c->AEGP_GetLayerLabel != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality") == 0)
+        return c->AEGP_GetLayerSamplingQuality != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID") == 0)
+        return c->AEGP_GetLayerSourceItemID != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn") == 0)
+        return c->AEGP_IsLayerVideoReallyOn != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn") == 0)
+        return c->AEGP_IsLayerAudioReallyOn != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte") == 0)
+        return c->AEGP_DoesLayerHaveTrackMatte != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte") == 0)
+        return c->AEGP_IsLayerUsedAsTrackMatte != NULL;
+    if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0)
+        return c->AEGP_GetTrackMatteLayer != NULL;
+    return 0;
+}
+
+/* Dispatch routers — explicit id lists so a future LayerSuite9
+   allowlist addition without an executor still reaches
+   OPERATION_NOT_DISPATCHABLE instead of being misrouted. */
+static int IsLayerCompOpId(const char* opIdZ)
+{
+    return strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetCompNumLayers") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex") == 0;
+}
+
+static int IsLayerGetterOpId(const char* opIdZ)
+{
+    return strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerIndex") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerName") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerFlags") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerQuality") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerObjectType") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayer3D") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayer2D") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerInPoint") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerDuration") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerID") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerLabel") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte") == 0 ||
+           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0;
+}
+
+/* Emit one aeRefLayer descriptor object {"type":"layer",...} into the
+   JBuf — used by GetCompLayerByIndex (issuance) and GetTrackMatteLayer
+   (derived-handle → descriptor). Reads the layer's live id+name and
+   the comp item's live id; the comp aeRef is rebuilt from the resolved
+   ItemResolution (which carries the live name/index and, when
+   wantProjectIdentity was set, project name/path). Returns A_Err_NONE
+   on success; A_Err_STRUCT on payload overflow or unreadable identity
+   data (caller maps to `failed` — never a partial descriptor). */
+static A_Err EmitLayerRefInner(
+    JBuf* b,
+    const AEGP_UtilitySuite6* utilP,
+    AEGP_PluginID plugin_id,
+    const AEGP_MemorySuite1* memP,
+    const AEGP_ItemSuite9* itemP,
+    AEGP_ItemH compItemH,
+    const ItemResolution* compRes,
+    const AEGP_LayerSuite9* layerP,
+    AEGP_LayerH layerH)
+{
+    AEGP_LayerIDVal lid = 0;
+    A_long compId = 0;
+    AEGP_MemHandle lnH = NULL;
+    AEGP_MemHandle snH = NULL;
+    char lname[LAYER_NAME_MAX + 1];
+    IntakeMemStatus ms;
+    A_Err err;
+
+    err = layerP->AEGP_GetLayerID(layerH, &lid);
+    IntakeOpRecord(utilP, "AEGP_LayerSuite9.AEGP_GetLayerID", (long)err,
+                   err == A_Err_NONE ? " (issuance)" : NULL);
+    if (err != A_Err_NONE) return err;
+    err = layerP->AEGP_GetLayerName(plugin_id, layerH, &lnH, &snH);
+    IntakeOpRecord(utilP, "AEGP_LayerSuite9.AEGP_GetLayerName", (long)err,
+                   err == A_Err_NONE ? " (issuance)" : NULL);
+    if (err != A_Err_NONE)
+    {
+        if (snH) IntakeFreeMemHandle(utilP, memP, snH);
+        return err;
+    }
+    ms = IntakeReadMemHandleUtf8(utilP, memP, lnH, lname, sizeof(lname));
+    if (snH) IntakeFreeMemHandle(utilP, memP, snH);
+    if (ms != IMH_OK) return A_Err_STRUCT; /* truncated or unreadable */
+    if (!itemP->AEGP_GetItemID) return A_Err_STRUCT;
+    err = itemP->AEGP_GetItemID(compItemH, &compId);
+    IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemID", (long)err,
+                   err == A_Err_NONE ? " (issuance)" : NULL);
+    if (err != A_Err_NONE) return err;
+
+    JBPut(b, "{\"type\":\"layer\",\"name\":\"");
+    JBEsc(b, lname);
+    JBPut(b, "\",\"layerId\":");
+    JBNum(b, (long)lid);
+    JBPut(b, ",\"comp\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"");
+    JBEsc(b, compRes->name);
+    JBPut(b, "\",\"path\":[");
+    JBNum(b, compRes->index);
+    JBPut(b, "],\"itemId\":");
+    JBNum(b, (long)(unsigned int)compId);
+    if (compRes->haveProjectName)
+    {
+        JBPut(b, ",\"projectName\":\"");
+        JBEsc(b, compRes->projectName);
+        JBPut(b, "\"");
+    }
+    if (compRes->haveProjectPath)
+    {
+        JBPut(b, ",\"projectPath\":\"");
+        JBEsc(b, compRes->projectPath);
+        JBPut(b, "\"");
+    }
+    JBPut(b, "}}}");
+    return b->of ? A_Err_STRUCT : A_Err_NONE;
+}
+
+/* Comp-scoped layer ops: GetCompNumLayers (count) and
+   GetCompLayerByIndex (descriptor issuance). Args carry the comp aeRef
+   (+ layerIndex for the latter). */
+static void ExecLayerCompOp(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* compArg = JGet(args, "comp");
+    JVal* ref = compArg ? JGet(compArg, "aeRef") : NULL;
+    long projIndex = ArgsInt(allow, args, 0);
+    int isIndexOp =
+        strcmp(allow->operationId,
+               "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex") == 0;
+    ItemResolution res;
+    const void* compSuite = NULL;
+    const void* layerSuite = NULL;
+    const AEGP_CompSuite13* compP = NULL;
+    const AEGP_LayerSuite9* layerP = NULL;
+    AEGP_CompH compH = NULL;
+    A_Err oerr = A_Err_STRUCT;
+    const char* opId = allow->operationId;
+
+    /* issuance needs the full comp descriptor (itemId + project
+       identity) embedded in the emitted aeRefLayer */
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projIndex, ref, isIndexOp, " (resolve)",
+                          &res, v))
+        return;
+    if (res.type != AEGP_ItemType_COMP)
+    {
+        ReleaseResolution(utilP, basicP, &res);
+        VerdictRefuse(v, "STALE_REFERENCE",
+                      "comp descriptor does not resolve to a comp item");
+        return;
+    }
+
+    compSuite = IntakeAcquireSuite(utilP, basicP,
+                                   kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    layerSuite = IntakeAcquireSuite(utilP, basicP,
+                                    kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+    if (!compSuite || !layerSuite)
+    {
+        if (compSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        if (layerSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+        ReleaseResolution(utilP, basicP, &res);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "comp/layer suite unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+    compP = (const AEGP_CompSuite13*)compSuite;
+    layerP = (const AEGP_LayerSuite9*)layerSuite;
+
+    if (!compP->AEGP_GetCompFromItem || !layerP->AEGP_GetCompNumLayers ||
+        !layerP->AEGP_GetCompLayerByIndex || !layerP->AEGP_GetLayerID ||
+        !layerP->AEGP_GetLayerName)
+    {
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+        ReleaseResolution(utilP, basicP, &res);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "comp/layer suite entry unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+
+    {
+        A_Err cerr = compP->AEGP_GetCompFromItem(res.itemH, &compH);
+        IntakeOpRecord(utilP, "AEGP_CompSuite13.AEGP_GetCompFromItem",
+                       (long)cerr, NULL);
+        if (cerr != A_Err_NONE || !compH)
+        {
+            IntakeReleaseSuite(utilP, basicP,
+                               kAEGPCompSuite, kAEGPCompSuiteVersion13);
+            IntakeReleaseSuite(utilP, basicP,
+                               kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+            ReleaseResolution(utilP, basicP, &res);
+            snprintf(v->outcome, sizeof(v->outcome), "failed");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetCompFromItem err=%ld", (long)cerr);
+            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            return;
+        }
+    }
+
+    if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetCompNumLayers") == 0)
+    {
+        A_long n = 0;
+        oerr = layerP->AEGP_GetCompNumLayers(compH, &n);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"numLayers\":%ld}", (long)n);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else
+    {
+        long idx = ArgsInt(allow, args, 2);
+        AEGP_LayerH lh = NULL;
+        oerr = layerP->AEGP_GetCompLayerByIndex(compH, (A_long)idx, &lh);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE && lh)
+        {
+            JBuf b;
+            A_Err e2;
+            JBInit(&b, v->payload, sizeof(v->payload));
+            JBPut(&b, "{\"index\":");
+            JBNum(&b, idx);
+            JBPut(&b, ",\"layer\":{\"aeRef\":");
+            e2 = EmitLayerRefInner(&b, utilP, plugin_id, res.memP,
+                                   res.itemP, res.itemH, &res, layerP, lh);
+            JBPut(&b, "}}");
+            if (e2 != A_Err_NONE || b.of)
+                oerr = A_Err_STRUCT;
+            else
+            {
+                *b.cur = '\0';
+                v->havePayload = 1;
+            }
+        }
+        else if (oerr == A_Err_NONE)
+        {
+            oerr = A_Err_STRUCT; /* NULL layer handle */
+        }
+    }
+
+    IntakeReleaseSuite(utilP, basicP,
+                       kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    IntakeReleaseSuite(utilP, basicP,
+                       kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+    ReleaseResolution(utilP, basicP, &res);
+
+    if (oerr == A_Err_NONE && v->havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+        v->publish = 1;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "%s err=%ld", opId, (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0;
+        v->publish = 1;
+    }
+}
+
+/* Layer-handle getters: {projectIndex, layer:<aeRefLayer>} → shared
+   resolver chain → typed getter on the resolved layer handle. */
+static void ExecLayerGetter(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* layerArg = JGet(args, "layer");
+    JVal* layerRef = layerArg ? JGet(layerArg, "aeRef") : NULL;
+    long projIndex = ArgsInt(allow, args, 0);
+    const char* opId = allow->operationId;
+    /* GetTrackMatteLayer emits an aeRefLayer — needs the full comp
+       descriptor (itemId + project identity) inside it. */
+    int wantPI =
+        strcmp(opId, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0;
+    LayerResolution lr;
+    A_Err oerr = A_Err_STRUCT;
+
+    if (!layerRef)
+    {
+        VerdictRefuse(v, "MALFORMED_REQUEST", "layer.aeRef missing");
+        return;
+    }
+    if (!ResolveLayerRef(utilP, projP, basicP, plugin_id,
+                         projIndex, layerRef, wantPI, " (resolve)",
+                         &lr, v))
+        return;
+
+    if (!LayerGetterEntryPresent(lr.layerP, opId))
+    {
+        ReleaseLayerResolution(utilP, basicP, &lr);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "layer suite entry unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+
+    if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerIndex") == 0)
+    {
+        A_long idx = 0;
+        oerr = lr.layerP->AEGP_GetLayerIndex(lr.layerH, &idx);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"index\":%ld}", (long)idx);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerName") == 0)
+    {
+        AEGP_MemHandle lnH = NULL;
+        AEGP_MemHandle snH = NULL;
+        char lname[LAYER_NAME_MAX + 1];
+        char sname[LAYER_NAME_MAX + 1];
+        IntakeMemStatus ms1, ms2;
+        oerr = lr.layerP->AEGP_GetLayerName(plugin_id, lr.layerH,
+                                            &lnH, &snH);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            ms1 = IntakeReadMemHandleUtf8(utilP, lr.res.memP, lnH,
+                                          lname, sizeof(lname));
+            ms2 = IntakeReadMemHandleUtf8(utilP, lr.res.memP, snH,
+                                          sname, sizeof(sname));
+            if (ms1 == IMH_OK && ms2 == IMH_OK)
+            {
+                char e1[LAYER_NAME_MAX * 6 + 16];
+                char e2[LAYER_NAME_MAX * 6 + 16];
+                JsonEscape(e1, sizeof(e1), lname);
+                JsonEscape(e2, sizeof(e2), sname);
+                snprintf(v->payload, sizeof(v->payload),
+                         "{\"name\":\"%s\",\"sourceName\":\"%s\"}",
+                         e1, e2);
+                v->payload[sizeof(v->payload) - 1] = '\0';
+                v->havePayload = 1;
+            }
+            else
+            {
+                oerr = A_Err_STRUCT; /* truncated/unreadable name */
+            }
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerFlags") == 0)
+    {
+        AEGP_LayerFlags flags = 0;
+        oerr = lr.layerP->AEGP_GetLayerFlags(lr.layerH, &flags);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"flags\":%ld}", (long)flags);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerQuality") == 0)
+    {
+        AEGP_LayerQuality q = AEGP_LayerQual_BEST;
+        oerr = lr.layerP->AEGP_GetLayerQuality(lr.layerH, &q);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"quality\":%d}", (int)q);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerObjectType") == 0)
+    {
+        AEGP_ObjectType ot = AEGP_ObjectType_NONE;
+        oerr = lr.layerP->AEGP_GetLayerObjectType(lr.layerH, &ot);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"objectType\":%ld}", (long)ot);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayer3D") == 0)
+    {
+        A_Boolean b = FALSE;
+        oerr = lr.layerP->AEGP_IsLayer3D(lr.layerH, &b);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"is3D\":%s}", b ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayer2D") == 0)
+    {
+        A_Boolean b = FALSE;
+        oerr = lr.layerP->AEGP_IsLayer2D(lr.layerH, &b);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"is2D\":%s}", b ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0 ||
+             strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerInPoint") == 0 ||
+             strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerDuration") == 0)
+    {
+        AEGP_LTimeMode tm =
+            (AEGP_LTimeMode)ArgsInt(allow, args, 2);
+        A_Time t = {0, 0};
+        const char* key =
+            strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0
+                ? "currentTime"
+            : strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerInPoint") == 0
+                ? "inPoint" : "duration";
+        if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0)
+            oerr = lr.layerP->AEGP_GetLayerCurrentTime(lr.layerH, tm, &t);
+        else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerInPoint") == 0)
+            oerr = lr.layerP->AEGP_GetLayerInPoint(lr.layerH, tm, &t);
+        else
+            oerr = lr.layerP->AEGP_GetLayerDuration(lr.layerH, tm, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"%s\":{\"value\":%ld,\"scale\":%lu}}",
+                     key, (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerID") == 0)
+    {
+        AEGP_LayerIDVal lid = 0;
+        oerr = lr.layerP->AEGP_GetLayerID(lr.layerH, &lid);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"layerId\":%ld}", (long)lid);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerLabel") == 0)
+    {
+        AEGP_LabelID label = AEGP_Label_NO_LABEL;
+        oerr = lr.layerP->AEGP_GetLayerLabel(lr.layerH, &label);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"label\":%d}", (int)label);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality") == 0)
+    {
+        AEGP_LayerSamplingQuality q = AEGP_LayerSamplingQual_BILINEAR;
+        oerr = lr.layerP->AEGP_GetLayerSamplingQuality(lr.layerH, &q);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"samplingQuality\":%d}", (int)q);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID") == 0)
+    {
+        A_long sid = 0;
+        oerr = lr.layerP->AEGP_GetLayerSourceItemID(lr.layerH, &sid);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"sourceItemId\":%ld}", (long)sid);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn") == 0)
+    {
+        A_Boolean b = FALSE;
+        oerr = lr.layerP->AEGP_IsLayerVideoReallyOn(lr.layerH, &b);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"videoOn\":%s}", b ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn") == 0)
+    {
+        A_Boolean b = FALSE;
+        oerr = lr.layerP->AEGP_IsLayerAudioReallyOn(lr.layerH, &b);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"audioOn\":%s}", b ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte") == 0)
+    {
+        A_Boolean b = FALSE;
+        oerr = lr.layerP->AEGP_DoesLayerHaveTrackMatte(lr.layerH, &b);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"hasTrackMatte\":%s}", b ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte") == 0)
+    {
+        A_Boolean fill = (A_Boolean)ArgsInt(allow, args, 2);
+        A_Boolean b = FALSE;
+        oerr = lr.layerP->AEGP_IsLayerUsedAsTrackMatte(lr.layerH, fill, &b);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"isTrackMatte\":%s}", b ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0)
+    {
+        AEGP_LayerH matteH = NULL;
+        JBuf b;
+        A_Err e2 = A_Err_NONE;
+        oerr = lr.layerP->AEGP_GetTrackMatteLayer(lr.layerH, &matteH);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            JBInit(&b, v->payload, sizeof(v->payload));
+            JBPut(&b, "{\"trackMatteLayer\":");
+            if (matteH)
+            {
+                JBPut(&b, "{\"aeRef\":");
+                e2 = EmitLayerRefInner(&b, utilP, plugin_id,
+                                       lr.res.memP, lr.res.itemP,
+                                       lr.res.itemH, &lr.res, lr.layerP,
+                                       matteH);
+                JBPut(&b, "}");
+            }
+            else
+                JBPut(&b, "null");
+            JBPut(&b, "}");
+            if (e2 != A_Err_NONE || b.of)
+                oerr = A_Err_STRUCT;
+            else
+            {
+                *b.cur = '\0';
+                v->havePayload = 1;
+            }
+        }
+    }
+    else
+    {
+        oerr = A_Err_STRUCT;
+    }
+
+    ReleaseLayerResolution(utilP, basicP, &lr);
+
+    if (oerr == A_Err_NONE && v->havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+        v->publish = 1;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "%s err=%ld", opId, (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0; /* read-only getter */
+        v->publish = 1;
+    }
+}
+
 /* Execute one claimed request file. Always publishes a result when
    publish==1; the caller removes the .claimed file afterwards.
    `mtimeMs` is the claimed file's mtime — the deadline base, matching
@@ -2801,6 +3860,19 @@ static void ProcessClaimed(
         else if (IsItemGetterOpId(allow->operationId))
         {
             ExecItemGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
+        }
+        /* ---- Issue #318 / #64: AEGP_LayerSuite9 ---------------------
+           Comp-scoped ops take {projectIndex, comp:<aeRefItem>}
+           (+layerIndex for issuance); layer getters take
+           {projectIndex, layer:<aeRefLayer>} — the descriptor embeds
+           its parent comp's aeRef. Handles never cross the wire. */
+        else if (IsLayerCompOpId(allow->operationId))
+        {
+            ExecLayerCompOp(utilP, projP, basicP, plugin_id, allow, args, &v);
+        }
+        else if (IsLayerGetterOpId(allow->operationId))
+        {
+            ExecLayerGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
         }
         /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
         else if (strcmp(allow->operationId,

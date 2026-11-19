@@ -104,6 +104,35 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_ItemSuite9.AEGP_GetItemDimensions",
   "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
   "AEGP_ItemSuite9.AEGP_GetItemComment",
+  /* Issue #318 / #64 layer slice: AEGP_LayerSuite9. The layer handle is
+     never taken from the wire — `layer` is an aeRefLayer descriptor
+     {type:"layer", name, layerId, comp:{aeRef:<comp item descriptor>}};
+     the host resolves the comp descriptor through the shared item
+     resolver, derives compH via AEGP_GetCompFromItem, then scans the
+     comp's layers by live AEGP_GetLayerID + name corroboration.
+     GetCompNumLayers/GetCompLayerByIndex are comp-scoped; the latter
+     is descriptor issuance (emits a ready-to-use aeRefLayer). */
+  "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
+  "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
+  "AEGP_LayerSuite9.AEGP_GetLayerIndex",
+  "AEGP_LayerSuite9.AEGP_GetLayerName",
+  "AEGP_LayerSuite9.AEGP_GetLayerFlags",
+  "AEGP_LayerSuite9.AEGP_GetLayerQuality",
+  "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
+  "AEGP_LayerSuite9.AEGP_IsLayer3D",
+  "AEGP_LayerSuite9.AEGP_IsLayer2D",
+  "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
+  "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
+  "AEGP_LayerSuite9.AEGP_GetLayerDuration",
+  "AEGP_LayerSuite9.AEGP_GetLayerID",
+  "AEGP_LayerSuite9.AEGP_GetLayerLabel",
+  "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
+  "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
+  "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
+  "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
+  "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
+  "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
+  "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
   "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
 ] as const;
@@ -168,6 +197,22 @@ export type NativeIntakeArgConstraint =
          type/name corroboration) happens host-side and failure is
          STALE_REFERENCE. */
       kind: "aeRefItem";
+    }
+  | {
+      /* Issue #318 layer slice (contract native-channel.md §7d): a
+         layer identity descriptor in the trusted-codec `aeRefLayer`
+         wire form —
+         {"aeRef":{"type":"layer","name":"<str>","layerId":<int32>,
+         "comp":{"aeRef":{<item descriptor>}}}}.
+         `layerId` is the live AEGP_GetLayerID value (full int32 range)
+         and is the authoritative selector; `name` corroborates;
+         `comp` is the REQUIRED parent-comp binding — the same §7b
+         item-descriptor arg shape, whose `type` must be "comp" at
+         resolution time. All four inner keys are required and no
+         others are accepted. Shape only — resolution (comp → itemH →
+         compH → layer scan) is host-side and failure is
+         STALE_REFERENCE. */
+      kind: "aeRefLayer";
     };
 
 /** operationId → exact arg-name → constraint map. Absent = zero-arg op. */
@@ -289,6 +334,100 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
     projectIndex: { kind: "integer", min: 0, max: 1000000 },
     item: { kind: "aeRefItem" },
   },
+  /* LayerSuite9 (Issue #318 layer slice): `comp` is the §7b aeRef item
+     descriptor for comp-scoped ops; `layer` is the §7d aeRefLayer
+     descriptor for layer-handle getters. */
+  "AEGP_LayerSuite9.AEGP_GetCompNumLayers": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+    layerIndex: { kind: "integer", min: 0, max: 1000000 },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerIndex": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerName": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerFlags": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerQuality": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerObjectType": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_IsLayer3D": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_IsLayer2D": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  /* timeMode is AEGP_LTimeMode {LayerTime=0, CompTime=1} — bounded
+     integer, never defaulted silently (mirrors the C++ spec). */
+  "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+    timeMode: { kind: "integer", min: 0, max: 1 },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerInPoint": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+    timeMode: { kind: "integer", min: 0, max: 1 },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerDuration": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+    timeMode: { kind: "integer", min: 0, max: 1 },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerID": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerLabel": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
+  "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+    fillMustBeActive: { kind: "integer", min: 0, max: 1 },
+  },
+  "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    layer: { kind: "aeRefLayer" },
+  },
 };
 
 function isPlainArgsObject(v: unknown): v is Record<string, unknown> {
@@ -349,6 +488,8 @@ export function validateNativeIntakeArgs(
       }
     } else if (spec.kind === "aeRefItem") {
       errors.push(...validateAeRefItemArg(k, v));
+    } else if (spec.kind === "aeRefLayer") {
+      errors.push(...validateAeRefLayerArg(k, v));
     }
   }
   return errors;
@@ -420,6 +561,46 @@ function validateAeRefItemArg(argName: string, v: unknown): string[] {
        utf8.encode(ref.projectPath).length > AEREF_MAX_STR_CHARS)) {
     bad("aeRef.projectPath must be a string ≤ 4096 UTF-8 bytes");
   }
+  return errors;
+}
+
+const AEREFLAYER_ID_MIN = -2147483648;
+const AEREFLAYER_ID_MAX = 2147483647;
+
+/* Shape-check an `aeRefLayer` descriptor (contract §7d):
+   {"aeRef":{"type":"layer","name","layerId","comp"}} — exactly those
+   four inner keys. `comp` recursively uses the §7b item-descriptor
+   shape (its "comp" type tag is corroborated host-side, not trusted
+   here). Shape only; resolution failure is STALE_REFERENCE. */
+function validateAeRefLayerArg(argName: string, v: unknown): string[] {
+  const errors: string[] = [];
+  const bad = (m: string): string => {
+    errors.push(`argument "${argName}": ${m}`);
+    return m;
+  };
+  if (!isPlainArgsObject(v)) return [bad("must be an object")];
+  const outerKeys = Object.keys(v);
+  if (outerKeys.length !== 1 || outerKeys[0] !== "aeRef") {
+    return [bad('must be exactly {"aeRef": {...}}')];
+  }
+  const ref = v.aeRef;
+  if (!isPlainArgsObject(ref)) return [bad("aeRef must be a plain object")];
+  const refKeys = Object.keys(ref).sort();
+  const want = ["comp", "layerId", "name", "type"];
+  if (refKeys.length !== want.length ||
+      refKeys.some((k, i) => k !== want[i])) {
+    return [bad('aeRef must carry exactly "type","name","layerId","comp"')];
+  }
+  if (ref.type !== "layer") bad('aeRef.type must be "layer"');
+  if (typeof ref.name !== "string" || ref.name.length === 0 ||
+      utf8.encode(ref.name).length > AEREF_MAX_NAME_BYTES) {
+    bad("aeRef.name must be a non-empty string ≤ 1024 UTF-8 bytes");
+  }
+  if (typeof ref.layerId !== "number" || !Number.isInteger(ref.layerId) ||
+      ref.layerId < AEREFLAYER_ID_MIN || ref.layerId > AEREFLAYER_ID_MAX) {
+    bad("aeRef.layerId must be an integer in [-2147483648, 2147483647]");
+  }
+  errors.push(...validateAeRefItemArg(`${argName}.comp`, ref.comp));
   return errors;
 }
 
