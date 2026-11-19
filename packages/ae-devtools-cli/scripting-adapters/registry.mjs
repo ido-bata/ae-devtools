@@ -230,17 +230,23 @@ return __adp_json({ ok: true });
     issue: "15",
     permission: "execute",
     mutating: true,
-    members: [S("ItemCollection", "addComp")],
-    args: ["name", "width", "height", "pixelAspect", "duration", "frameRate"],
+    members: [S("ItemCollection", "addComp"), S("Item", "parentFolder"), S("Project", "rootFolder")],
+    args: ["name", "width", "height", "pixelAspect", "duration", "frameRate", "parentFolder"],
     validate: (a) => {
       requireArgs(a, ["name", "width", "height", "pixelAspect", "duration", "frameRate"]);
       for (const n of ["width", "height", "pixelAspect", "duration", "frameRate"]) {
         if (!Number.isFinite(Number(a[n]))) throw new Error(`item.addComp: ${n} must be a finite number`);
       }
+      if (a.parentFolder !== undefined && a.parentFolder !== null && typeof a.parentFolder !== "string") {
+        throw new Error("item.addComp: parentFolder must be a folder name or null for root");
+      }
     },
     source: (a) => `${PRELUDE}
-var comp = app.project.items.addComp(${js(a.name)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.pixelAspect)}, ${Number(a.duration)}, ${Number(a.frameRate)});
-return __adp_json({ ok: true, id: comp.id, name: comp.name });
+var parent = app.project.rootFolder;
+var coll = app.project.items;
+${a.parentFolder !== undefined && a.parentFolder !== null ? `parent = __adp_findItem(${js(a.parentFolder)}, FolderItem); coll = parent.items;` : ""}
+var comp = coll.addComp(${js(a.name)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.pixelAspect)}, ${Number(a.duration)}, ${Number(a.frameRate)});
+return __adp_json({ ok: true, id: comp.id, name: comp.name, parent: comp.parentFolder === app.project.rootFolder ? null : String(comp.parentFolder.name) });
 `,
   },
   {
@@ -250,12 +256,19 @@ return __adp_json({ ok: true, id: comp.id, name: comp.name });
     issue: "15",
     permission: "execute",
     mutating: true,
-    members: [S("ItemCollection", "addFolder")],
-    args: ["name"],
-    validate: (a) => requireArgs(a, ["name"]),
+    members: [S("ItemCollection", "addFolder"), S("Item", "parentFolder"), S("Project", "rootFolder")],
+    args: ["name", "parentFolder"],
+    validate: (a) => {
+      requireArgs(a, ["name"]);
+      if (a.parentFolder !== undefined && a.parentFolder !== null && typeof a.parentFolder !== "string") {
+        throw new Error("item.addFolder: parentFolder must be a folder name or null for root");
+      }
+    },
     source: (a) => `${PRELUDE}
-var f = app.project.items.addFolder(${js(a.name)});
-return __adp_json({ ok: true, id: f.id, name: f.name });
+var coll = app.project.items;
+${a.parentFolder !== undefined && a.parentFolder !== null ? `var parent = __adp_findItem(${js(a.parentFolder)}, FolderItem); coll = parent.items;` : ""}
+var f = coll.addFolder(${js(a.name)});
+return __adp_json({ ok: true, id: f.id, name: f.name, parent: f.parentFolder === app.project.rootFolder ? null : String(f.parentFolder.name) });
 `,
   },
   {
@@ -278,6 +291,56 @@ return __adp_json({ ok: true, id: f.id, name: f.name });
 var it = __adp_findItem(${js(a.name)}, ${a.type});
 it.remove();
 return __adp_json({ ok: true, removed: ${js(a.name)} });
+`,
+  },
+  {
+    id: "item.setParentFolder",
+    title: "Move a project item into a folder (or back to root)",
+    domain: "project-items-comps-layers",
+    issue: "291",
+    permission: "execute",
+    mutating: true,
+    members: [S("Item", "parentFolder"), S("Project", "rootFolder"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
+    args: ["name", "type", "parentFolder"],
+    validate: (a) => {
+      requireArgs(a, ["name", "type"]);
+      if (["CompItem", "FolderItem", "FootageItem"].indexOf(a.type) === -1) {
+        throw new Error("item.setParentFolder: type must be one of CompItem|FolderItem|FootageItem");
+      }
+      if (a.parentFolder !== undefined && a.parentFolder !== null && typeof a.parentFolder !== "string") {
+        throw new Error("item.setParentFolder: parentFolder must be a folder name or null for root");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, ${a.type});
+var parent = ${a.parentFolder === undefined || a.parentFolder === null ? "app.project.rootFolder" : `__adp_findItem(${js(a.parentFolder)}, FolderItem)`};
+it.parentFolder = parent;
+return __adp_json({ ok: true, name: it.name, id: it.id, parent: it.parentFolder === app.project.rootFolder ? null : String(it.parentFolder.name) });
+`,
+  },
+  {
+    id: "item.setSelected",
+    title: "Select or deselect a project item",
+    domain: "project-items-comps-layers",
+    issue: "291",
+    permission: "execute",
+    mutating: true,
+    members: [S("Item", "selected"), S("Project", "selection"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
+    args: ["name", "type", "selected"],
+    validate: (a) => {
+      requireArgs(a, ["name", "type", "selected"]);
+      if (["CompItem", "FolderItem", "FootageItem"].indexOf(a.type) === -1) {
+        throw new Error("item.setSelected: type must be one of CompItem|FolderItem|FootageItem");
+      }
+      if (typeof a.selected !== "boolean") throw new Error("item.setSelected: selected must be boolean");
+    },
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, ${a.type});
+it.selected = ${a.selected === true ? "true" : "false"};
+var sel = app.project.selection;
+var names = [];
+for (var i = 0; i < sel.length; i++) names.push(String(sel[i].name));
+return __adp_json({ ok: true, name: it.name, selected: it.selected === true, selection: names });
 `,
   },
   {
@@ -389,20 +452,92 @@ return __adp_json({ ok: true, source: layer.name, duplicate: dup.name, index: du
     issue: "15",
     permission: "execute",
     mutating: false,
-    members: [S("Project", "activeItem"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
+    members: [S("Project", "activeItem"), S("Project", "items"), S("Project", "numItems"), S("Project", "rootFolder"), S("Project", "selection"), S("Item", "name"), S("Item", "id"), S("Item", "typeName"), S("Item", "parentFolder"), S("Item", "selected")],
     args: [],
     source: () => `${PRELUDE}
 var items = __adp_items();
 var list = [];
 for (var i = 1; i <= items.length; i++) {
-  list.push({ name: items[i].name, typeName: String(items[i].typeName), id: items[i].id }); // typeName is display-only (localized); never branch on it
+  var it = items[i];
+  list.push({
+    name: it.name, typeName: String(it.typeName), id: it.id, // typeName is display-only (localized); never branch on it
+    selected: it.selected === true,
+    parent: it.parentFolder === app.project.rootFolder ? null : String(it.parentFolder.name)
+  });
 }
 var ai = app.project.activeItem;
+var sel = app.project.selection;
+var selNames = [];
+for (var s = 0; s < sel.length; s++) selNames.push(String(sel[s].name));
 return __adp_json({
   ok: true,
   count: items.length,
+  numItems: app.project.numItems,
   items: list,
-  activeItem: ai === null ? null : { name: ai.name, typeName: String(ai.typeName) }
+  activeItem: ai === null ? null : { name: ai.name, typeName: String(ai.typeName) },
+  selection: selNames
+});
+`,
+  },
+  {
+    id: "read.projectTree",
+    title: "Read the Project panel folder hierarchy (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "291",
+    permission: "execute",
+    mutating: false,
+    members: [S("Project", "rootFolder"), S("Project", "numItems"), S("Project", "selection"), S("FolderItem", "numItems"), S("FolderItem", "item"), S("Item", "name"), S("Item", "id"), S("Item", "typeName"), S("Item", "parentFolder"), S("Item", "selected")],
+    args: [],
+    source: () => `${PRELUDE}
+function __adp_brief(it) {
+  return {
+    name: String(it.name), id: it.id, typeName: String(it.typeName), // display-only (localized)
+    selected: it.selected === true,
+    parent: it.parentFolder === app.project.rootFolder ? null : String(it.parentFolder.name)
+  };
+}
+function __adp_tree(folder) {
+  var out = [];
+  for (var i = 1; i <= folder.numItems; i++) {
+    var it = folder.item(i);
+    var node = __adp_brief(it);
+    if (it instanceof FolderItem) {
+      node.numItems = it.numItems;
+      node.children = __adp_tree(it);
+    }
+    out.push(node);
+  }
+  return out;
+}
+var sel = app.project.selection;
+var selNames = [];
+for (var s = 0; s < sel.length; s++) selNames.push(String(sel[s].name));
+return __adp_json({ ok: true, numItems: app.project.numItems, root: __adp_tree(app.project.rootFolder), selection: selNames });
+`,
+  },
+  {
+    id: "read.itemById",
+    title: "Read a project item by stable id (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "291",
+    permission: "execute",
+    mutating: false,
+    members: [S("Project", "itemByID"), S("Item", "id"), S("Item", "name"), S("Item", "typeName"), S("Item", "parentFolder"), S("Item", "selected")],
+    args: ["id"],
+    validate: (a) => {
+      requireArgs(a, ["id"]);
+      if (!Number.isInteger(a.id)) throw new Error("read.itemById: id must be an integer");
+    },
+    source: (a) => `${PRELUDE}
+var it = app.project.itemByID(${a.id});
+if (it === null) __adp_fail("item not found: id " + ${a.id});
+return __adp_json({
+  ok: true,
+  item: {
+    name: String(it.name), id: it.id, typeName: String(it.typeName),
+    selected: it.selected === true,
+    parent: it.parentFolder === app.project.rootFolder ? null : String(it.parentFolder.name)
+  }
 });
 `,
   },
@@ -748,8 +883,9 @@ var detail = {
   typeName: String(it.typeName) // display-only (localized); never branch on it
 };
 // Media-bearing items (CompItem/FootageItem) expose AVItem fields;
-// folders and other items do not — discriminate by instanceof.
-if (it instanceof AVItem) {
+// folders and other items do not. AVItem/Item are documentation base
+// classes, not ExtendScript globals — branch on the concrete classes.
+if (it instanceof CompItem || it instanceof FootageItem) {
   detail.duration = it.duration;
   detail.width = it.width;
   detail.height = it.height;
@@ -1330,11 +1466,18 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index, text: doc.t
     permission: "execute",
     mutating: true,
     members: [S("LayerCollection", "addCamera")],
-    args: ["compName", "name"],
-    validate: (a) => requireArgs(a, ["compName", "name"]),
+    args: ["compName", "name", "centerPoint"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "name", "centerPoint"]);
+      jsLit(a.centerPoint);
+      if (!Array.isArray(a.centerPoint) || a.centerPoint.length !== 2) {
+        throw new Error("layer.addCamera: centerPoint must be [x, y]");
+      }
+    },
+    // Real signature: addCamera(name, centerPoint); z is set to 0 by AE.
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
-var layer = comp.layers.addCamera(${js(a.name)});
+var layer = comp.layers.addCamera(${js(a.name)}, ${jsLit(a.centerPoint)});
 return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
 `,
   },
@@ -1346,32 +1489,21 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer
     permission: "execute",
     mutating: true,
     members: [S("LayerCollection", "addLight")],
-    args: ["compName", "name", "lightType", "intensity"],
+    args: ["compName", "name", "centerPoint"],
     validate: (a) => {
-      requireArgs(a, ["compName", "name"]);
-      // Real signature: addLight(name, lightType, lightIntensity).
-      // lightType is the LightType enum (1=parallel,2=spot,3=point,4=ambient).
-      if (a.lightType !== undefined && a.lightType !== null &&
-          (!Number.isInteger(a.lightType) || a.lightType < 1 || a.lightType > 4)) {
-        throw new Error("layer.addLight: lightType must be an integer 1-4 (LightType enum)");
-      }
-      if (a.intensity !== undefined && a.intensity !== null &&
-          !Number.isFinite(Number(a.intensity))) {
-        throw new Error("layer.addLight: intensity must be a finite number");
+      requireArgs(a, ["compName", "name", "centerPoint"]);
+      jsLit(a.centerPoint);
+      if (!Array.isArray(a.centerPoint) || a.centerPoint.length !== 2) {
+        throw new Error("layer.addLight: centerPoint must be [x, y]");
       }
     },
-    source: (a) => {
-      const hasType = a.lightType !== undefined && a.lightType !== null;
-      const hasIntensity = a.intensity !== undefined && a.intensity !== null;
-      const args = [js(a.name)];
-      if (hasType) args.push(String(a.lightType));
-      if (hasIntensity) args.push(String(Number(a.intensity)));
-      return `${PRELUDE}
+    // Real signature: addLight(name, centerPoint). Light type/intensity
+    // are layer properties set after creation, not addLight arguments.
+    source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
-var layer = comp.layers.addLight(${args.join(", ")});
+var layer = comp.layers.addLight(${js(a.name)}, ${jsLit(a.centerPoint)});
 return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
-`;
-    },
+`,
   },
   {
     id: "text.setText",

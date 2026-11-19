@@ -23,7 +23,7 @@ export function fakeHostContext(app) {
     File: class { constructor(p) { this.fsName = p; this.exists = true; } },
     CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
     CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
-    AVItem: app.AVItem, ImportOptions: app.ImportOptions,
+    ImportOptions: app.ImportOptions,
     // Enum globals referenced by generated adapter sources by NAME
     // (Issue #287). Values are the fake stand-ins — see fake-app.mjs.
     KeyframeInterpolationType, TrackMatteType,

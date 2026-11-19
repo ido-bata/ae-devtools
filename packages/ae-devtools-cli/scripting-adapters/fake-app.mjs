@@ -31,6 +31,141 @@ function collection(list, extra = {}) {
   });
 }
 
+/*
+ * Project-panel hierarchy model (Issue #291).
+ *
+ * `owner` is the flat project item list backing app.project.items /
+ * Project.item(i) / Project.numItems / Project.itemByID(). Folder
+ * membership lives in each FolderItem.__children; the root folder's
+ * __children are the top-level Project panel rows. parentFolder is the
+ * documented move API; cycles and removed items are refused like the
+ * real host is expected to refuse them (exact host error text remains
+ * a real-host verification item).
+ */
+function nextOwnerId(owner) {
+  owner.__nextItemId = (owner.__nextItemId || 0) + 1;
+  return owner.__nextItemId;
+}
+
+function initItemShell(item, name, typeName, owner, parent) {
+  item.name = name;
+  item.typeName = typeName;
+  item.id = nextOwnerId(owner);
+  item.label = 0;
+  item.comment = "";
+  item.__owner = owner;
+  item.__parent = parent;
+  item.__selected = false;
+  item.__removed = false;
+  item.__isRoot = false;
+  item.__children = item instanceof FolderItem ? [] : null;
+  Object.defineProperty(item, "parentFolder", {
+    get() {
+      if (item.__removed) throw new Error("fake-app: item has been removed");
+      return item.__parent;
+    },
+    set(folder) { setItemParent(item, folder); },
+    configurable: true,
+  });
+  Object.defineProperty(item, "selected", {
+    get() { return item.__selected === true; },
+    set(v) {
+      if (item.__removed) throw new Error("fake-app: item has been removed");
+      item.__selected = v === true;
+    },
+    configurable: true,
+  });
+  item.remove = function removeItem() { removeItemTree(item); };
+  if (item instanceof FolderItem) {
+    Object.defineProperty(item, "numItems", {
+      get() { return item.__children.length; },
+      configurable: true,
+    });
+    item.item = function folderItem(index) {
+      if (!Number.isInteger(index) || index < 1 || index > item.__children.length) return null;
+      return item.__children[index - 1];
+    };
+    item.items = collection(item.__children, {
+      addComp(cname, w, h, par, dur, frameRate) {
+        const c = makeComp(cname, w, h, par, dur, owner, item);
+        c.frameRate = frameRate;
+        return c;
+      },
+      addFolder(fname) { return makeFolder(fname, owner, item); },
+    });
+  }
+  return item;
+}
+
+function adoptItem(item, name, typeName, owner, parent) {
+  initItemShell(item, name, typeName, owner, parent);
+  owner.push(item);
+  if (parent !== null && parent !== undefined && parent.__children) parent.__children.push(item);
+  return item;
+}
+
+function makeFolder(name, owner, parent) {
+  return adoptItem(new FolderItem(), name, "Folder", owner, parent);
+}
+
+function setItemParent(item, folder) {
+  if (item.__removed) throw new Error("fake-app: item has been removed");
+  if (item.__isRoot) throw new Error("fake-app: project root folder cannot be reparented");
+  if (!(folder instanceof FolderItem)) throw new Error("fake-app: parentFolder must be a FolderItem");
+  if (folder.__removed) throw new Error("fake-app: parent folder has been removed");
+  if (folder === item) throw new Error("fake-app: item cannot be its own parentFolder");
+  for (var cur = folder; cur; cur = cur.__parent) {
+    if (cur === item) throw new Error("fake-app: parentFolder would create a cycle");
+  }
+  var old = item.__parent;
+  if (old !== null && old !== undefined && old.__children) {
+    var oi = old.__children.indexOf(item);
+    if (oi >= 0) old.__children.splice(oi, 1);
+  }
+  item.__parent = folder;
+  folder.__children.push(item);
+}
+
+function collectItemTree(item, out) {
+  out.push(item);
+  if (item instanceof FolderItem && item.__children) {
+    for (var i = 0; i < item.__children.length; i++) collectItemTree(item.__children[i], out);
+  }
+  return out;
+}
+
+function removeItemTree(item) {
+  if (item.__removed) throw new Error("fake-app: item has been removed");
+  if (item.__isRoot) throw new Error("fake-app: project root folder cannot be removed");
+  var doomed = collectItemTree(item, []);
+  for (var i = 0; i < doomed.length; i++) {
+    var d = doomed[i];
+    d.__removed = true;
+    var p = d.__parent;
+    if (p !== null && p !== undefined && p.__children) {
+      var pi = p.__children.indexOf(d);
+      if (pi >= 0) p.__children.splice(pi, 1);
+    }
+    var o = d.__owner;
+    if (o) {
+      var oi = o.indexOf(d);
+      if (oi >= 0) o.splice(oi, 1);
+    }
+  }
+  for (var j = 0; j < doomed.length; j++) {
+    if (doomed[j].__children) doomed[j].__children.length = 0;
+  }
+}
+
+function panelOrderItems(folder, out) {
+  for (var i = 0; i < folder.__children.length; i++) {
+    var child = folder.__children[i];
+    out.push(child);
+    if (child instanceof FolderItem) panelOrderItems(child, out);
+  }
+  return out;
+}
+
 // ExtendScript enum stand-ins (Issue #287). Numeric values follow the
 // community reference ordering; they are placeholders for round-trip
 // testing only — real-host numeric values must be confirmed during
@@ -380,21 +515,15 @@ function makeLayer(name, comp, kind) {
   return layer;
 }
 
-function makeComp(name, w, h, par, dur, owner) {
+function makeComp(name, w, h, par, dur, owner, parent) {
   const comp = new CompItem();
+  adoptItem(comp, name, "Composition", owner, parent);
   Object.assign(comp, {
-    name,
-    typeName: "Composition",
-    id: Math.floor(Math.random() * 1e9),
     width: w,
     height: h,
     pixelAspect: par,
     duration: dur,
     __layers: [],
-    remove() {
-      const i = owner.indexOf(comp);
-      if (i >= 0) owner.splice(i, 1);
-    },
     __reindex() { comp.__layers.forEach((l, i) => { l.index = i + 1; }); },
     resolutionFactor: 1,
     label: 0,
@@ -414,7 +543,7 @@ function makeComp(name, w, h, par, dur, owner) {
     dropFrame: false,
     duplicate() {
       const d = makeComp(this.name + " copy", this.width, this.height,
-        this.pixelAspect, this.duration, owner);
+        this.pixelAspect, this.duration, owner, this.__parent);
       d.frameRate = this.frameRate;
       for (const k of ["bgColor","displayStartTime","displayStartFrame","shutterAngle","shutterPhase",
         "motionBlur","frameBlending","draft3d","hideShyLayers","preserveNestedFrameRate","dropFrame"]) {
@@ -432,7 +561,6 @@ function makeComp(name, w, h, par, dur, owner) {
         d.__layers.push(nl);
       }
       d.__reindex();
-      owner.push(d);
       return d;
     },
     __moveLayer(layer, to) {
@@ -469,19 +597,28 @@ function makeComp(name, w, h, par, dur, owner) {
       comp.__reindex();
       return l;
     },
-    addCamera(cname) {
+    addCamera(cname, centerPoint) {
+      if (!Array.isArray(centerPoint) || centerPoint.length !== 2 ||
+          centerPoint.some((v) => typeof v !== "number" || !isFinite(v))) {
+        throw new Error("fake-app: addCamera requires centerPoint [x, y]");
+      }
       const l = makeLayer(cname, comp, "camera");
       l.threeDLayer = true;
+      l.__centerPoint = centerPoint.slice();
       comp.__layers.push(l);
       comp.__reindex();
       return l;
     },
-    // Real signature: addLight(name, lightType, lightIntensity);
-    // lightType is the LightType enum, stored verbatim by the fake.
-    addLight(lname, ltype, intensity) {
+    // Real signature: addLight(name, centerPoint). Light type and
+    // intensity are LightLayer properties, not creation arguments.
+    addLight(lname, centerPoint) {
+      if (!Array.isArray(centerPoint) || centerPoint.length !== 2 ||
+          centerPoint.some((v) => typeof v !== "number" || !isFinite(v))) {
+        throw new Error("fake-app: addLight requires centerPoint [x, y]");
+      }
       const l = makeLayer(lname, comp, "light");
       l.threeDLayer = true;
-      l.__light = { lightType: ltype === undefined ? null : ltype, intensity: intensity === undefined ? null : intensity };
+      l.__centerPoint = centerPoint.slice();
       comp.__layers.push(l);
       comp.__reindex();
       return l;
@@ -500,15 +637,11 @@ export class ImportOptions {
   }
 }
 
-function makeFootage(path, owner) {
+function makeFootage(path, owner, parent) {
   const f = new FootageItem();
   const base = String(path).split("/").pop().split("\\").pop();
+  adoptItem(f, base, "Footage", owner, parent);
   Object.assign(f, {
-    name: base,
-    typeName: "Footage",
-    id: owner.length + 1,
-    label: 0,
-    comment: "",
     duration: 10,
     width: 1920,
     height: 1080,
@@ -532,10 +665,6 @@ function makeFootage(path, owner) {
       missingFootagePath: "",
       reload() {},
     },
-    remove() {
-      const i = owner.indexOf(f);
-      if (i >= 0) owner.splice(i, 1);
-    },
   });
   return f;
 }
@@ -543,6 +672,18 @@ function makeFootage(path, owner) {
 export function createAdapterFakeApp() {
   const items = [];
   const renderItems = [];
+  // Virtual project root: not part of the flat item list, but its
+  // children are the top-level Project panel rows.
+  const rootFolder = initItemShell(new FolderItem(), "Root", "Folder", items, null);
+  rootFolder.__isRoot = true;
+  rootFolder.id = 0;
+  const clearProjectItems = () => {
+    for (const it of items) it.__removed = true;
+    items.length = 0;
+    rootFolder.__children.length = 0;
+    items.__nextItemId = 0;
+    project.activeItem = null;
+  };
   const project = {
     activeItem: null,
     save() {},
@@ -562,9 +703,7 @@ export function createAdapterFakeApp() {
       if (io.file.exists === false) {
         throw new Error("fake-app: import file not found: " + io.file.fsName);
       }
-      const f = makeFootage(io.file.fsName, items);
-      items.push(f);
-      return f;
+      return makeFootage(io.file.fsName, items, rootFolder);
     },
     renderQueue: {
       rendering: false,
@@ -666,26 +805,28 @@ export function createAdapterFakeApp() {
   };
   project.items = collection(items, {
     addComp(name, w, h, par, dur, frameRate) {
-      const c = makeComp(name, w, h, par, dur, items);
+      const c = makeComp(name, w, h, par, dur, items, rootFolder);
       c.frameRate = frameRate;
-      items.push(c);
       return c;
     },
-    addFolder(name) {
-      const f = new FolderItem();
-      Object.assign(f, {
-        name,
-        typeName: "Folder",
-        id: items.length + 1,
-        label: 0,
-        comment: "",
-        remove() {
-          const i = items.indexOf(f);
-          if (i >= 0) items.splice(i, 1);
-        },
-      });
-      items.push(f);
-      return f;
+    addFolder(name) { return makeFolder(name, items, rootFolder); },
+  });
+  Object.defineProperty(project, "numItems", { get() { return items.length; } });
+  project.item = function projectItem(index) {
+    if (!Number.isInteger(index) || index < 1 || index > items.length) return null;
+    return items[index - 1];
+  };
+  project.itemByID = function projectItemByID(id) {
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].id === id) return items[i];
+    }
+    return null;
+  };
+  project.rootFolder = rootFolder;
+  Object.defineProperty(project, "selection", {
+    get() {
+      const panel = panelOrderItems(rootFolder, []);
+      return panel.filter((it) => it.__selected === true);
     },
   });
   // Preferences model (Issue #283): section -> key -> typed value.
@@ -742,7 +883,7 @@ export function createAdapterFakeApp() {
     // Font collection: Font.name is the PostScript name in real AE.
     fonts: collection([{ name: "ArialMT" }, { name: "HelveticaLTStd-Bold" }]),
     project,
-    newProject() { items.length = 0; project.activeItem = null; },
+    newProject() { clearProjectItems(); },
     open(f) { project.file = f; },
   };
   app.CompItem = CompItem;
@@ -753,7 +894,7 @@ export function createAdapterFakeApp() {
   app.__state = {
     items,
     fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.typeName }))),
-    reset: () => { items.length = 0; project.activeItem = null; },
+    reset: () => { clearProjectItems(); },
   };
   return app;
 }

@@ -34,6 +34,27 @@
       ],
       "evidence": "fake/mock only"
     },
+    "ae.scripting.Item.parentFolder": {
+      "ops": [
+        "item.addComp",
+        "item.addFolder",
+        "item.setParentFolder",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.rootFolder": {
+      "ops": [
+        "item.addComp",
+        "item.addFolder",
+        "item.setParentFolder",
+        "read.projectSummary",
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
     "ae.scripting.ItemCollection.addFolder": {
       "ops": [
         "item.addFolder"
@@ -43,6 +64,62 @@
     "ae.scripting.Item.remove": {
       "ops": [
         "item.remove"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.name": {
+      "ops": [
+        "item.setParentFolder",
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail",
+        "comp.duplicate",
+        "item.setLabel",
+        "item.setComment",
+        "comp.setResolutionFactor",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.id": {
+      "ops": [
+        "item.setParentFolder",
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail",
+        "comp.duplicate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.typeName": {
+      "ops": [
+        "item.setParentFolder",
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.selected": {
+      "ops": [
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.selection": {
+      "ops": [
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree"
       ],
       "evidence": "fake/mock only"
     },
@@ -100,30 +177,34 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.Item.name": {
+    "ae.scripting.Project.items": {
       "ops": [
-        "read.projectSummary",
-        "read.itemDetail",
-        "comp.duplicate",
-        "item.setLabel",
-        "item.setComment",
-        "comp.setResolutionFactor",
-        "read.compSettings"
+        "read.projectSummary"
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.Item.id": {
+    "ae.scripting.Project.numItems": {
       "ops": [
         "read.projectSummary",
-        "read.itemDetail",
-        "comp.duplicate"
+        "read.projectTree"
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.Item.typeName": {
+    "ae.scripting.FolderItem.numItems": {
       "ops": [
-        "read.projectSummary",
-        "read.itemDetail"
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FolderItem.item": {
+      "ops": [
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.itemByID": {
+      "ops": [
+        "read.itemById"
       ],
       "evidence": "fake/mock only"
     },

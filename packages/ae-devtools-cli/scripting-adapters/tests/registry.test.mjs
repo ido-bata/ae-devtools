@@ -99,8 +99,7 @@ function sampleArgs(op) {
     else if (n === "resolutionFactor") a[n] = 0.5;
     else if (n === "color") a[n] = [1, 0, 0];
     else if (n === "text") a[n] = "sample text";
-    else if (n === "lightType") a[n] = 2;
-    else if (n === "intensity") a[n] = 100;
+    else if (n === "centerPoint") a[n] = [0, 0];
     else if (n === "fontSize") a[n] = 100;
     else if (n === "justification") a[n] = 1;
     else if (n === "fillColor") a[n] = [1, 0, 0];
@@ -118,6 +117,9 @@ function sampleArgs(op) {
     else if (n === "displayStartFrame") a[n] = 0;
     else if (["motionBlur", "frameBlending", "draft3d", "hideShyLayers", "preserveNestedFrameRate", "dropFrame"].includes(n)) a[n] = true;
     else if (n === "footageName") a[n] = "clip.mov";
+    else if (n === "parentFolder") a[n] = null;
+    else if (n === "selected") a[n] = true;
+    else if (n === "id") a[n] = 1;
     else if (n === "section") a[n] = "General";
     else if (n === "key") a[n] = "SomeKey";
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";

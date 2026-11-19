@@ -164,7 +164,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
     label: 3, startTime: 0, stretch: 100, timeSpanStart: 0, timeSpanDuration: 5,
     audioEnabled: true, enabled: true, comment: "note", setting: "Output File Info",
-    resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", lightType: 2, intensity: 100,
+    resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", centerPoint: [0, 0],
     section: "S", key: "K", default: "d",
     font: "F", fontStyle: "S", fontSize: 100, justification: 1,
     fillColor: [1, 0, 0], tracking: 0, leading: 100,
@@ -178,7 +178,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     shutterAngle: 180, shutterPhase: 0,
     motionBlur: false, frameBlending: false, draft3d: false,
     hideShyLayers: false, preserveNestedFrameRate: true, dropFrame: false,
-    footageName: "x.aep",
+    footageName: "x.aep", parentFolder: null, selected: true, id: 1,
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -191,7 +191,9 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "item.addFolder") args.name = "F";
     if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
     if (op.id === "read.itemDetail") args.name = "C";
-    if (["comp.duplicate", "item.setLabel", "item.setComment", "comp.setResolutionFactor", "comp.setSettings", "read.compSettings"].includes(op.id)) args.name = "C";
+    if (["comp.duplicate", "item.setLabel", "item.setComment", "comp.setResolutionFactor", "comp.setSettings", "read.compSettings", "item.setParentFolder", "item.setSelected"].includes(op.id)) args.name = "C";
+    if (op.id === "item.setParentFolder" || op.id === "item.setSelected") args.type = "CompItem";
+    if (op.id === "read.itemById") args.id = 1;
     if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
     if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText","layer.replaceSource","render.duplicateQueueItem"].includes(op.id)) args.compName = "C";
@@ -424,15 +426,16 @@ test("issue #281 batch: layer creation + text + footage/project read detail", as
   const badText = await go("text.setText", { compName: "C", layerName: "BG", text: "x" });
   assert.notEqual(badText.outcome, "COMPLETED");
 
-  // layer.addCamera / addLight: 3D-layer flag read-back.
-  const cam = await go("layer.addCamera", { compName: "C", name: "Cam 1" });
+  // layer.addCamera / addLight use the real (name, centerPoint) signature.
+  const cam = await go("layer.addCamera", { compName: "C", name: "Cam 1", centerPoint: [10, 20] });
   assert.equal(cam.outcome, "COMPLETED");
   assert.equal(cam.result.threeDLayer, true);
-  const light = await go("layer.addLight", { compName: "C", name: "Key", lightType: 2, intensity: 80 });
+  const light = await go("layer.addLight", { compName: "C", name: "Key", centerPoint: [30, 40] });
   assert.equal(light.outcome, "COMPLETED");
   assert.equal(light.result.threeDLayer, true);
-  // lightType outside the LightType enum range refuses before dispatch.
-  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad", lightType: 9 })).reason, "INVALID_ARGS");
+  // Missing/invalid centerPoint refuses before dispatch.
+  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad" })).reason, "INVALID_ARGS");
+  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad", centerPoint: [1] })).reason, "INVALID_ARGS");
 
   // read.footageDetail: import footage, then read AVItem + FootageSource fields.
   await go("item.import", { path: "/tmp/clip.mov" });
@@ -686,4 +689,65 @@ test("issue #289 batch: comp settings + replaceSource + queue duplicate", async 
   const rq = await go("read.renderQueueStatus");
   assert.equal(rq.result.count, 2);
   assert.ok(rq.result.items.every((i) => i.startTime === 0 && i.skipFrames === 0));
+});
+
+test("issue #291 batch: FolderItem hierarchy, move, selection, recursive delete", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  const f = await go("item.addFolder", { name: "F" }, mut);
+  assert.equal(f.outcome, "COMPLETED");
+  const g = await go("item.addFolder", { name: "G", parentFolder: "F" }, mut);
+  assert.equal(g.outcome, "COMPLETED");
+  const c = await go("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 1, frameRate: 30, parentFolder: "F" }, mut);
+  assert.equal(c.outcome, "COMPLETED");
+  const d = await go("item.addComp", { name: "D", width: 10, height: 10, pixelAspect: 1, duration: 1, frameRate: 30, parentFolder: "G" }, mut);
+  assert.equal(d.outcome, "COMPLETED");
+
+  let tree = await go("read.projectTree");
+  assert.equal(tree.outcome, "COMPLETED");
+  assert.equal(tree.result.numItems, 4);
+  assert.equal(tree.result.root.length, 1);
+  assert.equal(tree.result.root[0].name, "F");
+  assert.equal(tree.result.root[0].children.length, 2); // G and C are direct children of F
+  assert.equal(tree.result.root[0].children.find((n) => n.name === "G").children.length, 1); // D inside G
+
+  // Move C back to the project root via Item.parentFolder.
+  const mv = await go("item.setParentFolder", { name: "C", type: "CompItem", parentFolder: null }, mut);
+  assert.equal(mv.outcome, "COMPLETED");
+  assert.equal(mv.result.parent, null);
+  tree = await go("read.projectTree");
+  assert.equal(tree.result.root.length, 2);
+  assert.equal(tree.result.root.find((n) => n.name === "C").parent, null);
+
+  // Folder cycle is refused: F cannot be parented into its descendant G.
+  const cyc = await go("item.setParentFolder", { name: "F", type: "FolderItem", parentFolder: "G" }, mut);
+  assert.notEqual(cyc.outcome, "COMPLETED");
+
+  // Selection is exposed through Project.selection / read.projectTree.
+  const sel = await go("item.setSelected", { name: "C", type: "CompItem", selected: true }, mut);
+  assert.equal(sel.outcome, "COMPLETED");
+  assert.deepEqual(sel.result.selection, ["C"]);
+  tree = await go("read.projectTree");
+  assert.deepEqual(tree.result.selection, ["C"]);
+
+  // Stable id lookup survives hierarchy moves.
+  const byId = await go("read.itemById", { id: c.result.id });
+  assert.equal(byId.outcome, "COMPLETED");
+  assert.equal(byId.result.item.name, "C");
+
+  // Removing a folder removes its whole descendant tree, not just the folder.
+  const rm = await go("item.remove", { name: "F", type: "FolderItem" }, mut);
+  assert.equal(rm.outcome, "COMPLETED");
+  tree = await go("read.projectTree");
+  assert.equal(tree.result.numItems, 1);
+  assert.equal(tree.result.root.length, 1);
+  assert.equal(tree.result.root[0].name, "C");
+  const gone = await go("read.itemById", { id: d.result.id });
+  assert.notEqual(gone.outcome, "COMPLETED");
 });

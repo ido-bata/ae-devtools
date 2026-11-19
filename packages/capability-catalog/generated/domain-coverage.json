@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "5eb8fbd4c791ae24903403efbc1fb405cb8ed0fc552fc7e28a18d716b6921919"
+      "sha256": "9b9860a9a0815717f6fd4e4a04dee3868372dbcc86681aaa4a117b429ff3f7d5"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 169,
+          "documented": 160,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 84,
+          "automated-fake-tested": 93,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 91,
+          "adapter-present": 100,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 169
+          "unknown": 160
         },
         "verification": {
-          "not-run": 169,
-          "automated-fake": 84,
+          "not-run": 160,
+          "automated-fake": 93,
           "verified-real-host": 7
         }
       },
@@ -4125,10 +4125,10 @@
         {
           "id": "ae.scripting.FolderItem.item",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.FolderItem.items",
@@ -4141,10 +4141,10 @@
         {
           "id": "ae.scripting.FolderItem.numItems",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.FootageItem.file",
@@ -4445,10 +4445,10 @@
         {
           "id": "ae.scripting.Item.parentFolder",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Item.remove",
@@ -4469,10 +4469,10 @@
         {
           "id": "ae.scripting.Item.selected",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Item.setGuide",
@@ -5149,18 +5149,18 @@
         {
           "id": "ae.scripting.Project.itemByID",
           "category": "project",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Project.items",
           "category": "project",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Project.layerByID",
@@ -5213,10 +5213,10 @@
         {
           "id": "ae.scripting.Project.numItems",
           "category": "project",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Project.openTeamProject",
@@ -5277,10 +5277,10 @@
         {
           "id": "ae.scripting.Project.rootFolder",
           "category": "project",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Project.save",
@@ -5301,10 +5301,10 @@
         {
           "id": "ae.scripting.Project.selection",
           "category": "project",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Project.setDefaultImportFolder",
