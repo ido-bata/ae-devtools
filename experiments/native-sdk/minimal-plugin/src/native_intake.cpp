@@ -99,7 +99,7 @@ static void IntakeLogf(const AEGP_UtilitySuite6* utilP, const char* fmtZ, ...)
 /* op-record emission, intake-private (always direct; intake requests are
    never buffered — they are not probe runs). Also appends the id to the
    per-request opCalls list while s_collecting is set. */
-#define OPCALLS_MAX 16
+#define OPCALLS_MAX 24
 static const char* s_opcalls[OPCALLS_MAX];
 static int s_opcalls_count = 0;
 static int s_collecting = 0;
@@ -114,8 +114,15 @@ static void IntakeOpRecord(
     snprintf(line, sizeof(line), "op %s err=%ld%s", idZ, errL, extraZ ? extraZ : "");
     line[sizeof(line) - 1] = '\0';
     IntakeLog(utilP, line);
+    /* opCalls is a unique-id set: enumeration/resolution emit the same
+       member repeatedly and duplicates carry no extra linkage. */
     if (s_collecting && s_opcalls_count < OPCALLS_MAX)
-        s_opcalls[s_opcalls_count++] = idZ;
+    {
+        int i, dup = 0;
+        for (i = 0; i < s_opcalls_count; i++)
+            if (strcmp(s_opcalls[i], idZ) == 0) { dup = 1; break; }
+        if (!dup) s_opcalls[s_opcalls_count++] = idZ;
+    }
 }
 
 static void IntakeLogOnce(int* flagP, const AEGP_UtilitySuite6* utilP, const char* msgZ)
@@ -498,18 +505,23 @@ static const IntakeArgSpec S_TYPENAME_ARGS[] = {
     { "itemType", ARGK_INT, 1.0, 4.0 },
 };
 
-/* AEGP_ItemSuite9.AEGP_GetItemName(AEGP_PluginID, AEGP_ItemH, ...):
-   the item handle is resolved host-side from an aeRef descriptor
-   (Issue #270 Stage 3 / CAP027 groundwork). `projectIndex` selects the
-   project via AEGP_GetProjectByIndex (bounds-checked against
-   AEGP_GetNumProjects at resolution time → STALE_REFERENCE); `item` is
-   {"aeRef":{"type","name","path":[i]}} where path is exactly one
-   top-level project-item index and type is folder|comp|footage.
-   contentHash is NOT accepted — the resolver cannot verify it, so its
-   presence is MALFORMED_REQUEST rather than silently ignored. */
-static const IntakeArgSpec S_ITEMNAME_ARGS[] = {
+/* AEGP_ItemSuite9.AEGP_GetItemName / AEGP_GetItemID (Issue #270
+   identity slice): the item handle is resolved host-side from an aeRef
+   descriptor. `projectIndex` selects the project via
+   AEGP_GetProjectByIndex (bounds-checked → STALE_REFERENCE); `item` is
+   the §7b descriptor — legacy {type,name,path} or identity-bearing
+   {type,name,path,itemId?,projectName?,projectPath?}. */
+static const IntakeArgSpec S_AEREF_ARGS[] = {
     { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
     { "item", ARGK_AEREFITEM, 0.0, 0.0 },
+};
+
+/* AEGP_ItemSuite9.AEGP_GetFirstProjItem as the discovery/enumeration
+   op (Issue #270 identity slice): {projectIndex, offset, limit}. */
+static const IntakeArgSpec S_FIRSTITEM_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "offset", ARGK_INT, 0.0, 1000000.0 },
+    { "limit", ARGK_INT, 1.0, 32.0 },
 };
 
 static const AllowEntry S_ALLOWLIST[] = {
@@ -520,7 +532,15 @@ static const AllowEntry S_ALLOWLIST[] = {
     { "AEGP_ItemSuite9.AEGP_GetTypeName",
       "AEGP_ItemSuite9.AEGP_GetTypeName", S_TYPENAME_ARGS, 1 },
     { "AEGP_ItemSuite9.AEGP_GetItemName",
-      "AEGP_ItemSuite9.AEGP_GetItemName", S_ITEMNAME_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemName", S_AEREF_ARGS, 2 },
+    /* Issue #270 identity slice: GetItemID is descriptor issuance
+       (resolve → read live id + project identity → canonical aeRef);
+       GetFirstProjItem is discovery/enumeration. Both reuse the same
+       identity resolver — no per-kind resolver duplication. */
+    { "AEGP_ItemSuite9.AEGP_GetItemID",
+      "AEGP_ItemSuite9.AEGP_GetItemID", S_AEREF_ARGS, 2 },
+    { "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
+      "AEGP_ItemSuite9.AEGP_GetFirstProjItem", S_FIRSTITEM_ARGS, 3 },
     /* Issue #270 Stage 2: zero-arg read-only getters needing no
        identity resolution. The three UtilitySuite members use the
        already-held utilP; the two render-queue members acquire their
@@ -613,29 +633,31 @@ static int ValidateArgs(
     return 1;
 }
 
-/* aeRef project-item descriptor shape check (Issue #270 Stage 3).
-   Wire form mirrors the trusted-codec aeRef wrapper:
+/* aeRef project-item descriptor shape check (Issue #270, identity
+   slice; contract native-channel.md §7b). Wire form:
      {"aeRef":{"type":"folder"|"comp"|"footage","name":"<str>",
-               "path":[<non-neg int>]}}
-   Exactly those three inner keys — contentHash and any extra field
-   refuse MALFORMED_REQUEST (the resolver cannot verify contentHash).
-   This proves SHAPE only; name/type/index resolution against the live
-   project happens in the executor and its failure is STALE_REFERENCE.
-   Returns 1 when well-formed; fills detailZ on refusal. */
-static int JObjHasOnlyKeys(JVal* obj, const char* k1, const char* k2, const char* k3)
+               "path":[<non-neg int>],
+               "itemId"?:<int>,"projectName"?:"<str>","projectPath"?:"<str>"}}
+   Required keys: type, name, path (Stage-3 form). Optional identity
+   keys: itemId (integer in [0, 4294967295]), projectName/projectPath
+   (strings ≤ 4096 UTF-8 bytes; projectPath may be empty). Any other inner
+   key — including contentHash — refuses MALFORMED_REQUEST.
+   This proves SHAPE only; resolution against live state happens in
+   the executor and its failure is STALE_REFERENCE. */
+#define AEREF_MAX_STR 4096
+#define AEREF_MAX_ITEMID 4294967295.0
+#define AEREF_NAME_MAX 1024   /* UTF-8 bytes; longer live names are undescribable */
+
+static int AeRefKeyAllowed(const char* keyZ, size_t klen)
 {
-    /* exact key-set check for a 3-key object */
-    int seen1 = 0, seen2 = 0, seen3 = 0, i;
-    if (!obj || obj->kind != JK_OBJ || obj->npairs != 3) return 0;
-    for (i = 0; i < 3; i++)
-    {
-        JPair* p = &obj->pairs[i];
-        if (p->klen == strlen(k1) && memcmp(p->key, k1, p->klen) == 0) seen1 = 1;
-        else if (p->klen == strlen(k2) && memcmp(p->key, k2, p->klen) == 0) seen2 = 1;
-        else if (p->klen == strlen(k3) && memcmp(p->key, k3, p->klen) == 0) seen3 = 1;
-        else return 0;
-    }
-    return seen1 && seen2 && seen3;
+    static const char* keys[] = {
+        "type", "name", "path", "itemId", "projectName", "projectPath"
+    };
+    size_t i;
+    for (i = 0; i < sizeof(keys) / sizeof(keys[0]); i++)
+        if (strlen(keys[i]) == klen && memcmp(keyZ, keys[i], klen) == 0)
+            return 1;
+    return 0;
 }
 
 static int ValidateAeRefItem(JVal* v, char* detailZ, size_t detailCap)
@@ -645,34 +667,58 @@ static int ValidateAeRefItem(JVal* v, char* detailZ, size_t detailCap)
     JVal* nameV;
     JVal* pathV;
     JVal* idxV;
+    JVal* idV;
+    JVal* pnV;
+    JVal* ppV;
+    size_t i;
     if (!v || v->kind != JK_OBJ || v->npairs != 1)
     {
         snprintf(detailZ, detailCap, "aeRef arg must be an object with exactly \"aeRef\"");
         return 0;
     }
     ref = JGet(v, "aeRef");
-    if (!ref || ref->kind != JK_OBJ ||
-        !JObjHasOnlyKeys(ref, "type", "name", "path"))
+    if (!ref || ref->kind != JK_OBJ || ref->npairs < 3 || ref->npairs > 6)
     {
         snprintf(detailZ, detailCap,
-                 "aeRef must carry exactly type, name, path (contentHash unsupported)");
+                 "aeRef must carry type,name,path plus optional itemId/projectName/projectPath");
         return 0;
+    }
+    /* every key must be in the permitted set; required keys checked below */
+    for (i = 0; i < ref->npairs; i++)
+    {
+        JPair* p = &ref->pairs[i];
+        if (!AeRefKeyAllowed(p->key, p->klen))
+        {
+            snprintf(detailZ, detailCap,
+                     "aeRef carries unsupported key (contentHash unsupported)");
+            return 0;
+        }
     }
     typeV = JGet(ref, "type");
     nameV = JGet(ref, "name");
     pathV = JGet(ref, "path");
-    if (!typeV || typeV->kind != JK_STR ||
+    idV = JGet(ref, "itemId");
+    pnV = JGet(ref, "projectName");
+    ppV = JGet(ref, "projectPath");
+    if (!typeV || !nameV || !pathV)
+    {
+        snprintf(detailZ, detailCap, "aeRef requires type, name, path");
+        return 0;
+    }
+    if (typeV->kind != JK_STR ||
         !(JStrEq(typeV, "folder") || JStrEq(typeV, "comp") || JStrEq(typeV, "footage")))
     {
         snprintf(detailZ, detailCap, "aeRef.type must be folder|comp|footage");
         return 0;
     }
-    if (!nameV || nameV->kind != JK_STR || nameV->slen == 0)
+    if (nameV->kind != JK_STR || nameV->slen == 0 ||
+        nameV->slen > AEREF_NAME_MAX)
     {
-        snprintf(detailZ, detailCap, "aeRef.name must be a non-empty string");
+        snprintf(detailZ, detailCap,
+                 "aeRef.name must be a non-empty string ≤ 1024 UTF-8 bytes");
         return 0;
     }
-    if (!pathV || pathV->kind != JK_ARR || pathV->nitems != 1)
+    if (pathV->kind != JK_ARR || pathV->nitems != 1)
     {
         snprintf(detailZ, detailCap,
                  "aeRef.path must be [<index>] — one top-level item index");
@@ -683,6 +729,24 @@ static int ValidateAeRefItem(JVal* v, char* detailZ, size_t detailCap)
         floor(idxV->num) != idxV->num || idxV->num < 0.0 || idxV->num > 1000000.0)
     {
         snprintf(detailZ, detailCap, "aeRef.path[0] must be a non-negative integer");
+        return 0;
+    }
+    if (idV && (idV->kind != JK_NUM || !isfinite(idV->num) ||
+                floor(idV->num) != idV->num || idV->num < 0.0 ||
+                idV->num > AEREF_MAX_ITEMID))
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRef.itemId must be an integer in [0, 4294967295]");
+        return 0;
+    }
+    if (pnV && (pnV->kind != JK_STR || pnV->slen > AEREF_MAX_STR))
+    {
+        snprintf(detailZ, detailCap, "aeRef.projectName must be a string ≤ 4096 chars");
+        return 0;
+    }
+    if (ppV && (ppV->kind != JK_STR || ppV->slen > AEREF_MAX_STR))
+    {
+        snprintf(detailZ, detailCap, "aeRef.projectPath must be a string ≤ 4096 chars");
         return 0;
     }
     return 1;
@@ -696,6 +760,16 @@ static int AeRefTypeToItemType(JVal* typeV, AEGP_ItemType* outP)
     if (JStrEq(typeV, "comp")) { *outP = AEGP_ItemType_COMP; return 1; }
     if (JStrEq(typeV, "footage")) { *outP = AEGP_ItemType_FOOTAGE; return 1; }
     return 0;
+}
+
+/* Inverse of AeRefTypeToItemType for payload emission. Returns NULL for
+   types with no descriptor tag (NONE, SOLID_defunct, undefined). */
+static const char* ItemTypeToAeRefTag(AEGP_ItemType t)
+{
+    if (t == AEGP_ItemType_FOLDER) return "folder";
+    if (t == AEGP_ItemType_COMP) return "comp";
+    if (t == AEGP_ItemType_FOOTAGE) return "footage";
+    return NULL;
 }
 
 /* Fetch a validated integer argument (call only after ValidateArgs
@@ -878,7 +952,7 @@ typedef struct
     char outcome[16];
     char refusal[48];
     char detail[160];
-    char payload[256];      /* JSON for `result` member, or "" */
+    char payload[14000];    /* JSON for `result` member, or "" — identity-slice payloads (issuance/enumeration) need real headroom under RESULT_MAX */
     int havePayload;
     int mayHaveMutated;
     int publish;            /* 0 = no result file (should not happen) */
@@ -892,6 +966,781 @@ static void VerdictRefuse(ReqVerdict* r, const char* codeZ, const char* detailZ)
     r->havePayload = 0;
     r->mayHaveMutated = 0;
     r->publish = 1;
+}
+
+/* ---- identity resolution + payload emit (Issue #270 identity slice)
+   Contract: native-channel.md §7b. One shared resolver serves every
+   identity-bearing intake op — project/comp/layer/RQ-item descriptor
+   kinds extend THIS structure later, not parallel resolvers. */
+
+#define PROJ_STR_MAX 4096     /* projectPath fetch bound (= descriptor bound) */
+#define RESOLVE_SCAN_MAX 100000L
+#define ENUM_LIMIT_MAX 32
+
+typedef struct
+{
+    AEGP_ProjectH projectH;
+    AEGP_ItemH itemH;
+    long index;                 /* live top-level iteration position */
+    AEGP_ItemType type;
+    int nameTruncated;          /* live name exceeded AEREF_NAME_MAX */
+    char name[AEREF_NAME_MAX + 1];
+    char projectName[AEGP_MAX_PROJ_NAME_SIZE + 1];
+    char projectPath[PROJ_STR_MAX + 1];
+    int haveProjectName;
+    int haveProjectPath;
+    const void* itemSuite;
+    const void* memSuite;
+    const AEGP_ItemSuite9* itemP;
+    const AEGP_MemorySuite1* memP;
+} ItemResolution;
+
+static void ReleaseResolution(
+    const AEGP_UtilitySuite6* utilP,
+    struct SPBasicSuite* basicP,
+    ItemResolution* r)
+{
+    if (r->itemSuite)
+        IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    if (r->memSuite)
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    memset(r, 0, sizeof(*r));
+}
+
+/* Bounded JSON emit cursor — overflow is flagged, never silently
+   truncated mid-token. */
+typedef struct
+{
+    char* cur;
+    size_t left;
+    int of;
+} JBuf;
+
+static void JBInit(JBuf* b, char* buf, size_t cap)
+{
+    b->cur = buf;
+    b->left = cap;
+    b->of = 0;
+}
+static void JBPut(JBuf* b, const char* s)
+{
+    size_t n = strlen(s);
+    if (n >= b->left) { b->of = 1; b->left = 0; return; }
+    memcpy(b->cur, s, n);
+    b->cur += n;
+    b->left -= n;
+}
+static void JBPutc(JBuf* b, char c)
+{
+    if (b->left < 2) { b->of = 1; return; }
+    *b->cur++ = c;
+    b->left--;
+}
+static void JBNum(JBuf* b, long v)
+{
+    char t[24];
+    snprintf(t, sizeof(t), "%ld", v);
+    JBPut(b, t);
+}
+static void JBEsc(JBuf* b, const char* s)
+{
+    const unsigned char* u = (const unsigned char*)s;
+    while (*u)
+    {
+        unsigned char c = *u++;
+        if (c == '"' || c == '\\') { JBPutc(b, '\\'); JBPutc(b, (char)c); }
+        else if (c == '\n') JBPut(b, "\\n");
+        else if (c == '\r') JBPut(b, "\\r");
+        else if (c == '\t') JBPut(b, "\\t");
+        else if (c < 0x20)
+        {
+            char t[8];
+            snprintf(t, sizeof(t), "\\u%04x", c);
+            JBPut(b, t);
+        }
+        else JBPutc(b, (char)c);
+    }
+}
+
+/* Read the project's display name (A_char, bounded) and file path
+   (UTF-16 mem handle → UTF-8). wantName/wantPath select which reads
+   run; every call is op-recorded. Returns FPI_* status. */
+enum { FPI_OK = 0, FPI_AEGP_ERR, FPI_TRUNCATED };
+static int FetchProjectIdentity(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_ProjectH projectH,
+    int wantName, int wantPath,
+    char* nameOut, size_t nameCap,
+    char* pathOut, size_t pathCap,
+    A_Err* errP)
+{
+    *errP = A_Err_NONE;
+    nameOut[0] = '\0';
+    pathOut[0] = '\0';
+    if (wantName)
+    {
+        A_char nb[AEGP_MAX_PROJ_NAME_SIZE + 1];
+        A_Err e;
+        if (!projP->AEGP_GetProjectName) { *errP = A_Err_STRUCT; return FPI_AEGP_ERR; }
+        memset(nb, 0, sizeof(nb));
+        e = projP->AEGP_GetProjectName(projectH, nb);
+        IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetProjectName", (long)e, NULL);
+        if (e != A_Err_NONE) { *errP = e; return FPI_AEGP_ERR; }
+        strncpy(nameOut, nb, nameCap - 1);
+        nameOut[nameCap - 1] = '\0';
+    }
+    if (wantPath)
+    {
+        AEGP_MemHandle ph = NULL;
+        A_Err e;
+        IntakeMemStatus ms;
+        if (!projP->AEGP_GetProjectPath || !memP) { *errP = A_Err_STRUCT; return FPI_AEGP_ERR; }
+        e = projP->AEGP_GetProjectPath(projectH, &ph);
+        IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetProjectPath", (long)e, NULL);
+        if (e != A_Err_NONE) { *errP = e; return FPI_AEGP_ERR; }
+        ms = IntakeReadMemHandleUtf8(utilP, memP, ph, pathOut, pathCap);
+        if (ms == IMH_TRUNCATED) return FPI_TRUNCATED;
+        if (ms != IMH_OK) { *errP = A_Err_STRUCT; return FPI_AEGP_ERR; }
+    }
+    return FPI_OK;
+}
+
+/* Exact-match a descriptor string field (JVal, slen bytes — may hold
+   embedded NULs) against a NUL-terminated live string. */
+static int JStrEqCStr(JVal* v, const char* liveZ)
+{
+    size_t n = strlen(liveZ);
+    return v && v->kind == JK_STR && v->slen == n &&
+           memcmp(v->str, liveZ, n) == 0;
+}
+
+/* Resolve a validated aeRef descriptor to a live item inside the
+   request window (contract §7b). `ref` is the aeRef object; shape was
+   proven by ValidateArgs. wantProjectIdentity forces the project
+   name/path fetch even when the descriptor does not carry them
+   (issuance/enumeration payloads need the values).
+   nameCallExtraZ marks the GetItemName record (" (resolve+result)"
+   when the consuming op IS GetItemName, " (resolve)" otherwise).
+   On success returns 1: r is filled and its suites stay acquired —
+   the caller MUST ReleaseResolution before leaving the request.
+   On failure returns 0 with `v` already carrying the verdict
+   (refused STALE_REFERENCE / failed / not-sent). */
+static int ResolveAeRefItem(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    long projectIndex,
+    JVal* ref,
+    int wantProjectIdentity,
+    const char* nameCallExtraZ,
+    ItemResolution* r,
+    ReqVerdict* v)
+{
+    JVal* typeV = JGet(ref, "type");
+    JVal* nameV = JGet(ref, "name");
+    JVal* pathV = JGet(ref, "path");
+    JVal* idV = JGet(ref, "itemId");
+    JVal* pnV = JGet(ref, "projectName");
+    JVal* ppV = JGet(ref, "projectPath");
+    AEGP_ItemType wantType = AEGP_ItemType_NONE;
+    long wantIndex = -1;
+    long wantId = -1;
+    int haveId = 0;
+    int wantName, wantPath;
+    const void* itemSuite = NULL;
+    const void* memSuite = NULL;
+    const AEGP_ItemSuite9* itemP = NULL;
+    const AEGP_MemorySuite1* memP = NULL;
+    AEGP_ProjectH projectH = NULL;
+    AEGP_ItemH itemH = NULL;
+    A_Err perr;
+
+    memset(r, 0, sizeof(*r));
+    AeRefTypeToItemType(typeV, &wantType); /* shape already validated */
+    if (pathV && pathV->kind == JK_ARR && pathV->nitems == 1 &&
+        pathV->items[0] && pathV->items[0]->kind == JK_NUM)
+        wantIndex = (long)pathV->items[0]->num;
+    if (idV) { wantId = (long)idV->num; haveId = 1; }
+
+    /* project selection — projP is the fingerprint-held suite */
+    wantName = wantProjectIdentity || pnV != NULL;
+    wantPath = wantProjectIdentity || ppV != NULL;
+    if (!projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex ||
+        (wantName && !projP->AEGP_GetProjectName) ||
+        (wantPath && !projP->AEGP_GetProjectPath))
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "project suite entries unavailable for identity resolve");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    {
+        A_long numProjects = 0;
+        perr = projP->AEGP_GetNumProjects(&numProjects);
+        IntakeOpRecord(utilP,
+            "AEGP_ProjSuite6.AEGP_GetNumProjects", (long)perr,
+            perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE)
+        {
+            snprintf(v->outcome, sizeof(v->outcome), "failed");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetNumProjects err=%ld", (long)perr);
+            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            return 0;
+        }
+        if (projectIndex < 0 || projectIndex >= (long)numProjects)
+        {
+            VerdictRefuse(v, "STALE_REFERENCE", "projectIndex out of range");
+            return 0;
+        }
+        perr = projP->AEGP_GetProjectByIndex(projectIndex, &projectH);
+        IntakeOpRecord(utilP,
+            "AEGP_ProjSuite6.AEGP_GetProjectByIndex", (long)perr,
+            perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE || !projectH)
+        {
+            snprintf(v->outcome, sizeof(v->outcome), "failed");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetProjectByIndex err=%ld", (long)perr);
+            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            return 0;
+        }
+    }
+
+    /* item + memory suites inside the request window */
+    itemSuite = IntakeAcquireSuite(utilP, basicP,
+                                   kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    memSuite = IntakeAcquireSuite(utilP, basicP,
+                                  kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    if (!itemSuite || !memSuite)
+    {
+        if (itemSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPItemSuite, kAEGPItemSuiteVersion9);
+        if (memSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "item/memory suite unavailable for identity resolve");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    itemP = (const AEGP_ItemSuite9*)itemSuite;
+    memP = (const AEGP_MemorySuite1*)memSuite;
+    r->itemSuite = itemSuite;
+    r->memSuite = memSuite;
+    r->itemP = itemP;
+    r->memP = memP;
+    r->projectH = projectH;
+
+#define RESOLVE_NOT_SENT(msg) do { \
+        ReleaseResolution(utilP, basicP, r); \
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
+        snprintf(v->detail, sizeof(v->detail), "%s", msg); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define RESOLVE_FAILED(fmt, err) do { \
+        ReleaseResolution(utilP, basicP, r); \
+        snprintf(v->outcome, sizeof(v->outcome), "failed"); \
+        snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define RESOLVE_STALE(why) do { \
+        ReleaseResolution(utilP, basicP, r); \
+        VerdictRefuse(v, "STALE_REFERENCE", why); \
+        return 0; } while (0)
+
+    if (!itemP->AEGP_GetFirstProjItem || !itemP->AEGP_GetNextProjItem ||
+        !itemP->AEGP_GetItemType || !itemP->AEGP_GetItemName ||
+        (haveId && !itemP->AEGP_GetItemID))
+        RESOLVE_NOT_SENT("item suite entries unavailable for identity resolve");
+
+    /* project corroboration + payload identity fields */
+    {
+        A_Err ferr = A_Err_NONE;
+        int fpi = FetchProjectIdentity(utilP, projP, memP, projectH,
+                                     wantName, wantPath,
+                                     r->projectName, sizeof(r->projectName),
+                                     r->projectPath, sizeof(r->projectPath),
+                                     &ferr);
+        if (fpi == FPI_AEGP_ERR)
+            RESOLVE_FAILED("project identity read err=%ld", ferr);
+        if (fpi == FPI_TRUNCATED)
+            RESOLVE_FAILED("project path exceeds descriptor bound err=%ld", ferr);
+        r->haveProjectName = wantName;
+        r->haveProjectPath = wantPath;
+        if (pnV && !JStrEqCStr(pnV, r->projectName))
+            RESOLVE_STALE("project name mismatch");
+        if (ppV && !JStrEqCStr(ppV, r->projectPath))
+            RESOLVE_STALE("project path mismatch");
+    }
+
+    /* item resolution: itemId present → authoritative id scan;
+       absent → legacy positional path walk (Stage-3 semantics). */
+    {
+        A_Err ierr = itemP->AEGP_GetFirstProjItem(projectH, &itemH);
+        IntakeOpRecord(utilP,
+            "AEGP_ItemSuite9.AEGP_GetFirstProjItem", (long)ierr,
+            ierr == A_Err_NONE ? " (resolve)" : NULL);
+        if (ierr != A_Err_NONE)
+            RESOLVE_FAILED("AEGP_GetFirstProjItem err=%ld", ierr);
+    }
+    if (haveId)
+    {
+        /* scan every top-level item for exactly one itemId match —
+           reorder-tolerant; path is not consulted. */
+        AEGP_ItemH matchH = NULL;
+        long matchPos = -1;
+        long matches = 0;
+        long pos = 0;
+        while (itemH)
+        {
+            if (pos >= RESOLVE_SCAN_MAX)
+                RESOLVE_FAILED("item scan limit exceeded err=%ld", (long)pos);
+            {
+                A_long id = 0;
+                A_Err iderr = itemP->AEGP_GetItemID(itemH, &id);
+                IntakeOpRecord(utilP,
+                    "AEGP_ItemSuite9.AEGP_GetItemID", (long)iderr,
+                    iderr == A_Err_NONE ? " (resolve)" : NULL);
+                if (iderr != A_Err_NONE)
+                    RESOLVE_FAILED("AEGP_GetItemID err=%ld", iderr);
+                /* A_long is int32; the wire itemId range is u32 —
+                   compare bit-exact so ids with the sign bit set still
+                   match instead of silently never resolving. */
+                if ((unsigned int)id == (unsigned int)wantId)
+                { matches++; matchH = itemH; matchPos = pos; }
+            }
+            {
+                AEGP_ItemH nextH = NULL;
+                A_Err nerr = itemP->AEGP_GetNextProjItem(projectH, itemH, &nextH);
+                IntakeOpRecord(utilP,
+                    "AEGP_ItemSuite9.AEGP_GetNextProjItem", (long)nerr,
+                    nerr == A_Err_NONE ? " (resolve)" : NULL);
+                if (nerr != A_Err_NONE)
+                    RESOLVE_FAILED("AEGP_GetNextProjItem err=%ld", nerr);
+                itemH = nextH;
+                pos++;
+            }
+        }
+        if (matches == 0)
+            RESOLVE_STALE("itemId not found");
+        if (matches > 1)
+            RESOLVE_STALE("itemId ambiguous");
+        itemH = matchH;
+        r->index = matchPos;
+    }
+    else
+    {
+        /* legacy positional walk to path[0] */
+        long pos = 0;
+        while (itemH && pos < wantIndex)
+        {
+            AEGP_ItemH nextH = NULL;
+            A_Err nerr = itemP->AEGP_GetNextProjItem(projectH, itemH, &nextH);
+            IntakeOpRecord(utilP,
+                "AEGP_ItemSuite9.AEGP_GetNextProjItem", (long)nerr,
+                nerr == A_Err_NONE ? " (resolve)" : NULL);
+            if (nerr != A_Err_NONE) { itemH = NULL; break; }
+            itemH = nextH;
+            pos++;
+        }
+        if (!itemH || pos != wantIndex)
+            RESOLVE_STALE("item path index out of range");
+        r->index = wantIndex;
+    }
+    r->itemH = itemH;
+
+    /* corroboration: type + name must match the descriptor in BOTH
+       modes — a renamed item stales its descriptor (client re-issues). */
+    {
+        AEGP_ItemType actualType = AEGP_ItemType_NONE;
+        A_Err terr = itemP->AEGP_GetItemType(itemH, &actualType);
+        IntakeOpRecord(utilP,
+            "AEGP_ItemSuite9.AEGP_GetItemType", (long)terr,
+            terr == A_Err_NONE ? " (resolve)" : NULL);
+        if (terr != A_Err_NONE)
+            RESOLVE_FAILED("AEGP_GetItemType err=%ld", terr);
+        if (actualType != wantType)
+            RESOLVE_STALE("item type mismatch");
+        r->type = actualType;
+    }
+    {
+        AEGP_MemHandle nameH = NULL;
+        A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
+        IntakeOpRecord(utilP,
+            "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr,
+            nerr == A_Err_NONE ? nameCallExtraZ : NULL);
+        if (nerr != A_Err_NONE)
+            RESOLVE_FAILED("AEGP_GetItemName err=%ld", nerr);
+        {
+            IntakeMemStatus mst =
+                IntakeReadMemHandleUtf8(utilP, memP, nameH,
+                                        r->name, sizeof(r->name));
+            if (mst != IMH_OK && mst != IMH_TRUNCATED)
+                RESOLVE_FAILED("item name mem-handle read failed err=%ld", (long)mst);
+            r->nameTruncated = (mst == IMH_TRUNCATED);
+            if (r->nameTruncated)
+                RESOLVE_STALE("item name exceeds identity bound");
+            if (nameV->slen != strlen(r->name) ||
+                memcmp(nameV->str, r->name, nameV->slen) != 0)
+                RESOLVE_STALE("item name mismatch");
+        }
+    }
+
+#undef RESOLVE_NOT_SENT
+#undef RESOLVE_FAILED
+#undef RESOLVE_STALE
+    return 1;
+}
+
+/* Emit the canonical issued descriptor for a resolved item:
+   {"itemId":N,"item":{"aeRef":{...}}} — result.item is stored
+   verbatim as args.item by the client. Returns 1 on success; 0 when
+   the payload would exceed the result bound or the type has no tag. */
+static int EmitIssuedDescriptor(
+    ReqVerdict* v,
+    const ItemResolution* r,
+    long itemId)
+{
+    const char* tag = ItemTypeToAeRefTag(r->type);
+    JBuf b;
+    if (!tag) return 0;
+    JBInit(&b, v->payload, sizeof(v->payload));
+    JBPut(&b, "{\"itemId\":");
+    JBNum(&b, itemId);
+    JBPut(&b, ",\"item\":{\"aeRef\":{\"type\":\"");
+    JBPut(&b, tag);
+    JBPut(&b, "\",\"name\":\"");
+    JBEsc(&b, r->name);
+    JBPut(&b, "\",\"path\":[");
+    JBNum(&b, r->index);
+    JBPut(&b, "],\"itemId\":");
+    JBNum(&b, itemId);
+    if (r->haveProjectName)
+    {
+        JBPut(&b, ",\"projectName\":\"");
+        JBEsc(&b, r->projectName);
+        JBPut(&b, "\"");
+    }
+    if (r->haveProjectPath)
+    {
+        JBPut(&b, ",\"projectPath\":\"");
+        JBEsc(&b, r->projectPath);
+        JBPut(&b, "\"");
+    }
+    JBPut(&b, "}}}");
+    if (b.of) return 0;
+    *b.cur = '\0';
+    return 1;
+}
+
+/* Emit one enumeration item entry. Normal items get a complete usable
+   descriptor; names over the identity bound get an honest marker. */
+static void EmitEnumItem(
+    JBuf* b,
+    long index,
+    AEGP_ItemType type,
+    const char* nameZ,
+    int nameTruncated,
+    long itemId,
+    const char* projectNameZ,
+    const char* projectPathZ)
+{
+    const char* tag = ItemTypeToAeRefTag(type);
+    if (!tag)
+    {
+        /* live item kind with no descriptor tag (e.g. solid): report
+           honestly, never emit a partial/invalid aeRef. */
+        JBPut(b, "{\"index\":");
+        JBNum(b, index);
+        JBPut(b, ",\"unsupportedType\":true}");
+        return;
+    }
+    if (nameTruncated)
+    {
+        JBPut(b, "{\"index\":");
+        JBNum(b, index);
+        JBPut(b, ",\"type\":\"");
+        JBPut(b, tag);
+        JBPut(b, "\",\"itemId\":");
+        JBNum(b, itemId);
+        JBPut(b, ",\"nameTruncated\":true}");
+        return;
+    }
+    JBPut(b, "{\"item\":{\"aeRef\":{\"type\":\"");
+    JBPut(b, tag);
+    JBPut(b, "\",\"name\":\"");
+    JBEsc(b, nameZ);
+    JBPut(b, "\",\"path\":[");
+    JBNum(b, index);
+    JBPut(b, "],\"itemId\":");
+    JBNum(b, itemId);
+    JBPut(b, ",\"projectName\":\"");
+    JBEsc(b, projectNameZ);
+    JBPut(b, "\",\"projectPath\":\"");
+    JBEsc(b, projectPathZ);
+    JBPut(b, "\"}}}");
+}
+
+/* AEGP_ItemSuite9.AEGP_GetFirstProjItem as discovery/enumeration
+   (Issue #270 identity slice): {projectIndex, offset, limit} →
+   ready-to-use aeRef descriptors for the project's top-level items.
+   Walks the full list once (total is exact), emits the [offset,
+   offset+limit) window, pages via offset. Every call op-recorded;
+   failures are typed verdicts, never partial payloads. */
+static void EnumerateProjItems(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const char* opRecordIdZ,
+    JVal* args,
+    ReqVerdict* v)
+{
+    long projectIndex = (long)JGet(args, "projectIndex")->num;
+    long offset = (long)JGet(args, "offset")->num;
+    long limit = (long)JGet(args, "limit")->num;
+    AEGP_ProjectH projectH = NULL;
+    AEGP_ItemH itemH = NULL;
+    const void* itemSuite = NULL;
+    const void* memSuite = NULL;
+    const AEGP_ItemSuite9* itemP = NULL;
+    const AEGP_MemorySuite1* memP = NULL;
+    ItemResolution projIds;
+    long pos = 0;
+    long total = 0;
+    int windowStart, windowCount = 0;
+    /* window slots: limit ≤ 32, each ~1.1 KB worst case */
+    struct EnumSlot
+    {
+        long index;
+        AEGP_ItemType type;
+        long itemId;
+        int nameTruncated;
+        char name[AEREF_NAME_MAX + 1];
+    } slots[ENUM_LIMIT_MAX];
+    JBuf b;
+    int cut = 0;
+    A_Err perr;
+
+    memset(&projIds, 0, sizeof(projIds));
+    projIds.haveProjectName = 1;
+    projIds.haveProjectPath = 1;
+
+    if (!projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex ||
+        !projP->AEGP_GetProjectName || !projP->AEGP_GetProjectPath)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "project suite entries unavailable for enumeration");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+    {
+        A_long numProjects = 0;
+        perr = projP->AEGP_GetNumProjects(&numProjects);
+        IntakeOpRecord(utilP,
+            "AEGP_ProjSuite6.AEGP_GetNumProjects", (long)perr,
+            perr == A_Err_NONE ? " (enum)" : NULL);
+        if (perr != A_Err_NONE)
+        {
+            snprintf(v->outcome, sizeof(v->outcome), "failed");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetNumProjects err=%ld", (long)perr);
+            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            return;
+        }
+        if (projectIndex < 0 || projectIndex >= (long)numProjects)
+        {
+            VerdictRefuse(v, "STALE_REFERENCE", "projectIndex out of range");
+            return;
+        }
+        perr = projP->AEGP_GetProjectByIndex(projectIndex, &projectH);
+        IntakeOpRecord(utilP,
+            "AEGP_ProjSuite6.AEGP_GetProjectByIndex", (long)perr,
+            perr == A_Err_NONE ? " (enum)" : NULL);
+        if (perr != A_Err_NONE || !projectH)
+        {
+            snprintf(v->outcome, sizeof(v->outcome), "failed");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetProjectByIndex err=%ld", (long)perr);
+            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            return;
+        }
+    }
+
+    itemSuite = IntakeAcquireSuite(utilP, basicP,
+                                   kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    memSuite = IntakeAcquireSuite(utilP, basicP,
+                                  kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    if (!itemSuite || !memSuite)
+    {
+        if (itemSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPItemSuite, kAEGPItemSuiteVersion9);
+        if (memSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "item/memory suite unavailable for enumeration");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+    itemP = (const AEGP_ItemSuite9*)itemSuite;
+    memP = (const AEGP_MemorySuite1*)memSuite;
+
+#define ENUM_NOT_SENT(msg) do { \
+        IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9); \
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
+        snprintf(v->detail, sizeof(v->detail), "%s", msg); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return; } while (0)
+#define ENUM_FAILED(fmt, err) do { \
+        IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9); \
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
+        snprintf(v->outcome, sizeof(v->outcome), "failed"); \
+        snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return; } while (0)
+
+    if (!itemP->AEGP_GetFirstProjItem || !itemP->AEGP_GetNextProjItem ||
+        !itemP->AEGP_GetItemType || !itemP->AEGP_GetItemName ||
+        !itemP->AEGP_GetItemID)
+        ENUM_NOT_SENT("item suite entries unavailable for enumeration");
+
+    {
+        A_Err ferr = A_Err_NONE;
+        int fpi = FetchProjectIdentity(utilP, projP, memP, projectH,
+                                     1, 1,
+                                     projIds.projectName, sizeof(projIds.projectName),
+                                     projIds.projectPath, sizeof(projIds.projectPath),
+                                     &ferr);
+        if (fpi == FPI_AEGP_ERR)
+            ENUM_FAILED("project identity read err=%ld", ferr);
+        if (fpi == FPI_TRUNCATED)
+            ENUM_FAILED("project path exceeds descriptor bound err=%ld", ferr);
+    }
+
+    /* single walk: count total, capture the [offset, offset+limit)
+       window's type/name/id. */
+    windowStart = (int)(offset < 0 ? 0 : offset);
+    {
+        A_Err ierr = itemP->AEGP_GetFirstProjItem(projectH, &itemH);
+        IntakeOpRecord(utilP,
+            "AEGP_ItemSuite9.AEGP_GetFirstProjItem", (long)ierr,
+            ierr == A_Err_NONE ? " (enum)" : NULL);
+        if (ierr != A_Err_NONE)
+            ENUM_FAILED("AEGP_GetFirstProjItem err=%ld", ierr);
+    }
+    while (itemH)
+    {
+        if (pos >= RESOLVE_SCAN_MAX)
+            ENUM_FAILED("item scan limit exceeded err=%ld", pos);
+        if (pos >= windowStart && pos < windowStart + limit &&
+            windowCount < ENUM_LIMIT_MAX)
+        {
+            struct EnumSlot* s = &slots[windowCount];
+            AEGP_ItemType t = AEGP_ItemType_NONE;
+            AEGP_MemHandle nh = NULL;
+            A_long id = 0;
+            A_Err e1, e2, e3;
+            IntakeMemStatus ms;
+            s->index = pos;
+            s->name[0] = '\0';
+            s->nameTruncated = 0;
+            e1 = itemP->AEGP_GetItemType(itemH, &t);
+            IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemType",
+                           (long)e1, e1 == A_Err_NONE ? " (enum)" : NULL);
+            if (e1 != A_Err_NONE) ENUM_FAILED("AEGP_GetItemType err=%ld", e1);
+            s->type = t;
+            e2 = itemP->AEGP_GetItemName(plugin_id, itemH, &nh);
+            IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemName",
+                           (long)e2, e2 == A_Err_NONE ? " (enum)" : NULL);
+            if (e2 != A_Err_NONE) ENUM_FAILED("AEGP_GetItemName err=%ld", e2);
+            ms = IntakeReadMemHandleUtf8(utilP, memP, nh,
+                                         s->name, sizeof(s->name));
+            if (ms != IMH_OK && ms != IMH_TRUNCATED)
+                ENUM_FAILED("item name mem-handle read failed err=%ld", (long)ms);
+            s->nameTruncated = (ms == IMH_TRUNCATED);
+            e3 = itemP->AEGP_GetItemID(itemH, &id);
+            IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemID",
+                           (long)e3, e3 == A_Err_NONE ? " (enum)" : NULL);
+            if (e3 != A_Err_NONE) ENUM_FAILED("AEGP_GetItemID err=%ld", e3);
+            s->itemId = (long)(unsigned int)id; /* emit u32, not sign-extended */
+            windowCount++;
+        }
+        {
+            AEGP_ItemH nextH = NULL;
+            A_Err nerr = itemP->AEGP_GetNextProjItem(projectH, itemH, &nextH);
+            IntakeOpRecord(utilP,
+                "AEGP_ItemSuite9.AEGP_GetNextProjItem", (long)nerr,
+                nerr == A_Err_NONE ? " (enum)" : NULL);
+            if (nerr != A_Err_NONE) ENUM_FAILED("AEGP_GetNextProjItem err=%ld", nerr);
+            itemH = nextH;
+            pos++;
+        }
+    }
+    total = pos;
+
+    /* emit: project block + window items + paging flags. `truncated`
+       is written last so a payload-budget cut can still be reported. */
+    JBInit(&b, v->payload, sizeof(v->payload));
+    JBPut(&b, "{\"project\":{\"index\":");
+    JBNum(&b, projectIndex);
+    JBPut(&b, ",\"name\":\"");
+    JBEsc(&b, projIds.projectName);
+    JBPut(&b, "\",\"path\":\"");
+    JBEsc(&b, projIds.projectPath);
+    JBPut(&b, "\"},\"total\":");
+    JBNum(&b, total);
+    JBPut(&b, ",\"offset\":");
+    JBNum(&b, offset);
+    JBPut(&b, ",\"items\":[");
+    {
+        int i;
+        for (i = 0; i < windowCount && !b.of; i++)
+        {
+            size_t mark = (size_t)(b.cur - v->payload);
+            if (i) JBPut(&b, ",");
+            EmitEnumItem(&b, slots[i].index, slots[i].type, slots[i].name,
+                         slots[i].nameTruncated, slots[i].itemId,
+                         projIds.projectName, projIds.projectPath);
+            if (b.of)
+            {
+                /* roll back the partial item; mark the page cut */
+                b.cur = v->payload + mark;
+                b.left = sizeof(v->payload) - mark;
+                b.of = 0;
+                cut = 1;
+                break;
+            }
+        }
+    }
+    JBPut(&b, "],\"truncated\":");
+    JBPut(&b, (cut || total > windowStart + windowCount) ? "true" : "false");
+    JBPut(&b, "}");
+    if (b.of)
+        ENUM_FAILED("enumeration payload exceeds result bound err=%ld", (long)0);
+    *b.cur = '\0';
+
+    IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    {
+        char eb[48];
+        snprintf(eb, sizeof(eb), " value=%ld", total);
+        IntakeOpRecord(utilP, opRecordIdZ, A_Err_NONE, eb);
+    }
+    snprintf(v->outcome, sizeof(v->outcome), "completed");
+    v->havePayload = 1;
+    v->mayHaveMutated = 0;
+    v->publish = 1;
+
+#undef ENUM_NOT_SENT
+#undef ENUM_FAILED
 }
 
 /* Execute one claimed request file. Always publishes a result when
@@ -1213,254 +2062,104 @@ static void ProcessClaimed(
                 }
             }
         }
-        /* ---- Issue #270 Stage 3: aeRef → host-side identity resolve --
-           AEGP_ItemSuite9.AEGP_GetItemName(AEGP_PluginID, AEGP_ItemH,
-           AEGP_MemHandle*). The handle is NEVER taken from the wire:
-           args carry {"projectIndex": int, "item": {"aeRef":{type,
-           name, path:[i]}}} and this executor resolves it inside the
-           host-dispatched context through the SDK suites:
-             projectIndex → AEGP_GetProjectByIndex (bounded by
-               AEGP_GetNumProjects) → projectH
-             path[0]      → AEGP_GetFirstProjItem / GetNextProjItem
-               walk to the top-level item index → itemH
-           then verifies the descriptor against the live item:
-           AEGP_GetItemType must equal the mapped type tag and
-           AEGP_GetItemName must equal aeRef.name (exact UTF-8 match).
-           Any resolution failure is refused STALE_REFERENCE — a
+        /* ---- Issue #270 identity slice: shared aeRef resolve ------
+           AEGP_ItemSuite9.AEGP_GetItemName / AEGP_GetItemID /
+           AEGP_GetFirstProjItem. The item handle is NEVER taken from
+           the wire: args carry {"projectIndex": int, "item": {"aeRef":
+           {...}}} and ResolveAeRefItem resolves it inside the
+           host-dispatched context (contract native-channel.md §7b):
+             projectIndex → GetNumProjects/GetProjectByIndex → projectH
+               (+ optional projectName/projectPath corroboration)
+             itemId present → scan top-level items for the live id
+             else          → legacy path[0] positional walk
+           then verifies type + exact UTF-8 name in BOTH modes. Any
+           resolution failure is refused STALE_REFERENCE — a
            well-formed descriptor that no longer matches live state is
            state drift, not a caller-shape bug (trusted-execution.md
            §3/§4). AEGP errors are failed with mayHaveMutated=false
            (read-only). Missing suites/entries are not-sent. */
         else if (strcmp(allow->operationId,
-                        "AEGP_ItemSuite9.AEGP_GetItemName") == 0)
+                        "AEGP_ItemSuite9.AEGP_GetItemName") == 0 ||
+                 strcmp(allow->operationId,
+                        "AEGP_ItemSuite9.AEGP_GetItemID") == 0)
         {
+            int isNameOp = strcmp(allow->operationId,
+                                  "AEGP_ItemSuite9.AEGP_GetItemName") == 0;
             JVal* itemArg = JGet(args, "item");
             JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
-            JVal* typeV = ref ? JGet(ref, "type") : NULL;
-            JVal* nameV = ref ? JGet(ref, "name") : NULL;
-            JVal* pathV = ref ? JGet(ref, "path") : NULL;
-            JVal* idxV = (pathV && pathV->kind == JK_ARR &&
-                          pathV->nitems == 1) ? pathV->items[0] : NULL;
-            AEGP_ItemType wantType = AEGP_ItemType_NONE;
-            long wantIndex = idxV ? (long)idxV->num : -1;
             long projIndex = ArgsInt(allow, args, 0);
-            AEGP_ProjectH projectH = NULL;
-            AEGP_ItemH itemH = NULL;
-            int stale = 0;
-            const char* staleWhy = "";
+            ItemResolution res;
 
-            AeRefTypeToItemType(typeV, &wantType); /* shape already validated */
+            /* GetItemName resolves only what the descriptor asserts;
+               GetItemID additionally fetches project identity for the
+               issued descriptor payload (wantProjectIdentity=1). */
+            if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                                  projIndex, ref, isNameOp ? 0 : 1,
+                                  isNameOp ? " (resolve+result)" : " (resolve)",
+                                  &res, &v))
+                goto verdict;   /* v already carries the verdict */
 
-            /* project selection — projP is the fingerprint-held suite;
-               guard its entries like every other consumer. */
-            if (!projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex)
+            if (isNameOp)
             {
-                snprintf(v.outcome, sizeof(v.outcome), "not-sent");
-                snprintf(v.detail, sizeof(v.detail),
-                         "project suite entries unavailable for identity resolve");
-                v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                goto verdict;
-            }
-            {
-                A_long numProjects = 0;
-                A_Err perr = projP->AEGP_GetNumProjects(&numProjects);
-                IntakeOpRecord(utilP,
-                    "AEGP_ProjSuite6.AEGP_GetNumProjects", (long)perr,
-                    perr == A_Err_NONE ? " (resolve)" : NULL);
-                if (perr != A_Err_NONE)
-                {
-                    snprintf(v.outcome, sizeof(v.outcome), "failed");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "AEGP_GetNumProjects err=%ld", (long)perr);
-                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                    goto verdict;
-                }
-                if (projIndex < 0 || projIndex >= (long)numProjects)
-                {
-                    stale = 1; staleWhy = "projectIndex out of range";
-                }
-                else
-                {
-                    perr = projP->AEGP_GetProjectByIndex(projIndex, &projectH);
-                    IntakeOpRecord(utilP,
-                        "AEGP_ProjSuite6.AEGP_GetProjectByIndex", (long)perr,
-                        perr == A_Err_NONE ? " (resolve)" : NULL);
-                    if (perr != A_Err_NONE || !projectH)
-                    {
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "AEGP_GetProjectByIndex err=%ld", (long)perr);
-                        v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                        goto verdict;
-                    }
-                }
-            }
-
-            /* item suites acquired inside the request window */
-            const void* itemSuite = NULL;
-            const void* memSuite = NULL;
-            const AEGP_ItemSuite9* itemP = NULL;
-            const AEGP_MemorySuite1* memP = NULL;
-            if (!stale)
-            {
-                itemSuite = IntakeAcquireSuite(utilP, basicP,
-                                               kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                memSuite = IntakeAcquireSuite(utilP, basicP,
-                                              kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                if (!itemSuite || !memSuite)
-                {
-                    if (itemSuite) IntakeReleaseSuite(utilP, basicP,
-                        kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                    if (memSuite) IntakeReleaseSuite(utilP, basicP,
-                        kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                    snprintf(v.outcome, sizeof(v.outcome), "not-sent");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "item/memory suite unavailable for identity resolve");
-                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                    goto verdict;
-                }
-                itemP = (const AEGP_ItemSuite9*)itemSuite;
-                memP = (const AEGP_MemorySuite1*)memSuite;
-                if (!itemP->AEGP_GetFirstProjItem || !itemP->AEGP_GetNextProjItem ||
-                    !itemP->AEGP_GetItemType || !itemP->AEGP_GetItemName)
-                {
-                    IntakeReleaseSuite(utilP, basicP,
-                        kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                    IntakeReleaseSuite(utilP, basicP,
-                        kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                    snprintf(v.outcome, sizeof(v.outcome), "not-sent");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "item suite entries unavailable for identity resolve");
-                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                    goto verdict;
-                }
-
-                /* walk top-level items to path[0] */
-                {
-                    A_Err ierr = itemP->AEGP_GetFirstProjItem(projectH, &itemH);
-                    IntakeOpRecord(utilP,
-                        "AEGP_ItemSuite9.AEGP_GetFirstProjItem", (long)ierr,
-                        ierr == A_Err_NONE ? " (resolve)" : NULL);
-                    if (ierr != A_Err_NONE)
-                    {
-                        IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "AEGP_GetFirstProjItem err=%ld", (long)ierr);
-                        v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                        goto verdict;
-                    }
-                    {
-                        long pos = 0;
-                        while (itemH && pos < wantIndex)
-                        {
-                            AEGP_ItemH nextH = NULL;
-                            A_Err nerr = itemP->AEGP_GetNextProjItem(projectH, itemH, &nextH);
-                            IntakeOpRecord(utilP,
-                                "AEGP_ItemSuite9.AEGP_GetNextProjItem", (long)nerr,
-                                nerr == A_Err_NONE ? " (resolve)" : NULL);
-                            if (nerr != A_Err_NONE) { itemH = NULL; break; }
-                            itemH = nextH;
-                            pos++;
-                        }
-                        if (!itemH || pos != wantIndex)
-                        {
-                            stale = 1; staleWhy = "item path index out of range";
-                        }
-                    }
-                }
-            }
-
-            /* verify type + name against the descriptor, then the op
-               itself IS GetItemName — reuse its mem handle for both the
-               verification read and the result payload. */
-            char resolvedName[256];
-            resolvedName[0] = '\0';
-            if (!stale)
-            {
-                AEGP_ItemType actualType = AEGP_ItemType_NONE;
-                A_Err terr = itemP->AEGP_GetItemType(itemH, &actualType);
-                IntakeOpRecord(utilP,
-                    "AEGP_ItemSuite9.AEGP_GetItemType", (long)terr,
-                    terr == A_Err_NONE ? " (resolve)" : NULL);
-                if (terr != A_Err_NONE)
-                {
-                    IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                    IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                    snprintf(v.outcome, sizeof(v.outcome), "failed");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "AEGP_GetItemType err=%ld", (long)terr);
-                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                    goto verdict;
-                }
-                if (actualType != wantType)
-                {
-                    stale = 1; staleWhy = "item type mismatch";
-                }
-            }
-            if (!stale)
-            {
-                AEGP_MemHandle nameH = NULL;
-                A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
-                IntakeOpRecord(utilP,
-                    "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr,
-                    nerr == A_Err_NONE ? " (resolve+result)" : NULL);
-                if (nerr != A_Err_NONE)
-                {
-                    IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                    IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                    snprintf(v.outcome, sizeof(v.outcome), "failed");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "AEGP_GetItemName err=%ld", (long)nerr);
-                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                    goto verdict;
-                }
-                {
-                    IntakeMemStatus mst =
-                        IntakeReadMemHandleUtf8(utilP, memP, nameH,
-                                                resolvedName, sizeof(resolvedName));
-                    if (mst != IMH_OK && mst != IMH_TRUNCATED)
-                    {
-                        IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "item name mem-handle read failed (%d)", (int)mst);
-                        v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                        goto verdict;
-                    }
-                }
-                /* name equality: descriptor.name is the JSON-decoded
-                   UTF-8 bytes; resolvedName is host UTF-16→UTF-8. */
-                if (nameV->slen != strlen(resolvedName) ||
-                    memcmp(nameV->str, resolvedName, nameV->slen) != 0)
-                {
-                    stale = 1; staleWhy = "item name mismatch";
-                }
-            }
-
-            /* release suites before verdict (every path above that
-               reached here still holds them) */
-            if (itemSuite) IntakeReleaseSuite(utilP, basicP,
-                kAEGPItemSuite, kAEGPItemSuiteVersion9);
-            if (memSuite) IntakeReleaseSuite(utilP, basicP,
-                kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-
-            if (stale)
-            {
-                VerdictRefuse(&v, "STALE_REFERENCE", staleWhy);
-                goto verdict;
-            }
-            {
-                char esc[600];
-                JsonEscape(esc, sizeof(esc), resolvedName);
+                char esc[AEREF_NAME_MAX * 6 + 8];
+                JsonEscape(esc, sizeof(esc), res.name);
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
                 snprintf(v.payload, sizeof(v.payload), "{\"name\":\"%s\"}", esc);
                 v.payload[sizeof(v.payload) - 1] = '\0';
                 v.havePayload = 1;
                 v.mayHaveMutated = 0;
             }
+            else
+            {
+                /* GetItemID = descriptor issuance: read the live id of
+                   the resolved item, then emit the canonical
+                   identity-bearing aeRef (project identity included).
+                   Emit BEFORE ReleaseResolution — release zeroes res. */
+                A_long liveId = 0;
+                A_Err iderr = res.itemP->AEGP_GetItemID
+                    ? res.itemP->AEGP_GetItemID(res.itemH, &liveId)
+                    : A_Err_STRUCT;
+                IntakeOpRecord(utilP,
+                    "AEGP_ItemSuite9.AEGP_GetItemID", (long)iderr,
+                    iderr == A_Err_NONE ? " (result)" : NULL);
+                {
+                    int emitOk = iderr == A_Err_NONE &&
+                        EmitIssuedDescriptor(&v, &res,
+                            (long)(unsigned int)liveId);
+                    ReleaseResolution(utilP, basicP, &res);
+                    if (iderr != A_Err_NONE)
+                    {
+                        snprintf(v.outcome, sizeof(v.outcome), "failed");
+                        snprintf(v.detail, sizeof(v.detail),
+                                 "AEGP_GetItemID err=%ld", (long)iderr);
+                        v.havePayload = 0; v.mayHaveMutated = 0;
+                    }
+                    else if (!emitOk)
+                    {
+                        snprintf(v.outcome, sizeof(v.outcome), "failed");
+                        snprintf(v.detail, sizeof(v.detail),
+                                 "descriptor payload exceeds result bound");
+                        v.havePayload = 0; v.mayHaveMutated = 0;
+                    }
+                    else
+                    {
+                        snprintf(v.outcome, sizeof(v.outcome), "completed");
+                        v.havePayload = 1;
+                        v.mayHaveMutated = 0;
+                    }
+                }
+            }
+            if (isNameOp) ReleaseResolution(utilP, basicP, &res);
+        }
+        /* ---- Issue #270 identity slice: discovery/enumeration ------
+           AEGP_ItemSuite9.AEGP_GetFirstProjItem as a paged enumerator:
+           {projectIndex, offset, limit} → ready-to-use aeRef
+           descriptors. Read-only; every member call op-recorded. */
+        else if (strcmp(allow->operationId,
+                        "AEGP_ItemSuite9.AEGP_GetFirstProjItem") == 0)
+        {
+            EnumerateProjItems(utilP, projP, basicP, plugin_id,
+                               allow->opRecordId, args, &v);
         }
         /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
         else if (strcmp(allow->operationId,

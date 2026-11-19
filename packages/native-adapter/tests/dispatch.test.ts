@@ -230,6 +230,8 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
        NativeProbe already calls; mutation candidates stay out until
        the FR-07/US3 permission model exists (#270) */
     expect([...NATIVE_INTAKE_OPERATIONS].sort()).toEqual([
+      "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
+      "AEGP_ItemSuite9.AEGP_GetItemID",
       "AEGP_ItemSuite9.AEGP_GetItemName",
       "AEGP_ItemSuite9.AEGP_GetTypeName",
       "AEGP_ProjSuite6.AEGP_GetNumProjects",
@@ -332,5 +334,77 @@ describe("aeRefItem arg — Issue #270 Stage 3 identity descriptor", () => {
       item: { aeRef: { type: "comp", name: "DoesNotExist", path: [999] } },
     };
     expect(validateNativeIntakeArgs(IN, ghost)).toEqual([]);
+  });
+});
+
+describe("aeRefItem v2 identity fields — Issue #270 identity slice", () => {
+  const IN = "AEGP_ItemSuite9.AEGP_GetItemName";
+  const ID = "AEGP_ItemSuite9.AEGP_GetItemID";
+  const ENUM = "AEGP_ItemSuite9.AEGP_GetFirstProjItem";
+  const base = { type: "comp", name: "Plate", path: [0] };
+  const wrap = (aeRef: Record<string, unknown>) =>
+    ({ projectIndex: 0, item: { aeRef } });
+
+  test("identity-bearing descriptor passes shape validation", () => {
+    expect(validateNativeIntakeArgs(IN, wrap({
+      ...base, itemId: 5001, projectName: "Shot01", projectPath: "/a.aep",
+    }))).toEqual([]);
+    // projectPath may be empty (untitled project)
+    expect(validateNativeIntakeArgs(IN, wrap({
+      ...base, itemId: 0, projectName: "", projectPath: "",
+    }))).toEqual([]);
+    // optional fields are independently omittable
+    expect(validateNativeIntakeArgs(IN, wrap({ ...base, itemId: 4294967295 })))
+      .toEqual([]);
+    expect(validateNativeIntakeArgs(IN, wrap({ ...base, projectName: "P" })))
+      .toEqual([]);
+  });
+  test("GetItemID shares the aeRefItem arg contract", () => {
+    expect(validateNativeIntakeArgs(ID, wrap(base))).toEqual([]);
+    expect(validateNativeIntakeArgs(ID, wrap({ ...base, itemId: 7 }))).toEqual([]);
+    expect(validateNativeIntakeArgs(ID, { projectIndex: 0 })).not.toEqual([]);
+  });
+  test("GetFirstProjItem paging args are exact and bounded", () => {
+    expect(validateNativeIntakeArgs(ENUM,
+      { projectIndex: 0, offset: 0, limit: 1 })).toEqual([]);
+    expect(validateNativeIntakeArgs(ENUM,
+      { projectIndex: 3, offset: 64, limit: 32 })).toEqual([]);
+    for (const bad of [
+      { projectIndex: 0, offset: 0 },                    // missing limit
+      { projectIndex: 0, offset: 0, limit: 0 },          // limit < 1
+      { projectIndex: 0, offset: 0, limit: 33 },         // limit > 32
+      { projectIndex: 0, offset: -1, limit: 8 },         // negative offset
+      { projectIndex: 0, offset: 0, limit: 8, x: 1 },    // extra arg
+      { projectIndex: 0, offset: 0, limit: 1.5 },        // fractional
+      { offset: 0, limit: 8 },                           // missing projectIndex
+    ]) {
+      expect(validateNativeIntakeArgs(ENUM, bad)).not.toEqual([]);
+    }
+  });
+  test("v2 field bounds and types refuse", () => {
+    const bad = [
+      wrap({ ...base, itemId: -1 }),
+      wrap({ ...base, itemId: 4294967296 }),
+      wrap({ ...base, itemId: 1.5 }),
+      wrap({ ...base, itemId: "7" }),
+      wrap({ ...base, itemId: null }),
+      wrap({ ...base, projectName: 5 }),
+      wrap({ ...base, projectPath: true }),
+      wrap({ ...base, generation: 1 }),                  // unknown key
+      wrap({ ...base, name: "A".repeat(1025) }),         // >1024 UTF-8 bytes
+      { projectIndex: 0, item: { aeRef: { type: "comp", name: "P", itemId: 7 } } }, // missing path
+    ];
+    for (const a of bad) {
+      expect(validateNativeIntakeArgs(IN, a)).not.toEqual([]);
+      expect(validateNativeIntakeArgs(ID, a)).not.toEqual([]);
+    }
+    // multibyte name: 600 × 'é' = 1200 UTF-8 bytes > 1024
+    expect(validateNativeIntakeArgs(IN, wrap({
+      ...base, name: "é".repeat(600),
+    }))).not.toEqual([]);
+    // 500 × 'é' = 1000 bytes ≤ 1024 passes
+    expect(validateNativeIntakeArgs(IN, wrap({
+      ...base, name: "é".repeat(500),
+    }))).toEqual([]);
   });
 });
