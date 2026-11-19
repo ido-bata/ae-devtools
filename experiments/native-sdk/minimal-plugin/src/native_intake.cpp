@@ -455,19 +455,49 @@ static int EmitResult(
 #undef APP
 }
 
-/* ---- allowlist ------------------------------------------------------- */
+/* ---- allowlist + per-operation argument schema ----------------------
+   Issue #270 Stage 1: each entry declares the exact `args` contract the
+   plug-in enforces BEFORE any AEGP call. The devtools-side canonical
+   statement is NATIVE_INTAKE_ARG_SCHEMAS in
+   packages/native-adapter/src/dispatch.ts — keep the two in sync.
+
+   Args rules (contract native-channel.md §3/§4):
+   - zero-arg op (argsSpec NULL): `args` must be absent or null.
+   - arg op: `args` must be a JSON object whose key set is EXACTLY the
+     spec's names — missing and extra fields both refuse
+     MALFORMED_REQUEST. Values must be finite integral numbers inside
+     [min, max]. Identity-bearing arguments (AEGP_ItemH etc.) are not
+     expressible: external JSON never becomes a host handle. */
+
+typedef struct
+{
+    const char* name; /* args object key */
+    double min;       /* inclusive bounds (integral values only) */
+    double max;
+} IntakeArgSpec;
 
 typedef struct
 {
     const char* operationId;
     const char* opRecordId; /* identical string; kept explicit */
+    const IntakeArgSpec* argsSpec;
+    int nargs;
 } AllowEntry;
+
+/* AEGP_ItemType (AE_GeneralPlug.h): NONE=0 FOLDER=1 COMP=2
+   SOLID_defunct=3 FOOTAGE=4, NUM_TYPES1=5. GetTypeName rejects NONE;
+   the permitted span is the defined non-NONE values [1, 4]. */
+static const IntakeArgSpec S_TYPENAME_ARGS[] = {
+    { "itemType", 1.0, 4.0 },
+};
 
 static const AllowEntry S_ALLOWLIST[] = {
     { "AEGP_ProjSuite6.AEGP_GetNumProjects",
-      "AEGP_ProjSuite6.AEGP_GetNumProjects" },
+      "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, 0 },
     { "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
-      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion" },
+      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion", NULL, 0 },
+    { "AEGP_ItemSuite9.AEGP_GetTypeName",
+      "AEGP_ItemSuite9.AEGP_GetTypeName", S_TYPENAME_ARGS, 1 },
 };
 static const int S_ALLOWLIST_COUNT =
     (int)(sizeof(S_ALLOWLIST) / sizeof(S_ALLOWLIST[0]));
@@ -481,6 +511,112 @@ static const AllowEntry* AllowFind(const char* opIdZ, size_t len)
         if (strlen(a) == len && memcmp(a, opIdZ, len) == 0) return &S_ALLOWLIST[i];
     }
     return NULL;
+}
+
+/* Per-operation args validation (Issue #270 Stage 1). `args` is the
+   request envelope's args member: absent (JGet NULL), JK_NULL, or any
+   parsed JSON value. Returns 1 when acceptable; on refusal fills
+   `detailZ` (bounded) for the MALFORMED_REQUEST verdict. Runs BEFORE
+   session attestation and any AEGP call — unpermitted input never
+   reaches the host. */
+static int ValidateArgs(
+    const AllowEntry* allow,
+    JVal* args,
+    char* detailZ, size_t detailCap)
+{
+    int i;
+    if (allow->nargs == 0)
+    {
+        if (args && args->kind != JK_NULL)
+        {
+            snprintf(detailZ, detailCap, "operation takes no arguments");
+            return 0;
+        }
+        return 1;
+    }
+    if (!args || args->kind != JK_OBJ)
+    {
+        snprintf(detailZ, detailCap, "args must be an object of named arguments");
+        return 0;
+    }
+    /* exact key set: every spec name present, no extras */
+    if ((int)args->npairs != allow->nargs)
+    {
+        snprintf(detailZ, detailCap, "args field count mismatch");
+        return 0;
+    }
+    for (i = 0; i < allow->nargs; i++)
+    {
+        const IntakeArgSpec* spec = &allow->argsSpec[i];
+        JVal* v = JGet(args, spec->name);
+        if (!v)
+        {
+            snprintf(detailZ, detailCap, "missing argument \"%s\"", spec->name);
+            return 0;
+        }
+        if (v->kind != JK_NUM || !isfinite(v->num) ||
+            floor(v->num) != v->num || v->num < spec->min || v->num > spec->max)
+        {
+            snprintf(detailZ, detailCap,
+                     "argument \"%s\" out of permitted range", spec->name);
+            return 0;
+        }
+    }
+    /* duplicate spec names would let one field satisfy two slots; the
+       table is compile-time constant so this cannot happen, but the
+       exact-count check above already bounds the surface. */
+    return 1;
+}
+
+/* Fetch a validated integer argument (call only after ValidateArgs
+   succeeded for this op). */
+static long ArgsInt(const AllowEntry* allow, JVal* args, int index)
+{
+    JVal* v = JGet(args, allow->argsSpec[index].name);
+    return v ? (long)v->num : 0;
+}
+
+/* ---- per-request suite acquisition (Issue #270 Stage 1) --------------
+   Intake runs before the probe's reason-gated item-suite acquisition, so
+   an arg-bearing op acquires exactly the suite it needs, inside the
+   request window, and releases it before the verdict. Acquire/release
+   are op-recorded like every other host call. */
+
+static const void* IntakeAcquireSuite(
+    const AEGP_UtilitySuite6* utilP,
+    struct SPBasicSuite* basicP,
+    const char* nameZ,
+    int versionL)
+{
+    const void* suite = NULL;
+    SPErr src = A_Err_STRUCT;
+    char extra[96];
+    if (basicP && basicP->AcquireSuite)
+        src = basicP->AcquireSuite(nameZ, versionL, &suite);
+    snprintf(extra, sizeof(extra), " suite=\"%s\" version=%d",
+             nameZ, (int)versionL);
+    extra[sizeof(extra) - 1] = '\0';
+    IntakeOpRecord(utilP, "SPBasicSuite.AcquireSuite", (long)src,
+                   src == 0 ? extra : NULL);
+    if (src != 0 || !suite) return NULL;
+    return suite;
+}
+
+static void IntakeReleaseSuite(
+    const AEGP_UtilitySuite6* utilP,
+    struct SPBasicSuite* basicP,
+    const char* nameZ,
+    int versionL)
+{
+    SPErr src = A_Err_STRUCT;
+    char extra[96];
+    if (basicP && basicP->ReleaseSuite)
+        src = basicP->ReleaseSuite(nameZ, versionL);
+    snprintf(extra, sizeof(extra), " suite=\"%s\" version=%d",
+             nameZ, (int)versionL);
+    extra[sizeof(extra) - 1] = '\0';
+    IntakeOpRecord(utilP, "SPBasicSuite.ReleaseSuite", (long)src,
+                   src == 0 ? extra : NULL);
 }
 
 /* ---- request processing ---------------------------------------------- */
@@ -513,6 +649,7 @@ static void VerdictRefuse(ReqVerdict* r, const char* codeZ, const char* detailZ)
 static void ProcessClaimed(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
     AEGP_PluginID plugin_id,
     const char* claimedPathZ,
     const char* stemZ,
@@ -624,7 +761,6 @@ static void ProcessClaimed(
                        JNonEmptyStr(JGet(srel, "identifier")) &&
                        JNonEmptyStr(JGet(srel, "distribution")))) ||
             !opid || opid->kind != JK_STR || opid->slen == 0 ||
-            (args && args->kind != JK_NULL) ||
             (aref && !JNonEmptyStr(aref)))
         {
             VerdictRefuse(&v, "MALFORMED_REQUEST", "dispatch envelope failed shape validation");
@@ -637,6 +773,20 @@ static void ProcessClaimed(
             VerdictRefuse(&v, "OPERATION_NOT_DISPATCHABLE",
                           "operation is not in the native intake allowlist");
             goto verdict;
+        }
+        /* per-operation args schema (Issue #270 Stage 1): validated
+           here — after allowlist resolution, before the duplicate check,
+           session attestation, and any AEGP call. Unpermitted input is
+           refused MALFORMED_REQUEST and never reaches the host. */
+        {
+            char argDetail[160];
+            argDetail[0] = '\0';
+            if (!ValidateArgs(allow, args, argDetail, sizeof(argDetail)))
+            {
+                VerdictRefuse(&v, "MALFORMED_REQUEST",
+                              argDetail[0] ? argDetail : "args failed schema validation");
+                goto verdict;
+            }
         }
         /* duplicate requestId */
         if (SeenBefore(stemZ))
@@ -746,6 +896,69 @@ static void ProcessClaimed(
                          "AEGP_GetDriverImplementationVersion err=%ld", (long)oerr);
                 v.havePayload = 0;
                 v.mayHaveMutated = 0;
+            }
+        }
+        else if (strcmp(allow->operationId,
+                        "AEGP_ItemSuite9.AEGP_GetTypeName") == 0)
+        {
+            /* args validated above: {"itemType": <int in [1,4]>}.
+               The suite is acquired and released inside this request's
+               evidence window; a missing suite/entry is environment-
+               proven non-dispatch (not-sent), an AEGP error is failed
+               with mayHaveMutated=false (read-only getter). */
+            AEGP_ItemType itype = (AEGP_ItemType)ArgsInt(allow, args, 0);
+            const void* suite = IntakeAcquireSuite(
+                utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+            if (!suite)
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "not-sent");
+                snprintf(v.detail, sizeof(v.detail),
+                         "AEGP Item Suite unavailable for GetTypeName");
+                v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
+                goto verdict;
+            }
+            {
+                const AEGP_ItemSuite9* itemP = (const AEGP_ItemSuite9*)suite;
+                A_Err oerr = A_Err_STRUCT;
+                char extra[48];
+                A_char nameZ[AEGP_MAX_TYPE_NAME_SIZE + 1];
+                if (!itemP->AEGP_GetTypeName)
+                {
+                    IntakeReleaseSuite(utilP, basicP,
+                                       kAEGPItemSuite, kAEGPItemSuiteVersion9);
+                    snprintf(v.outcome, sizeof(v.outcome), "not-sent");
+                    snprintf(v.detail, sizeof(v.detail),
+                             "AEGP_GetTypeName entry unavailable");
+                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
+                    goto verdict;
+                }
+                memset(nameZ, 0, sizeof(nameZ));
+                oerr = itemP->AEGP_GetTypeName(itype, nameZ);
+                snprintf(extra, sizeof(extra), " t=%d", (int)itype);
+                extra[sizeof(extra) - 1] = '\0';
+                IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                               oerr == A_Err_NONE ? extra : NULL);
+                IntakeReleaseSuite(utilP, basicP,
+                                   kAEGPItemSuite, kAEGPItemSuiteVersion9);
+                if (oerr == A_Err_NONE)
+                {
+                    char esc[AEGP_MAX_TYPE_NAME_SIZE * 2 + 8];
+                    JsonEscape(esc, sizeof(esc), nameZ);
+                    snprintf(v.outcome, sizeof(v.outcome), "completed");
+                    snprintf(v.payload, sizeof(v.payload),
+                             "{\"typeName\":\"%s\"}", esc);
+                    v.payload[sizeof(v.payload) - 1] = '\0';
+                    v.havePayload = 1;
+                    v.mayHaveMutated = 0;
+                }
+                else
+                {
+                    snprintf(v.outcome, sizeof(v.outcome), "failed");
+                    snprintf(v.detail, sizeof(v.detail),
+                             "AEGP_GetTypeName err=%ld", (long)oerr);
+                    v.havePayload = 0;
+                    v.mayHaveMutated = 0; /* read-only getter */
+                }
             }
         }
         else
@@ -864,6 +1077,7 @@ static void WriteHeartbeat(
 void NativeIntakeTick(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
     AEGP_PluginID plugin_id)
 {
     char inboxDir[PATH_MAX_LOCAL], outboxDir[PATH_MAX_LOCAL], statePath[PATH_MAX_LOCAL];
@@ -973,7 +1187,7 @@ void NativeIntakeTick(
                 }
             }
 
-            ProcessClaimed(utilP, projP, plugin_id, claimedPath, stem,
+            ProcessClaimed(utilP, projP, basicP, plugin_id, claimedPath, stem,
                            outboxDir, token, pin,
                            FileMtimeMs(claimedPath));
             remove(claimedPath);
@@ -1018,9 +1232,10 @@ void NativeIntakeConfigure(const char* channelRootZ)
 void NativeIntakeTick(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
     AEGP_PluginID plugin_id)
 {
-    (void)utilP; (void)projP; (void)plugin_id;
+    (void)utilP; (void)projP; (void)basicP; (void)plugin_id;
 }
 
 #endif /* !_WIN32 */

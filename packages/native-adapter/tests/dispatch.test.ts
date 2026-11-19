@@ -14,6 +14,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   DISPATCH_ARG_MAX_DEPTH,
+  NATIVE_INTAKE_ARG_SCHEMAS,
   NATIVE_INTAKE_OPERATIONS,
   DISPATCH_OUTCOMES,
   DISPATCH_SCHEMA,
@@ -22,6 +23,7 @@ import {
   resolveDispatchOperation,
   validateDispatchRequest,
   validateDispatchResult,
+  validateNativeIntakeArgs,
   type DispatchRequest,
   type DispatchResult,
 } from "../src/dispatch.ts";
@@ -231,5 +233,48 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
     for (const id of NATIVE_INTAKE_OPERATIONS) {
       expect(id).toMatch(/Get/);
     }
+  });
+});
+
+describe("NATIVE_INTAKE_ARG_SCHEMAS / validateNativeIntakeArgs — Issue #270 Stage 1", () => {
+  const TN = "AEGP_ItemSuite9.AEGP_GetTypeName";
+  const ZERO = "AEGP_ProjSuite6.AEGP_GetNumProjects";
+
+  test("schema keys are exactly the intake allowlist members", () => {
+    for (const id of Object.keys(NATIVE_INTAKE_ARG_SCHEMAS)) {
+      expect((NATIVE_INTAKE_OPERATIONS as readonly string[]).includes(id)).toBe(true);
+    }
+  });
+  test("zero-arg ops accept absent/null args and refuse everything else", () => {
+    expect(validateNativeIntakeArgs(ZERO, undefined)).toEqual([]);
+    expect(validateNativeIntakeArgs(ZERO, null)).toEqual([]);
+    for (const bad of [{}, [], 0, "", { itemType: 2 }, true]) {
+      expect(validateNativeIntakeArgs(ZERO, bad)).not.toEqual([]);
+    }
+  });
+  test("arg op requires the exact named-arg object", () => {
+    expect(validateNativeIntakeArgs(TN, { itemType: 2 })).toEqual([]);
+    expect(validateNativeIntakeArgs(TN, { itemType: 1 })).toEqual([]);
+    expect(validateNativeIntakeArgs(TN, { itemType: 4 })).toEqual([]);
+    // missing / null / non-object forms
+    for (const bad of [undefined, null, {}, [], 2, "2", { other: 2 }]) {
+      expect(validateNativeIntakeArgs(TN, bad)).not.toEqual([]);
+    }
+    // extra fields refuse — no partial/partial-plus application
+    expect(validateNativeIntakeArgs(TN, { itemType: 2, extra: 1 })).not.toEqual([]);
+  });
+  test("itemType range rejects NONE, undefined values, non-integers, wrong types", () => {
+    for (const bad of [0, 5, -1, 99, 1.5, "2", true, null]) {
+      expect(validateNativeIntakeArgs(TN, { itemType: bad })).not.toEqual([]);
+    }
+  });
+  test("prototype-polluting keys cannot smuggle extra args", () => {
+    const args = JSON.parse('{"itemType":2,"constructor":1,"__proto__":{}}');
+    expect(validateNativeIntakeArgs(TN, args)).not.toEqual([]);
+  });
+  test("non-allowlisted operation ids refuse", () => {
+    expect(validateNativeIntakeArgs("AEGP_ProjSuite6.AEGP_GetProjectName", null))
+      .not.toEqual([]);
+    expect(validateNativeIntakeArgs("No.Such.Op", { itemType: 2 })).not.toEqual([]);
   });
 });
