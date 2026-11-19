@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "cd8d5235a3952c42040050b5114d7a08e43420b78e99564426c011e60b84fe40"
+      "sha256": "fc3d570b321f44215d7a3e94840304d22ab9c78a6ba7471fb8396ab3dff27ffc"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -16434,7 +16434,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, layer.replaceSource)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.replaceSource)"
           }
         ]
       }

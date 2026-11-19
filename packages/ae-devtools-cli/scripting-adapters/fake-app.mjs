@@ -639,7 +639,12 @@ function makeTextDoc(box) {
     // Style fields (Issue #285).
     font: "ArialMT",
     fontSize: 100,
-    fontStyle: "Regular",
+    // fontStyle is read-only in the scripting reference (it reflects
+    // the first character's style). The fake has no per-character
+    // style state, so it exposes a constant via a getter backed by
+    // __fontStyle — writes throw in strict mode like a real read-only
+    // attribute assignment would.
+    __fontStyle: "Regular",
     justification: 0,
     tracking: 0,
     leading: 0,
@@ -718,9 +723,13 @@ function makeTextDoc(box) {
     },
     enumerable: true,
   });
+  Object.defineProperty(d, "fontStyle", {
+    get() { return this.__fontStyle; },
+    enumerable: true,
+  });
   // Clone support for layer/comp duplication: copies every own field
   // except the conditional getters (read via __state instead).
-  const CONDITIONAL = ["fillColor", "strokeColor", "boxTextSize", "boxTextPos", "paragraphCount", "composedLineCount"];
+  const CONDITIONAL = ["fillColor", "strokeColor", "boxTextSize", "boxTextPos", "paragraphCount", "composedLineCount", "fontStyle"];
   d.__snapshot = function () {
     const s = {};
     for (const k in this) {
@@ -764,7 +773,10 @@ function makeLayer(name, comp, kind) {
     // true to match the common footage-layer case.
     adjustmentLayer: false,
     preserveTransparency: true,
-    frameBlending: false,
+    // AVLayer.frameBlending is read-only in the scripting reference;
+    // expose it via a getter backed by __frameBlending so generated
+    // code cannot write it (strict-mode assignment throws).
+    __frameBlending: false,
     collapseTransformation: false,
     timeRemapEnabled: false,
     // Track matte state (Issue #287): {layer, type} or null. The matte
@@ -876,6 +888,16 @@ function makeLayer(name, comp, kind) {
     duplicate() {
       const l = makeLayer(this.name + " copy", comp, this.kind);
       l.__source = this.__source;
+      // Scalar layer state survives duplication in real AE; copy the
+      // flag/binding fields the fake models (track matte is skipped —
+      // remapping __trackMatte across the copy is not modeled).
+      for (const k of ["enabled", "locked", "solo", "shy", "label", "comment",
+        "audioEnabled", "threeDLayer", "motionBlur", "guideLayer",
+        "adjustmentLayer", "preserveTransparency", "__frameBlending",
+        "collapseTransformation", "timeRemapEnabled",
+        "inPoint", "outPoint", "startTime", "stretch"]) {
+        l[k] = this[k];
+      }
       if (l.__textDoc !== null && this.__textDoc !== null) {
         l.__textDoc.__restore(this.__textDoc.__snapshot());
       }
@@ -891,6 +913,10 @@ function makeLayer(name, comp, kind) {
       comp.__reindex();
     },
   };
+  Object.defineProperty(layer, "frameBlending", {
+    get() { return layer.__frameBlending; },
+    enumerable: true,
+  });
   // Real AE rejects self-parenting and parent cycles; model both.
   Object.defineProperty(layer, "parent", {
     get() { return layer.__parent; },
@@ -950,6 +976,19 @@ function makeComp(name, w, h, par, dur, owner, parent) {
         nl.shy = l.shy;
         nl.label = l.label;
         nl.locked = l.locked;
+        nl.enabled = l.enabled;
+        nl.comment = l.comment;
+        nl.audioEnabled = l.audioEnabled;
+        nl.threeDLayer = l.threeDLayer;
+        nl.motionBlur = l.motionBlur;
+        nl.guideLayer = l.guideLayer;
+        nl.adjustmentLayer = l.adjustmentLayer;
+        nl.preserveTransparency = l.preserveTransparency;
+        nl.__frameBlending = l.__frameBlending;
+        nl.collapseTransformation = l.collapseTransformation;
+        nl.timeRemapEnabled = l.timeRemapEnabled;
+        nl.inPoint = l.inPoint;
+        nl.outPoint = l.outPoint;
         copyMarkers(l.__marker, nl.marker);
         if (l.__shapeContents !== null) nl.__shapeContents = clonePropNode(l.__shapeContents);
         d.__layers.push(nl);

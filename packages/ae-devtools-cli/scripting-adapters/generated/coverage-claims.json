@@ -425,13 +425,6 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.AVLayer.replaceSource": {
-      "ops": [
-        "read.layerDetail",
-        "layer.replaceSource"
-      ],
-      "evidence": "fake/mock only"
-    },
     "ae.scripting.PropertyGroup.property": {
       "ops": [
         "read.layerDetail",
@@ -1540,6 +1533,12 @@
       "ops": [
         "comp.setSettings",
         "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.replaceSource": {
+      "ops": [
+        "layer.replaceSource"
       ],
       "evidence": "fake/mock only"
     },
