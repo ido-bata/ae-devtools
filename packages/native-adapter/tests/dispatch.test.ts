@@ -256,6 +256,27 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
       "AEGP_ItemSuite9.AEGP_GetItemType",
       "AEGP_ItemSuite9.AEGP_GetTypeName",
       "AEGP_ItemSuite9.AEGP_IsItemSelected",
+      "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
+      "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
+      "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
+      "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
+      "AEGP_LayerSuite9.AEGP_GetLayerDuration",
+      "AEGP_LayerSuite9.AEGP_GetLayerFlags",
+      "AEGP_LayerSuite9.AEGP_GetLayerID",
+      "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
+      "AEGP_LayerSuite9.AEGP_GetLayerIndex",
+      "AEGP_LayerSuite9.AEGP_GetLayerLabel",
+      "AEGP_LayerSuite9.AEGP_GetLayerName",
+      "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
+      "AEGP_LayerSuite9.AEGP_GetLayerQuality",
+      "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
+      "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
+      "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
+      "AEGP_LayerSuite9.AEGP_IsLayer2D",
+      "AEGP_LayerSuite9.AEGP_IsLayer3D",
+      "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
+      "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
+      "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
       "AEGP_ProjSuite6.AEGP_GetNumProjects",
       "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
       "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
@@ -467,5 +488,107 @@ describe("comp:<aeRefItem> arg — Issue #318 CompSuite13 getters", () => {
       projectIndex: 0,
       comp: { aeRef: { type: "footage", name: "F", path: [0] } },
     })).toEqual([]);
+  });
+});
+
+describe("layer:<aeRefLayer> arg — Issue #318 LayerSuite9 getters", () => {
+  const LID = "AEGP_LayerSuite9.AEGP_GetLayerID";
+  const LIDX = "AEGP_LayerSuite9.AEGP_GetLayerIndex";
+  const LTIME = "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime";
+  const LMATTE = "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte";
+  const CIDX = "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex";
+  const CNUM = "AEGP_LayerSuite9.AEGP_GetCompNumLayers";
+  const compRef = {
+    aeRef: {
+      type: "comp", name: "Clip", path: [0], itemId: 6001,
+      projectName: "Shot01", projectPath: "/tmp/shot01.aep",
+    },
+  };
+  const good = {
+    projectIndex: 0,
+    layer: {
+      aeRef: { type: "layer", name: "Layer One", layerId: 4242, comp: compRef },
+    },
+  };
+  test("well-formed layer descriptor passes shape validation", () => {
+    expect(validateNativeIntakeArgs(LID, good)).toEqual([]);
+    expect(validateNativeIntakeArgs(LIDX, good)).toEqual([]);
+    // full int32 range including negatives is legal
+    for (const id of [-2147483648, -1, 0, 2147483647]) {
+      const a = { projectIndex: 0, layer: { aeRef: {
+        type: "layer", name: "L", layerId: id, comp: compRef } } };
+      expect(validateNativeIntakeArgs(LID, a)).toEqual([]);
+    }
+  });
+  test("comp-scoped ops use the comp aeRefItem contract", () => {
+    expect(validateNativeIntakeArgs(CNUM, {
+      projectIndex: 0, comp: compRef,
+    })).toEqual([]);
+    expect(validateNativeIntakeArgs(CIDX, {
+      projectIndex: 0, comp: compRef, layerIndex: 3,
+    })).toEqual([]);
+    for (const bad of [
+      { projectIndex: 0, comp: compRef },                    // CIDX missing layerIndex
+      { projectIndex: 0, comp: compRef, layerIndex: -1 },
+      { projectIndex: 0, comp: compRef, layerIndex: 1.5 },
+      { projectIndex: 0, layer: good.layer },                // wrong arg key
+    ]) {
+      expect(validateNativeIntakeArgs(CIDX, bad)).not.toEqual([]);
+    }
+  });
+  test("timeMode / fillMustBeActive are required bounded integers", () => {
+    for (const tm of [0, 1]) {
+      expect(validateNativeIntakeArgs(LTIME, { ...good, timeMode: tm }))
+        .toEqual([]);
+    }
+    expect(validateNativeIntakeArgs(LMATTE, { ...good, fillMustBeActive: 1 }))
+      .toEqual([]);
+    for (const bad of [
+      { ...good },                                            // missing timeMode
+      { ...good, timeMode: 2 },
+      { ...good, timeMode: -1 },
+      { ...good, timeMode: 0.5 },
+      { ...good, timeMode: "0" },
+      { ...good, fillMustBeActive: 1 },                      // on LTIME → extra arg
+    ]) {
+      expect(validateNativeIntakeArgs(LTIME, bad)).not.toEqual([]);
+    }
+    for (const bad of [
+      { ...good },                                            // missing fillMustBeActive
+      { ...good, fillMustBeActive: 2 },
+      { ...good, fillMustBeActive: true },
+    ]) {
+      expect(validateNativeIntakeArgs(LMATTE, bad)).not.toEqual([]);
+    }
+  });
+  test("aeRefLayer inner shape is exact — keys, type, id, name", () => {
+    const wrap = (inner: Record<string, unknown>) =>
+      ({ projectIndex: 0, layer: { aeRef: inner } });
+    const base = { type: "layer", name: "L", layerId: 1, comp: compRef };
+    for (const bad of [
+      { projectIndex: 0, layer: { type: "layer", name: "L", layerId: 1, comp: compRef } }, // no wrapper
+      wrap({ type: "comp", name: "L", layerId: 1, comp: compRef }),   // wrong type tag
+      wrap({ type: "layer", name: "", layerId: 1, comp: compRef }),   // empty name
+      wrap({ type: "layer", name: "L", layerId: 2147483648, comp: compRef }),
+      wrap({ type: "layer", name: "L", layerId: -2147483649, comp: compRef }),
+      wrap({ type: "layer", name: "L", layerId: 1.5, comp: compRef }),
+      wrap({ type: "layer", name: "L", layerId: "1", comp: compRef }),
+      wrap({ type: "layer", name: "L", layerId: 1 }),                  // missing comp
+      wrap({ type: "layer", name: "L", comp: compRef }),              // missing layerId
+      wrap({ ...base, extra: 1 }),                                    // extra inner key
+      wrap({ ...base, comp: { aeRef: { type: "comp", name: "C" } } }),// comp missing path
+      wrap({ ...base, comp: "Clip" }),                                // comp not descriptor
+      { projectIndex: 0, layer: "Layer One" },                        // arg not object
+      { projectIndex: 0 },                                            // missing layer
+    ]) {
+      expect(validateNativeIntakeArgs(LID, bad)).not.toEqual([]);
+    }
+  });
+  test("shape pass is not resolution — ghost ids stay host-side", () => {
+    const ghost = { projectIndex: 0, layer: { aeRef: {
+      type: "layer", name: "Ghost", layerId: 999999,
+      comp: { aeRef: { type: "comp", name: "Nope", path: [42], itemId: 1 } },
+    } } };
+    expect(validateNativeIntakeArgs(LID, ghost)).toEqual([]);
   });
 });

@@ -147,11 +147,32 @@ AEGP_ItemSuite9.AEGP_GetItemCurrentTime                                (args: pr
 AEGP_ItemSuite9.AEGP_GetItemDimensions                                 (args: projectIndex+item aeRefItem — item detail getter, see §7a)
 AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio                           (args: projectIndex+item aeRefItem — item detail getter, see §7a)
 AEGP_ItemSuite9.AEGP_GetItemComment                                    (args: projectIndex+item aeRefItem — item detail getter, see §7a)
+AEGP_LayerSuite9.AEGP_GetCompNumLayers                                 (args: projectIndex+comp aeRefItem — comp-scoped, see §7d)
+AEGP_LayerSuite9.AEGP_GetCompLayerByIndex                              (args: projectIndex+comp aeRefItem+layerIndex — layer descriptor issuance, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerIndex                                    (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerName                                     (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerFlags                                    (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerQuality                                  (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerObjectType                               (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_IsLayer3D                                        (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_IsLayer2D                                        (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerCurrentTime                              (args: projectIndex+layer aeRefLayer+timeMode — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerInPoint                                  (args: projectIndex+layer aeRefLayer+timeMode — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerDuration                                 (args: projectIndex+layer aeRefLayer+timeMode — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerID                                       (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerLabel                                    (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality                          (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetLayerSourceItemID                             (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn                             (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn                             (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte                          (args: projectIndex+layer aeRefLayer — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte                          (args: projectIndex+layer aeRefLayer+fillMustBeActive — layer-handle getter, see §7d)
+AEGP_LayerSuite9.AEGP_GetTrackMatteLayer                               (args: projectIndex+layer aeRefLayer — emits aeRefLayer, see §7d)
 AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState                      (zero-arg, #270 stage 2)
 AEGP_RQItemSuite4.AEGP_GetNumRQItems                                 (zero-arg, #270 stage 2)
 ```
 
-All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Stage 4 (#318) extends the same pattern to **derived handles and item detail**: the thirteen `AEGP_CompSuite13` read-only getters take the item descriptor and derive the `AEGP_CompH` host-side via `AEGP_GetCompFromItem` inside the request window (§7c), and nine `AEGP_ItemSuite9` read-only detail getters (`GetItemType`/`GetItemFlags`/`IsItemSelected`/`GetItemLabel`/`GetItemDuration`/`GetItemCurrentTime`/`GetItemDimensions`/`GetItemPixelAspectRatio`/`GetItemComment`) run directly on the resolved `AEGP_ItemH` — same `{projectIndex, item}` contract, no derived handle. `AEGP_GetItemParentFolder` and `AEGP_GetItemMRUView` stay out: they return host handles of other identity kinds (folder item / item-view) needing their own descriptor story. `AEGP_GetCompShutterFrameRange` is deliberately excluded: it takes an `A_Time` input argument, and arg-bearing (non-descriptor) inputs are a separate slice. Project/layer/RQ-item handle kinds extend the same §7c pattern in later stages. Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Stage 4 (#318) extends the same pattern to **derived handles and item detail**: the thirteen `AEGP_CompSuite13` read-only getters take the item descriptor and derive the `AEGP_CompH` host-side via `AEGP_GetCompFromItem` inside the request window (§7c), and nine `AEGP_ItemSuite9` read-only detail getters (`GetItemType`/`GetItemFlags`/`IsItemSelected`/`GetItemLabel`/`GetItemDuration`/`GetItemCurrentTime`/`GetItemDimensions`/`GetItemPixelAspectRatio`/`GetItemComment`) run directly on the resolved `AEGP_ItemH` — same `{projectIndex, item}` contract, no derived handle. `AEGP_GetItemParentFolder` and `AEGP_GetItemMRUView` stay out: they return host handles of other identity kinds (folder item / item-view) needing their own descriptor story. `AEGP_GetCompShutterFrameRange` is deliberately excluded: it takes an `A_Time` input argument, and arg-bearing (non-descriptor) inputs are a separate slice. The layer slice (#318) adds twenty-one `AEGP_LayerSuite9` read-only members on the same pattern extended one level deeper (§7d): the layer handle is never taken from the wire — `layer` is an `aeRefLayer` descriptor that embeds its parent comp's §7b item descriptor, and `AEGP_GetCompLayerByIndex` is the layer **descriptor issuance** operation. `AEGP_GetActiveLayer`, members needing `A_Time`/`A_FloatRect`/stream arguments, source/parent-handle paths needing additional identity kinds, and all mutating members stay out. Project/RQ-item handle kinds extend the same pattern in later stages. Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
@@ -172,6 +193,11 @@ The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `pack
 | `AEGP_ItemSuite9.AEGP_GetFirstProjItem` | `{"projectIndex": <integer 0..1000000>, "offset": <integer 0..1000000>, "limit": <integer 1..32>}` — exactly these three fields. This is the **discovery/enumeration** operation: walks the project's top-level items in `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` order and emits ready-to-use descriptors. Result `{"project": {"index","name","path"}, "total": <int>, "offset": <int>, "items": [{"item": {"aeRef": {…}}}…], "truncated": <bool>}` — each `items[]` entry's `item` value is a complete §7b descriptor (including `itemId`/`projectName`/`projectPath`) usable verbatim as `args.item`. `truncated:true` means more items exist beyond the emitted window or the result-size budget; page with `offset`. Items whose live name exceeds the identity bound are emitted as `{"index","type","itemId","nameTruncated":true}` without a usable descriptor; live item kinds with no descriptor tag (e.g. solid) are emitted as `{"index","unsupportedType":true}` — never a partial or invalid `aeRef` |
 | `AEGP_CompSuite13.*` (the thirteen getters listed in §7) | `{"projectIndex": <integer 0..1000000>, "comp": <aeRefItem>}` — exactly these two fields. `comp` is the same §7b descriptor; resolution and corroboration are identical to `GetItemName` (the descriptor's `type` must corroborate the live item — a `comp`-typed descriptor against a non-comp item refuses `STALE_REFERENCE`). The resolved `AEGP_ItemH` is then mapped to `AEGP_CompH` via `AEGP_GetCompFromItem` inside the request window (§7c). Result payloads are typed per getter — see §7c |
 | `AEGP_ItemSuite9.*` detail getters (`GetItemType`, `GetItemFlags`, `IsItemSelected`, `GetItemLabel`, `GetItemDuration`, `GetItemCurrentTime`, `GetItemDimensions`, `GetItemPixelAspectRatio`, `GetItemComment`) | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields, identical to `GetItemName`. The resolved `AEGP_ItemH` is used directly (no derived handle, no extra suite). Result payloads: `GetItemType` → `{"itemType": <int>}` (`AEGP_ItemType`); `GetItemFlags` → `{"flags": <int>}`; `IsItemSelected` → `{"selected": <bool>}`; `GetItemLabel` → `{"label": <int>}` (`AEGP_LabelID`); `GetItemDuration`/`GetItemCurrentTime` → `{"duration"|"currentTime": {"value": <int>, "scale": <uint>}}` (`A_Time`); `GetItemDimensions` → `{"width": <int>, "height": <int>}`; `GetItemPixelAspectRatio` → `{"pixelAspectRatio": {"num": <int>, "den": <uint>}}` (`A_Ratio`); `GetItemComment` → `{"comment": "<string>"}` — the item's UTF-16 comment via `AEGP_MemHandle`, converted to UTF-8 and JSON-escaped, bounded at 2048 UTF-8 bytes (a longer comment is `failed`, never silently truncated) |
+| `AEGP_LayerSuite9.AEGP_GetCompNumLayers` | `{"projectIndex": <integer 0..1000000>, "comp": <aeRefItem>}` — comp-scoped (§7d); result `{"numLayers": <int>}` |
+| `AEGP_LayerSuite9.AEGP_GetCompLayerByIndex` | `{"projectIndex": <integer 0..1000000>, "comp": <aeRefItem>, "layerIndex": <integer 0..1000000>}` — `layerIndex` is the `AEGP_GetCompLayerByIndex` position (0-based). **Layer descriptor issuance**: result `{"index": <int>, "layer": {"aeRef": {<aeRefLayer>}}}` — store `result.layer` verbatim as `args.layer` |
+| `AEGP_LayerSuite9.*` layer-handle getters (`GetLayerIndex`, `GetLayerName`, `GetLayerFlags`, `GetLayerQuality`, `GetLayerObjectType`, `IsLayer3D`, `IsLayer2D`, `GetLayerID`, `GetLayerLabel`, `GetLayerSamplingQuality`, `GetLayerSourceItemID`, `IsLayerVideoReallyOn`, `IsLayerAudioReallyOn`, `DoesLayerHaveTrackMatte`, `GetTrackMatteLayer`) | `{"projectIndex": <integer 0..1000000>, "layer": <aeRefLayer>}` — exactly these two fields (§7d). Result payloads are typed per getter — see §7d |
+| `AEGP_LayerSuite9.AEGP_GetLayerCurrentTime` / `GetLayerInPoint` / `GetLayerDuration` | `{"projectIndex": <integer 0..1000000>, "layer": <aeRefLayer>, "timeMode": <integer 0..1>}` — `timeMode` is `AEGP_LTimeMode` (`LayerTime`=0, `CompTime`=1); required, never defaulted. Result `{"currentTime"|"inPoint"|"duration": {"value": <int>, "scale": <uint>}}` (`A_Time`) |
+| `AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte` | `{"projectIndex": <integer 0..1000000>, "layer": <aeRefLayer>, "fillMustBeActive": <integer 0..1>}` — required boolean-as-integer; result `{"isTrackMatte": <bool>}` |
 
 Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.
 
@@ -252,6 +278,64 @@ Result payloads (all `completed` carry `mayHaveMutated:false` semantics — read
 | `AEGP_GetCompShutterAnglePhase` | `{"shutterAngle": {"num","den"}, "shutterPhase": {"num","den"}}` (`A_Ratio`) |
 
 `AEGP_GetCompShutterFrameRange` is excluded from the allowlist: it takes an `A_Time comp_timeP` input argument. Non-descriptor scalar/struct arguments are a separate arg-schema slice; until then only zero-extra-arg getters are admitted. The same §7c pattern — resolve item descriptor → derive handle via the owning suite → typed getter — is the template for layer and RQ-item handles in later stages; each new handle kind reuses `ResolveAeRefItem` and the suite acquire/release discipline rather than growing a parallel resolver.
+
+## 7d. `aeRefLayer` descriptors and `AEGP_LayerSuite9` getters (Issue #318 / #64)
+
+The twenty-one `AEGP_LayerSuite9` read-only members extend the §7c derived-handle pattern one level deeper: a layer needs an `AEGP_LayerH`, which the wire never carries. There is still exactly one item resolver — `ResolveAeRefItem` — plus one layer-resolution step:
+
+```json
+{"aeRef": {"type": "layer",
+           "name": "<string>",
+           "layerId": <integer>,
+           "comp": {"aeRef": {<§7b item descriptor>}}}}
+```
+
+- `type` is exactly `"layer"`. `name` must be non-empty and within the same 1024-UTF-8-byte identity bound as §7b. `layerId` is the live `AEGP_GetLayerID` value (`AEGP_LayerIDVal` = `A_long`, full int32 range `[-2147483648, 2147483647]`).
+- `comp` is **required** and uses the same `{"aeRef":{…}}` item-descriptor arg shape as §7b — the parent-comp binding is part of the layer's identity, so a layer descriptor can never resolve against the wrong composition. All four inner keys (`type`, `name`, `layerId`, `comp`) are required and no others are accepted; the comp descriptor's own `type` must corroborate `"comp"` at resolution time (a footage/ folder binding is `STALE_REFERENCE`).
+- Shape validation is identical in kind to §7b: the TS `aeRefLayer` constraint and the C++ `ValidateAeRefLayer` refuse the same inputs with `MALFORMED_REQUEST` before any AEGP call.
+
+### Layer resolution semantics
+
+1. `comp` → `ResolveAeRefItem`; `wantProjectIdentity` is set for the two operations that emit descriptors (`GetCompLayerByIndex`, `GetTrackMatteLayer`) so the embedded comp `aeRef` carries live `itemId`/`projectName`/`projectPath`, and unset for plain getters. The resolved item's live type must be `AEGP_ItemType_COMP` — otherwise `STALE_REFERENCE`.
+2. `AEGP_CompSuite13` (v13) and `AEGP_LayerSuite9` (`kAEGPLayerSuiteVersion9`) are both acquired inside the request window; either acquire failure is `not-sent`. The specific getter entry, `AEGP_GetCompFromItem`, `AEGP_GetCompNumLayers`, `AEGP_GetCompLayerByIndex`, `AEGP_GetLayerID`, and `AEGP_GetLayerName` must all be present before any layer call — a missing entry is `not-sent`.
+3. `AEGP_GetCompFromItem(itemH, &compH)` derives the comp handle (borrowed, never freed, never crosses the request boundary).
+4. The comp's layers are enumerated via `AEGP_GetCompNumLayers` + `AEGP_GetCompLayerByIndex` (bounded by the 100000-layer scan limit), and each candidate's live `AEGP_GetLayerID` is compared to `layerId`. Zero matches → `STALE_REFERENCE` (deleted/recreated layer, or wrong comp); more than one → `STALE_REFERENCE` (ambiguous; fail closed). The matched layer's `AEGP_GetLayerName` must equal `aeRef.name` exactly — a renamed layer stales its descriptor. Layer **order is not consulted**: reordering layers does not stale a descriptor (verified: `GetLayerIndex` reports the live position after a swap).
+5. `AEGP_LayerH` is likewise borrowed — never freed, never crosses the request boundary. All suite releases and resolution cleanup happen inside the same `opCalls` evidence window.
+
+### Comp-scoped members and issuance
+
+- `AEGP_GetCompNumLayers` takes `{projectIndex, comp}` and returns `{"numLayers": <int>}`.
+- `AEGP_GetCompLayerByIndex` takes `{projectIndex, comp, layerIndex}` (`layerIndex` = the 0-based `AEGP_GetCompLayerByIndex` position, bound 0..1000000). It is **layer descriptor issuance**: the plug-in resolves the comp, fetches the layer at `layerIndex`, reads its live `AEGP_GetLayerID` + `AEGP_GetLayerName`, and emits `{"index": <int>, "layer": {"aeRef": {<aeRefLayer>}}}` where the inner `comp.aeRef` is the full §7b descriptor (live `itemId` + `projectName`/`projectPath`). Store `result.layer` verbatim as `args.layer`. An out-of-range index is an AEGP error → `failed`.
+
+### Getter result payloads
+
+All `completed` results carry `mayHaveMutated:false` (read-only):
+
+| operationId | result `result` payload |
+| --- | --- |
+| `AEGP_GetCompNumLayers` | `{"numLayers": <int>}` |
+| `AEGP_GetCompLayerByIndex` | `{"index": <int>, "layer": {"aeRef": {<aeRefLayer>}}}` |
+| `AEGP_GetLayerIndex` | `{"index": <int>}` — live position in the comp's layer stack |
+| `AEGP_GetLayerName` | `{"name": "<string>", "sourceName": "<string>"}` — UTF-16 pair via `AEGP_MemHandle`, UTF-8 + JSON-escaped, each bounded at 1024 bytes (overflow/unreadable → `failed`) |
+| `AEGP_GetLayerFlags` | `{"flags": <int>}` (`AEGP_LayerFlags`) |
+| `AEGP_GetLayerQuality` | `{"quality": <int>}` (`AEGP_LayerQuality`) |
+| `AEGP_GetLayerObjectType` | `{"objectType": <int>}` (`AEGP_ObjectType`) |
+| `AEGP_IsLayer3D` / `AEGP_IsLayer2D` | `{"is3D": <bool>}` / `{"is2D": <bool>}` |
+| `AEGP_GetLayerCurrentTime` / `GetLayerInPoint` / `GetLayerDuration` | `{"currentTime"|"inPoint"|"duration": {"value": <int>, "scale": <uint>}}` (`A_Time`) |
+| `AEGP_GetLayerID` | `{"layerId": <int>}` (`AEGP_LayerIDVal`, int32) |
+| `AEGP_GetLayerLabel` | `{"label": <int>}` (`AEGP_LabelID`) |
+| `AEGP_GetLayerSamplingQuality` | `{"samplingQuality": <int>}` (`AEGP_LayerSamplingQuality`) |
+| `AEGP_GetLayerSourceItemID` | `{"sourceItemId": <int>}` |
+| `AEGP_IsLayerVideoReallyOn` / `AEGP_IsLayerAudioReallyOn` | `{"videoOn": <bool>}` / `{"audioOn": <bool>}` |
+| `AEGP_DoesLayerHaveTrackMatte` | `{"hasTrackMatte": <bool>}` |
+| `AEGP_IsLayerUsedAsTrackMatte` | `{"isTrackMatte": <bool>}` |
+| `AEGP_GetTrackMatteLayer` | `{"trackMatteLayer": {"aeRef": {<aeRefLayer>}}}` or `{"trackMatteLayer": null}` — the matte layer is emitted as a descriptor, never a handle |
+
+### Deferred layer members
+
+- `AEGP_GetActiveLayer` — the SDK signature takes no comp argument; there is no comp binding to resolve against, so a descriptor cannot name its scope. Excluded until an explicit comp-scoped variant exists.
+- Getters taking `A_Time`/`A_FloatRect`/stream inputs or returning additional host handles (`GetLayerSourceItem`, `GetLayerParentComp`, `GetLayerSourceTextDocument`, etc.) — each needs its own serializable argument/identity story first.
+- All mutating members — out of scope until the FR-07/US3 permission model and the ae-a8n-owned authorization/audit/`UNKNOWN` contract exist.
 
 ## 8. Non-goals / explicit limitations
 

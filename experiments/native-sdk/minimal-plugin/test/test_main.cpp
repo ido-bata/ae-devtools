@@ -2765,6 +2765,488 @@ static void TestIntakeCompGetters()
     }
 }
 
+static void TestIntakeLayerGetters()
+{
+    /* Issue #318 / #64 layer slice: aeRefLayer descriptor (comp aeRef
+       embedded) → comp item resolve → compH → layerId scan + name
+       corroboration → typed LayerSuite9 getter → typed JSON.
+       Covers issuance (GetCompLayerByIndex emits a usable descriptor),
+       layer reorder tolerance, stale/ambiguous/wrong-parent refusals,
+       suite/entry absence, and op-error handling. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Clip",   AEGP_ItemType_COMP,    6001 },
+        { "Reel",   AEGP_ItemType_FOOTAGE, 6002 },
+    });
+    p.itemMeta[0].compMeta.layers.resize(2);
+    FakeLayerMeta& l0 = p.itemMeta[0].compMeta.layers[0];
+    l0.name = h->MakeNameSpec(FakeHost::U16("Layer One"));
+    l0.sourceName = h->MakeNameSpec(FakeHost::U16("src0"));
+    l0.flags = 0x11;
+    l0.quality = AEGP_LayerQual_DRAFT;
+    l0.objectType = AEGP_ObjectType_TEXT;
+    l0.is3D = TRUE;
+    l0.is2D = FALSE;
+    l0.currentTime = {15, 30};
+    l0.inPoint = {2, 30};
+    l0.duration = {48, 30};
+    l0.id = 4242;
+    l0.label = 3;
+    l0.samplingQuality = AEGP_LayerSamplingQual_BICUBIC;
+    l0.sourceItemID = 77;
+    l0.videoOn = FALSE;
+    l0.audioOn = TRUE;
+    l0.hasTrackMatte = TRUE;
+    l0.isTrackMatte = FALSE;
+    l0.trackMatteLayerIndex = 1;
+    FakeLayerMeta& l1 = p.itemMeta[0].compMeta.layers[1];
+    l1.name = h->MakeNameSpec(FakeHost::U16("Layer Two"));
+    l1.sourceName = h->MakeNameSpec(FakeHost::U16("src1"));
+    l1.id = 4343;
+    l1.trackMatteLayerIndex = -1;
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+
+    const char* compRefJson =
+        "\"comp\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Clip\","
+        "\"path\":[0],\"itemId\":6001,\"projectName\":\"Shot01\","
+        "\"projectPath\":\"/tmp/shot01.aep\"}}";
+    /* full args object for comp-scoped ops */
+    std::string compArgs =
+        std::string("{\"projectIndex\":0,") + compRefJson + "}";
+    /* full args object for layer ops — layer descriptor embeds the
+       same comp aeRef verbatim */
+    std::string layerArgs =
+        std::string("{\"projectIndex\":0,\"layer\":{\"aeRef\":{"
+                    "\"type\":\"layer\",\"name\":\"Layer One\","
+                    "\"layerId\":4242,") + compRefJson + "}}}";
+    /* NOTE: compRefJson already starts with "comp": — inside the layer
+       aeRef the key is also "comp", so the nested shape is correct. */
+
+    /* ---- comp-scoped: layer count ---- */
+    WriteReq0600(c.Path("inbox/ln.request.json"),
+                 ReqJsonArgs("ln", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetCompNumLayers", "26.5",
+                    compArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "ln", &doc);
+        JVal* n = PayloadNum(pay, "numLayers");
+        CHECK(n != NULL && n->num == 2.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "ln", "completed", NULL);
+    }
+
+    /* ---- issuance: GetCompLayerByIndex emits a usable descriptor ---- */
+    std::string idxArgs =
+        std::string("{\"projectIndex\":0,") + compRefJson +
+        ",\"layerIndex\":0}";
+    WriteReq0600(c.Path("inbox/li.request.json"),
+                 ReqJsonArgs("li", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex", "26.5",
+                    idxArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string issuedLayerRef;
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "li", &doc);
+        CHECK(pay != NULL);
+        JVal* idx = PayloadNum(pay, "index");
+        CHECK(idx != NULL && idx->num == 0.0);
+        JVal* layer = pay ? JGet(pay, "layer") : NULL;
+        JVal* ref = layer ? JGet(layer, "aeRef") : NULL;
+        CHECK(ref != NULL);
+        if (ref)
+        {
+            CHECK(JStrEq(JGet(ref, "type"), "layer"));
+            JVal* lid = PayloadNum(ref, "layerId");
+            CHECK(lid != NULL && lid->num == 4242.0);
+            JVal* comp = JGet(ref, "comp");
+            JVal* cref = comp ? JGet(comp, "aeRef") : NULL;
+            CHECK(cref != NULL);
+            JVal* cid = cref ? PayloadNum(cref, "itemId") : NULL;
+            CHECK(cid != NULL && cid->num == 6001.0);
+        }
+        CheckResultDoc(c, "li", "completed", NULL);
+        if (doc) JFree(doc);
+        /* extract the emitted layer aeRef verbatim for reuse below —
+           proves the client never hand-assembles descriptors */
+        std::string r = Slurp(ResultPath(c, "li"));
+        size_t lp = r.find("\"layer\":{\"aeRef\":");
+        CHECK(lp != std::string::npos);
+        if (lp != std::string::npos)
+        {
+            size_t start = lp + 8; /* at '{' of {"aeRef":...} */
+            /* find matching close: the layer object ends before ,"index"? no —
+               layer is last member: ..."layer":{...}} — take through the
+               aeRef object's own close by brace matching */
+            int depth = 0;
+            size_t i = start;
+            for (; i < r.size(); i++)
+            {
+                if (r[i] == '{') depth++;
+                else if (r[i] == '}') { depth--; if (depth == 0) { i++; break; } }
+            }
+            issuedLayerRef = r.substr(start, i - start);
+        }
+    }
+    CHECK(!issuedLayerRef.empty());
+
+    /* ---- layer getters on the hand-built descriptor ---- */
+    WriteReq0600(c.Path("inbox/lx.request.json"),
+                 ReqJsonArgs("lx", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetLayerIndex", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "lx", &doc);
+        JVal* idx = PayloadNum(pay, "index");
+        CHECK(idx != NULL && idx->num == 0.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "lx", "completed", NULL);
+        CHECK(h->LogContains("op AEGP_LayerSuite9.AEGP_GetLayerIndex err=0"));
+    }
+
+    WriteReq0600(c.Path("inbox/lf.request.json"),
+                 ReqJsonArgs("lf", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetLayerFlags", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "lf", &doc);
+        JVal* fl = PayloadNum(pay, "flags");
+        CHECK(fl != NULL && fl->num == 17.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "lf", "completed", NULL);
+    }
+
+    /* time-mode getter: explicit AEGP_LTimeMode arg */
+    {
+        std::string tArgs = layerArgs;
+        tArgs.insert(tArgs.size() - 1, ",\"timeMode\":1");
+        WriteReq0600(c.Path("inbox/lt.request.json"),
+                     ReqJsonArgs("lt", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime", "26.5",
+                        tArgs.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "lt", &doc);
+        JVal* ct = pay ? JGet(pay, "currentTime") : NULL;
+        JVal* val = ct ? PayloadNum(ct, "value") : NULL;
+        JVal* scl = ct ? PayloadNum(ct, "scale") : NULL;
+        CHECK(val != NULL && val->num == 15.0);
+        CHECK(scl != NULL && scl->num == 30.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "lt", "completed", NULL);
+    }
+
+    /* booleans + ids + label + quality + sourceItemID */
+    {
+        const char* ops[] = {
+            "AEGP_LayerSuite9.AEGP_IsLayer3D",
+            "AEGP_LayerSuite9.AEGP_IsLayer2D",
+            "AEGP_LayerSuite9.AEGP_GetLayerID",
+            "AEGP_LayerSuite9.AEGP_GetLayerLabel",
+            "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
+            "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
+            "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
+            "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
+            "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
+            "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
+            "AEGP_LayerSuite9.AEGP_GetLayerQuality",
+        };
+        const char* ids[] = { "b3", "b2", "gi", "gl", "gq", "gs",
+                              "gv", "ga", "gm", "go", "gql" };
+        for (int i = 0; i < 11; i++)
+        {
+            char fname[64];
+            snprintf(fname, sizeof(fname), "inbox/%s.request.json", ids[i]);
+            WriteReq0600(c.Path(fname),
+                         ReqJsonArgs(ids[i], kTok, 30000, ops[i], "26.5",
+                                     layerArgs.c_str()));
+        }
+        for (int i = 0; i < 11; i++)
+            CHECK(CallIdle(*h) == A_Err_NONE);
+        {
+            JVal* doc = NULL;
+            JVal* pay;
+            pay = ResultPayload(c, "b3", &doc); CHECK(pay != NULL);
+            JVal* b = pay ? JGet(pay, "is3D") : NULL;
+            CHECK(b != NULL && b->kind == JK_TRUE);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "b2", &doc); CHECK(pay != NULL);
+            b = pay ? JGet(pay, "is2D") : NULL;
+            CHECK(b != NULL && b->kind == JK_FALSE);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "gi", &doc); CHECK(pay != NULL);
+            JVal* lid = PayloadNum(pay, "layerId");
+            CHECK(lid != NULL && lid->num == 4242.0);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "gl", &doc); CHECK(pay != NULL);
+            JVal* lb = PayloadNum(pay, "label");
+            CHECK(lb != NULL && lb->num == 3.0);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "gq", &doc); CHECK(pay != NULL);
+            JVal* sq = PayloadNum(pay, "samplingQuality");
+            CHECK(sq != NULL && sq->num != 0.0);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "gs", &doc); CHECK(pay != NULL);
+            JVal* sid = PayloadNum(pay, "sourceItemId");
+            CHECK(sid != NULL && sid->num == 77.0);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "gv", &doc); CHECK(pay != NULL);
+            b = pay ? JGet(pay, "videoOn") : NULL;
+            CHECK(b != NULL && b->kind == JK_FALSE);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "ga", &doc); CHECK(pay != NULL);
+            b = pay ? JGet(pay, "audioOn") : NULL;
+            CHECK(b != NULL && b->kind == JK_TRUE);
+            if (doc) JFree(doc);
+            pay = ResultPayload(c, "gm", &doc); CHECK(pay != NULL);
+            b = pay ? JGet(pay, "hasTrackMatte") : NULL;
+            CHECK(b != NULL && b->kind == JK_TRUE);
+            if (doc) JFree(doc);
+            for (int i = 0; i < 11; i++)
+                CheckResultDoc(c, ids[i], "completed", NULL);
+        }
+    }
+
+    /* matte-arg getter: fillMustBeActive bounded int */
+    {
+        std::string mArgs = layerArgs;
+        mArgs.insert(mArgs.size() - 1, ",\"fillMustBeActive\":0");
+        WriteReq0600(c.Path("inbox/mm.request.json"),
+                     ReqJsonArgs("mm", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
+                        "26.5", mArgs.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "mm", &doc);
+        JVal* b = pay ? JGet(pay, "isTrackMatte") : NULL;
+        CHECK(b != NULL && b->kind == JK_FALSE);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "mm", "completed", NULL);
+    }
+
+    /* track-matte layer: emits a nested aeRefLayer descriptor */
+    WriteReq0600(c.Path("inbox/tm.request.json"),
+                 ReqJsonArgs("tm", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "tm", &doc);
+        CHECK(pay != NULL);
+        JVal* tml = pay ? JGet(pay, "trackMatteLayer") : NULL;
+        JVal* ref = tml ? JGet(tml, "aeRef") : NULL;
+        CHECK(ref != NULL);
+        if (ref)
+        {
+            JVal* lid = PayloadNum(ref, "layerId");
+            CHECK(lid != NULL && lid->num == 4343.0); /* l0 matte → l1 */
+            JVal* nm = JGet(ref, "name");
+            CHECK(nm != NULL && nm->kind == JK_STR);
+        }
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "tm", "completed", NULL);
+    }
+
+    /* GetLayerName: both mem handles read + freed */
+    WriteReq0600(c.Path("inbox/lnm.request.json"),
+                 ReqJsonArgs("lnm", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetLayerName", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "lnm", &doc);
+        CHECK(pay != NULL);
+        JVal* nm = pay ? JGet(pay, "name") : NULL;
+        JVal* sn = pay ? JGet(pay, "sourceName") : NULL;
+        CHECK(nm != NULL && nm->kind == JK_STR &&
+              nm->slen == strlen("Layer One") &&
+              memcmp(nm->str, "Layer One", nm->slen) == 0);
+        CHECK(sn != NULL && sn->kind == JK_STR &&
+              sn->slen == strlen("src0") &&
+              memcmp(sn->str, "src0", sn->slen) == 0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "lnm", "completed", NULL);
+    }
+
+    /* issued descriptor reuse: verbatim aeRefLayer from "li" resolves */
+    if (!issuedLayerRef.empty())
+    {
+        std::string reuseArgs =
+            std::string("{\"projectIndex\":0,\"layer\":") +
+            issuedLayerRef + "}";
+        WriteReq0600(c.Path("inbox/lr.request.json"),
+                     ReqJsonArgs("lr", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                        reuseArgs.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "lr", "completed", NULL);
+    }
+
+    /* ---- refusal paths ---- */
+
+    /* stale layerId → STALE_REFERENCE */
+    {
+        std::string stale = layerArgs;
+        size_t pos = stale.find("4242");
+        stale.replace(pos, 4, "9999");
+        WriteReq0600(c.Path("inbox/ls.request.json"),
+                     ReqJsonArgs("ls", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                        stale.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "ls", "refused", "STALE_REFERENCE");
+
+    /* right id, wrong name → STALE_REFERENCE (rename stales) */
+    {
+        std::string wrong = layerArgs;
+        size_t pos = wrong.find("Layer One");
+        wrong.replace(pos, 9, "Renamed!!");
+        WriteReq0600(c.Path("inbox/lw.request.json"),
+                     ReqJsonArgs("lw", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                        wrong.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "lw", "refused", "STALE_REFERENCE");
+
+    /* layer descriptor bound to the footage item → parent is not a
+       comp → STALE_REFERENCE */
+    {
+        std::string bad = layerArgs;
+        size_t pos = bad.find("\"type\":\"comp\"");
+        bad.replace(pos, 13, "\"type\":\"footage\"");
+        pos = bad.find("\"name\":\"Clip\"");
+        bad.replace(pos, 13, "\"name\":\"Reel\"");
+        pos = bad.find("\"itemId\":6001");
+        bad.replace(pos, 13, "\"itemId\":6002");
+        WriteReq0600(c.Path("inbox/lp.request.json"),
+                     ReqJsonArgs("lp", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                        bad.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "lp", "refused", "STALE_REFERENCE");
+
+    /* layer reorder: swap the two layers — layerId still resolves,
+       GetLayerIndex now reports the live position 1 */
+    std::swap(p.itemMeta[0].compMeta.layers[0],
+              p.itemMeta[0].compMeta.layers[1]);
+    {
+        std::string l1args = layerArgs; /* still "Layer One"/4242 */
+        WriteReq0600(c.Path("inbox/lr2.request.json"),
+                     ReqJsonArgs("lr2", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerIndex", "26.5",
+                        l1args.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "lr2", &doc);
+        JVal* idx = PayloadNum(pay, "index");
+        CHECK(idx != NULL && idx->num == 1.0); /* reordered to index 1 */
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "lr2", "completed", NULL);
+    }
+    std::swap(p.itemMeta[0].compMeta.layers[0],
+              p.itemMeta[0].compMeta.layers[1]);
+
+    /* malformed: layerId out of int32 range → MALFORMED_REQUEST */
+    {
+        std::string bad = layerArgs;
+        size_t pos = bad.find("4242");
+        bad.replace(pos, 4, "99999999999");
+        WriteReq0600(c.Path("inbox/lm.request.json"),
+                     ReqJsonArgs("lm", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                        bad.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "lm", "refused", "MALFORMED_REQUEST");
+
+    /* malformed: aeRefLayer missing comp → MALFORMED_REQUEST */
+    {
+        std::string bad =
+            "{\"projectIndex\":0,\"layer\":{\"aeRef\":{\"type\":\"layer\","
+            "\"name\":\"Layer One\",\"layerId\":4242}}}";
+        WriteReq0600(c.Path("inbox/lc.request.json"),
+                     ReqJsonArgs("lc", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                        bad.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "lc", "refused", "MALFORMED_REQUEST");
+
+    /* layer-suite acquisition failure → not-sent */
+    h->failAcquireLayer = true;
+    WriteReq0600(c.Path("inbox/la.request.json"),
+                 ReqJsonArgs("la", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->failAcquireLayer = false;
+    CheckResultDoc(c, "la", "not-sent", NULL);
+
+    /* missing getter entry → not-sent (entry 5 = GetLayerFlags) */
+    h->nullLayerEntry = 5;
+    h->PopulateSuites();
+    WriteReq0600(c.Path("inbox/le.request.json"),
+                 ReqJsonArgs("le", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetLayerFlags", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->nullLayerEntry = 0;
+    h->PopulateSuites();
+    CheckResultDoc(c, "le", "not-sent", NULL);
+
+    /* layer getter AEGP error → failed, mayHaveMutated=false. The same
+       flag fails the resolve scan's GetCompNumLayers — still an honest
+       `failed` (no mutation possible on a read path). */
+    h->layerQueryErr = A_Err_GENERIC;
+    WriteReq0600(c.Path("inbox/lq.request.json"),
+                 ReqJsonArgs("lq", kTok, 30000,
+                    "AEGP_LayerSuite9.AEGP_GetLayerID", "26.5",
+                    layerArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->layerQueryErr = A_Err_NONE;
+    {
+        std::string r = Slurp(ResultPath(c, "lq"));
+        CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
+        CHECK(r.find("\"mayHaveMutated\":false") != std::string::npos);
+        CheckResultDoc(c, "lq", "failed", NULL);
+    }
+
+    /* out-of-range layerIndex on issuance → failed (AEGP error) */
+    {
+        std::string oob =
+            std::string("{\"projectIndex\":0,") + compRefJson +
+            ",\"layerIndex\":99}";
+        WriteReq0600(c.Path("inbox/lo.request.json"),
+                     ReqJsonArgs("lo", kTok, 30000,
+                        "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
+                        "26.5", oob.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "lo", "failed", NULL);
+}
+
 static void TestIntakeUnknownOperation()
 {
     auto h = MakeFakeHost();
@@ -3197,6 +3679,7 @@ int main(int argc, char** argv)
     TestIntakeEnumerateUndescribableName();
     TestIntakeCompGetters();
     TestIntakeItemGetters();
+    TestIntakeLayerGetters();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();
