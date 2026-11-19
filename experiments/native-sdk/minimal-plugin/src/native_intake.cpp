@@ -524,6 +524,16 @@ static const IntakeArgSpec S_FIRSTITEM_ARGS[] = {
     { "limit", ARGK_INT, 1.0, 32.0 },
 };
 
+/* CompSuite13 read-only getters (Issue #318 / #64): the comp handle is
+   NEVER taken from the wire — `comp` is the same §7b aeRef item
+   descriptor (type must be "comp"); the executor resolves it to an
+   itemH via the shared resolver, then maps itemH → compH through
+   AEGP_GetCompFromItem inside the request window. */
+static const IntakeArgSpec S_COMP_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "comp", ARGK_AEREFITEM, 0.0, 0.0 },
+};
+
 static const AllowEntry S_ALLOWLIST[] = {
     { "AEGP_ProjSuite6.AEGP_GetNumProjects",
       "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, 0 },
@@ -541,6 +551,38 @@ static const AllowEntry S_ALLOWLIST[] = {
       "AEGP_ItemSuite9.AEGP_GetItemID", S_AEREF_ARGS, 2 },
     { "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
       "AEGP_ItemSuite9.AEGP_GetFirstProjItem", S_FIRSTITEM_ARGS, 3 },
+    /* Issue #318 / #64: CompSuite13 read-only getters. All share the
+       {projectIndex, comp:<aeRefItem type=comp>} contract; the comp
+       handle is derived host-side via AEGP_GetCompFromItem — never
+       taken from the wire. GetCompShutterFrameRange is excluded: it
+       takes an A_Time input argument (arg-bearing ops are a separate
+       slice). */
+    { "AEGP_CompSuite13.AEGP_GetCompFramerate",
+      "AEGP_CompSuite13.AEGP_GetCompFramerate", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompFrameDuration",
+      "AEGP_CompSuite13.AEGP_GetCompFrameDuration", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart",
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",
+      "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
+      "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor",
+      "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",
+      "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetShowBlendModes",
+      "AEGP_CompSuite13.AEGP_GetShowBlendModes", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",
+      "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
+      "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompBGColor",
+      "AEGP_CompSuite13.AEGP_GetCompBGColor", S_COMP_ARGS, 2 },
+    { "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
+      "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase", S_COMP_ARGS, 2 },
     /* Issue #270 Stage 2: zero-arg read-only getters needing no
        identity resolution. The three UtilitySuite members use the
        already-held utilP; the two render-queue members acquire their
@@ -1743,6 +1785,323 @@ static void EnumerateProjItems(
 #undef ENUM_FAILED
 }
 
+/* ---- CompSuite13 read-only getters (Issue #318 / #64) ---------------
+   Vertical slice of the shared identity resolver: args carry
+   {"projectIndex": int, "comp": {"aeRef": {...}}}; ResolveAeRefItem
+   resolves the item handle host-side (type+name corroborated, itemId
+   authoritative when present), then AEGP_GetCompFromItem derives the
+   comp handle inside the request window. The comp handle is borrowed —
+   never freed; the comp suite is released before leaving. Missing
+   suite/entry → not-sent; AEGP errors → failed with
+   mayHaveMutated=false (read-only). The wire never carries a handle. */
+
+/* Entry-presence gate: the specific getter must exist in the acquired
+   suite table before any comp call (not-sent = environment-proven
+   non-dispatch, same convention as GetTypeName). */
+static int CompEntryPresent(const AEGP_CompSuite13* c, const char* opIdZ)
+{
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompFramerate") == 0)
+        return c->AEGP_GetCompFramerate != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompFrameDuration") == 0)
+        return c->AEGP_GetCompFrameDuration != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart") == 0)
+        return c->AEGP_GetCompWorkAreaStart != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration") == 0)
+        return c->AEGP_GetCompWorkAreaDuration != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime") == 0)
+        return c->AEGP_GetCompDisplayStartTime != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame") == 0)
+        return c->AEGP_GetCompDisplayDropFrame != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor") == 0)
+        return c->AEGP_GetCompDownsampleFactor != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName") == 0)
+        return c->AEGP_GetShowLayerNameOrSourceName != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetShowBlendModes") == 0)
+        return c->AEGP_GetShowBlendModes != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples") == 0)
+        return c->AEGP_GetCompSuggestedMotionBlurSamples != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit") == 0)
+        return c->AEGP_GetCompMotionBlurAdaptiveSampleLimit != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompBGColor") == 0)
+        return c->AEGP_GetCompBGColor != NULL;
+    if (strcmp(opIdZ, "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase") == 0)
+        return c->AEGP_GetCompShutterAnglePhase != NULL;
+    return 0;
+}
+
+static void ExecCompGetter(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* compArg = JGet(args, "comp");
+    JVal* ref = compArg ? JGet(compArg, "aeRef") : NULL;
+    long projIndex = ArgsInt(allow, args, 0);
+    ItemResolution res;
+    const void* compSuite = NULL;
+    const AEGP_CompSuite13* compP = NULL;
+    AEGP_CompH compH = NULL;
+    A_Err cerr, oerr;
+    const char* opId = allow->operationId;
+
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projIndex, ref, 0, " (resolve)", &res, v))
+        return; /* v already carries the verdict */
+
+    compSuite = IntakeAcquireSuite(utilP, basicP,
+                                   kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    if (!compSuite)
+    {
+        ReleaseResolution(utilP, basicP, &res);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP Comp Suite unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+    compP = (const AEGP_CompSuite13*)compSuite;
+
+    if (!compP->AEGP_GetCompFromItem || !CompEntryPresent(compP, opId))
+    {
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        ReleaseResolution(utilP, basicP, &res);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "comp suite entry unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+
+    cerr = compP->AEGP_GetCompFromItem(res.itemH, &compH);
+    IntakeOpRecord(utilP, "AEGP_CompSuite13.AEGP_GetCompFromItem",
+                   (long)cerr, NULL);
+    if (cerr != A_Err_NONE || !compH)
+    {
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        ReleaseResolution(utilP, basicP, &res);
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_GetCompFromItem err=%ld", (long)cerr);
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+
+    oerr = A_Err_STRUCT;
+    if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompFramerate") == 0)
+    {
+        A_FpLong fps = 0;
+        oerr = compP->AEGP_GetCompFramerate(compH, &fps);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload), "{\"fps\":%.12g}", fps);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompFrameDuration") == 0)
+    {
+        A_Time t = {0, 0};
+        oerr = compP->AEGP_GetCompFrameDuration(compH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"frameDuration\":{\"value\":%ld,\"scale\":%lu}}",
+                     (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart") == 0)
+    {
+        A_Time t = {0, 0};
+        oerr = compP->AEGP_GetCompWorkAreaStart(compH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"workAreaStart\":{\"value\":%ld,\"scale\":%lu}}",
+                     (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration") == 0)
+    {
+        A_Time t = {0, 0};
+        oerr = compP->AEGP_GetCompWorkAreaDuration(compH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"workAreaDuration\":{\"value\":%ld,\"scale\":%lu}}",
+                     (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime") == 0)
+    {
+        A_Time t = {0, 0};
+        oerr = compP->AEGP_GetCompDisplayStartTime(compH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"displayStartTime\":{\"value\":%ld,\"scale\":%lu}}",
+                     (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame") == 0)
+    {
+        A_Boolean dropB = FALSE;
+        oerr = compP->AEGP_GetCompDisplayDropFrame(compH, &dropB);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"displayDropFrame\":%s}", dropB ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor") == 0)
+    {
+        AEGP_DownsampleFactor dsf;
+        dsf.xS = 0; dsf.yS = 0;
+        oerr = compP->AEGP_GetCompDownsampleFactor(compH, &dsf);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"downsampleFactor\":{\"x\":%d,\"y\":%d}}",
+                     (int)dsf.xS, (int)dsf.yS);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName") == 0)
+    {
+        A_Boolean shownB = FALSE;
+        oerr = compP->AEGP_GetShowLayerNameOrSourceName(compH, &shownB);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"showLayerNameOrSourceName\":%s}",
+                     shownB ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetShowBlendModes") == 0)
+    {
+        A_Boolean shownB = FALSE;
+        oerr = compP->AEGP_GetShowBlendModes(compH, &shownB);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"showBlendModes\":%s}", shownB ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples") == 0)
+    {
+        A_long samplesL = 0;
+        oerr = compP->AEGP_GetCompSuggestedMotionBlurSamples(compH, &samplesL);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"suggestedMotionBlurSamples\":%ld}", (long)samplesL);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit") == 0)
+    {
+        A_long samplesL = 0;
+        oerr = compP->AEGP_GetCompMotionBlurAdaptiveSampleLimit(compH, &samplesL);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"motionBlurAdaptiveSampleLimit\":%ld}", (long)samplesL);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompBGColor") == 0)
+    {
+        AEGP_ColorVal bg;
+        memset(&bg, 0, sizeof(bg));
+        oerr = compP->AEGP_GetCompBGColor(compH, &bg);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"bgColor\":{\"alpha\":%.12g,\"red\":%.12g,"
+                     "\"green\":%.12g,\"blue\":%.12g}}",
+                     bg.alphaF, bg.redF, bg.greenF, bg.blueF);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase") == 0)
+    {
+        A_Ratio angle = {0, 0}, phase = {0, 0};
+        oerr = compP->AEGP_GetCompShutterAnglePhase(compH, &angle, &phase);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"shutterAngle\":{\"num\":%ld,\"den\":%lu},"
+                     "\"shutterPhase\":{\"num\":%ld,\"den\":%lu}}",
+                     (long)angle.num, (unsigned long)angle.den,
+                     (long)phase.num, (unsigned long)phase.den);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else
+    {
+        /* allowlist/entry gate already proved this unreachable; keep
+           the verdict honest rather than emitting garbage. */
+        oerr = A_Err_STRUCT;
+    }
+
+    IntakeReleaseSuite(utilP, basicP,
+                       kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    ReleaseResolution(utilP, basicP, &res);
+
+    if (oerr == A_Err_NONE && v->havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+        v->publish = 1;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "%s err=%ld", opId, (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0; /* read-only getter */
+        v->publish = 1;
+    }
+}
+
 /* Execute one claimed request file. Always publishes a result when
    publish==1; the caller removes the .claimed file afterwards.
    `mtimeMs` is the claimed file's mtime — the deadline base, matching
@@ -2160,6 +2519,14 @@ static void ProcessClaimed(
         {
             EnumerateProjItems(utilP, projP, basicP, plugin_id,
                                allow->opRecordId, args, &v);
+        }
+        /* ---- Issue #318 / #64: CompSuite13 read-only getters --------
+           {projectIndex, comp:<aeRefItem>} → shared resolver →
+           AEGP_GetCompFromItem → typed getter → typed JSON. The comp
+           handle exists only inside the request window. */
+        else if (strncmp(allow->operationId, "AEGP_CompSuite13.", 17) == 0)
+        {
+            ExecCompGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
         }
         /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
         else if (strcmp(allow->operationId,

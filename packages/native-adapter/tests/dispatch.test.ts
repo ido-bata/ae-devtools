@@ -230,6 +230,19 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
        NativeProbe already calls; mutation candidates stay out until
        the FR-07/US3 permission model exists (#270) */
     expect([...NATIVE_INTAKE_OPERATIONS].sort()).toEqual([
+      "AEGP_CompSuite13.AEGP_GetCompBGColor",
+      "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
+      "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",
+      "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor",
+      "AEGP_CompSuite13.AEGP_GetCompFrameDuration",
+      "AEGP_CompSuite13.AEGP_GetCompFramerate",
+      "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
+      "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
+      "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart",
+      "AEGP_CompSuite13.AEGP_GetShowBlendModes",
+      "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",
       "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
       "AEGP_ItemSuite9.AEGP_GetItemID",
       "AEGP_ItemSuite9.AEGP_GetItemName",
@@ -406,5 +419,44 @@ describe("aeRefItem v2 identity fields — Issue #270 identity slice", () => {
     expect(validateNativeIntakeArgs(IN, wrap({
       ...base, name: "é".repeat(500),
     }))).toEqual([]);
+  });
+});
+
+describe("comp:<aeRefItem> arg — Issue #318 CompSuite13 getters", () => {
+  const FR = "AEGP_CompSuite13.AEGP_GetCompFramerate";
+  const BG = "AEGP_CompSuite13.AEGP_GetCompBGColor";
+  const good = {
+    projectIndex: 0,
+    comp: { aeRef: { type: "comp", name: "Clip", path: [0], itemId: 6001 } },
+  };
+  test("well-formed comp descriptor passes shape validation", () => {
+    expect(validateNativeIntakeArgs(FR, good)).toEqual([]);
+    expect(validateNativeIntakeArgs(BG, good)).toEqual([]);
+    // legacy positional form also passes shape — resolution is host-side
+    expect(validateNativeIntakeArgs(FR, {
+      projectIndex: 2,
+      comp: { aeRef: { type: "comp", name: "C", path: [3] } },
+    })).toEqual([]);
+  });
+  test("arg key set is exact — wrong/missing/extra keys refuse", () => {
+    for (const bad of [
+      { projectIndex: 0 },                        // missing comp
+      { projectIndex: 0, comp: good.comp, extra: 1 }, // extra arg
+      { comp: good.comp },                        // missing projectIndex
+      { projectIndex: 0, item: good.comp },       // wrong key name
+      { projectIndex: 0, comp: "Clip" },          // non-descriptor
+      { projectIndex: 0, comp: { aeRef: { type: "comp", name: "C" } } }, // no path
+    ]) {
+      expect(validateNativeIntakeArgs(FR, bad)).not.toEqual([]);
+    }
+  });
+  test("non-comp aeRef types pass shape — host corroborates live type", () => {
+    // The validator proves shape only; a "footage" descriptor is
+    // well-formed here and fails STALE_REFERENCE host-side when the
+    // live item type does not match.
+    expect(validateNativeIntakeArgs(FR, {
+      projectIndex: 0,
+      comp: { aeRef: { type: "footage", name: "F", path: [0] } },
+    })).toEqual([]);
   });
 });

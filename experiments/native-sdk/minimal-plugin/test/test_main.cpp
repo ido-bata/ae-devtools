@@ -2438,6 +2438,168 @@ static void TestIntakeEnumerateUndescribableName()
     }
 }
 
+static void TestIntakeCompGetters()
+{
+    /* Issue #318 / #64: aeRef item descriptor → shared resolver →
+       AEGP_GetCompFromItem → typed CompSuite13 getter → typed JSON.
+       Covers happy path, identity reorder tolerance, wrong-type and
+       stale refusals, non-comp item failure, suite/entry absence, and
+       op-error handling. Comp suite acquire/release is balanced by the
+       shared FakeHost teardown check (slot 8). */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Clip",   AEGP_ItemType_COMP,    6001 },
+        { "Reel",   AEGP_ItemType_FOOTAGE, 6002 },
+        { "Folder", AEGP_ItemType_FOLDER,  6003 },
+    });
+    p.itemMeta[0].compMeta.fps = 24.0;
+    p.itemMeta[0].compMeta.bgColor = {1.0, 0.1, 0.2, 0.3};
+    p.itemMeta[0].compMeta.workAreaDuration = {60, 30};
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* compRef =
+        "{\"projectIndex\":0,\"comp\":{\"aeRef\":{\"type\":\"comp\","
+        "\"name\":\"Clip\",\"path\":[0],\"itemId\":6001,"
+        "\"projectName\":\"Shot01\",\"projectPath\":\"/tmp/shot01.aep\"}}}";
+
+    /* framerate: scalar typed payload */
+    WriteReq0600(c.Path("inbox/cf.request.json"),
+                 ReqJsonArgs("cf", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5", compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "cf", &doc);
+        CHECK(pay != NULL);
+        JVal* fps = PayloadNum(pay, "fps");
+        CHECK(fps != NULL && fps->num == 24.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "cf", "completed", NULL);
+        CHECK(h->LogContains("op AEGP_CompSuite13.AEGP_GetCompFromItem err=0"));
+        CHECK(h->LogContains("op AEGP_CompSuite13.AEGP_GetCompFramerate err=0"));
+    }
+
+    /* bgColor: four-channel typed payload */
+    WriteReq0600(c.Path("inbox/cb.request.json"),
+                 ReqJsonArgs("cb", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompBGColor", "26.5", compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "cb", &doc);
+        CHECK(pay != NULL);
+        JVal* bg = pay ? JGet(pay, "bgColor") : NULL;
+        CHECK(bg != NULL);
+        JVal* r = bg ? PayloadNum(bg, "red") : NULL;
+        CHECK(r != NULL && r->num == 0.1);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "cb", "completed", NULL);
+    }
+
+    /* work-area duration: A_Time value/scale pair */
+    WriteReq0600(c.Path("inbox/cw.request.json"),
+                 ReqJsonArgs("cw", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration", "26.5",
+                    compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "cw", &doc);
+        CHECK(pay != NULL);
+        JVal* wad = pay ? JGet(pay, "workAreaDuration") : NULL;
+        JVal* val = wad ? PayloadNum(wad, "value") : NULL;
+        JVal* scl = wad ? PayloadNum(wad, "scale") : NULL;
+        CHECK(val != NULL && val->num == 60.0);
+        CHECK(scl != NULL && scl->num == 30.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "cw", "completed", NULL);
+    }
+
+    /* reorder: Clip moves to index 2 — itemId keeps resolving */
+    {
+        /* move item 0 to the end via two swaps (0↔1, then 1↔2) */
+        SwapProjectItems(p, 0, 1);
+        SwapProjectItems(p, 1, 2);
+    }
+    WriteReq0600(c.Path("inbox/cr.request.json"),
+                 ReqJsonArgs("cr", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5", compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "cr"));
+        CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+        CHECK(r.find("\"fps\":24") != std::string::npos);
+        CheckResultDoc(c, "cr", "completed", NULL);
+    }
+
+    /* stale itemId → STALE_REFERENCE, no comp calls */
+    {
+        std::string stale = compRef;
+        size_t pos = stale.find("6001");
+        stale.replace(pos, 4, "6999");
+        WriteReq0600(c.Path("inbox/cs.request.json"),
+                     ReqJsonArgs("cs", kTok, 30000,
+                        "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5",
+                        stale.c_str()));
+    }
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "cs", "refused", "STALE_REFERENCE");
+
+    /* footage descriptor resolves (type matches) but the item is not
+       a comp → AEGP_GetCompFromItem fails → failed, mayHaveMutated=false */
+    WriteReq0600(c.Path("inbox/cn.request.json"),
+                 ReqJsonArgs("cn", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5",
+                    "{\"projectIndex\":0,\"comp\":{\"aeRef\":{\"type\":"
+                    "\"footage\",\"name\":\"Reel\",\"path\":[0],"
+                    "\"itemId\":6002}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "cn"));
+        CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
+        CHECK(r.find("\"mayHaveMutated\":false") != std::string::npos);
+        CheckResultDoc(c, "cn", "failed", NULL);
+    }
+
+    /* comp-suite acquisition failure → not-sent */
+    h->failAcquireComp = true;
+    WriteReq0600(c.Path("inbox/ca.request.json"),
+                 ReqJsonArgs("ca", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5", compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->failAcquireComp = false;
+    CheckResultDoc(c, "ca", "not-sent", NULL);
+
+    /* missing getter entry → not-sent (entry 8 = GetCompFramerate) */
+    h->nullCompEntry = 8;
+    h->PopulateSuites();
+    WriteReq0600(c.Path("inbox/ce.request.json"),
+                 ReqJsonArgs("ce", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5", compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->nullCompEntry = 0;
+    h->PopulateSuites();
+    CheckResultDoc(c, "ce", "not-sent", NULL);
+
+    /* comp getter AEGP error → failed, mayHaveMutated=false */
+    h->compQueryErr = A_Err_GENERIC;
+    WriteReq0600(c.Path("inbox/co.request.json"),
+                 ReqJsonArgs("co", kTok, 30000,
+                    "AEGP_CompSuite13.AEGP_GetCompFramerate", "26.5", compRef));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    h->compQueryErr = A_Err_NONE;
+    {
+        std::string r = Slurp(ResultPath(c, "co"));
+        CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
+        CHECK(r.find("\"mayHaveMutated\":false") != std::string::npos);
+        CheckResultDoc(c, "co", "failed", NULL);
+    }
+}
+
 static void TestIntakeUnknownOperation()
 {
     auto h = MakeFakeHost();
@@ -2868,6 +3030,7 @@ int main(int argc, char** argv)
     TestIntakeIdentitySameNameSameType();
     TestIntakeIdentityMalformed();
     TestIntakeEnumerateUndescribableName();
+    TestIntakeCompGetters();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();

@@ -74,6 +74,24 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_ItemSuite9.AEGP_GetItemName",
   "AEGP_ItemSuite9.AEGP_GetItemID",
   "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
+  /* Issue #318 / #64: CompSuite13 read-only getters. All share the
+     {projectIndex, comp:<aeRefItem type=comp>} contract — the comp
+     handle is derived host-side via AEGP_GetCompFromItem, never taken
+     from the wire. GetCompShutterFrameRange is excluded (A_Time input
+     arg — arg-bearing ops are a separate slice). */
+  "AEGP_CompSuite13.AEGP_GetCompFramerate",
+  "AEGP_CompSuite13.AEGP_GetCompFrameDuration",
+  "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart",
+  "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",
+  "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",
+  "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
+  "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor",
+  "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",
+  "AEGP_CompSuite13.AEGP_GetShowBlendModes",
+  "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",
+  "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
+  "AEGP_CompSuite13.AEGP_GetCompBGColor",
+  "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
   "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
 ] as const;
@@ -164,6 +182,62 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
     projectIndex: { kind: "integer", min: 0, max: 1000000 },
     offset: { kind: "integer", min: 0, max: 1000000 },
     limit: { kind: "integer", min: 1, max: 32 },
+  },
+  /* CompSuite13 getters (Issue #318 / #64): `comp` is the same §7b
+     aeRef item descriptor; the descriptor's `type` must be "comp" for
+     resolution to succeed (type corroboration is fail-closed
+     host-side). */
+  "AEGP_CompSuite13.AEGP_GetCompFramerate": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompFrameDuration": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetShowBlendModes": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompBGColor": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
+  },
+  "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    comp: { kind: "aeRefItem" },
   },
 };
 
