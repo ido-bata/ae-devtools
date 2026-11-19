@@ -1401,8 +1401,10 @@ export function createAdapterFakeApp() {
     preferences,
     // Effect collection: matchName is the stable identifier adapters use.
     effects: collection(KNOWN_EFFECTS.map((mn) => ({ matchName: mn, name: mn }))),
-    // Font collection: Font.name is the PostScript name in real AE.
-    fonts: collection([{ name: "ArialMT" }, { name: "HelveticaLTStd-Bold" }]),
+    // Font collection: real AE exposes app.fonts as a FontsObject whose
+    // allFonts attribute is the indexable FontObject list;
+    // FontObject.postScriptName is the stable font identifier.
+    fonts: { allFonts: collection([{ postScriptName: "ArialMT" }, { postScriptName: "HelveticaLTStd-Bold" }]) },
     project,
     newProject() { clearProjectItems(); },
     open(f) { project.file = f; },

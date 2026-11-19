@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "fc3d570b321f44215d7a3e94840304d22ab9c78a6ba7471fb8396ab3dff27ffc"
+      "sha256": "c0cb307cf3a4ceeb0898539a7b16fc38e347abb8a04e2e4ba105b2306080c83b"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -20853,16 +20853,12 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "implementation": "unknown",
+        "verification": "not-run",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/footageitem/#footageitemfile"
-          },
-          {
-            "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail)"
           }
         ]
       }
@@ -22837,7 +22833,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setParentFolder, item.setSelected, read.projectSummary, read.projectTree, read.itemById, read.itemDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.projectTree, read.itemById, read.itemDetail)"
           },
           {
             "kind": "real-host",
@@ -22974,16 +22970,12 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "implementation": "unknown",
+        "verification": "not-run",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/keyframeease/#keyframeeaseinfluence"
-          },
-          {
-            "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setTemporalEase)"
           }
         ]
       }
@@ -23018,16 +23010,12 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "adapter-present",
-        "verification": "automated-fake",
+        "implementation": "unknown",
+        "verification": "not-run",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/keyframeease/#keyframeeasespeed"
-          },
-          {
-            "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setTemporalEase)"
           }
         ]
       }
@@ -26467,7 +26455,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.saveOutputModuleTemplate)"
           }
         ]
       }
@@ -34713,7 +34701,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.addOutputModule)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.addOutputModule)"
           }
         ]
       }
@@ -35137,7 +35125,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listTemplates, render.applyTemplate, render.saveTemplate)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listTemplates, render.saveTemplate)"
           }
         ]
       }
