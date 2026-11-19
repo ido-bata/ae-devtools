@@ -1858,6 +1858,586 @@ static void TestIntakeGetItemNameOpFailure()
     CheckResultDoc(c, "iof", "failed", NULL);
 }
 
+/* ---- Issue #270 identity slice: issuance / discovery / v2 resolve -- */
+
+struct ItemSpec
+{
+    const char* name;
+    AEGP_ItemType type;
+    A_long id;
+};
+
+/* Populate a project's parallel item vectors (names/types/meta) so
+   itemIds are explicit — the fake derives 1000+index when id<0. */
+static void SetupProjectItems(FakeHost& h, int projIndex,
+                              std::initializer_list<ItemSpec> items)
+{
+    FakeProject& p = h.projects[projIndex];
+    p.itemNames.clear();
+    p.itemTypes.clear();
+    p.itemMeta.clear();
+    for (const ItemSpec& s : items)
+    {
+        p.itemNames.push_back(h.MakeNameSpec(FakeHost::U16(s.name)));
+        p.itemTypes.push_back(s.type);
+        FakeItemMeta m;
+        m.id = s.id;
+        p.itemMeta.push_back(m);
+    }
+}
+
+/* Swap two top-level items across all parallel vectors — models a
+   project-panel reorder between requests. */
+static void SwapProjectItems(FakeProject& p, int a, int b)
+{
+    std::swap(p.itemNames[a], p.itemNames[b]);
+    std::swap(p.itemTypes[a], p.itemTypes[b]);
+    if ((int)p.itemMeta.size() > a && (int)p.itemMeta.size() > b)
+        std::swap(p.itemMeta[a], p.itemMeta[b]);
+}
+
+/* Parse an outbox result file; returns the DispatchResult's `result`
+   payload member as a JVal owned by *docOut (caller JFree(*docOut)). */
+static JVal* ResultPayload(TmpChan& c, const char* id, JVal** docOut)
+{
+    std::string r = Slurp(ResultPath(c, id));
+    JVal* doc = JParseDoc(r.data(), r.size());
+    *docOut = doc;
+    if (!doc) return NULL;
+    JVal* res = JGet(doc, "result");
+    return res ? JGet(res, "result") : NULL;
+}
+
+static JVal* PayloadNum(JVal* obj, const char* key)
+{
+    JVal* v = obj ? JGet(obj, key) : NULL;
+    return (v && v->kind == JK_NUM) ? v : NULL;
+}
+
+static void TestIntakeGetItemIDIssuance()
+{
+    /* Legacy descriptor in → canonical identity-bearing descriptor
+       out: live itemId + project name/path + live path index. The
+       client stores result.item verbatim as args.item. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Alpha", AEGP_ItemType_COMP, 5001 },
+        { "Beta",  AEGP_ItemType_FOLDER, 5002 },
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    WriteReq0600(c.Path("inbox/iss.request.json"),
+                 ReqJsonArgs("iss", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemID", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Alpha\",\"path\":[0]}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "iss"));
+    CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+    CheckResultDoc(c, "iss", "completed", NULL);
+    JVal* doc = NULL;
+    JVal* pay = ResultPayload(c, "iss", &doc);
+    CHECK(pay != NULL);
+    if (pay)
+    {
+        JVal* idv = PayloadNum(pay, "itemId");
+        CHECK(idv && idv->num == 5001);
+        JVal* item = JGet(pay, "item");
+        JVal* ref = item ? JGet(item, "aeRef") : NULL;
+        CHECK(ref != NULL);
+        if (ref)
+        {
+            JVal* rid = PayloadNum(ref, "itemId");
+            CHECK(rid && rid->num == 5001);
+            JVal* pn = JGet(ref, "projectName");
+            CHECK(pn && JStrEq(pn, "Shot01"));
+            JVal* pp = JGet(ref, "projectPath");
+            CHECK(pp && JStrEq(pp, "/tmp/shot01.aep"));
+            JVal* path = JGet(ref, "path");
+            CHECK(path && path->kind == JK_ARR && path->nitems == 1 &&
+                  path->items[0]->num == 0);
+        }
+    }
+    if (doc) JFree(doc);
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemID err=0 (result)"));
+}
+
+static void TestIntakeGetFirstProjItemPages()
+{
+    /* Discovery/enumeration: paged ready-to-use descriptors.
+       Page 1: offset 0 limit 2 of 3 → truncated:true.
+       Page 2: offset 2 limit 2 → 1 item, truncated:false. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Alpha", AEGP_ItemType_COMP, 5001 },
+        { "Beta",  AEGP_ItemType_FOLDER, 5002 },
+        { "Gamma", AEGP_ItemType_FOOTAGE, 5003 },
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    WriteReq0600(c.Path("inbox/e1.request.json"),
+                 ReqJsonArgs("e1", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetFirstProjItem", "26.5",
+                             "{\"projectIndex\":0,\"offset\":0,\"limit\":2}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);   /* one request per tick */
+    WriteReq0600(c.Path("inbox/e2.request.json"),
+                 ReqJsonArgs("e2", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetFirstProjItem", "26.5",
+                             "{\"projectIndex\":0,\"offset\":2,\"limit\":2}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "e1", "completed", NULL);
+    CheckResultDoc(c, "e2", "completed", NULL);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "e1", &doc);
+        CHECK(pay != NULL);
+        if (pay)
+        {
+            JVal* proj = JGet(pay, "project");
+            CHECK(proj && JGet(proj, "name") && JStrEq(JGet(proj, "name"), "Shot01"));
+            CHECK(JGet(proj, "path") && JStrEq(JGet(proj, "path"), "/tmp/shot.aep"));
+            JVal* total = PayloadNum(pay, "total");
+            CHECK(total && total->num == 3);
+            JVal* items = JGet(pay, "items");
+            CHECK(items && items->kind == JK_ARR && items->nitems == 2);
+            JVal* tr = JGet(pay, "truncated");
+            CHECK(tr && tr->kind == JK_TRUE);
+            if (items && items->kind == JK_ARR && items->nitems == 2)
+            {
+                JVal* ref0 = JGet(JGet(items->items[0], "item"), "aeRef");
+                JVal* ref1 = JGet(JGet(items->items[1], "item"), "aeRef");
+                CHECK(ref0 && JGet(ref0, "projectName") &&
+                      JStrEq(JGet(ref0, "projectName"), "Shot01"));
+                CHECK(PayloadNum(ref0, "itemId") && PayloadNum(ref0, "itemId")->num == 5001);
+                CHECK(PayloadNum(ref1, "itemId") && PayloadNum(ref1, "itemId")->num == 5002);
+                JVal* p0 = JGet(ref0, "path");
+                CHECK(p0 && p0->nitems == 1 && p0->items[0]->num == 0);
+                JVal* p1 = JGet(ref1, "path");
+                CHECK(p1 && p1->nitems == 1 && p1->items[0]->num == 1);
+            }
+        }
+        if (doc) JFree(doc);
+        doc = NULL;
+        pay = ResultPayload(c, "e2", &doc);
+        CHECK(pay != NULL);
+        if (pay)
+        {
+            JVal* items = JGet(pay, "items");
+            CHECK(items && items->kind == JK_ARR && items->nitems == 1);
+            JVal* tr = JGet(pay, "truncated");
+            CHECK(tr && tr->kind == JK_FALSE);
+            if (items && items->nitems == 1)
+            {
+                JVal* ref = JGet(JGet(items->items[0], "item"), "aeRef");
+                CHECK(PayloadNum(ref, "itemId") && PayloadNum(ref, "itemId")->num == 5003);
+            }
+        }
+        if (doc) JFree(doc);
+    }
+}
+
+static void TestIntakeIdentityReorder()
+{
+    /* Identity descriptor survives reorder: itemId is authoritative,
+       path is not consulted. Legacy positional descriptor stales —
+       the Stage-3 hazard the identity fields exist to fix. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/s.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Alpha", AEGP_ItemType_COMP, 5001 },
+        { "Beta",  AEGP_ItemType_COMP, 5002 },
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* ident =
+        "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\","
+        "\"name\":\"Beta\",\"path\":[1],\"itemId\":5002,"
+        "\"projectName\":\"Shot01\",\"projectPath\":\"/tmp/s.aep\"}}}";
+    WriteReq0600(c.Path("inbox/r0.request.json"),
+                 ReqJsonArgs("r0", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", ident));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "r0"));
+        CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+    }
+    /* reorder: Beta moves to index 0 */
+    SwapProjectItems(p, 0, 1);
+    /* identity descriptor still resolves — live path is now [0] but
+       itemId 5002 finds Beta regardless of the stale path claim */
+    WriteReq0600(c.Path("inbox/r1.request.json"),
+                 ReqJsonArgs("r1", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", ident));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "r1"));
+        CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+        CHECK(r.find("\"name\":\"Beta\"") != std::string::npos);
+        CheckResultDoc(c, "r1", "completed", NULL);
+    }
+    /* legacy descriptor claiming Beta at path[1] now lands on Alpha →
+       name corroboration refuses it (fail-closed, not wrong-target) */
+    WriteReq0600(c.Path("inbox/r2.request.json"),
+                 ReqJsonArgs("r2", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Beta\",\"path\":[1]}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "r2"));
+        CHECK(r.find("STALE_REFERENCE") != std::string::npos);
+        CheckResultDoc(c, "r2", "refused", "STALE_REFERENCE");
+    }
+}
+
+static void TestIntakeIdentityABA()
+{
+    /* Delete + recreate with a NEW id: the issued descriptor must
+       stale (itemId not found) — this is the ABA case Stage 3 could
+       not detect. Legacy descriptor still resolves the impostor:
+       documented residual, pinned here. Recreated with the SAME id +
+       name + type is indistinguishable — the contract's stated
+       guarantee boundary (SDK does not promise id uniqueness). */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/s.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Alpha", AEGP_ItemType_COMP, 5001 },
+        { "Beta",  AEGP_ItemType_COMP, 5002 },
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* ident =
+        "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\","
+        "\"name\":\"Beta\",\"path\":[1],\"itemId\":5002,"
+        "\"projectName\":\"Shot01\",\"projectPath\":\"/tmp/s.aep\"}}}";
+    /* delete Beta, recreate same name/type at same index, NEW id */
+    p.itemMeta[1].id = 5003;
+    WriteReq0600(c.Path("inbox/aba1.request.json"),
+                 ReqJsonArgs("aba1", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", ident));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "aba1"));
+        CHECK(r.find("STALE_REFERENCE") != std::string::npos);
+        CheckResultDoc(c, "aba1", "refused", "STALE_REFERENCE");
+    }
+    /* legacy descriptor resolves the recreated impostor — pinned as
+       the known limitation identity fields fix */
+    WriteReq0600(c.Path("inbox/aba2.request.json"),
+                 ReqJsonArgs("aba2", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Beta\",\"path\":[1]}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "aba2", "completed", NULL);
+    /* id reuse + identical name/type: indistinguishable by contract —
+       resolution succeeds (documented residual, not a bug) */
+    p.itemMeta[1].id = 5002;
+    WriteReq0600(c.Path("inbox/aba3.request.json"),
+                 ReqJsonArgs("aba3", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", ident));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "aba3", "completed", NULL);
+}
+
+static void TestIntakeIdentityProjectBinding()
+{
+    /* Two projects, identical item id+name: projectName/projectPath
+       corroboration is what refuses cross-project confusion. */
+    auto h = MakeFakeHost();
+    FakeProject& p0 = h->AddProject("Alpha");
+    p0.path = "/a.aep";
+    p0.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, { { "Item", AEGP_ItemType_COMP, 5001 } });
+    FakeProject& p1 = h->AddProject("Beta");
+    p1.path = "/b.aep";
+    p1.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 1, { { "Item", AEGP_ItemType_COMP, 5001 } });
+    h->numProjects = 2;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* bound0 =
+        "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\","
+        "\"name\":\"Item\",\"path\":[0],\"itemId\":5001,"
+        "\"projectName\":\"Alpha\",\"projectPath\":\"/a.aep\"}}}";
+    /* correct project → completed */
+    WriteReq0600(c.Path("inbox/pb0.request.json"),
+                 ReqJsonArgs("pb0", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", bound0));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "pb0", "completed", NULL);
+    /* same descriptor against projectIndex=1 → project name mismatch
+       refuses BEFORE the item scan — no wrong-project resolution */
+    {
+        std::string wrong = std::string(bound0);
+        wrong.replace(wrong.find("\"projectIndex\":0"), 16,
+                      "\"projectIndex\":1");
+        WriteReq0600(c.Path("inbox/pb1.request.json"),
+                     ReqJsonArgs("pb1", kTok, 30000,
+                                 "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                                 wrong.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        std::string r = Slurp(ResultPath(c, "pb1"));
+        CHECK(r.find("STALE_REFERENCE") != std::string::npos);
+        CheckResultDoc(c, "pb1", "refused", "STALE_REFERENCE");
+    }
+    /* wrong projectPath also stales */
+    {
+        std::string wrong = std::string(bound0);
+        wrong.replace(wrong.find("/a.aep"), 6, "/b.aep");
+        WriteReq0600(c.Path("inbox/pb2.request.json"),
+                     ReqJsonArgs("pb2", kTok, 30000,
+                                 "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                                 wrong.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pb2", "refused", "STALE_REFERENCE");
+    }
+    /* descriptor bound to project 1 resolves there */
+    {
+        std::string b1 = std::string(bound0);
+        b1.replace(b1.find("\"projectIndex\":0"), 16, "\"projectIndex\":1");
+        b1.replace(b1.find("\"Alpha\""), 7, "\"Beta\"");
+        b1.replace(b1.find("/a.aep"), 6, "/b.aep");
+        WriteReq0600(c.Path("inbox/pb3.request.json"),
+                     ReqJsonArgs("pb3", kTok, 30000,
+                                 "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                                 b1.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pb3", "completed", NULL);
+    }
+}
+
+static void TestIntakeIdentitySessionRebuild()
+{
+    /* Session reconstruction may reassign itemIds. A descriptor issued
+       before the rebuild must fail closed — never resolve against a
+       recycled handle space. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, { { "Alpha", AEGP_ItemType_COMP, 5001 } });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* ident =
+        "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\","
+        "\"name\":\"Alpha\",\"path\":[0],\"itemId\":5001}}}";
+    /* sanity: resolves while ids are stable */
+    WriteReq0600(c.Path("inbox/sb0.request.json"),
+                 ReqJsonArgs("sb0", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", ident));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "sb0", "completed", NULL);
+    /* rebuild: itemMeta cleared → fake derives 1000+index; id 5001 gone */
+    p.itemMeta.clear();
+    WriteReq0600(c.Path("inbox/sb1.request.json"),
+                 ReqJsonArgs("sb1", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5", ident));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "sb1"));
+        CHECK(r.find("STALE_REFERENCE") != std::string::npos);
+        CheckResultDoc(c, "sb1", "refused", "STALE_REFERENCE");
+    }
+}
+
+static void TestIntakeIdentitySameNameSameType()
+{
+    /* Two comps named "Dup" with distinct ids: itemId is the
+       discriminator — a descriptor whose path points at the OTHER
+       Dup still resolves the id's owner (path is corroboration-free
+       when itemId is present). */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Dup", AEGP_ItemType_COMP, 5001 },
+        { "Dup", AEGP_ItemType_COMP, 5002 },
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    /* id 5001 but path claims [1] (the other Dup): GetItemID must
+       return 5001 with live path [0] — id wins over path */
+    WriteReq0600(c.Path("inbox/ss0.request.json"),
+                 ReqJsonArgs("ss0", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemID", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Dup\",\"path\":[1],"
+                             "\"itemId\":5001}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "ss0", &doc);
+        CHECK(pay != NULL);
+        if (pay)
+        {
+            JVal* idv = PayloadNum(pay, "itemId");
+            CHECK(idv && idv->num == 5001);
+            JVal* ref = JGet(JGet(pay, "item"), "aeRef");
+            JVal* path = ref ? JGet(ref, "path") : NULL;
+            CHECK(path && path->nitems == 1 && path->items[0]->num == 0);
+        }
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "ss0", "completed", NULL);
+    }
+    /* legacy positional still discriminates by index */
+    WriteReq0600(c.Path("inbox/ss1.request.json"),
+                 ReqJsonArgs("ss1", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemID", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Dup\",\"path\":[1]}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "ss1", &doc);
+        JVal* idv = pay ? PayloadNum(pay, "itemId") : NULL;
+        CHECK(idv && idv->num == 5002);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "ss1", "completed", NULL);
+    }
+}
+
+static void TestIntakeIdentityMalformed()
+{
+    /* v2 descriptor shape violations refuse MALFORMED_REQUEST before
+       any AEGP call — same discipline as Stage 1/3. */
+    std::string longArgs;
+    {
+        std::string nm(1100, 'A');
+        longArgs = std::string("{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"") + nm + "\",\"path\":[0]}}}";
+    }
+    static const struct { const char* id; const char* args; } cases[] = {
+        { "v1", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"itemId\":-1}}}" },
+        { "v2", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"itemId\":4294967296}}}" },
+        { "v3", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"itemId\":1.5}}}" },
+        { "v4", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"itemId\":\"7\"}}}" },
+        { "v5", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"projectName\":5}}}" },
+        { "v6", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"projectPath\":true}}}" },
+        { "v7", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"generation\":1}}}" },
+        { "v9", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"itemId\":7}}}" }, /* missing path */
+    };
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, { { "P", AEGP_ItemType_COMP, 7 } });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    size_t i;
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        WriteReq0600(c.Path((std::string("inbox/") + cases[i].id +
+                             ".request.json").c_str()),
+                     ReqJsonArgs(cases[i].id, kTok, 30000,
+                                 "AEGP_ItemSuite9.AEGP_GetItemID", "26.5",
+                                 cases[i].args));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        std::string r = Slurp(ResultPath(c, cases[i].id));
+        CHECK(r.find("MALFORMED_REQUEST") != std::string::npos);
+        CHECK(r.find("opCalls") == std::string::npos);
+        CheckResultDoc(c, cases[i].id, "refused", "MALFORMED_REQUEST");
+    }
+    /* over-bound name (>1024 UTF-8 bytes) is malformed, not stale */
+    WriteReq0600(c.Path("inbox/v8.request.json"),
+                 ReqJsonArgs("v8", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemID", "26.5",
+                             longArgs.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "v8", "refused", "MALFORMED_REQUEST");
+}
+
+static void TestIntakeEnumerateUndescribableName()
+{
+    /* A live item name over the 1024-byte identity bound cannot be
+       described: enumeration reports nameTruncated without a usable
+       aeRef, and resolution refuses STALE (fail-closed). */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    {
+        std::vector<A_UTF16Char> units(1101, 'A');
+        units[1100] = 0;
+        p.itemNames.push_back(h->MakeNameSpec(units));
+        p.itemNames.insert(p.itemNames.begin(),
+                           h->MakeNameSpec(FakeHost::U16("Alpha")));
+        p.itemTypes.assign(3, AEGP_ItemType_COMP);
+        p.itemTypes[2] = AEGP_ItemType_SOLID_defunct; /* no descriptor tag */
+        FakeItemMeta m0; m0.id = 5001;
+        FakeItemMeta m1; m1.id = 5002;
+        FakeItemMeta m2; m2.id = 5003;
+        p.itemMeta.push_back(m0);
+        p.itemMeta.push_back(m1);
+        p.itemMeta.push_back(m2);
+        p.itemNames.push_back(h->MakeNameSpec(FakeHost::U16("Sol")));
+    }
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    WriteReq0600(c.Path("inbox/en.request.json"),
+                 ReqJsonArgs("en", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetFirstProjItem", "26.5",
+                             "{\"projectIndex\":0,\"offset\":0,\"limit\":8}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "en", "completed", NULL);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "en", &doc);
+        CHECK(pay != NULL);
+        if (pay)
+        {
+            JVal* items = JGet(pay, "items");
+            CHECK(items && items->kind == JK_ARR && items->nitems == 3);
+            if (items && items->nitems == 3)
+            {
+                JVal* e0 = items->items[0];
+                JVal* e1 = items->items[1];
+                JVal* e2 = items->items[2];
+                CHECK(JGet(e0, "item") != NULL);           /* describable */
+                CHECK(JGet(e1, "item") == NULL);           /* no usable aeRef */
+                JVal* nt = JGet(e1, "nameTruncated");
+                CHECK(nt && nt->kind == JK_TRUE);
+                JVal* eid = PayloadNum(e1, "itemId");
+                CHECK(eid && eid->num == 5002);
+                /* SOLID_defunct: honest marker, never a partial aeRef */
+                CHECK(JGet(e2, "item") == NULL);
+                JVal* ut = JGet(e2, "unsupportedType");
+                CHECK(ut && ut->kind == JK_TRUE);
+            }
+        }
+        if (doc) JFree(doc);
+    }
+    /* resolution against the over-long live name fails closed —
+       the descriptor cannot even carry the name (>1024 → malformed),
+       and a truncated-name descriptor mismatches → stale */
+    WriteReq0600(c.Path("inbox/en2.request.json"),
+                 ReqJsonArgs("en2", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Alpha\",\"path\":[0],"
+                             "\"itemId\":5002}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        std::string r = Slurp(ResultPath(c, "en2"));
+        CHECK(r.find("STALE_REFERENCE") != std::string::npos);
+        CheckResultDoc(c, "en2", "refused", "STALE_REFERENCE");
+    }
+}
+
 static void TestIntakeUnknownOperation()
 {
     auto h = MakeFakeHost();
@@ -2279,6 +2859,15 @@ int main(int argc, char** argv)
     TestIntakeGetItemNameMalformed();
     TestIntakeGetItemNameSuiteFailure();
     TestIntakeGetItemNameOpFailure();
+    TestIntakeGetItemIDIssuance();
+    TestIntakeGetFirstProjItemPages();
+    TestIntakeIdentityReorder();
+    TestIntakeIdentityABA();
+    TestIntakeIdentityProjectBinding();
+    TestIntakeIdentitySessionRebuild();
+    TestIntakeIdentitySameNameSameType();
+    TestIntakeIdentityMalformed();
+    TestIntakeEnumerateUndescribableName();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();

@@ -72,6 +72,8 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_UtilitySuite6.AEGP_HostIsActivated",
   "AEGP_ItemSuite9.AEGP_GetTypeName",
   "AEGP_ItemSuite9.AEGP_GetItemName",
+  "AEGP_ItemSuite9.AEGP_GetItemID",
+  "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
   "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
 ] as const;
@@ -117,18 +119,24 @@ export type NativeIntakeArgConstraint =
       max: number;
     }
   | {
-      /* Issue #270 Stage 3 (CAP027 groundwork): a project-item identity
-         descriptor in the trusted-codec `aeRef` wire form —
-         {"aeRef":{"type","name","path":[i]}}. `type` is one of the
-         native-mapped tags "folder"|"comp"|"footage" (AEGP_ItemType
-         1|2|4); `path` is exactly one top-level project-item index
+      /* Issue #270 identity slice (contract native-channel.md §7b): a
+         project-item identity descriptor in the trusted-codec `aeRef`
+         wire form —
+         {"aeRef":{"type","name","path":[i],"itemId"?,"projectName"?,
+         "projectPath"?}}. `type` is one of the native-mapped tags
+         "folder"|"comp"|"footage" (AEGP_ItemType 1|2|4); `path` is
+         exactly one top-level project-item index
          (AEGP_GetFirstProjItem/GetNextProjItem order — folder children
          are not enumerable through AEGP_ItemSuite9, so deeper paths are
-         refused); `contentHash` is NOT accepted by this slice — the
-         host-side resolver cannot verify it cheaply, so its presence is
+         refused); `itemId` is the live AEGP_GetItemID value and, when
+         present, is the authoritative selector (path is then ignored);
+         `projectName`/`projectPath` corroborate the project binding.
+         `contentHash` and any other inner key are NOT accepted — the
+         host-side resolver cannot verify them, so their presence is
          MALFORMED_REQUEST rather than silently ignored. The descriptor
-         is validated for shape here; resolution (name/type/index match)
-         happens host-side and failure is STALE_REFERENCE. */
+         is validated for shape here; resolution (id/path + project +
+         type/name corroboration) happens host-side and failure is
+         STALE_REFERENCE. */
       kind: "aeRefItem";
     };
 
@@ -142,6 +150,20 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
   "AEGP_ItemSuite9.AEGP_GetItemName": {
     projectIndex: { kind: "integer", min: 0, max: 1000000 },
     item: { kind: "aeRefItem" },
+  },
+  /* GetItemID shares the aeRefItem arg shape — it is descriptor
+     issuance: resolve the descriptor, then return the canonical
+     identity-bearing aeRef (live itemId + project name/path). */
+  "AEGP_ItemSuite9.AEGP_GetItemID": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+  },
+  /* GetFirstProjItem as discovery/enumeration: paged ready-to-use
+     descriptors. limit mirrors the C++ ENUM_LIMIT_MAX bound. */
+  "AEGP_ItemSuite9.AEGP_GetFirstProjItem": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    offset: { kind: "integer", min: 0, max: 1000000 },
+    limit: { kind: "integer", min: 1, max: 32 },
   },
 };
 
@@ -208,10 +230,20 @@ export function validateNativeIntakeArgs(
   return errors;
 }
 
-/* Shape-check an `aeRefItem` descriptor: {"aeRef":{"type","name","path"}}
-   with exactly those keys (no contentHash — see constraint comment).
-   This proves wire shape only; name/type/index resolution is the
-   plug-in's job and its failure is STALE_REFERENCE, not malformed. */
+/* Shape-check an `aeRefItem` descriptor (contract §7b):
+   {"aeRef":{"type","name","path",...}} where the required keys are
+   type/name/path and the only permitted optional keys are itemId,
+   projectName, projectPath. Any other inner key — including
+   contentHash — refuses. This proves wire shape only; id/path/project
+   resolution and name/type corroboration are the plug-in's job and
+   their failure is STALE_REFERENCE, not malformed. */
+const AEREF_REQUIRED_KEYS = ["type", "name", "path"];
+const AEREF_OPTIONAL_KEYS = ["itemId", "projectName", "projectPath"];
+const AEREF_MAX_NAME_BYTES = 1024;
+const AEREF_MAX_STR_CHARS = 4096;
+const AEREF_MAX_ITEM_ID = 4294967295;
+const utf8 = new TextEncoder();
+
 function validateAeRefItemArg(argName: string, v: unknown): string[] {
   const errors: string[] = [];
   const bad = (m: string): string => {
@@ -225,19 +257,44 @@ function validateAeRefItemArg(argName: string, v: unknown): string[] {
   }
   const ref = v.aeRef;
   if (!isPlainArgsObject(ref)) return [bad("aeRef must be a plain object")];
-  const refKeys = Object.keys(ref).sort();
-  if (refKeys.join(",") !== "name,path,type") {
-    return [bad("aeRef must carry exactly type, name, path (contentHash unsupported)")];
+  const refKeys = Object.keys(ref);
+  for (const k of refKeys) {
+    if (!AEREF_REQUIRED_KEYS.includes(k) && !AEREF_OPTIONAL_KEYS.includes(k)) {
+      bad(`aeRef carries unsupported key "${k}" (contentHash unsupported)`);
+    }
   }
+  for (const k of AEREF_REQUIRED_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(ref, k)) {
+      bad(`aeRef requires "${k}"`);
+    }
+  }
+  if (errors.length > 0) return errors;
   if (ref.type !== "folder" && ref.type !== "comp" && ref.type !== "footage") {
     bad('aeRef.type must be "folder" | "comp" | "footage"');
   }
-  if (typeof ref.name !== "string" || ref.name.length === 0) {
-    bad("aeRef.name must be a non-empty string");
+  if (typeof ref.name !== "string" || ref.name.length === 0 ||
+      utf8.encode(ref.name).length > AEREF_MAX_NAME_BYTES) {
+    bad("aeRef.name must be a non-empty string ≤ 1024 UTF-8 bytes");
   }
   if (!Array.isArray(ref.path) || ref.path.length !== 1 ||
-      !Number.isInteger(ref.path[0]) || (ref.path[0] as number) < 0) {
+      !Number.isInteger(ref.path[0]) || (ref.path[0] as number) < 0 ||
+      (ref.path[0] as number) > 1000000) {
     bad("aeRef.path must be [<non-negative integer>] — one top-level item index");
+  }
+  if (ref.itemId !== undefined &&
+      (typeof ref.itemId !== "number" || !Number.isInteger(ref.itemId) ||
+       ref.itemId < 0 || ref.itemId > AEREF_MAX_ITEM_ID)) {
+    bad("aeRef.itemId must be an integer in [0, 4294967295]");
+  }
+  if (ref.projectName !== undefined &&
+      (typeof ref.projectName !== "string" ||
+       utf8.encode(ref.projectName).length > AEREF_MAX_STR_CHARS)) {
+    bad("aeRef.projectName must be a string ≤ 4096 UTF-8 bytes");
+  }
+  if (ref.projectPath !== undefined &&
+      (typeof ref.projectPath !== "string" ||
+       utf8.encode(ref.projectPath).length > AEREF_MAX_STR_CHARS)) {
+    bad("aeRef.projectPath must be a string ≤ 4096 UTF-8 bytes");
   }
   return errors;
 }
