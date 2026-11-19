@@ -56,7 +56,7 @@ against a fake `SPBasicSuite`/AEGP suite-table host — plain `clang++`,
 no After Effects, no GUI:
 
 ```
-1094 checks, 0 failures
+1312 checks, 0 failures
 ```
 
 Coverage: init-time suite-acquire failure (utility, register),
@@ -91,6 +91,15 @@ only.** It exercises our code's control flow and memory discipline;
 it says nothing about real AE dispatch, real suite semantics, or real
 timing. Not `fake/mock only`-as-working for the plugin itself — the
 plugin remains UNVERIFIED below build-host level.
+
+The suite also covers the Issue #267 Slice A native intake channel
+(`native-channel/v1`, `src/native_intake.cpp` + `src/native_json.cpp`):
+opt-in gating, claim/validate/execute/publish, every refusal code,
+duplicate/stale/token/session/target mismatch, suite and publish
+failure, channel privacy violation, and channel-token non-leakage —
+all at fake-host level only. No intake result promotes any registry
+operation; `verifiedOnRealHost`/`externalDispatchVerified` remain
+false pending the #223 authorized real-host session (Slice C).
 
 AE load/registration/execution of this bundle: **UNVERIFIED** — see
 blocker 2 below and `LOAD-PROOF.md`.
