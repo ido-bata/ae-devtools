@@ -12,6 +12,7 @@
 /*******************************************************************/
 
 #include "fake_host.h"
+#include "../src/native_json.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -1368,6 +1369,23 @@ static void TestIntakeCompletedGetNumProjects()
     CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
     CHECK(r.find("\"numProjects\":2") != std::string::npos);
     CHECK(r.find("opCalls") != std::string::npos);
+    /* the result file must be one complete JSON document — substring
+       checks alone missed an extra closing brace (Slice B E2E) */
+    {
+        JVal* rdoc = JParseDoc(r.data(), r.size());
+        CHECK(rdoc != NULL);
+        if (rdoc)
+        {
+            JVal* res = JGet(rdoc, "result");
+            CHECK(res != NULL);
+            if (res)
+            {
+                JVal* outcome = JGet(res, "outcome");
+                CHECK(outcome != NULL && JStrEq(outcome, "completed"));
+            }
+            JFree(rdoc);
+        }
+    }
     CHECK(r.find("AEGP_ProjSuite6.AEGP_GetNumProjects") != std::string::npos);
     CHECK(h->LogContains("native.request id=reqA"));
     CHECK(h->LogContains("native.result id=reqA outcome=completed"));
@@ -1694,8 +1712,37 @@ static void TestIntakeChannelPrivacyViolation()
     CHECK(h->LogContains("native.error: channel privacy check failed"));
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    /* --channel-server <root> <requestId> [deadlineMs]: drive the real
+       entry + idle hook against FakeHost until the result file for
+       <requestId> appears in <root>/outbox — the plug-in side of the
+       native-channel/v1 fake E2E (Issue #267 Slice B). Exit 0 on
+       delivery, 3 on deadline, 4 on entry failure. */
+    if (argc > 3 && strcmp(argv[1], "--channel-server") == 0)
+    {
+        auto h = MakeFakeHost();
+        setenv("AE_DEVTOOLS_NATIVE_CHANNEL", argv[2], 1);
+        if (CallEntry(*h) != A_Err_NONE)
+            return 4;
+        std::string result =
+            std::string(argv[2]) + "/outbox/" + argv[3] + ".result.json";
+        long deadlineMs = argc > 4 ? atol(argv[4]) : 15000;
+        long waited = 0;
+        while (waited < deadlineMs)
+        {
+            CallIdle(*h);
+            if (access(result.c_str(), F_OK) == 0)
+            {
+                printf("%s\n", result.c_str());
+                return 0;
+            }
+            usleep(20000);
+            waited += 20;
+        }
+        return 3;
+    }
+
     TestEntryRegistersIdleHook();
     TestEntrySuiteAcquireFailures();
     TestEntryNullBasicSuite();
