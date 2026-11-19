@@ -849,3 +849,98 @@ test("issue #293 batch: itemRef id/path resolves duplicate names safely", async 
   assert.equal(layers.outcome, "COMPLETED");
   assert.equal(layers.result.layers.length, 1);
 });
+
+test("issue #295 batch: MarkerValue layer/comp markers — write, read-back, params, counterexamples", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "N1" })).outcome, "COMPLETED");
+
+  // Full-field layer marker with cue-point params.
+  const set = await go("marker.setLayerMarker", {
+    compName: "C", layerName: "N1", time: 1.5, comment: "Fade Up",
+    chapter: "ch2", url: "https://example.com", frameTarget: "f3",
+    cuePointName: "cue1", duration: 0.5, eventCuePoint: true,
+    params: { alpha: "a", beta: "b" },
+  });
+  assert.equal(set.outcome, "COMPLETED");
+  assert.equal(set.result.numKeys, 1);
+  const m = set.result.markers[0];
+  assert.equal(m.time, 1.5);
+  assert.equal(m.comment, "Fade Up");
+  assert.equal(m.chapter, "ch2");
+  assert.equal(m.url, "https://example.com");
+  assert.equal(m.frameTarget, "f3");
+  assert.equal(m.cuePointName, "cue1");
+  assert.equal(m.duration, 0.5);
+  assert.equal(m.eventCuePoint, true);
+  assert.deepEqual(m.params, { alpha: "a", beta: "b" });
+
+  // Second marker at a different time; read op returns both in order.
+  await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: 3, comment: "Outro" });
+  const rd = await go("marker.readLayerMarkers", { compName: "C", layerName: "N1" });
+  assert.equal(rd.outcome, "COMPLETED");
+  assert.equal(rd.result.numKeys, 2);
+  assert.equal(rd.result.markers[1].comment, "Outro");
+  assert.equal(rd.result.markers[1].chapter, "");
+  assert.deepEqual(rd.result.markers[1].params, {});
+
+  // Same-time write updates the existing key (Property.setValueAtTime
+  // semantics) rather than appending a duplicate.
+  const dup = await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: 1.5, comment: "Renamed" });
+  assert.equal(dup.outcome, "COMPLETED");
+  assert.equal(dup.result.numKeys, 2);
+  assert.equal(dup.result.markers[0].comment, "Renamed");
+
+  // Comp markers live on comp.markerProperty — a separate store from
+  // layer markers even at the same times.
+  const cm = await go("marker.setCompMarker", { compName: "C", time: 1.5, comment: "Beat", duration: 1 });
+  assert.equal(cm.outcome, "COMPLETED");
+  assert.equal(cm.result.numKeys, 1);
+  const cr = await go("marker.readCompMarkers", { compName: "C" });
+  assert.equal(cr.result.markers[0].comment, "Beat");
+  assert.equal(cr.result.markers[0].duration, 1);
+  // Layer marker count is untouched by the comp marker.
+  const lr = await go("marker.readLayerMarkers", { compName: "C", layerName: "N1" });
+  assert.equal(lr.result.numKeys, 2);
+
+  // Counterexamples: wrong comp, wrong layer, wrong item type.
+  assert.notEqual((await go("marker.setLayerMarker", { compName: "C", layerName: "Ghost", time: 0, comment: "x" })).outcome, "COMPLETED");
+  assert.notEqual((await go("marker.readCompMarkers", { compName: "Ghost" })).outcome, "COMPLETED");
+  await go("item.import", { path: "/tmp/clip.mov" });
+  assert.notEqual((await go("marker.readCompMarkers", { compName: "clip.mov" })).outcome, "COMPLETED");
+
+  // Non-marker property is not a marker store: Position keys are
+  // numbers, and marker ops never touch it.
+  const PATH = ["ADBE Transform Group", "ADBE Position"];
+  await go("anim.setValueAtTime", { compName: "C", layerName: "N1", propertyPath: PATH, time: 0, value: [0, 0] });
+  const pv = await go("read.propertyValue", { compName: "C", layerName: "N1", propertyPath: PATH });
+  assert.equal(pv.result.numKeys, 1);
+  assert.deepEqual(pv.result.value, [0, 0]);
+
+  // Arg validation refuses malformed markers before any dispatch.
+  assert.equal((await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: "x", comment: "c" })).reason, "INVALID_ARGS");
+  assert.equal((await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: 0 })).reason, "INVALID_ARGS");
+  assert.equal((await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: 0, comment: "c", duration: -1 })).reason, "INVALID_ARGS");
+  assert.equal((await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: 0, comment: "c", params: { k: 1 } })).reason, "INVALID_ARGS");
+  assert.equal((await go("marker.setLayerMarker", { compName: "C", layerName: "N1", time: 0, comment: "c", eventCuePoint: "yes" })).reason, "INVALID_ARGS");
+
+  // Version-gated fields (label/protectedRegion, AE 16.0+) are not
+  // modeled: no member claim and no source reference — no overclaim.
+  const { OPERATIONS, buildSource } = await import("../registry.mjs");
+  for (const op of OPERATIONS.filter((o) => o.id.startsWith("marker."))) {
+    assert.ok(!op.members.some((m) => /MarkerValue\.(label|protectedRegion)/.test(m)), `${op.id} overclaims version-gated member`);
+    const src = buildSource(op.id, {
+      compName: "C", layerName: "N1", time: 0, comment: "c",
+      chapter: "x", url: "u", frameTarget: "f", cuePointName: "cp",
+      duration: 1, eventCuePoint: false, params: { a: "b" },
+    });
+    assert.ok(!/protectedRegion|\.label\b/.test(src), `${op.id} source references version-gated field`);
+  }
+});

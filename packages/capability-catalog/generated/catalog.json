@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "9e82093cba6aaf3656c5e011b063fde669458629fe8c7952fac44a4271ea367a"
+      "sha256": "07e0c80ab6382adc3db27c04a6a67dbc163ae319721a836909c65c7ca69f8af8"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -17945,12 +17945,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/compitem/#compitemmarkerproperty"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setCompMarker, marker.readCompMarkers)"
           }
         ]
       }
@@ -23774,12 +23778,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layer/#layermarker"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.readLayerMarkers)"
           }
         ]
       }
@@ -25146,12 +25154,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervaluechapter"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25186,12 +25198,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervaluecomment"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25226,12 +25242,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervaluecuepointname"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25266,12 +25286,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervalueduration"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25306,12 +25330,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervalueeventcuepoint"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25346,12 +25374,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervalueframetarget"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25386,12 +25418,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervaluegetparameters"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -25506,12 +25542,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervaluesetparameters"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker)"
           }
         ]
       }
@@ -25546,12 +25586,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/markervalue/#markervalueurl"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -31253,7 +31297,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.keyframes)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.keyframes, marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -31297,7 +31341,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.keyframes)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.keyframes, marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -31509,7 +31553,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyValue, read.keyframes, anim.removeKeyframe, read.valueAtTime, read.propertyDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyValue, read.keyframes, anim.removeKeyframe, read.valueAtTime, read.propertyDetail, marker.setLayerMarker, marker.setCompMarker, marker.readLayerMarkers, marker.readCompMarkers)"
           }
         ]
       }
@@ -32497,7 +32541,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setValueAtTime)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (anim.setValueAtTime, marker.setLayerMarker, marker.setCompMarker)"
           }
         ]
       }

@@ -199,6 +199,79 @@ function defaultEaseList(dims) {
   return out;
 }
 
+/*
+ * MarkerValue (Issue #295). Real constructor:
+ *   new MarkerValue(comment, chapter, url, frameTarget, cuePointName, params)
+ * — comment is required, the rest optional; scalar args are strings and
+ * `params` is a key-value-pair carrier accessed via get/setParameters.
+ * The fake keeps the documented scalar fields plus a params map.
+ * label/protectedRegion are AE 16.0+ and deliberately NOT modeled —
+ * version-gated fields stay unclaimed until a version-aware gate exists.
+ */
+export class MarkerValue {
+  constructor(comment, chapter, url, frameTarget, cuePointName, params) {
+    if (typeof comment !== "string") {
+      throw new Error("fake-app: MarkerValue comment must be a string");
+    }
+    this.comment = comment;
+    this.chapter = chapter === undefined ? "" : String(chapter);
+    this.url = url === undefined ? "" : String(url);
+    this.frameTarget = frameTarget === undefined ? "" : String(frameTarget);
+    this.cuePointName = cuePointName === undefined ? "" : String(cuePointName);
+    this.duration = 0;
+    this.eventCuePoint = false;
+    this.__params = {};
+    if (params !== undefined && params !== null) this.setParameters(params);
+  }
+  getParameters() {
+    const out = {};
+    for (const k in this.__params) out[k] = this.__params[k];
+    return out;
+  }
+  setParameters(pairs) {
+    if (pairs === null || typeof pairs !== "object" || Array.isArray(pairs)) {
+      throw new Error("fake-app: MarkerValue.setParameters requires a key-value object");
+    }
+    const next = {};
+    for (const k in pairs) {
+      if (!pairs.hasOwnProperty(k)) continue;
+      if (typeof pairs[k] !== "string") {
+        throw new Error("fake-app: MarkerValue parameter values must be strings");
+      }
+      next[String(k)] = pairs[k];
+    }
+    this.__params = next;
+  }
+}
+
+/*
+ * Marker property group: Layer.marker / CompItem.markerProperty both
+ * behave as a keyframed Property whose values are MarkerValue objects.
+ * Reuses makeProperty so numKeys/keyTime/keyValue/setValueAtTime/
+ * valueAtTime semantics (incl. same-time update) match the other
+ * property surfaces.
+ */
+function makeMarkerProperty(matchName) {
+  return makeProperty(null, { matchName: matchName ?? "ADBE Marker" });
+}
+
+// Duplicated layers/comps get INDEPENDENT MarkerValue copies — sharing
+// the object would make later edits leak across duplicates.
+function cloneMarkerValue(mv) {
+  const c = new MarkerValue(mv.comment, mv.chapter, mv.url, mv.frameTarget, mv.cuePointName);
+  c.duration = mv.duration;
+  c.eventCuePoint = mv.eventCuePoint;
+  c.setParameters(mv.getParameters());
+  return c;
+}
+
+function copyMarkers(srcProp, dstProp) {
+  if (srcProp === null || srcProp === undefined) return;
+  for (var i = 1; i <= srcProp.numKeys; i++) {
+    dstProp.setValueAtTime(srcProp.keyTime(i), cloneMarkerValue(srcProp.keyValue(i)));
+  }
+}
+
 function makeProperty(value, opts = {}) {
   const expressionAllowed = opts.expressionAllowed !== false;
   const prop = {
@@ -436,6 +509,14 @@ function makeLayer(name, comp, kind) {
       tracking: 0,
       leading: 0,
     } : null,
+    // Layer.marker (Issue #295): a lazily-created keyframed property
+    // whose values are MarkerValue objects. All layer kinds carry one,
+    // matching the Layer base class.
+    __marker: null,
+    get marker() {
+      if (layer.__marker === null) layer.__marker = makeMarkerProperty();
+      return layer.__marker;
+    },
     property(group) {
       // Real AE resolves both display name and matchName; we only
       // implement the stable matchName path adapters must use.
@@ -514,6 +595,7 @@ function makeLayer(name, comp, kind) {
       if (l.__textDoc !== null && this.__textDoc !== null) {
         for (var k in this.__textDoc) l.__textDoc[k] = this.__textDoc[k];
       }
+      copyMarkers(this.__marker, l.marker);
       comp.__layers.push(l);
       comp.__reindex();
       return l;
@@ -581,8 +663,10 @@ function makeComp(name, w, h, par, dur, owner, parent) {
         nl.shy = l.shy;
         nl.label = l.label;
         nl.locked = l.locked;
+        copyMarkers(l.__marker, nl.marker);
         d.__layers.push(nl);
       }
+      copyMarkers(this.__marker, d.markerProperty);
       d.__reindex();
       return d;
     },
@@ -595,6 +679,16 @@ function makeComp(name, w, h, par, dur, owner, parent) {
     },
   });
   Object.defineProperty(comp, "numLayers", { get() { return comp.__layers.length; } });
+  // CompItem.markerProperty (Issue #295, AE 14.0+): same keyframed
+  // MarkerValue property as Layer.marker but owned by the comp.
+  comp.__marker = null;
+  Object.defineProperty(comp, "markerProperty", {
+    get() {
+      if (comp.__marker === null) comp.__marker = makeMarkerProperty();
+      return comp.__marker;
+    },
+    configurable: true,
+  });
   comp.layers = collection(comp.__layers, {
     addNull(d) {
       const l = makeLayer("Null " + (comp.__layers.length + 1), comp, "null");
