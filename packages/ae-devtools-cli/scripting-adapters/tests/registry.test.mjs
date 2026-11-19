@@ -93,6 +93,10 @@ function sampleArgs(op) {
     else if (n === "startTime" || n === "timeSpanStart") a[n] = 0;
     else if (n === "stretch" || n === "timeSpanDuration") a[n] = 100;
     else if (n === "solo" || n === "shy" || n === "locked") a[n] = true;
+    else if (n === "audioEnabled" || n === "threeDLayer" || n === "motionBlur" || n === "guideLayer" || n === "enabled") a[n] = true;
+    else if (n === "comment") a[n] = "sample comment";
+    else if (n === "setting") a[n] = "Output File Info";
+    else if (n === "resolutionFactor") a[n] = 0.5;
     else a[n] = `sample-${n}`;
   }
   return a;
@@ -406,6 +410,6 @@ test("coverage claims only reference members actually exercised AND present in t
   const opMembers = {};
   for (const op of OPERATIONS) for (const m of op.members) (opMembers[m] ??= []).push(op.id);
   assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueue.rendering"], ["read.renderQueueStatus"]);
-  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue"]);
+  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue", "render.getOutputSettings", "render.setOutputSetting"]);
   assert.deepEqual(opMembers["provisional.ae.scripting.PropertyBase.name"], undefined, "PropertyBase.name was a wrong-owner claim");
 });
