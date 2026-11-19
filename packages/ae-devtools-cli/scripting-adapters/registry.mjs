@@ -567,7 +567,7 @@ return __adp_json({ ok: true, removed: ${js(a.name)} });
     issue: "291",
     permission: "execute",
     mutating: true,
-    members: [S("Item", "parentFolder"), S("Project", "rootFolder"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
+    members: [S("Item", "parentFolder"), S("Project", "rootFolder"), S("Item", "name"), S("Item", "id")],
     args: ["name", "type", "parentFolder"],
     validate: (a) => {
       requireArgs(a, ["name", "type"]);
@@ -592,7 +592,7 @@ return __adp_json({ ok: true, name: it.name, id: it.id, parent: it.parentFolder 
     issue: "291",
     permission: "execute",
     mutating: true,
-    members: [S("Item", "selected"), S("Project", "selection"), S("Item", "name"), S("Item", "id"), S("Item", "typeName")],
+    members: [S("Item", "selected"), S("Project", "selection"), S("Item", "name"), S("Item", "id")],
     args: ["name", "type", "selected"],
     validate: (a) => {
       requireArgs(a, ["name", "type", "selected"]);
@@ -915,7 +915,7 @@ return __adp_json({ ok: true, effect: String(fx.name), matchName: ${js(a.effectM
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var item = app.project.renderQueue.items.add(comp);
-return __adp_json({ ok: true, queued: comp.name, index: item.index });
+return __adp_json({ ok: true, queued: comp.name, index: app.project.renderQueue.items.length });
 `,
   },
   {
@@ -1115,7 +1115,7 @@ var list = [];
 for (var i = 1; i <= items.length; i++) {
   var it = items[i];
   list.push({
-    index: it.index,
+    index: i,
     comp: it.comp === null ? null : String(it.comp.name),
     status: it.status,
     timeSpanStart: it.timeSpanStart,
@@ -1624,8 +1624,7 @@ return __adp_json({ ok: true, comp: found.comp.name, templates: found.templates 
     mutating: true,
     members: [
       S("Project", "renderQueue"), S("RenderQueue", "items"),
-      S("RenderQueueItem", "comp"), S("RenderQueueItem", "templates"),
-      S("RenderQueueItem", "applyTemplate"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "applyTemplate"),
       S("RenderQueueItem", "timeSpanStart"), S("RenderQueueItem", "timeSpanDuration"),
       S("RenderQueueItem", "skipFrames"), S("RenderQueueItem", "logType"),
       S("RenderQueueItem", "startTime"),
@@ -1682,7 +1681,7 @@ return __adp_json({ ok: true, comp: found.comp.name, template: ${js(a.templateNa
     members: [
       S("Project", "renderQueue"), S("RenderQueue", "items"),
       S("RenderQueueItem", "comp"), S("RenderQueueItem", "numOutputModules"),
-      S("RenderQueueItem", "outputModules"), S("RenderQueueItem", "outputModule"),
+      S("RenderQueueItem", "outputModule"),
       S("OutputModule", "name"), S("OutputModule", "file"),
       S("OutputModule", "includeSourceXMP"), S("OutputModule", "postRenderAction"),
       S("OutputModule", "templates"),
@@ -1741,8 +1740,7 @@ return __adp_json({
     members: [
       S("Project", "renderQueue"), S("RenderQueue", "items"),
       S("RenderQueueItem", "comp"), S("RenderQueueItem", "outputModule"),
-      S("OutputModule", "name"), S("OutputModule", "templates"),
-      S("OutputModule", "applyTemplate"), S("OutputModule", "getSettings"),
+      S("OutputModule", "name"), S("OutputModule", "applyTemplate"), S("OutputModule", "getSettings"),
     ],
     args: ["compName", "moduleIndex", "templateName"],
     validate: (a) => {
@@ -2433,7 +2431,7 @@ return __adp_json({ ok: true, layer: layer.name, inPoint: layer.inPoint, outPoin
       S("AVItem", "hasVideo"), S("AVItem", "hasAudio"),
       S("AVItem", "frameDuration"), S("AVItem", "useProxy"),
       S("AVItem", "footageMissing"), S("AVItem", "duration"),
-      S("FootageItem", "mainSource"), S("FootageItem", "file"),
+      S("FootageItem", "mainSource"),
       S("FileSource", "file"),
       S("FootageSource", "alphaMode"), S("FootageSource", "hasAlpha"),
       S("FootageSource", "isStill"), S("FootageSource", "loop"),
@@ -2843,10 +2841,10 @@ if (effects !== null && effects !== undefined) {
   }
 }
 var fn = [];
-var fonts = app.fonts;
+var fonts = app.fonts.allFonts;
 if (fonts !== null && fonts !== undefined) {
   for (var j = 1; j <= fonts.length; j++) {
-    fn.push(String(fonts[j].name));
+    fn.push(String(fonts[j].postScriptName));
   }
 }
 return __adp_json({
@@ -2915,7 +2913,6 @@ return __adp_json({
     members: [
       S("Property", "setTemporalEaseAtKey"), S("Property", "keyInTemporalEase"),
       S("Property", "keyOutTemporalEase"), S("PropertyGroup", "property"),
-      S("KeyframeEase", "speed"), S("KeyframeEase", "influence"),
     ],
     args: ["compName", "layerName", "propertyPath", "keyIndex", "inEase", "outEase"],
     validate: (a) => {
@@ -3169,7 +3166,7 @@ var found = __adp_findRQItem(${js(a.compName)});
 var rq = app.project.renderQueue;
 var d = found.duplicate();
 return __adp_json({
-  ok: true, index: d.index, comp: String(d.comp.name),
+  ok: true, index: rq.items.length, comp: String(d.comp.name),
   timeSpanStart: d.timeSpanStart, timeSpanDuration: d.timeSpanDuration,
   remaining: rq.items.length
 });
