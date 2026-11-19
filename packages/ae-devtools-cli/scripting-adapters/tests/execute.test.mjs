@@ -547,6 +547,8 @@ test("issue #285 batch: text style + layer flags + in/out points", async () => {
   assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", justification: 9 })).reason, "INVALID_ARGS");
   assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", fillColor: [2, 0, 0] })).reason, "INVALID_ARGS");
   assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", fontSize: -1 })).reason, "INVALID_ARGS");
+  // fontStyle is read-only on TextDocument — passing it is rejected.
+  assert.equal((await go("text.setStyle", { compName: "C", layerName: "T1", fontStyle: "Bold" })).reason, "INVALID_ARGS");
   const st = await go("text.setStyle", {
     compName: "C", layerName: "T1",
     font: "HelveticaLTStd-Bold", fontSize: 48, justification: 2,
@@ -567,12 +569,14 @@ test("issue #285 batch: text style + layer flags + in/out points", async () => {
   // layer.setLayerFlags: partial flags + read-back via read.compLayers.
   assert.equal((await go("layer.setLayerFlags", { compName: "C", layerName: "N1" })).reason, "INVALID_ARGS");
   assert.equal((await go("layer.setLayerFlags", { compName: "C", layerName: "N1", adjustmentLayer: "yes" })).reason, "INVALID_ARGS");
-  const fl = await go("layer.setLayerFlags", { compName: "C", layerName: "N1", adjustmentLayer: true, frameBlending: true });
+  // frameBlending is read-only on AVLayer — passing it is rejected.
+  assert.equal((await go("layer.setLayerFlags", { compName: "C", layerName: "N1", adjustmentLayer: true, frameBlending: true })).reason, "INVALID_ARGS");
+  const fl = await go("layer.setLayerFlags", { compName: "C", layerName: "N1", adjustmentLayer: true });
   assert.equal(fl.outcome, "COMPLETED");
   const cl = await go("read.compLayers", { compName: "C" });
   const n1 = cl.result.layers.find((l) => l.name === "N1");
   assert.equal(n1.adjustmentLayer, true);
-  assert.equal(n1.frameBlending, true);
+  assert.equal(n1.frameBlending, false);
   assert.equal(n1.collapseTransformation, false);
 
   // layer.setInOutPoint: bounds validation + read-back.

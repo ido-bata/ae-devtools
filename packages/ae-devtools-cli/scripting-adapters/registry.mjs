@@ -39,7 +39,7 @@ const S = (owner, member) => `provisional.ae.scripting.${owner}.${member}`;
  * name, and returns JSON-safe results. ExtendScript is ES3 — no
  * arrow functions, let/const, or JSON-dependent circular refs.
  */
-const PRELUDE = `
+export const PRELUDE = `
 function __adp_fail(msg) { throw new Error("adapter: " + msg); }
 function __adp_items() { return app.project.items; }
 // Type discrimination uses instanceof (locale-independent). typeName
@@ -1009,7 +1009,7 @@ return __adp_json({ ok: true, comp: comp.name, count: layers.length, layers: lis
       S("Layer", "parent"), S("Layer", "locked"),
       S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
       S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
-      S("AVLayer", "source"), S("AVLayer", "replaceSource"),
+      S("AVLayer", "source"),
       S("PropertyGroup", "property"), S("Property", "value"),
     ],
     args: ["compName", "layerName"],
@@ -2011,7 +2011,7 @@ return __adp_json({ ok: true, layer: layer.name, text: doc.text });
   },
   {
     id: "text.setStyle",
-    title: "Set TextDocument style fields (font/size/style/justification/color/tracking/leading)",
+    title: "Set TextDocument style fields (font/size/justification/color/tracking/leading)",
     domain: "project-items-comps-layers",
     issue: "285",
     permission: "execute",
@@ -2022,16 +2022,21 @@ return __adp_json({ ok: true, layer: layer.name, text: doc.text });
       S("TextDocument", "fillColor"), S("TextDocument", "tracking"),
       S("TextDocument", "leading"), S("PropertyGroup", "property"),
     ],
-    args: ["compName", "layerName", "font", "fontSize", "fontStyle", "justification", "fillColor", "tracking", "leading"],
+    // TextDocument.fontStyle is read-only in the scripting reference
+    // (it reflects the first character's style) — reported in the
+    // read-back but cannot be set here.
+    args: ["compName", "layerName", "font", "fontSize", "justification", "fillColor", "tracking", "leading"],
     validate: (a) => {
       requireArgs(a, ["compName", "layerName"]);
-      const set = ["font", "fontSize", "fontStyle", "justification", "fillColor", "tracking", "leading"]
+      const set = ["font", "fontSize", "justification", "fillColor", "tracking", "leading"]
         .filter((k) => a[k] !== undefined);
+      if (a.fontStyle !== undefined) {
+        throw new Error("text.setStyle: fontStyle is read-only on TextDocument");
+      }
       if (set.length === 0) {
         throw new Error("text.setStyle: at least one style field is required");
       }
       if (a.font !== undefined && typeof a.font !== "string") throw new Error("text.setStyle: font must be a string");
-      if (a.fontStyle !== undefined && typeof a.fontStyle !== "string") throw new Error("text.setStyle: fontStyle must be a string");
       if (a.fontSize !== undefined && !(typeof a.fontSize === "number" && Number.isFinite(a.fontSize) && a.fontSize > 0)) {
         throw new Error("text.setStyle: fontSize must be a positive finite number");
       }
@@ -2059,7 +2064,6 @@ var layer = __adp_findLayer(comp, ${js(a.layerName)});
 var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
 ${a.font !== undefined ? `doc.font = ${js(a.font)};` : ""}
 ${a.fontSize !== undefined ? `doc.fontSize = ${a.fontSize};` : ""}
-${a.fontStyle !== undefined ? `doc.fontStyle = ${js(a.fontStyle)};` : ""}
 ${a.justification !== undefined ? `doc.justification = ${a.justification};` : ""}
 ${a.fillColor !== undefined ? `doc.fillColor = [${a.fillColor.join(", ")}];` : ""}
 ${a.tracking !== undefined ? `doc.tracking = ${a.tracking};` : ""}
@@ -2346,7 +2350,7 @@ return __adp_json({
   },
   {
     id: "layer.setLayerFlags",
-    title: "Set AVLayer stacking/render flags (adjustment/preserveTransparency/frameBlending/collapseTransformation)",
+    title: "Set AVLayer stacking/render flags (adjustment/preserveTransparency/collapseTransformation)",
     domain: "project-items-comps-layers",
     issue: "285",
     permission: "execute",
@@ -2355,10 +2359,15 @@ return __adp_json({
       S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
       S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
     ],
-    args: ["compName", "layerName", "adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"],
+    // AVLayer.frameBlending is read-only in the scripting reference —
+    // it is reported in the read-back but cannot be set here.
+    args: ["compName", "layerName", "adjustmentLayer", "preserveTransparency", "collapseTransformation"],
     validate: (a) => {
       requireArgs(a, ["compName", "layerName"]);
-      const flags = ["adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"];
+      const flags = ["adjustmentLayer", "preserveTransparency", "collapseTransformation"];
+      if (a.frameBlending !== undefined) {
+        throw new Error("layer.setLayerFlags: frameBlending is read-only on AVLayer");
+      }
       const set = flags.filter((k) => a[k] !== undefined);
       if (set.length === 0) {
         throw new Error("layer.setLayerFlags: at least one flag is required");
@@ -2372,7 +2381,6 @@ var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
 ${a.adjustmentLayer !== undefined ? `layer.adjustmentLayer = ${a.adjustmentLayer ? "true" : "false"};` : ""}
 ${a.preserveTransparency !== undefined ? `layer.preserveTransparency = ${a.preserveTransparency ? "true" : "false"};` : ""}
-${a.frameBlending !== undefined ? `layer.frameBlending = ${a.frameBlending ? "true" : "false"};` : ""}
 ${a.collapseTransformation !== undefined ? `layer.collapseTransformation = ${a.collapseTransformation ? "true" : "false"};` : ""}
 return __adp_json({
   ok: true, layer: layer.name,
