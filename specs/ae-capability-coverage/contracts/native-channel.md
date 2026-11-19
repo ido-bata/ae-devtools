@@ -123,11 +123,13 @@ AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI                     (zero-arg, 
 AEGP_UtilitySuite6.AEGP_HostIsActivated                              (zero-arg, #270 stage 2)
 AEGP_ItemSuite9.AEGP_GetTypeName                                     (args: see §7a)
 AEGP_ItemSuite9.AEGP_GetItemName                                     (args: aeRef descriptor, see §7a/§7b)
+AEGP_ItemSuite9.AEGP_GetItemID                                       (args: aeRef descriptor — descriptor issuance, see §7a/§7b)
+AEGP_ItemSuite9.AEGP_GetFirstProjItem                                (args: projectIndex+offset+limit — item discovery, see §7a/§7b)
 AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState                      (zero-arg, #270 stage 2)
 AEGP_RQItemSuite4.AEGP_GetNumRQItems                                 (zero-arg, #270 stage 2)
 ```
 
-All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. Every remaining implemented getter takes an `AEGP_*H` host handle and waits for the same descriptor pattern to be extended to its identity kind (project handles, comp/layer handles, RQ-item handles). Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Every remaining implemented getter takes an `AEGP_*H` host handle and waits for the same descriptor pattern to be extended to its identity kind (project handles, comp/layer handles, RQ-item handles). Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
@@ -143,35 +145,59 @@ The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `pack
 | `AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState` | none — `args` absent or `null`; result `{"state": <uint>}` (`AEGP_RenderQueueState`); plug-in acquires `AEGP Render Queue Suite` v1 in-window |
 | `AEGP_RQItemSuite4.AEGP_GetNumRQItems` | none — `args` absent or `null`; result `{"numRQItems": <int>}`; plug-in acquires `AEGP Render Queue Item Suite` v4 in-window |
 | `AEGP_ItemSuite9.AEGP_GetTypeName` | `{"itemType": <integer>}` — exactly one field; `itemType` is the `AEGP_ItemType` (`A_short`) enum, permitted range **[1, 4]** = the defined non-`NONE` values (`FOLDER`=1, `COMP`=2, `SOLID_defunct`=3, `FOOTAGE`=4; `NUM_TYPES1`=5 per `AE_GeneralPlug.h`). `NONE`=0 and any undefined/out-of-range/non-integral/wrong-typed value refuses `MALFORMED_REQUEST`. `SOLID_defunct` is a defined enum value passed through to the host; what real AE returns for it is a real-host question this contract does not settle |
-| `AEGP_ItemSuite9.AEGP_GetItemName` | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields. `projectIndex` selects the project via `AEGP_GetProjectByIndex`, bounds-checked against `AEGP_GetNumProjects` at resolution time. `item` is the §7b descriptor. Result `{"name": "<string>"}` — the item's UTF-16 name converted to UTF-8, JSON-escaped, bounded |
+| `AEGP_ItemSuite9.AEGP_GetItemName` | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields. `projectIndex` selects the project via `AEGP_GetProjectByIndex`, bounds-checked against `AEGP_GetNumProjects` at resolution time. `item` is the §7b descriptor (legacy or identity-bearing form). Result `{"name": "<string>"}` — the item's UTF-16 name converted to UTF-8, JSON-escaped, bounded |
+| `AEGP_ItemSuite9.AEGP_GetItemID` | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields, same descriptor contract as `GetItemName`. This is the **issuance** operation: the supplied descriptor is resolved host-side exactly like `GetItemName`, then `AEGP_GetItemID` plus the project identity fields are read and a canonical descriptor is returned. Result `{"itemId": <integer>, "item": {"aeRef": {…}}}` — `result.item` is stored verbatim and reused as `args.item` in later requests; the client never assembles descriptor fields itself |
+| `AEGP_ItemSuite9.AEGP_GetFirstProjItem` | `{"projectIndex": <integer 0..1000000>, "offset": <integer 0..1000000>, "limit": <integer 1..32>}` — exactly these three fields. This is the **discovery/enumeration** operation: walks the project's top-level items in `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` order and emits ready-to-use descriptors. Result `{"project": {"index","name","path"}, "total": <int>, "offset": <int>, "items": [{"item": {"aeRef": {…}}}…], "truncated": <bool>}` — each `items[]` entry's `item` value is a complete §7b descriptor (including `itemId`/`projectName`/`projectPath`) usable verbatim as `args.item`. `truncated:true` means more items exist beyond the emitted window or the result-size budget; page with `offset`. Items whose live name exceeds the identity bound are emitted as `{"index","type","itemId","nameTruncated":true}` without a usable descriptor |
 
 Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.
 
-## 7b. `aeRefItem` identity descriptors (Issue #270 Stage 3, CAP027 groundwork)
+## 7b. `aeRefItem` identity descriptors (Issue #270, CAP027 groundwork)
 
 Identity-bearing arguments never cross the wire as handles. An operation that needs an `AEGP_ItemH` takes an **aeRef descriptor** — the same wire shape as the trusted-codec `aeRef` wrapper (trusted-execution.md §2/§3):
 
 ```json
 {"aeRef": {"type": "folder" | "comp" | "footage",
            "name": "<string>",
-           "path": [<non-negative integer>]}}
+           "path": [<non-negative integer>],
+           "itemId": <integer>,
+           "projectName": "<string>",
+           "projectPath": "<string>"}}
 ```
 
 - `type` maps to `AEGP_ItemType`: `folder`=1, `comp`=2, `footage`=4. `SOLID_defunct` has no live identity and is not expressible.
+- `name` must be non-empty; comparison against the live item is **exact UTF-8 byte equality** after the host's UTF-16→UTF-8 conversion. The identity bound for names is **1024 UTF-8 bytes** — a live name longer than that cannot be described (issuance fails, enumeration reports `nameTruncated`, resolution of such a descriptor refuses `STALE_REFERENCE`).
 - `path` is **exactly one** index — the position in `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` order within the selected project. `AEGP_ItemSuite9` exposes no folder-children enumeration, so deeper paths are `MALFORMED_REQUEST`, not a silent best-effort.
-- `contentHash` and any other inner key are `MALFORMED_REQUEST` — the resolver cannot verify a content hash cheaply, so its presence is refused rather than ignored.
-- `name` must be non-empty; comparison against the live item is **exact UTF-8 byte equality** after the host's UTF-16→UTF-8 conversion.
+- `itemId`, `projectName`, `projectPath` are the **identity-bearing optional fields** (identity slice, #270). `itemId` is the `AEGP_ItemSuite9.AEGP_GetItemID` value — an integer in `[0, 4294967295]`. `projectName`/`projectPath` are the `AEGP_GetProjectName`/`AEGP_GetProjectPath` values (`projectPath` may be `""` for an untitled project); each is a string of at most 4096 characters when present.
+- `contentHash` and any other inner key are `MALFORMED_REQUEST` — the resolver cannot verify a content hash cheaply, so its presence is refused rather than ignored. The permitted key set is exactly `{type, name, path}` plus any subset of `{itemId, projectName, projectPath}`; duplicate keys are already rejected by the JSON parser.
 
-### Host-side resolution (all inside the request's op-record window)
+### Identity semantics — what each field guarantees
 
-1. `AEGP_GetNumProjects` bounds-checks `projectIndex`; `AEGP_GetProjectByIndex` yields `projectH`. Out-of-range → `refused`/`STALE_REFERENCE`.
-2. `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` walk to `path[0]`. Exhausted before the index → `STALE_REFERENCE`.
-3. `AEGP_GetItemType` must equal the mapped type tag → mismatch is `STALE_REFERENCE`.
-4. `AEGP_GetItemName` yields the name (mem handle → UTF-8); mismatch with `aeRef.name` → `STALE_REFERENCE`.
+The descriptor is **identity, not authorization** (trusted-execution.md §1/§3 unchanged). Resolution is fail-closed: any mismatch is `STALE_REFERENCE`, never a best-effort re-resolution.
+
+1. **Project selection.** `projectIndex` selects via `AEGP_GetProjectByIndex`, bounds-checked against `AEGP_GetNumProjects`. Out-of-range → `STALE_REFERENCE`.
+2. **Project corroboration.** When the descriptor carries `projectName` and/or `projectPath`, the live project at `projectIndex` must match **exactly** (`AEGP_GetProjectName` byte equality; `AEGP_GetProjectPath` UTF-16→UTF-8 byte equality, `""` matching only an empty path). A mismatch means the index now names a different project → `STALE_REFERENCE`. This is what prevents project reordering/close-open from silently re-targeting a descriptor.
+3. **Item resolution — `itemId` present (authoritative).** The resolver walks the project's top-level items and calls `AEGP_GetItemID` on each, looking for exactly one match. Zero matches → `STALE_REFERENCE` (the item is gone — including the delete/recreate ABA case, where a same-name/same-type/same-index replacement is a *different* SDK item). More than one match → `STALE_REFERENCE` (ambiguous; fail closed). `path` is **not** consulted for positioning when `itemId` is present — reordering items does not stale a descriptor. The scan is bounded at 100000 items; exceeding it is `failed` (environment limitation, `mayHaveMutated:false`), not a silent partial scan.
+4. **Item resolution — `itemId` absent (legacy Stage-3 form).** `path[0]` positional walk via `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem`, then type and name verification — the weaker pre-identity semantics, retained for backward compatibility. New descriptors should always carry `itemId` (issuance/enumeration emit it).
+5. **Corroboration.** After the item handle is found, `AEGP_GetItemType` must equal the mapped type tag and `AEGP_GetItemName` must equal `aeRef.name` — in **both** resolution modes. A renamed item stales its descriptor (the client re-issues); this is deliberate conservatism, not an oversight.
 
 `STALE_REFERENCE` means *well-formed descriptor, drifted state* — distinct from `MALFORMED_REQUEST` (shape violations refused before any AEGP call, no `opCalls`) per trusted-execution.md §3/§4. AEGP errors during resolution or the op itself are `failed` with `mayHaveMutated:false` (read-only); missing suite/entry is `not-sent`. Resolution emits its own op records (`(resolve)`/`(resolve+result)` extras) inside `opCalls`, so the evidence window shows exactly which host calls produced the handle.
 
-Descriptor *issuance* (how a client learns a valid descriptor) is out of scope for this contract — today it is constructed by hand or from probe output; a snapshot/descriptor API is follow-up work.
+### Guarantee boundary — what is and is not proven
+
+- `AEGP_GetItemID` exists in `AEGP_ItemSuite9` (`AE_GeneralPlug.h`, suite frozen in AE 14.1). The SDK exposes **no** `GetItemByID` lookup — resolution is necessarily walk-and-compare inside the request window, which is also what makes the corroborating checks possible in the same evidence window.
+- **ABA safety (design-level):** a deleted-then-recreated item is a different SDK item. Per AE's id allocation the replacement receives a different `itemId`, so the old descriptor resolves nothing → `STALE_REFERENCE`. Whether AE ever reuses an `itemId` within a project session is **not SDK-guaranteed** — the type+name corroboration is the second factor, and a hypothetical id-reuse *plus* identical type *and* name would be indistinguishable. This residual is recorded, not hidden; real-host behavior is a #223 question.
+- **Project scope:** `itemId` is meaningful only within its project — ids from different projects are never compared (resolution never leaves the `projectIndex`-selected project). Project binding is `index + name + path`; two simultaneously open projects with identical name *and* identical (or both empty) path cannot be distinguished by this contract — recorded limitation.
+- **Session/lifetime:** descriptors carry no plug-in state; a plug-in or AE restart simply re-resolves against live state. If AE reassigns ids across project close/reopen, old descriptors go `STALE_REFERENCE` (fail closed); if AE persists ids in the project file they keep resolving the same item — either outcome is safe. In-memory `AEGP_ItemH` handles never cross request boundaries.
+- **Real-host status:** all of the above is fake-host verified (`probe_test`) only. `implemented-unverified` stands; `dispatchable` promotion still requires #223 real-host evidence.
+
+### Descriptor issuance and discovery
+
+Clients never hand-assemble descriptors:
+
+- **Issuance** — `AEGP_ItemSuite9.AEGP_GetItemID` with `{projectIndex, item}` resolves the supplied descriptor (legacy or v2) and returns `{"itemId":N,"item":{"aeRef":{…}}}` where the inner `aeRef` carries `type`, `name`, live `path` index, `itemId`, `projectName`, `projectPath`. Store `result.item` verbatim.
+- **Discovery** — `AEGP_ItemSuite9.AEGP_GetFirstProjItem` with `{projectIndex, offset, limit}` enumerates top-level items and returns per-item `{"item":{"aeRef":{…}}}` entries plus a single `project` block — each entry is a complete usable descriptor.
+
+Issuance/enumeration perform the same project corroboration fetches (`AEGP_GetProjectName`, `AEGP_GetProjectPath`) inside the request window; a project-name/path read failure is `failed` (`mayHaveMutated:false`), never a partially-populated descriptor.
 
 ## 8. Non-goals / explicit limitations
 
