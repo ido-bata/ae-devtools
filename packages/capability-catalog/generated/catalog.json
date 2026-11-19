@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "07e0c80ab6382adc3db27c04a6a67dbc163ae319721a836909c65c7ca69f8af8"
+      "sha256": "1328006384048d1f5e5294f77cda934913d2fe518802d84050b60ab0ec7ea91d"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -22539,7 +22539,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setParentFolder, item.setSelected, read.projectSummary, read.projectTree, read.itemById, read.itemDetail, comp.duplicate, item.setLabel, item.setComment, comp.setResolutionFactor, read.compSettings)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setParentFolder, item.setSelected, read.projectSummary, read.projectTree, read.itemById, read.itemDetail, comp.duplicate, item.setLabel, item.setComment, comp.setResolutionFactor, read.compSettings, layer.addShape)"
           },
           {
             "kind": "real-host",
@@ -24786,12 +24786,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layercollection/#layercollectionaddshape"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addShape)"
           }
         ]
       }
@@ -32453,7 +32457,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setTransformPosition, anim.setValue)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setTransformPosition, anim.setValue, shape.addPath)"
           }
         ]
       }
@@ -32665,7 +32669,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setTransformPosition, read.layerDetail, read.propertyValue, read.propertyDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.setTransformPosition, read.layerDetail, read.propertyValue, read.propertyDetail, shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -33113,7 +33117,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.propertyDetail, shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -33517,7 +33521,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (effect.add)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (effect.add, shape.addPath)"
           }
         ]
       }
@@ -33601,7 +33605,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (effect.add)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (effect.add, shape.addPath)"
           }
         ]
       }
@@ -33636,12 +33640,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/property/propertygroup/#propertygroupnumproperties"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -33685,7 +33693,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, read.propertyValue, read.keyframes, read.valueAtTime, read.propertyDetail, anim.setExpressionEnabled, text.setText, text.setStyle, text.readStyle, anim.setInterpolation, anim.setTemporalEase)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, read.propertyValue, read.keyframes, read.valueAtTime, read.propertyDetail, anim.setExpressionEnabled, text.setText, text.setStyle, text.readStyle, anim.setInterpolation, anim.setTemporalEase, shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -35296,12 +35304,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/shape/#shapeclosed"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -35616,12 +35628,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/shape/#shapeintangents"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -35656,12 +35672,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/shape/#shapeouttangents"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -35696,12 +35716,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/other/shape/#shapevertices"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (shape.readContents, shape.addPath)"
           }
         ]
       }

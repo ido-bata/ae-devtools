@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "07e0c80ab6382adc3db27c04a6a67dbc163ae319721a836909c65c7ca69f8af8"
+      "sha256": "1328006384048d1f5e5294f77cda934913d2fe518802d84050b60ab0ec7ea91d"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 280,
+          "documented": 275,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 75,
+          "automated-fake-tested": 80,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 75,
+          "adapter-present": 80,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 280
+          "unknown": 275
         },
         "verification": {
-          "not-run": 280,
-          "automated-fake": 75,
+          "not-run": 275,
+          "automated-fake": 80,
           "verified-real-host": 0
         }
       },
@@ -1744,10 +1744,10 @@
         {
           "id": "ae.scripting.PropertyGroup.numProperties",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.PropertyGroup.property",
@@ -2056,10 +2056,10 @@
         {
           "id": "ae.scripting.Shape.closed",
           "category": "shape",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Shape.featherInterps",
@@ -2120,26 +2120,26 @@
         {
           "id": "ae.scripting.Shape.inTangents",
           "category": "shape",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Shape.outTangents",
           "category": "shape",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Shape.vertices",
           "category": "shape",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.System.callSystem",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 158,
+          "documented": 157,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 95,
+          "automated-fake-tested": 96,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 102,
+          "adapter-present": 103,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 158
+          "unknown": 157
         },
         "verification": {
-          "not-run": 158,
-          "automated-fake": 95,
+          "not-run": 157,
+          "automated-fake": 96,
           "verified-real-host": 7
         }
       },
@@ -4845,10 +4845,10 @@
         {
           "id": "ae.scripting.LayerCollection.addShape",
           "category": "collection",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.LayerCollection.addSolid",

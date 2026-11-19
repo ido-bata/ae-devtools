@@ -24,6 +24,12 @@ const registryPath = fileURLToPath(import.meta.resolve("../registry.mjs"));
 const claims = {};
 for (const op of OPERATIONS) {
   for (const m of op.members) {
+    // Class records (provisional.ae.scripting.class.*) exist in the
+    // scripting inventory but are NOT catalog-modeled — catalog records
+    // are built from owner/member symbol rows only. They stay in op.members
+    // (the op does exercise the constructor) but cannot be claimed here:
+    // a claim with no catalog record fails the claims/catalog contract.
+    if (m.startsWith("provisional.ae.scripting.class.")) continue;
     // provisional.ae.scripting.X.y -> ae.scripting.X.y (catalog id shape)
     const catalogId = m.replace(/^provisional\./, "");
     (claims[catalogId] ??= { ops: [], evidence: "fake/mock only" }).ops.push(op.id);

@@ -180,6 +180,10 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     motionBlur: false, frameBlending: false, draft3d: false,
     hideShyLayers: false, preserveNestedFrameRate: true, dropFrame: false,
     footageName: "x.aep", parentFolder: null, selected: true, id: 1,
+    vertices: [[0, 0], [10, 0], [10, 10]],
+    inTangents: [[0, 0], [0, 0], [0, 0]],
+    outTangents: [[0, 0], [0, 0], [0, 0]],
+    closed: true,
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -197,7 +201,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "read.itemById") args.id = 1;
     if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
-    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText","layer.replaceSource","render.duplicateQueueItem"].includes(op.id)) args.compName = "C";
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText","layer.replaceSource","render.duplicateQueueItem","layer.addShape","shape.readContents","shape.addPath","marker.setLayerMarker","marker.readLayerMarkers"].includes(op.id)) args.compName = "C";
     // Batch-3 layer creators get distinct names so text.setText can
     // resolve the text layer unambiguously.
     if (op.id === "layer.addSolid") args.name = "Solid 1";
@@ -205,6 +209,10 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "layer.addCamera") args.name = "Cam 1";
     if (op.id === "layer.addLight") args.name = "Light 1";
     if (["text.setText", "text.setStyle", "text.readStyle"].includes(op.id)) args.layerName = "Text 1";
+    // layer.addShape names its layer "N" (VALUE.name); shape.* ops must
+    // target that shape layer, not the earlier "Null 1".
+    if (op.id === "layer.addShape") args.name = "N";
+    if (op.id.startsWith("shape.")) args.layerName = "N";
     // Footage detail reads the item imported earlier by item.import
     // (path /tmp/x.aep → footage name "x.aep").
     if (op.id === "read.footageDetail") args.name = "x.aep";
@@ -943,4 +951,85 @@ test("issue #295 batch: MarkerValue layer/comp markers — write, read-back, par
     });
     assert.ok(!/protectedRegion|\.label\b/.test(src), `${op.id} source references version-gated field`);
   }
+});
+
+test("issue #296 batch: ShapeLayer addShape + Contents path slice — write, read-back, counterexamples", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "N1" })).outcome, "COMPLETED");
+
+  // addShape takes no host args; the op renames via layer.name.
+  const add = await go("layer.addShape", { compName: "C", name: "Shapes" });
+  assert.equal(add.outcome, "COMPLETED");
+  assert.equal(add.result.layer, "Shapes");
+
+  // Fresh shape layer: Contents exists but is empty.
+  const empty = await go("shape.readContents", { compName: "C", layerName: "Shapes" });
+  assert.equal(empty.outcome, "COMPLETED");
+  assert.equal(empty.result.numProperties, 0);
+  assert.deepEqual(empty.result.contents, []);
+
+  // Add a closed triangular path with explicit tangents.
+  const V = [[0, 0], [10, 0], [5, 10]];
+  const Z = [[0, 0], [0, 0], [0, 0]];
+  const path = await go("shape.addPath", {
+    compName: "C", layerName: "Shapes",
+    vertices: V, inTangents: Z, outTangents: Z, closed: true,
+  });
+  assert.equal(path.outcome, "COMPLETED");
+  assert.equal(path.result.numProperties, 1);
+  const grp = path.result.contents[0];
+  assert.equal(grp.matchName, "ADBE Vector Shape - Group");
+  assert.equal(grp.numProperties, 2);
+  const shapeLeaf = grp.children.find((c) => c.matchName === "ADBE Vector Shape");
+  assert.ok(shapeLeaf, "path group must contain ADBE Vector Shape leaf");
+  assert.deepEqual(shapeLeaf.shape.vertices, V);
+  assert.equal(shapeLeaf.shape.closed, true);
+  const dirLeaf = grp.children.find((c) => c.matchName === "ADBE Vector Shape Direction");
+  assert.equal(dirLeaf.value, 1);
+
+  // Second path accumulates; read-back is stable.
+  await go("shape.addPath", {
+    compName: "C", layerName: "Shapes",
+    vertices: [[0, 0], [4, 4]], inTangents: [[0, 0], [0, 0]], outTangents: [[0, 0], [0, 0]],
+  });
+  const rd = await go("shape.readContents", { compName: "C", layerName: "Shapes" });
+  assert.equal(rd.result.numProperties, 2);
+  assert.equal(rd.result.contents[1].children.find((c) => c.matchName === "ADBE Vector Shape").shape.closed, false);
+
+  // Counterexamples: non-shape layer has no Contents; wrong layer/comp;
+  // unsupported matchName cannot be added.
+  assert.notEqual((await go("shape.readContents", { compName: "C", layerName: "N1" })).outcome, "COMPLETED");
+  assert.notEqual((await go("shape.addPath", { compName: "C", layerName: "N1", vertices: V, inTangents: Z, outTangents: Z })).outcome, "COMPLETED");
+  assert.notEqual((await go("shape.readContents", { compName: "Ghost", layerName: "Shapes" })).outcome, "COMPLETED");
+  // Unsupported contents child (e.g. a filter) is refused, not faked.
+  const appLayer = app.project.items.find((i) => i.name === "C").layers[2]; // "Shapes"
+  const contents = appLayer.property("ADBE Root Vectors Group");
+  assert.equal(contents.canAddProperty("ADBE Vector Filter - Gaussian Blur 2"), false);
+  assert.throws(() => contents.addProperty("ADBE Vector Filter - Gaussian Blur 2"), /cannot add property/);
+
+  // Stale layer reference: remove the shape layer, ops must fail.
+  appLayer.remove();
+  assert.notEqual((await go("shape.readContents", { compName: "C", layerName: "Shapes" })).outcome, "COMPLETED");
+
+  // Arg validation refuses malformed geometry before dispatch.
+  assert.equal((await go("shape.addPath", { compName: "C", layerName: "Shapes", vertices: [[0, 0]], inTangents: Z, outTangents: Z })).reason, "INVALID_ARGS");
+  assert.equal((await go("shape.addPath", { compName: "C", layerName: "Shapes", vertices: V, inTangents: [[0, 0]], outTangents: Z })).reason, "INVALID_ARGS");
+  assert.equal((await go("shape.addPath", { compName: "C", layerName: "Shapes", vertices: V, inTangents: Z, outTangents: Z, closed: "yes" })).reason, "INVALID_ARGS");
+
+  // Duplicate copies Contents with independent Shape values.
+  await go("layer.addShape", { compName: "C", name: "Shapes2" });
+  await go("shape.addPath", { compName: "C", layerName: "Shapes2", vertices: V, inTangents: Z, outTangents: Z, closed: true });
+  await go("layer.duplicate", { compName: "C", layerName: "Shapes2" });
+  const dupRead = await go("shape.readContents", { compName: "C", layerName: "Shapes2 copy" });
+  assert.equal(dupRead.result.numProperties, 1);
+  const dupShape = dupRead.result.contents[0].children.find((c) => c.matchName === "ADBE Vector Shape");
+  assert.deepEqual(dupShape.shape.vertices, V);
 });

@@ -169,6 +169,40 @@ function __adp_markerSnapshot(prop) {
   }
   return out;
 }
+// Shape contents walk (Issue #296): PropertyGroup children expose
+// numProperties/property(i); leaf Property values may be Shape objects
+// (vertices/inTangents/outTangents/closed per the official Shape docs).
+// Detection uses only documented attributes — no fake markers.
+// ch.name is read for display but NOT claimed: PropertyBase.name is a
+// recorded wrong-owner claim (see registry.test.mjs contract).
+function __adp_vectorTree(group) {
+  var out = [];
+  for (var i = 1; i <= group.numProperties; i++) {
+    var ch = group.property(i);
+    var e = {
+      name: String(ch.name),
+      matchName: ch.matchName === undefined || ch.matchName === null ? null : String(ch.matchName)
+    };
+    if (typeof ch.numProperties === "number") {
+      e.numProperties = ch.numProperties;
+      e.children = __adp_vectorTree(ch);
+    } else {
+      var v = ch.value;
+      if (v !== null && typeof v === "object" && v.vertices !== undefined) {
+        e.shape = {
+          vertices: v.vertices,
+          inTangents: v.inTangents === undefined ? null : v.inTangents,
+          outTangents: v.outTangents === undefined ? null : v.outTangents,
+          closed: v.closed === true
+        };
+      } else {
+        e.value = v === undefined ? null : v;
+      }
+    }
+    out.push(e);
+  }
+  return out;
+}
 // Hand-rolled JSON serializer: ExtendScript's JSON support is NOT
 // guaranteed across AE versions, and host objects crash native
 // JSON.stringify on circular refs. Adapter results are plain
@@ -314,6 +348,32 @@ function markerBuildExpr(a) {
   if (a.eventCuePoint !== undefined) lines.push(`mv.eventCuePoint = ${a.eventCuePoint ? "true" : "false"};`);
   if (a.params !== undefined) lines.push(`mv.setParameters(${js(a.params)});`);
   return lines.join("\n");
+}
+
+// ---- Issue #296: Shape path args ----
+// Shape.vertices/inTangents/outTangents are arrays of [x,y] pairs;
+// tangents are RELATIVE to their vertex (official Shape docs). The
+// adapter requires explicit tangent arrays — no silent zero-default
+// guessing about real-host semantics.
+function isPairArray(v, minLen) {
+  return Array.isArray(v) && v.length >= minLen && v.every((p) =>
+    Array.isArray(p) && p.length === 2 &&
+    typeof p[0] === "number" && Number.isFinite(p[0]) &&
+    typeof p[1] === "number" && Number.isFinite(p[1]));
+}
+function validateShapePathArgs(a) {
+  requireArgs(a, ["compName", "layerName", "vertices", "inTangents", "outTangents"]);
+  if (!isPairArray(a.vertices, 2)) {
+    throw new Error("shape.addPath: vertices must be an array of >=2 [x,y] pairs");
+  }
+  for (const k of ["inTangents", "outTangents"]) {
+    if (!isPairArray(a[k], 0) || a[k].length !== a.vertices.length) {
+      throw new Error(`shape.addPath: ${k} must be [x,y] pairs matching vertices length`);
+    }
+  }
+  if (a.closed !== undefined && typeof a.closed !== "boolean") {
+    throw new Error("shape.addPath: closed must be a boolean");
+  }
 }
 
 export const OPERATIONS = [
@@ -2509,6 +2569,98 @@ return __adp_json({
   ok: true, comp: comp.name,
   numKeys: comp.markerProperty.numKeys,
   markers: __adp_markerSnapshot(comp.markerProperty)
+});
+`,
+  },
+  // ---- Issue #296: ShapeLayer contents — verified minimal slice ----
+  // addShape() takes no arguments (official LayerCollection docs);
+  // Contents is reached via the "ADBE Root Vectors Group" matchName;
+  // a Path is added with addProperty("ADBE Vector Shape - Group") and
+  // its "ADBE Vector Shape" value is a Shape object. Groups, shape
+  // filters, trim paths, and materials stay unclaimed.
+  {
+    id: "layer.addShape",
+    title: "Add an empty shape layer to a comp",
+    domain: "project-items-comps-layers",
+    issue: "296",
+    permission: "execute",
+    mutating: true,
+    members: [S("class", "ShapeLayer"), S("LayerCollection", "addShape"), S("Item", "name")],
+    args: ["compName", "name"],
+    validate: (a) => requireArgs(a, ["compName", "name"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = comp.layers.addShape();
+layer.name = ${js(a.name)};
+return __adp_json({ ok: true, layer: layer.name, index: layer.index });
+`,
+  },
+  {
+    id: "shape.readContents",
+    title: "Read a shape layer's Contents tree (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "296",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("PropertyGroup", "property"), S("PropertyGroup", "numProperties"),
+      S("PropertyBase", "matchName"),
+      S("Property", "value"),
+      S("Shape", "vertices"), S("Shape", "inTangents"),
+      S("Shape", "outTangents"), S("Shape", "closed"),
+    ],
+    args: ["compName", "layerName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var contents = layer.property("ADBE Root Vectors Group");
+return __adp_json({
+  ok: true, layer: layer.name,
+  numProperties: contents.numProperties,
+  contents: __adp_vectorTree(contents)
+});
+`,
+  },
+  {
+    id: "shape.addPath",
+    title: "Add a Path (Shape) to a shape layer's Contents",
+    domain: "project-items-comps-layers",
+    issue: "296",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("class", "Shape"), S("class", "ShapeLayer"),
+      S("PropertyGroup", "addProperty"), S("PropertyGroup", "canAddProperty"),
+      S("PropertyGroup", "property"), S("PropertyGroup", "numProperties"),
+      S("PropertyBase", "matchName"),
+      S("Property", "value"), S("Property", "setValue"),
+      S("Shape", "vertices"), S("Shape", "inTangents"),
+      S("Shape", "outTangents"), S("Shape", "closed"),
+    ],
+    args: ["compName", "layerName", "vertices", "inTangents", "outTangents", "closed"],
+    validate: (a) => validateShapePathArgs(a),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var contents = layer.property("ADBE Root Vectors Group");
+if (typeof contents.canAddProperty === "function" &&
+    !contents.canAddProperty("ADBE Vector Shape - Group")) {
+  __adp_fail("shape path cannot be added to this layer's contents");
+}
+var grp = contents.addProperty("ADBE Vector Shape - Group");
+var pathProp = grp.property("ADBE Vector Shape");
+var sh = new Shape();
+sh.vertices = ${js(a.vertices)};
+sh.inTangents = ${js(a.inTangents)};
+sh.outTangents = ${js(a.outTangents)};
+sh.closed = ${a.closed === true ? "true" : "false"};
+pathProp.setValue(sh);
+return __adp_json({
+  ok: true, layer: layer.name,
+  added: "ADBE Vector Shape - Group",
+  numProperties: contents.numProperties,
+  contents: __adp_vectorTree(contents)
 });
 `,
   },

@@ -272,6 +272,100 @@ function copyMarkers(srcProp, dstProp) {
   }
 }
 
+/*
+ * ShapeLayer contents model (Issue #296). Verified against the official
+ * Shape Layer matchnames: Contents = "ADBE Root Vectors Group"; a Path
+ * is "ADBE Vector Shape - Group" containing "ADBE Vector Shape
+ * Direction" + "ADBE Vector Shape" (whose value is a Shape object).
+ * The fake models ONLY the Path slice — groups/filters/materials are
+ * recorded non-claims, not silently approximated.
+ */
+export class Shape {
+  constructor() {
+    this.vertices = null;
+    this.inTangents = null;
+    this.outTangents = null;
+    this.closed = false;
+  }
+}
+
+function makePropGroup(matchName, name) {
+  const g = {
+    matchName,
+    name,
+    __kids: [],
+    numProperties: 0,
+    property(ref) {
+      if (typeof ref === "number") {
+        if (!Number.isInteger(ref) || ref < 1 || ref > g.__kids.length) {
+          throw new Error("fake-app: property index out of range " + ref);
+        }
+        return g.__kids[ref - 1];
+      }
+      const hits = [];
+      for (var i = 0; i < g.__kids.length; i++) {
+        if (g.__kids[i].matchName === ref || g.__kids[i].name === ref) hits.push(g.__kids[i]);
+      }
+      if (hits.length === 1) return hits[0];
+      if (hits.length > 1) throw new Error("fake-app: ambiguous property " + ref);
+      throw new Error("fake-app: no such property " + ref);
+    },
+    canAddProperty(mn) {
+      return g.__addable !== undefined && g.__addable.indexOf(mn) !== -1;
+    },
+    addProperty(mn) {
+      if (!g.canAddProperty(mn)) {
+        throw new Error("fake-app: cannot add property " + mn + " to " + g.matchName);
+      }
+      const node = g.__makeNode(mn);
+      g.__kids.push(node);
+      g.numProperties = g.__kids.length;
+      return node;
+    },
+  };
+  return g;
+}
+
+function makePathGroup() {
+  const dir = makeProperty(1, { matchName: "ADBE Vector Shape Direction" });
+  const shapeProp = makeProperty(null, { matchName: "ADBE Vector Shape" });
+  const g = makePropGroup("ADBE Vector Shape - Group", "Path");
+  g.__kids.push(dir, shapeProp);
+  g.numProperties = 2;
+  return g;
+}
+
+function makeShapeContents() {
+  const g = makePropGroup("ADBE Root Vectors Group", "Contents");
+  g.__addable = ["ADBE Vector Shape - Group"];
+  g.__makeNode = function () { return makePathGroup(); };
+  return g;
+}
+
+function cloneVectorValue(v) {
+  if (v instanceof Shape) {
+    const s = new Shape();
+    s.vertices = v.vertices === null || v.vertices === undefined ? null : v.vertices.map((r) => r.slice());
+    s.inTangents = v.inTangents === null || v.inTangents === undefined ? null : v.inTangents.map((r) => r.slice());
+    s.outTangents = v.outTangents === null || v.outTangents === undefined ? null : v.outTangents.map((r) => r.slice());
+    s.closed = v.closed === true;
+    return s;
+  }
+  return Array.isArray(v) ? v.slice() : v;
+}
+
+// Deep-copies a vectors-group subtree so duplicated shape layers get
+// independent Shape values (same rule as MarkerValue copies).
+function clonePropNode(node) {
+  if (node.__kids !== undefined) {
+    const g = makePropGroup(node.matchName, node.name);
+    for (var i = 0; i < node.__kids.length; i++) g.__kids.push(clonePropNode(node.__kids[i]));
+    g.numProperties = g.__kids.length;
+    return g;
+  }
+  return makeProperty(cloneVectorValue(node.value), { matchName: node.matchName });
+}
+
 function makeProperty(value, opts = {}) {
   const expressionAllowed = opts.expressionAllowed !== false;
   const prop = {
@@ -517,6 +611,10 @@ function makeLayer(name, comp, kind) {
       if (layer.__marker === null) layer.__marker = makeMarkerProperty();
       return layer.__marker;
     },
+    // Shape contents (Issue #296): only kind==="shape" layers expose
+    // "ADBE Root Vectors Group". Lazily created so untouched layers
+    // stay cheap; non-shape layers throw like the real host.
+    __shapeContents: null,
     property(group) {
       // Real AE resolves both display name and matchName; we only
       // implement the stable matchName path adapters must use.
@@ -533,6 +631,13 @@ function makeLayer(name, comp, kind) {
       if (group === "ADBE Effect Parade" || group === "Effects") {
         if (layer.__fx === null) layer.__fx = makeFxGroup(layer);
         return layer.__fx;
+      }
+      if (group === "ADBE Root Vectors Group") {
+        if (layer.kind !== "shape") {
+          throw new Error("fake-app: layer has no shape contents (not a shape layer)");
+        }
+        if (layer.__shapeContents === null) layer.__shapeContents = makeShapeContents();
+        return layer.__shapeContents;
       }
       if (group === "ADBE Text Properties" || group === "Text") {
         if (layer.__textDoc === null) {
@@ -596,6 +701,7 @@ function makeLayer(name, comp, kind) {
         for (var k in this.__textDoc) l.__textDoc[k] = this.__textDoc[k];
       }
       copyMarkers(this.__marker, l.marker);
+      if (this.__shapeContents !== null) l.__shapeContents = clonePropNode(this.__shapeContents);
       comp.__layers.push(l);
       comp.__reindex();
       return l;
@@ -664,6 +770,7 @@ function makeComp(name, w, h, par, dur, owner, parent) {
         nl.label = l.label;
         nl.locked = l.locked;
         copyMarkers(l.__marker, nl.marker);
+        if (l.__shapeContents !== null) nl.__shapeContents = clonePropNode(l.__shapeContents);
         d.__layers.push(nl);
       }
       copyMarkers(this.__marker, d.markerProperty);
@@ -710,6 +817,14 @@ function makeComp(name, w, h, par, dur, owner, parent) {
     },
     addText(tname) {
       const l = makeLayer(tname, comp, "text");
+      comp.__layers.push(l);
+      comp.__reindex();
+      return l;
+    },
+    // Real signature: addShape() takes NO arguments — the layer gets
+    // AE's default name; adapters rename via layer.name afterwards.
+    addShape() {
+      const l = makeLayer("Shape Layer " + (comp.__layers.length + 1), comp, "shape");
       comp.__layers.push(l);
       comp.__reindex();
       return l;
