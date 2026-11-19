@@ -277,6 +277,34 @@
       ],
       "evidence": "fake/mock only"
     },
+    "ae.scripting.AVLayer.hasTrackMatte": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.trackMatteType": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.trackMatteLayer": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.timeRemapEnabled": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTimeRemap"
+      ],
+      "evidence": "fake/mock only"
+    },
     "ae.scripting.PropertyGroup.property": {
       "ops": [
         "read.layerDetail",
@@ -287,7 +315,9 @@
         "anim.setExpressionEnabled",
         "text.setText",
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "anim.setInterpolation",
+        "anim.setTemporalEase"
       ],
       "evidence": "fake/mock only"
     },
@@ -858,6 +888,84 @@
     "ae.scripting.app.fonts": {
       "ops": [
         "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setInterpolationTypeAtKey": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.isInterpolationTypeValid": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyInInterpolationType": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyOutInterpolationType": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setTemporalEaseAtKey": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyInTemporalEase": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyOutTemporalEase": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.KeyframeEase.speed": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.KeyframeEase.influence": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.setTrackMatte": {
+      "ops": [
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.removeTrackMatte": {
+      "ops": [
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.isTrackMatte": {
+      "ops": [
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.canSetTimeRemapEnabled": {
+      "ops": [
+        "layer.setTimeRemap"
       ],
       "evidence": "fake/mock only"
     }

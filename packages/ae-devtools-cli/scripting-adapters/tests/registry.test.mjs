@@ -108,6 +108,10 @@ function sampleArgs(op) {
     else if (["inPoint"].includes(n)) a[n] = 0;
     else if (n === "outPoint") a[n] = 10;
     else if (["adjustmentLayer", "preserveTransparency", "frameBlending", "collapseTransformation"].includes(n)) a[n] = true;
+    else if (n === "inType" || n === "outType") a[n] = "LINEAR";
+    else if (n === "inEase" || n === "outEase") a[n] = { speed: 0, influence: 50 };
+    else if (n === "matteLayerName") a[n] = "Matte";
+    else if (n === "matteType") a[n] = "ALPHA";
     else if (n === "section") a[n] = "General";
     else if (n === "key") a[n] = "SomeKey";
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";

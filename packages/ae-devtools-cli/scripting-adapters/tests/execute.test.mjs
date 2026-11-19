@@ -171,6 +171,9 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     adjustmentLayer: true, preserveTransparency: false,
     frameBlending: true, collapseTransformation: false,
     inPoint: 0, outPoint: 5,
+    inType: "LINEAR", outType: "HOLD",
+    inEase: { speed: 0, influence: 50 }, outEase: { speed: 0, influence: 50 },
+    matteLayerName: "Text 1", matteType: "ALPHA",
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -212,7 +215,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
         consentProvider: provider, confirmDestructive: true, ...t });
     }
     // Keyframe ops need an existing key: seed one via setValueAtTime first.
-    if (op.id === "anim.setKeyframe" || op.id === "anim.removeKeyframe") {
+    if (["anim.setKeyframe", "anim.removeKeyframe", "anim.setInterpolation", "anim.setTemporalEase"].includes(op.id)) {
       await runOperation({ opId: "anim.setValueAtTime",
         args: { compName: "C", layerName: "Null 1", propertyPath: args.propertyPath, time: 0, value: [0, 0] },
         consentProvider: provider, confirmDestructive: true, ...t });
@@ -550,4 +553,71 @@ test("issue #285 batch: text style + layer flags + in/out points", async () => {
   const ld = await go("read.layerDetail", { compName: "C", layerName: "N1" });
   assert.equal(ld.result.layer.inPoint, 0.5);
   assert.equal(ld.result.layer.outPoint, 4.5);
+});
+
+test("issue #287 batch: interpolation/ease + track matte + time remap", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  assert.equal((await go("project.new", {}, { confirmDestructive: true })).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "N1" })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "N2" })).outcome, "COMPLETED");
+  const PATH = ["ADBE Transform Group", "ADBE Position"];
+  await go("anim.setValueAtTime", { compName: "C", layerName: "N1", propertyPath: PATH, time: 0, value: [0, 0] });
+  await go("anim.setValueAtTime", { compName: "C", layerName: "N1", propertyPath: PATH, time: 1, value: [1, 1] });
+
+  // anim.setInterpolation: validation + partial update + read-back.
+  assert.equal((await go("anim.setInterpolation", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1 })).reason, "INVALID_ARGS");
+  assert.equal((await go("anim.setInterpolation", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, inType: "BOGUS" })).reason, "INVALID_ARGS");
+  const ip = await go("anim.setInterpolation", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, inType: "LINEAR", outType: "HOLD" });
+  assert.equal(ip.outcome, "COMPLETED");
+  // inType only: outType preserved from previous set.
+  const ip2 = await go("anim.setInterpolation", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 2, inType: "BEZIER" });
+  assert.equal(ip2.outcome, "COMPLETED");
+  // Out-of-range key index is a host-level failure.
+  const ipBad = await go("anim.setInterpolation", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 9, inType: "LINEAR" });
+  assert.notEqual(ipBad.outcome, "COMPLETED");
+
+  // anim.setTemporalEase: ease objects validated, partial update.
+  assert.equal((await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1 })).reason, "INVALID_ARGS");
+  assert.equal((await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, inEase: { speed: "x", influence: 1 } })).reason, "INVALID_ARGS");
+  const ez = await go("anim.setTemporalEase", {
+    compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1,
+    inEase: { speed: 10, influence: 25 }, outEase: { speed: 0, influence: 75 },
+  });
+  assert.equal(ez.outcome, "COMPLETED");
+  assert.deepEqual(ez.result.inEase, { speed: 10, influence: 25 });
+  const ez2 = await go("anim.setTemporalEase", { compName: "C", layerName: "N1", propertyPath: PATH, keyIndex: 1, outEase: { speed: 5, influence: 60 } });
+  assert.equal(ez2.outcome, "COMPLETED");
+  assert.equal(ez2.result.inEase.speed, 10); // inEase preserved
+
+  // layer.setTrackMatte: set → read-back via compLayers → clear.
+  assert.equal((await go("layer.setTrackMatte", { compName: "C", layerName: "N1", matteType: "ALPHA" })).reason, "INVALID_ARGS");
+  // Self-matte is rejected at host level.
+  const selfMatte = await go("layer.setTrackMatte", { compName: "C", layerName: "N1", matteLayerName: "N1", matteType: "ALPHA" });
+  assert.notEqual(selfMatte.outcome, "COMPLETED");
+  const tm = await go("layer.setTrackMatte", { compName: "C", layerName: "N1", matteLayerName: "N2", matteType: "ALPHA_INVERTED" });
+  assert.equal(tm.outcome, "COMPLETED");
+  assert.equal(tm.result.hasTrackMatte, true);
+  assert.equal(tm.result.trackMatteLayer, "N2");
+  // Matte layer side: N2.isTrackMatte reflected in compLayers? (not exported there) — check via layerDetail not available; verify via re-set symmetry.
+  const cl = await go("read.compLayers", { compName: "C" });
+  const n1 = cl.result.layers.find((l) => l.name === "N1");
+  assert.equal(n1.hasTrackMatte, true);
+  assert.equal(n1.trackMatteType, 2); // ALPHA_INVERTED stand-in value — fake-level only
+  const clr = await go("layer.setTrackMatte", { compName: "C", layerName: "N1", matteType: "NO_TRACK_MATTE" });
+  assert.equal(clr.outcome, "COMPLETED");
+  assert.equal(clr.result.hasTrackMatte, false);
+  assert.equal(clr.result.trackMatteLayer, null);
+
+  // layer.setTimeRemap.
+  const tr = await go("layer.setTimeRemap", { compName: "C", layerName: "N1", enabled: true });
+  assert.equal(tr.outcome, "COMPLETED");
+  assert.equal(tr.result.timeRemapEnabled, true);
+  const cl2 = await go("read.compLayers", { compName: "C" });
+  assert.equal(cl2.result.layers.find((l) => l.name === "N1").timeRemapEnabled, true);
 });
