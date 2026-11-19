@@ -277,7 +277,15 @@
         "render.setTimeSpan",
         "render.removeFromQueue",
         "render.getOutputSettings",
-        "render.setOutputSetting"
+        "render.setOutputSetting",
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions"
       ],
       "evidence": "fake/mock only"
     },
@@ -289,6 +297,14 @@
         "render.removeFromQueue",
         "render.getOutputSettings",
         "render.setOutputSetting",
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions",
         "render.duplicateQueueItem"
       ],
       "evidence": "fake/mock only"
@@ -493,6 +509,14 @@
         "render.removeFromQueue",
         "render.getOutputSettings",
         "render.setOutputSetting",
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions",
         "render.duplicateQueueItem"
       ],
       "evidence": "fake/mock only"
@@ -506,32 +530,37 @@
     "ae.scripting.RenderQueueItem.timeSpanStart": {
       "ops": [
         "read.renderQueueStatus",
-        "render.setTimeSpan"
+        "render.setTimeSpan",
+        "render.applyTemplate"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueueItem.timeSpanDuration": {
       "ops": [
         "read.renderQueueStatus",
-        "render.setTimeSpan"
+        "render.setTimeSpan",
+        "render.applyTemplate"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueueItem.startTime": {
       "ops": [
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.applyTemplate"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueueItem.skipFrames": {
       "ops": [
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.applyTemplate"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueueItem.logType": {
       "ops": [
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.applyTemplate"
       ],
       "evidence": "fake/mock only"
     },
@@ -710,25 +739,115 @@
     "ae.scripting.RenderQueueItem.outputModule": {
       "ops": [
         "render.getOutputSettings",
-        "render.setOutputSetting"
+        "render.setOutputSetting",
+        "render.listOutputModules",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.OutputModule.name": {
       "ops": [
-        "render.getOutputSettings"
+        "render.getOutputSettings",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.OutputModule.getSettings": {
       "ops": [
-        "render.getOutputSettings"
+        "render.getOutputSettings",
+        "render.applyOutputModuleTemplate"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.OutputModule.setSetting": {
       "ops": [
         "render.setOutputSetting"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.templates": {
+      "ops": [
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.applyTemplate": {
+      "ops": [
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.saveAsTemplate": {
+      "ops": [
+        "render.saveTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.numOutputModules": {
+      "ops": [
+        "render.listOutputModules",
+        "render.addOutputModule"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.outputModules": {
+      "ops": [
+        "render.listOutputModules",
+        "render.addOutputModule"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.file": {
+      "ops": [
+        "render.listOutputModules",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.includeSourceXMP": {
+      "ops": [
+        "render.listOutputModules",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.postRenderAction": {
+      "ops": [
+        "render.listOutputModules",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.templates": {
+      "ops": [
+        "render.listOutputModules",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OMCollection.add": {
+      "ops": [
+        "render.addOutputModule"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.applyTemplate": {
+      "ops": [
+        "render.applyOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.saveAsTemplate": {
+      "ops": [
+        "render.saveOutputModuleTemplate"
       ],
       "evidence": "fake/mock only"
     },

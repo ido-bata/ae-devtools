@@ -147,6 +147,23 @@ function __adp_findLayer(comp, name) {
   __adp_fail("layer not found in comp '" + comp.name + "': " + name);
   return null;
 }
+// Render-queue item lookup (Issue #299): resolves the single RQ item
+// for a comp name; refuses missing and ambiguous matches. Shared by
+// every render.* op that targets a queued comp.
+function __adp_findRQItem(compName) {
+  var items = app.project.renderQueue.items;
+  var found = null;
+  var matches = 0;
+  for (var i = 1; i <= items.length; i++) {
+    if (items[i].comp !== null && items[i].comp.name === compName) {
+      found = items[i];
+      matches++;
+    }
+  }
+  if (matches === 0) __adp_fail("render queue has no item for comp '" + compName + "'");
+  if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + compName + "': ambiguous");
+  return found;
+}
 // Marker read-back snapshot (Issue #295): MarkerValue is a host object
 // whose fields are NOT guaranteed enumerable, so serialize explicitly
 // into a plain object — never pass the MarkerValue itself to __adp_json.
@@ -1365,18 +1382,8 @@ return __adp_json({
       }
     },
     source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
 var rq = app.project.renderQueue;
-var items = rq.items;
-var found = null;
-var matches = 0;
-for (var i = 1; i <= items.length; i++) {
-  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
-    found = items[i];
-    matches++;
-  }
-}
-if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
-if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
 found.timeSpanStart = ${Number(a.timeSpanStart)};
 found.timeSpanDuration = ${Number(a.timeSpanDuration)};
 return __adp_json({
@@ -1401,18 +1408,8 @@ return __adp_json({
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
     source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
 var rq = app.project.renderQueue;
-var items = rq.items;
-var found = null;
-var matches = 0;
-for (var i = 1; i <= items.length; i++) {
-  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
-    found = items[i];
-    matches++;
-  }
-}
-if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
-if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
 found.remove();
 return __adp_json({ ok: true, removed: ${js(a.compName)}, remaining: rq.items.length });
 `,
@@ -1545,18 +1542,7 @@ return __adp_json({
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
     source: (a) => `${PRELUDE}
-var rq = app.project.renderQueue;
-var items = rq.items;
-var found = null;
-var matches = 0;
-for (var i = 1; i <= items.length; i++) {
-  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
-    found = items[i];
-    matches++;
-  }
-}
-if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
-if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
+var found = __adp_findRQItem(${js(a.compName)});
 var om = found.outputModule(1);
 return __adp_json({
   ok: true, comp: found.comp.name,
@@ -1593,24 +1579,269 @@ return __adp_json({
       }
     },
     source: (a) => `${PRELUDE}
-var rq = app.project.renderQueue;
-var items = rq.items;
-var found = null;
-var matches = 0;
-for (var i = 1; i <= items.length; i++) {
-  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
-    found = items[i];
-    matches++;
-  }
-}
-if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
-if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
+var found = __adp_findRQItem(${js(a.compName)});
 var om = found.outputModule(1);
 om.setSetting(${js(a.setting)}, ${js(a.value)});
 return __adp_json({
   ok: true, comp: found.comp.name,
   setting: ${js(a.setting)},
   value: om.getSettings()[${js(a.setting)}]
+});
+`,
+  },
+  // ---- Issue #299: render/output-module template surface ----
+  // Real API (docsforadobe renderqueue/*): RenderQueueItem.templates /
+  // applyTemplate / saveAsTemplate manage render-settings templates;
+  // OutputModule.templates / applyTemplate / saveAsTemplate manage
+  // output-module templates; numOutputModules/outputModules/OMCollection
+  // .add expose multiple output modules. Template application is
+  // mutating but is NOT a render — render.renderQueued keeps its
+  // confirmRender gate.
+  {
+    id: "render.listTemplates",
+    title: "List render-settings templates for a queued comp (non-mutating)",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "templates"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+return __adp_json({ ok: true, comp: found.comp.name, templates: found.templates });
+`,
+  },
+  {
+    id: "render.applyTemplate",
+    title: "Apply a render-settings template to a queued item",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "templates"),
+      S("RenderQueueItem", "applyTemplate"),
+      S("RenderQueueItem", "timeSpanStart"), S("RenderQueueItem", "timeSpanDuration"),
+      S("RenderQueueItem", "skipFrames"), S("RenderQueueItem", "logType"),
+      S("RenderQueueItem", "startTime"),
+    ],
+    args: ["compName", "templateName"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "templateName"]);
+      if (typeof a.templateName !== "string" || a.templateName.length === 0) {
+        throw new Error("render.applyTemplate: templateName must be a non-empty string");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+found.applyTemplate(${js(a.templateName)});
+return __adp_json({
+  ok: true, comp: found.comp.name, template: ${js(a.templateName)},
+  timeSpanStart: found.timeSpanStart, timeSpanDuration: found.timeSpanDuration,
+  skipFrames: found.skipFrames, logType: found.logType, startTime: found.startTime
+});
+`,
+  },
+  {
+    id: "render.saveTemplate",
+    title: "Save a queued item's render settings as a template",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "templates"),
+      S("RenderQueueItem", "saveAsTemplate"),
+    ],
+    args: ["compName", "templateName"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "templateName"]);
+      if (typeof a.templateName !== "string" || a.templateName.length === 0) {
+        throw new Error("render.saveTemplate: templateName must be a non-empty string");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+found.saveAsTemplate(${js(a.templateName)});
+return __adp_json({ ok: true, comp: found.comp.name, template: ${js(a.templateName)}, templates: found.templates });
+`,
+  },
+  {
+    id: "render.listOutputModules",
+    title: "List a queued item's output modules (non-mutating)",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "numOutputModules"),
+      S("RenderQueueItem", "outputModules"), S("RenderQueueItem", "outputModule"),
+      S("OutputModule", "name"), S("OutputModule", "file"),
+      S("OutputModule", "includeSourceXMP"), S("OutputModule", "postRenderAction"),
+      S("OutputModule", "templates"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+var mods = [];
+for (var i = 1; i <= found.numOutputModules; i++) {
+  var om = found.outputModule(i);
+  mods.push({
+    index: i,
+    name: String(om.name),
+    file: om.file === null || om.file === undefined ? null : String(om.file.fsName),
+    includeSourceXMP: om.includeSourceXMP === true,
+    postRenderAction: om.postRenderAction,
+    templates: om.templates
+  });
+}
+return __adp_json({ ok: true, comp: found.comp.name, numOutputModules: found.numOutputModules, modules: mods });
+`,
+  },
+  {
+    id: "render.addOutputModule",
+    title: "Add an output module to a queued item",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "numOutputModules"),
+      S("RenderQueueItem", "outputModules"), S("OMCollection", "add"),
+      S("OutputModule", "name"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+var om = found.outputModules.add();
+return __adp_json({
+  ok: true, comp: found.comp.name,
+  index: found.numOutputModules, name: String(om.name),
+  numOutputModules: found.numOutputModules
+});
+`,
+  },
+  {
+    id: "render.applyOutputModuleTemplate",
+    title: "Apply an output-module template to a queued item's module",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "outputModule"),
+      S("OutputModule", "name"), S("OutputModule", "templates"),
+      S("OutputModule", "applyTemplate"), S("OutputModule", "getSettings"),
+    ],
+    args: ["compName", "moduleIndex", "templateName"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "moduleIndex", "templateName"]);
+      if (!Number.isInteger(a.moduleIndex) || a.moduleIndex < 1) {
+        throw new Error("render.applyOutputModuleTemplate: moduleIndex must be an integer >= 1");
+      }
+      if (typeof a.templateName !== "string" || a.templateName.length === 0) {
+        throw new Error("render.applyOutputModuleTemplate: templateName must be a non-empty string");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+var om = found.outputModule(${Number(a.moduleIndex)});
+om.applyTemplate(${js(a.templateName)});
+return __adp_json({
+  ok: true, comp: found.comp.name, module: ${Number(a.moduleIndex)},
+  name: String(om.name), template: ${js(a.templateName)},
+  settings: om.getSettings()
+});
+`,
+  },
+  {
+    id: "render.saveOutputModuleTemplate",
+    title: "Save an output module's settings as a template",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "outputModule"),
+      S("OutputModule", "name"), S("OutputModule", "templates"),
+      S("OutputModule", "saveAsTemplate"),
+    ],
+    args: ["compName", "moduleIndex", "templateName"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "moduleIndex", "templateName"]);
+      if (!Number.isInteger(a.moduleIndex) || a.moduleIndex < 1) {
+        throw new Error("render.saveOutputModuleTemplate: moduleIndex must be an integer >= 1");
+      }
+      if (typeof a.templateName !== "string" || a.templateName.length === 0) {
+        throw new Error("render.saveOutputModuleTemplate: templateName must be a non-empty string");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+var om = found.outputModule(${Number(a.moduleIndex)});
+om.saveAsTemplate(${js(a.templateName)});
+return __adp_json({
+  ok: true, comp: found.comp.name, module: ${Number(a.moduleIndex)},
+  name: String(om.name), template: ${js(a.templateName)}, templates: om.templates
+});
+`,
+  },
+  {
+    id: "render.setOutputModuleOptions",
+    title: "Set output module file / includeSourceXMP / postRenderAction",
+    domain: "animation-effects-render",
+    issue: "299",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"), S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "outputModule"),
+      S("OutputModule", "file"), S("OutputModule", "includeSourceXMP"),
+      S("OutputModule", "postRenderAction"),
+    ],
+    args: ["compName", "moduleIndex", "file", "includeSourceXMP", "postRenderAction"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "moduleIndex"]);
+      if (!Number.isInteger(a.moduleIndex) || a.moduleIndex < 1) {
+        throw new Error("render.setOutputModuleOptions: moduleIndex must be an integer >= 1");
+      }
+      if (a.file === undefined && a.includeSourceXMP === undefined && a.postRenderAction === undefined) {
+        throw new Error("render.setOutputModuleOptions: at least one option is required");
+      }
+      if (a.file !== undefined && (typeof a.file !== "string" || a.file.length === 0)) {
+        throw new Error("render.setOutputModuleOptions: file must be a non-empty string");
+      }
+      if (a.includeSourceXMP !== undefined && typeof a.includeSourceXMP !== "boolean") {
+        throw new Error("render.setOutputModuleOptions: includeSourceXMP must be a boolean");
+      }
+      if (a.postRenderAction !== undefined &&
+          !["NONE", "IMPORT", "IMPORT_AND_REPLACE_USAGE", "SET_PROXY"].includes(a.postRenderAction)) {
+        throw new Error("render.setOutputModuleOptions: postRenderAction must be a PostRenderAction name");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
+var om = found.outputModule(${Number(a.moduleIndex)});
+${a.file !== undefined ? `om.file = new File(${js(a.file)});` : ""}
+${a.includeSourceXMP !== undefined ? `om.includeSourceXMP = ${a.includeSourceXMP ? "true" : "false"};` : ""}
+${a.postRenderAction !== undefined ? `om.postRenderAction = PostRenderAction[${js(a.postRenderAction)}];` : ""}
+return __adp_json({
+  ok: true, comp: found.comp.name, module: ${Number(a.moduleIndex)},
+  file: om.file === null || om.file === undefined ? null : String(om.file.fsName),
+  includeSourceXMP: om.includeSourceXMP === true,
+  postRenderAction: om.postRenderAction
 });
 `,
   },
@@ -2926,15 +3157,8 @@ return __adp_json({
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
     source: (a) => `${PRELUDE}
+var found = __adp_findRQItem(${js(a.compName)});
 var rq = app.project.renderQueue;
-var found = null;
-var count = 0;
-for (var i = 1; i <= rq.items.length; i++) {
-  var it = rq.items[i];
-  if (it.comp !== null && it.comp.name === ${js(a.compName)}) { found = it; count++; }
-}
-if (count === 0) __adp_fail("no queued item for comp '" + ${js(a.compName)} + "'");
-if (count > 1) __adp_fail("ambiguous: " + count + " queued items for comp '" + ${js(a.compName)} + "'");
 var d = found.duplicate();
 return __adp_json({
   ok: true, index: d.index, comp: String(d.comp.name),
