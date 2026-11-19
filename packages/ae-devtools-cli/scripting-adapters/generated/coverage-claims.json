@@ -107,7 +107,8 @@
         "comp.duplicate",
         "item.setLabel",
         "item.setComment",
-        "comp.setResolutionFactor"
+        "comp.setResolutionFactor",
+        "read.compSettings"
       ],
       "evidence": "fake/mock only"
     },
@@ -198,7 +199,8 @@
         "render.setTimeSpan",
         "render.removeFromQueue",
         "render.getOutputSettings",
-        "render.setOutputSetting"
+        "render.setOutputSetting",
+        "render.duplicateQueueItem"
       ],
       "evidence": "fake/mock only"
     },
@@ -305,6 +307,20 @@
       ],
       "evidence": "fake/mock only"
     },
+    "ae.scripting.AVLayer.source": {
+      "ops": [
+        "read.layerDetail",
+        "layer.replaceSource"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.replaceSource": {
+      "ops": [
+        "read.layerDetail",
+        "layer.replaceSource"
+      ],
+      "evidence": "fake/mock only"
+    },
     "ae.scripting.PropertyGroup.property": {
       "ops": [
         "read.layerDetail",
@@ -362,7 +378,8 @@
         "render.setTimeSpan",
         "render.removeFromQueue",
         "render.getOutputSettings",
-        "render.setOutputSetting"
+        "render.setOutputSetting",
+        "render.duplicateQueueItem"
       ],
       "evidence": "fake/mock only"
     },
@@ -383,6 +400,30 @@
       "ops": [
         "read.renderQueueStatus",
         "render.setTimeSpan"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.startTime": {
+      "ops": [
+        "read.renderQueueStatus"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.skipFrames": {
+      "ops": [
+        "read.renderQueueStatus"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.logType": {
+      "ops": [
+        "read.renderQueueStatus"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.elapsedSeconds": {
+      "ops": [
+        "read.renderQueueStatus"
       ],
       "evidence": "fake/mock only"
     },
@@ -966,6 +1007,89 @@
     "ae.scripting.AVLayer.canSetTimeRemapEnabled": {
       "ops": [
         "layer.setTimeRemap"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.bgColor": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.displayStartTime": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.displayStartFrame": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.shutterAngle": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.shutterPhase": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.motionBlur": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.frameBlending": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.draft3d": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.hideShyLayers": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.preserveNestedFrameRate": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.dropFrame": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.duplicate": {
+      "ops": [
+        "render.duplicateQueueItem"
       ],
       "evidence": "fake/mock only"
     }

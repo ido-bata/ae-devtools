@@ -256,6 +256,10 @@ function makeLayer(name, comp, kind) {
     // layer's __isTrackMatte flag mirrors the real host behavior.
     __trackMatte: null,
     __isTrackMatte: false,
+    // AVLayer.source model (Issue #289): replaced via replaceSource.
+    // Solid/text/null/camera/light layers have no footage source in
+    // the fake (null); only replaceSource-populated values are read.
+    __source: null,
     inPoint: 0,
     outPoint: comp ? comp.duration : 0,
     __pos: makeProperty([0, 0], { matchName: "ADBE Position" }),
@@ -306,6 +310,17 @@ function makeLayer(name, comp, kind) {
       }
       throw new Error("fake-app: no such property group " + group);
     },
+    // AVLayer.source / replaceSource (Issue #289). The fake accepts
+    // FootageItem only — real AE accepts any AVItem and checks usage;
+    // that restriction is a real-host verification item.
+    get source() { return layer.__source; },
+    replaceSource(item) {
+      if (!(item instanceof FootageItem)) {
+        throw new Error("fake-app: replaceSource requires a FootageItem");
+      }
+      layer.__source = item;
+      return item;
+    },
     // Fake approximation: every modeled AV layer can time-remap.
     // Real AE restricts this (e.g. no time remap on some layer types);
     // that gate is a real-host verification item.
@@ -337,6 +352,7 @@ function makeLayer(name, comp, kind) {
     moveToEnd() { comp.__moveLayer(layer, "bottom"); },
     duplicate() {
       const l = makeLayer(this.name + " copy", comp, this.kind);
+      l.__source = this.__source;
       if (l.__textDoc !== null && this.__textDoc !== null) {
         for (var k in this.__textDoc) l.__textDoc[k] = this.__textDoc[k];
       }
@@ -383,10 +399,27 @@ function makeComp(name, w, h, par, dur, owner) {
     resolutionFactor: 1,
     label: 0,
     comment: "",
+    // Comp settings (Issue #289). Defaults are the fake's approximation
+    // of AE defaults — real-host defaults may differ.
+    bgColor: [0, 0, 0],
+    displayStartTime: 0,
+    displayStartFrame: 0,
+    shutterAngle: 180,
+    shutterPhase: 0,
+    motionBlur: false,
+    frameBlending: false,
+    draft3d: false,
+    hideShyLayers: false,
+    preserveNestedFrameRate: true,
+    dropFrame: false,
     duplicate() {
       const d = makeComp(this.name + " copy", this.width, this.height,
         this.pixelAspect, this.duration, owner);
       d.frameRate = this.frameRate;
+      for (const k of ["bgColor","displayStartTime","displayStartFrame","shutterAngle","shutterPhase",
+        "motionBlur","frameBlending","draft3d","hideShyLayers","preserveNestedFrameRate","dropFrame"]) {
+        d[k] = Array.isArray(this[k]) ? this[k].slice() : this[k];
+      }
       for (const l of this.__layers) {
         const nl = makeLayer(l.name, d, l.kind);
         if (nl.__textDoc !== null && l.__textDoc !== null) nl.__textDoc.text = l.__textDoc.text;
@@ -544,6 +577,56 @@ export function createAdapterFakeApp() {
             status: 1,
             timeSpanStart: 0,
             timeSpanDuration: comp.duration,
+            // Issue #289: queue item control fields (fake defaults).
+            startTime: 0,
+            skipFrames: 0,
+            logType: 0,
+            elapsedSeconds: 0,
+            duplicate() {
+              // Copies the RECEIVER's settings (this === source item).
+              const src = this;
+              const d = {
+                comp: src.comp, index: 0, status: 1,
+                timeSpanStart: src.timeSpanStart, timeSpanDuration: src.timeSpanDuration,
+                startTime: src.startTime, skipFrames: src.skipFrames,
+                logType: src.logType, elapsedSeconds: 0,
+                __om: src.__om === undefined ? undefined : {
+                  name: src.__om.name, templates: [],
+                  __settings: Object.assign({}, src.__om.__settings),
+                  getSettings() {
+                    const out = {};
+                    for (const k in this.__settings) out[k] = this.__settings[k];
+                    return out;
+                  },
+                  setSetting(k, v) { this.__settings[k] = v; },
+                },
+                remove() {
+                  const i = renderItems.indexOf(d);
+                  if (i >= 0) renderItems.splice(i, 1);
+                  renderItems.forEach((r, j) => { r.index = j + 1; });
+                },
+                outputModule(idx) {
+                  if (idx !== 1) throw new Error("fake-app: only output module 1 is modeled");
+                  if (this.__om === undefined) {
+                    this.__om = {
+                      name: "Lossless", templates: [],
+                      __settings: { "Output File Info": "[compName].mov" },
+                      getSettings() {
+                        const out = {};
+                        for (const k in this.__settings) out[k] = this.__settings[k];
+                        return out;
+                      },
+                      setSetting(k, v) { this.__settings[k] = v; },
+                    };
+                  }
+                  return this.__om;
+                },
+                duplicate: src.duplicate,
+              };
+              renderItems.push(d);
+              renderItems.forEach((r, j) => { r.index = j + 1; });
+              return d;
+            },
             remove() {
               const i = renderItems.indexOf(it);
               if (i >= 0) renderItems.splice(i, 1);

@@ -112,6 +112,12 @@ function sampleArgs(op) {
     else if (n === "inEase" || n === "outEase") a[n] = { speed: 0, influence: 50 };
     else if (n === "matteLayerName") a[n] = "Matte";
     else if (n === "matteType") a[n] = "ALPHA";
+    else if (n === "bgColor") a[n] = [0, 0, 0];
+    else if (n === "shutterAngle") a[n] = 180;
+    else if (["displayStartTime", "shutterPhase"].includes(n)) a[n] = 0;
+    else if (n === "displayStartFrame") a[n] = 0;
+    else if (["motionBlur", "frameBlending", "draft3d", "hideShyLayers", "preserveNestedFrameRate", "dropFrame"].includes(n)) a[n] = true;
+    else if (n === "footageName") a[n] = "clip.mov";
     else if (n === "section") a[n] = "General";
     else if (n === "key") a[n] = "SomeKey";
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";
@@ -433,6 +439,6 @@ test("coverage claims only reference members actually exercised AND present in t
   const opMembers = {};
   for (const op of OPERATIONS) for (const m of op.members) (opMembers[m] ??= []).push(op.id);
   assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueue.rendering"], ["read.renderQueueStatus"]);
-  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue", "render.getOutputSettings", "render.setOutputSetting"]);
+  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue", "render.getOutputSettings", "render.setOutputSetting", "render.duplicateQueueItem"]);
   assert.deepEqual(opMembers["provisional.ae.scripting.PropertyBase.name"], undefined, "PropertyBase.name was a wrong-owner claim");
 });

@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "2769e5fdf399c6e315c129080821984a1cb487884ad57f6ee6023bee66eb246f"
+      "sha256": "5eb8fbd4c791ae24903403efbc1fb405cb8ed0fc552fc7e28a18d716b6921919"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 294,
+          "documented": 289,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 61,
+          "automated-fake-tested": 66,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 61,
+          "adapter-present": 66,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 294
+          "unknown": 289
         },
         "verification": {
-          "not-run": 294,
-          "automated-fake": 61,
+          "not-run": 289,
+          "automated-fake": 66,
           "verified-real-host": 0
         }
       },
@@ -1864,18 +1864,18 @@
         {
           "id": "ae.scripting.RenderQueueItem.duplicate",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.elapsedSeconds",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.getSetting",
@@ -1896,10 +1896,10 @@
         {
           "id": "ae.scripting.RenderQueueItem.logType",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.numOutputModules",
@@ -1984,18 +1984,18 @@
         {
           "id": "ae.scripting.RenderQueueItem.skipFrames",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.startTime",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.status",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 182,
+          "documented": 169,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 71,
+          "automated-fake-tested": 84,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 78,
+          "adapter-present": 91,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 182
+          "unknown": 169
         },
         "verification": {
-          "not-run": 182,
-          "automated-fake": 71,
+          "not-run": 169,
+          "automated-fake": 84,
           "verified-real-host": 7
         }
       },
@@ -3717,10 +3717,10 @@
         {
           "id": "ae.scripting.AVLayer.replaceSource",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.samplingQuality",
@@ -3741,10 +3741,10 @@
         {
           "id": "ae.scripting.AVLayer.source",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.AVLayer.sourcePointToComp",
@@ -3821,10 +3821,10 @@
         {
           "id": "ae.scripting.CompItem.bgColor",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.counters",
@@ -3837,34 +3837,34 @@
         {
           "id": "ae.scripting.CompItem.displayStartFrame",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.displayStartTime",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.draft3d",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.dropFrame",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.duplicate",
@@ -3885,10 +3885,10 @@
         {
           "id": "ae.scripting.CompItem.frameBlending",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.frameDuration",
@@ -3909,10 +3909,10 @@
         {
           "id": "ae.scripting.CompItem.hideShyLayers",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.layer",
@@ -3941,10 +3941,10 @@
         {
           "id": "ae.scripting.CompItem.motionBlur",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.motionBlurAdaptiveSampleLimit",
@@ -4005,10 +4005,10 @@
         {
           "id": "ae.scripting.CompItem.preserveNestedFrameRate",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.preserveNestedResolution",
@@ -4069,18 +4069,18 @@
         {
           "id": "ae.scripting.CompItem.shutterAngle",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.shutterPhase",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.workAreaDuration",
