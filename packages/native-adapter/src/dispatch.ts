@@ -67,7 +67,12 @@ export type DispatchSchema = typeof DISPATCH_SCHEMA;
 export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_ProjSuite6.AEGP_GetNumProjects",
   "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
+  "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
+  "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
+  "AEGP_UtilitySuite6.AEGP_HostIsActivated",
   "AEGP_ItemSuite9.AEGP_GetTypeName",
+  "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
+  "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
 ] as const;
 export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
 

@@ -118,10 +118,15 @@ Every allowlisted AEGP call emits the standard `op <Suite>.<member> err=<n>` rec
 ```
 AEGP_ProjSuite6.AEGP_GetNumProjects                                  (zero-arg)
 AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion               (zero-arg)
+AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion               (zero-arg, #270 stage 2)
+AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI                     (zero-arg, #270 stage 2)
+AEGP_UtilitySuite6.AEGP_HostIsActivated                              (zero-arg, #270 stage 2)
 AEGP_ItemSuite9.AEGP_GetTypeName                                     (args: see §7a)
+AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState                      (zero-arg, #270 stage 2)
+AEGP_RQItemSuite4.AEGP_GetNumRQItems                                 (zero-arg, #270 stage 2)
 ```
 
-All are read-only getters; all stay `implemented-unverified`. Widening the allowlist is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**: scalar/enum arguments or none, serializable results. Every remaining implemented getter takes an `AEGP_*H` host handle — those wait for the CAP027 identity-descriptor work and are deliberately NOT allowlisted (external JSON must never become a host handle). Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
@@ -131,6 +136,11 @@ The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `pack
 | --- | --- |
 | `AEGP_ProjSuite6.AEGP_GetNumProjects` | none — `args` absent or `null` |
 | `AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion` | none — `args` absent or `null` |
+| `AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion` | none — `args` absent or `null`; result `{"major","minor"}` |
+| `AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI` | none — `args` absent or `null`; result `{"interactiveUiSuppressed": <bool>}` |
+| `AEGP_UtilitySuite6.AEGP_HostIsActivated` | none — `args` absent or `null`; result `{"hostActivated": <bool>}` |
+| `AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState` | none — `args` absent or `null`; result `{"state": <uint>}` (`AEGP_RenderQueueState`); plug-in acquires `AEGP Render Queue Suite` v1 in-window |
+| `AEGP_RQItemSuite4.AEGP_GetNumRQItems` | none — `args` absent or `null`; result `{"numRQItems": <int>}`; plug-in acquires `AEGP Render Queue Item Suite` v4 in-window |
 | `AEGP_ItemSuite9.AEGP_GetTypeName` | `{"itemType": <integer>}` — exactly one field; `itemType` is the `AEGP_ItemType` (`A_short`) enum, permitted range **[1, 4]** = the defined non-`NONE` values (`FOLDER`=1, `COMP`=2, `SOLID_defunct`=3, `FOOTAGE`=4; `NUM_TYPES1`=5 per `AE_GeneralPlug.h`). `NONE`=0 and any undefined/out-of-range/non-integral/wrong-typed value refuses `MALFORMED_REQUEST`. `SOLID_defunct` is a defined enum value passed through to the host; what real AE returns for it is a real-host question this contract does not settle |
 
 Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.

@@ -498,6 +498,20 @@ static const AllowEntry S_ALLOWLIST[] = {
       "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion", NULL, 0 },
     { "AEGP_ItemSuite9.AEGP_GetTypeName",
       "AEGP_ItemSuite9.AEGP_GetTypeName", S_TYPENAME_ARGS, 1 },
+    /* Issue #270 Stage 2: zero-arg read-only getters needing no
+       identity resolution. The three UtilitySuite members use the
+       already-held utilP; the two render-queue members acquire their
+       suite inside the request window like GetTypeName. */
+    { "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
+      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion", NULL, 0 },
+    { "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
+      "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI", NULL, 0 },
+    { "AEGP_UtilitySuite6.AEGP_HostIsActivated",
+      "AEGP_UtilitySuite6.AEGP_HostIsActivated", NULL, 0 },
+    { "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
+      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState", NULL, 0 },
+    { "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
+      "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, 0 },
 };
 static const int S_ALLOWLIST_COUNT =
     (int)(sizeof(S_ALLOWLIST) / sizeof(S_ALLOWLIST[0]));
@@ -959,6 +973,178 @@ static void ProcessClaimed(
                     v.havePayload = 0;
                     v.mayHaveMutated = 0; /* read-only getter */
                 }
+            }
+        }
+        /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
+        else if (strcmp(allow->operationId,
+                        "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion") == 0)
+        {
+            A_short maj = 0, min = 0;
+            A_Err oerr = utilP->AEGP_GetDriverPluginInitFuncVersion
+                ? utilP->AEGP_GetDriverPluginInitFuncVersion(&maj, &min)
+                : A_Err_STRUCT;
+            char extra[48];
+            if (oerr == A_Err_NONE)
+                snprintf(extra, sizeof(extra), " v=%d.%d", (int)maj, (int)min);
+            else
+                extra[0] = '\0';
+            extra[sizeof(extra) - 1] = '\0';
+            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                           oerr == A_Err_NONE ? extra : NULL);
+            if (oerr == A_Err_NONE)
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "completed");
+                snprintf(v.payload, sizeof(v.payload),
+                         "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
+                v.payload[sizeof(v.payload) - 1] = '\0';
+                v.havePayload = 1;
+                v.mayHaveMutated = 0;
+            }
+            else
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "failed");
+                snprintf(v.detail, sizeof(v.detail),
+                         "AEGP_GetDriverPluginInitFuncVersion err=%ld", (long)oerr);
+                v.havePayload = 0;
+                v.mayHaveMutated = 0;
+            }
+        }
+        else if (strcmp(allow->operationId,
+                        "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI") == 0)
+        {
+            A_Boolean suppressed = FALSE;
+            A_Err oerr = utilP->AEGP_GetSuppressInteractiveUI
+                ? utilP->AEGP_GetSuppressInteractiveUI(&suppressed)
+                : A_Err_STRUCT;
+            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                           oerr == A_Err_NONE ? (suppressed ? " value=1" : " value=0") : NULL);
+            if (oerr == A_Err_NONE)
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "completed");
+                snprintf(v.payload, sizeof(v.payload),
+                         "{\"interactiveUiSuppressed\":%s}", suppressed ? "true" : "false");
+                v.havePayload = 1;
+                v.mayHaveMutated = 0;
+            }
+            else
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "failed");
+                snprintf(v.detail, sizeof(v.detail),
+                         "AEGP_GetSuppressInteractiveUI err=%ld", (long)oerr);
+                v.havePayload = 0;
+                v.mayHaveMutated = 0;
+            }
+        }
+        else if (strcmp(allow->operationId,
+                        "AEGP_UtilitySuite6.AEGP_HostIsActivated") == 0)
+        {
+            A_Boolean activated = FALSE;
+            A_Err oerr = utilP->AEGP_HostIsActivated
+                ? utilP->AEGP_HostIsActivated(&activated)
+                : A_Err_STRUCT;
+            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                           oerr == A_Err_NONE ? (activated ? " value=1" : " value=0") : NULL);
+            if (oerr == A_Err_NONE)
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "completed");
+                snprintf(v.payload, sizeof(v.payload),
+                         "{\"hostActivated\":%s}", activated ? "true" : "false");
+                v.havePayload = 1;
+                v.mayHaveMutated = 0;
+            }
+            else
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "failed");
+                snprintf(v.detail, sizeof(v.detail),
+                         "AEGP_HostIsActivated err=%ld", (long)oerr);
+                v.havePayload = 0;
+                v.mayHaveMutated = 0;
+            }
+        }
+        else if (strcmp(allow->operationId,
+                        "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState") == 0 ||
+                 strcmp(allow->operationId,
+                        "AEGP_RQItemSuite4.AEGP_GetNumRQItems") == 0)
+        {
+            /* zero-arg render-queue getters: acquire the needed suite
+               inside the request window (same pattern as GetTypeName) */
+            int isRQState = strcmp(allow->operationId,
+                                   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState") == 0;
+            const char* suiteName = isRQState ? kAEGPRenderQueueSuite : kAEGPRQItemSuite;
+            int suiteVer = isRQState ? kAEGPRenderQueueSuiteVersion1
+                                     : kAEGPRQItemSuiteVersion4;
+            const void* suite = IntakeAcquireSuite(utilP, basicP, suiteName, suiteVer);
+            if (!suite)
+            {
+                snprintf(v.outcome, sizeof(v.outcome), "not-sent");
+                snprintf(v.detail, sizeof(v.detail), "render queue suite unavailable");
+                v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
+                goto verdict;
+            }
+            {
+                A_Err oerr = A_Err_STRUCT;
+                char extra[48];
+                extra[0] = '\0';
+                if (isRQState)
+                {
+                    const AEGP_RenderQueueSuite1* rqP = (const AEGP_RenderQueueSuite1*)suite;
+                    AEGP_RenderQueueState state = 0;
+                    if (rqP->AEGP_GetRenderQueueState)
+                        oerr = rqP->AEGP_GetRenderQueueState(&state);
+                    else
+                        oerr = A_Err_STRUCT;
+                    if (oerr == A_Err_NONE)
+                    {
+                        snprintf(extra, sizeof(extra), " value=%lu",
+                                 (unsigned long)state);
+                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
+                        snprintf(v.outcome, sizeof(v.outcome), "completed");
+                        snprintf(v.payload, sizeof(v.payload),
+                                 "{\"state\":%lu}", (unsigned long)state);
+                        v.payload[sizeof(v.payload) - 1] = '\0';
+                        v.havePayload = 1;
+                        v.mayHaveMutated = 0;
+                    }
+                    else
+                    {
+                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+                        snprintf(v.outcome, sizeof(v.outcome), "failed");
+                        snprintf(v.detail, sizeof(v.detail),
+                                 "AEGP_GetRenderQueueState err=%ld", (long)oerr);
+                        v.havePayload = 0;
+                        v.mayHaveMutated = 0;
+                    }
+                }
+                else
+                {
+                    const AEGP_RQItemSuite4* rqItemP = (const AEGP_RQItemSuite4*)suite;
+                    A_long num = 0;
+                    if (rqItemP->AEGP_GetNumRQItems)
+                        oerr = rqItemP->AEGP_GetNumRQItems(&num);
+                    else
+                        oerr = A_Err_STRUCT;
+                    if (oerr == A_Err_NONE)
+                    {
+                        snprintf(extra, sizeof(extra), " value=%ld", (long)num);
+                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
+                        snprintf(v.outcome, sizeof(v.outcome), "completed");
+                        snprintf(v.payload, sizeof(v.payload),
+                                 "{\"numRQItems\":%ld}", (long)num);
+                        v.payload[sizeof(v.payload) - 1] = '\0';
+                        v.havePayload = 1;
+                        v.mayHaveMutated = 0;
+                    }
+                    else
+                    {
+                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+                        snprintf(v.outcome, sizeof(v.outcome), "failed");
+                        snprintf(v.detail, sizeof(v.detail),
+                                 "AEGP_GetNumRQItems err=%ld", (long)oerr);
+                        v.havePayload = 0;
+                        v.mayHaveMutated = 0;
+                    }
+                }
+                IntakeReleaseSuite(utilP, basicP, suiteName, suiteVer);
             }
         }
         else

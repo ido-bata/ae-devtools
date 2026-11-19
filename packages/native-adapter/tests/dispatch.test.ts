@@ -225,14 +225,20 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
       if (!res.ok) expect(res.refusal).toBe("operation-not-dispatchable");
     }
   });
-  test("intake allowlist contains only read-only project/version getters", () => {
-    expect(NATIVE_INTAKE_OPERATIONS).toContain("AEGP_ProjSuite6.AEGP_GetNumProjects");
-    expect(NATIVE_INTAKE_OPERATIONS).toContain(
+  test("intake allowlist contains only implemented read-only getters", () => {
+    /* explicit expected set — every entry is a read-only query the
+       NativeProbe already calls; mutation candidates stay out until
+       the FR-07/US3 permission model exists (#270) */
+    expect([...NATIVE_INTAKE_OPERATIONS].sort()).toEqual([
+      "AEGP_ItemSuite9.AEGP_GetTypeName",
+      "AEGP_ProjSuite6.AEGP_GetNumProjects",
+      "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
+      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
       "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
-    );
-    for (const id of NATIVE_INTAKE_OPERATIONS) {
-      expect(id).toMatch(/Get/);
-    }
+      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
+      "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
+      "AEGP_UtilitySuite6.AEGP_HostIsActivated",
+    ]);
   });
 });
 
