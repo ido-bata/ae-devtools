@@ -258,7 +258,7 @@ try {
 
       const list = await request("tools/list");
       const names = (list.result?.tools ?? []).map((t) => t.name).sort();
-      assertNode.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_verify"], "tools/list mismatch");
+      assertNode.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_session", "ae_verify"], "tools/list mismatch");
 
       // Consent default deny still holds through the packaged bin: an
       // ae_execute without consent must be refused before any session.
