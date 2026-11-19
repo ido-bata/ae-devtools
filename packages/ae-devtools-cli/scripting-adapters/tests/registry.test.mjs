@@ -391,3 +391,9 @@ test("coverage claims only reference members actually exercised AND present in t
   assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue", "render.getOutputSettings", "render.setOutputSetting", "render.listTemplates", "render.applyTemplate", "render.saveTemplate", "render.listOutputModules", "render.addOutputModule", "render.applyOutputModuleTemplate", "render.saveOutputModuleTemplate", "render.setOutputModuleOptions", "render.duplicateQueueItem"]);
   assert.deepEqual(opMembers["provisional.ae.scripting.PropertyBase.name"], undefined, "PropertyBase.name was a wrong-owner claim");
 });
+
+test("member-kind audit: no method/attribute/access/arity mismatches vs inventory", { skip: !repoFixtures && "repo-root fixtures not present (published tarball)" }, async () => {
+  const { auditMemberKinds } = await import("../scripts/audit-member-kinds.mjs");
+  const { findings } = auditMemberKinds();
+  assert.deepEqual(findings, []);
+});
