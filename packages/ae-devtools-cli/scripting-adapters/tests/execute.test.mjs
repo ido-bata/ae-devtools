@@ -164,7 +164,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
     label: 3, startTime: 0, stretch: 100, timeSpanStart: 0, timeSpanDuration: 5,
     audioEnabled: true, enabled: true, comment: "note", setting: "Output File Info",
-    resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", lightType: 2, intensity: 100,
+    resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", centerPoint: [0, 0],
     section: "S", key: "K", default: "d",
     font: "F", fontStyle: "S", fontSize: 100, justification: 1,
     fillColor: [1, 0, 0], tracking: 0, leading: 100,
@@ -424,15 +424,16 @@ test("issue #281 batch: layer creation + text + footage/project read detail", as
   const badText = await go("text.setText", { compName: "C", layerName: "BG", text: "x" });
   assert.notEqual(badText.outcome, "COMPLETED");
 
-  // layer.addCamera / addLight: 3D-layer flag read-back.
-  const cam = await go("layer.addCamera", { compName: "C", name: "Cam 1" });
+  // layer.addCamera / addLight use the real (name, centerPoint) signature.
+  const cam = await go("layer.addCamera", { compName: "C", name: "Cam 1", centerPoint: [10, 20] });
   assert.equal(cam.outcome, "COMPLETED");
   assert.equal(cam.result.threeDLayer, true);
-  const light = await go("layer.addLight", { compName: "C", name: "Key", lightType: 2, intensity: 80 });
+  const light = await go("layer.addLight", { compName: "C", name: "Key", centerPoint: [30, 40] });
   assert.equal(light.outcome, "COMPLETED");
   assert.equal(light.result.threeDLayer, true);
-  // lightType outside the LightType enum range refuses before dispatch.
-  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad", lightType: 9 })).reason, "INVALID_ARGS");
+  // Missing/invalid centerPoint refuses before dispatch.
+  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad" })).reason, "INVALID_ARGS");
+  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad", centerPoint: [1] })).reason, "INVALID_ARGS");
 
   // read.footageDetail: import footage, then read AVItem + FootageSource fields.
   await go("item.import", { path: "/tmp/clip.mov" });

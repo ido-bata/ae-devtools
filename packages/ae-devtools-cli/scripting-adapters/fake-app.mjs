@@ -469,19 +469,28 @@ function makeComp(name, w, h, par, dur, owner) {
       comp.__reindex();
       return l;
     },
-    addCamera(cname) {
+    addCamera(cname, centerPoint) {
+      if (!Array.isArray(centerPoint) || centerPoint.length !== 2 ||
+          centerPoint.some((v) => typeof v !== "number" || !isFinite(v))) {
+        throw new Error("fake-app: addCamera requires centerPoint [x, y]");
+      }
       const l = makeLayer(cname, comp, "camera");
       l.threeDLayer = true;
+      l.__centerPoint = centerPoint.slice();
       comp.__layers.push(l);
       comp.__reindex();
       return l;
     },
-    // Real signature: addLight(name, lightType, lightIntensity);
-    // lightType is the LightType enum, stored verbatim by the fake.
-    addLight(lname, ltype, intensity) {
+    // Real signature: addLight(name, centerPoint). Light type and
+    // intensity are LightLayer properties, not creation arguments.
+    addLight(lname, centerPoint) {
+      if (!Array.isArray(centerPoint) || centerPoint.length !== 2 ||
+          centerPoint.some((v) => typeof v !== "number" || !isFinite(v))) {
+        throw new Error("fake-app: addLight requires centerPoint [x, y]");
+      }
       const l = makeLayer(lname, comp, "light");
       l.threeDLayer = true;
-      l.__light = { lightType: ltype === undefined ? null : ltype, intensity: intensity === undefined ? null : intensity };
+      l.__centerPoint = centerPoint.slice();
       comp.__layers.push(l);
       comp.__reindex();
       return l;

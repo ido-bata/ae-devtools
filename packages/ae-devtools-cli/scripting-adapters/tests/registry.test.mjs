@@ -99,8 +99,7 @@ function sampleArgs(op) {
     else if (n === "resolutionFactor") a[n] = 0.5;
     else if (n === "color") a[n] = [1, 0, 0];
     else if (n === "text") a[n] = "sample text";
-    else if (n === "lightType") a[n] = 2;
-    else if (n === "intensity") a[n] = 100;
+    else if (n === "centerPoint") a[n] = [0, 0];
     else if (n === "fontSize") a[n] = 100;
     else if (n === "justification") a[n] = 1;
     else if (n === "fillColor") a[n] = [1, 0, 0];

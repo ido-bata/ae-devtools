@@ -748,8 +748,9 @@ var detail = {
   typeName: String(it.typeName) // display-only (localized); never branch on it
 };
 // Media-bearing items (CompItem/FootageItem) expose AVItem fields;
-// folders and other items do not — discriminate by instanceof.
-if (it instanceof AVItem) {
+// folders and other items do not. AVItem/Item are documentation base
+// classes, not ExtendScript globals — branch on the concrete classes.
+if (it instanceof CompItem || it instanceof FootageItem) {
   detail.duration = it.duration;
   detail.width = it.width;
   detail.height = it.height;
@@ -1330,11 +1331,18 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index, text: doc.t
     permission: "execute",
     mutating: true,
     members: [S("LayerCollection", "addCamera")],
-    args: ["compName", "name"],
-    validate: (a) => requireArgs(a, ["compName", "name"]),
+    args: ["compName", "name", "centerPoint"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "name", "centerPoint"]);
+      jsLit(a.centerPoint);
+      if (!Array.isArray(a.centerPoint) || a.centerPoint.length !== 2) {
+        throw new Error("layer.addCamera: centerPoint must be [x, y]");
+      }
+    },
+    // Real signature: addCamera(name, centerPoint); z is set to 0 by AE.
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
-var layer = comp.layers.addCamera(${js(a.name)});
+var layer = comp.layers.addCamera(${js(a.name)}, ${jsLit(a.centerPoint)});
 return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
 `,
   },
@@ -1346,32 +1354,21 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer
     permission: "execute",
     mutating: true,
     members: [S("LayerCollection", "addLight")],
-    args: ["compName", "name", "lightType", "intensity"],
+    args: ["compName", "name", "centerPoint"],
     validate: (a) => {
-      requireArgs(a, ["compName", "name"]);
-      // Real signature: addLight(name, lightType, lightIntensity).
-      // lightType is the LightType enum (1=parallel,2=spot,3=point,4=ambient).
-      if (a.lightType !== undefined && a.lightType !== null &&
-          (!Number.isInteger(a.lightType) || a.lightType < 1 || a.lightType > 4)) {
-        throw new Error("layer.addLight: lightType must be an integer 1-4 (LightType enum)");
-      }
-      if (a.intensity !== undefined && a.intensity !== null &&
-          !Number.isFinite(Number(a.intensity))) {
-        throw new Error("layer.addLight: intensity must be a finite number");
+      requireArgs(a, ["compName", "name", "centerPoint"]);
+      jsLit(a.centerPoint);
+      if (!Array.isArray(a.centerPoint) || a.centerPoint.length !== 2) {
+        throw new Error("layer.addLight: centerPoint must be [x, y]");
       }
     },
-    source: (a) => {
-      const hasType = a.lightType !== undefined && a.lightType !== null;
-      const hasIntensity = a.intensity !== undefined && a.intensity !== null;
-      const args = [js(a.name)];
-      if (hasType) args.push(String(a.lightType));
-      if (hasIntensity) args.push(String(Number(a.intensity)));
-      return `${PRELUDE}
+    // Real signature: addLight(name, centerPoint). Light type/intensity
+    // are layer properties set after creation, not addLight arguments.
+    source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
-var layer = comp.layers.addLight(${args.join(", ")});
+var layer = comp.layers.addLight(${js(a.name)}, ${jsLit(a.centerPoint)});
 return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
-`;
-    },
+`,
   },
   {
     id: "text.setText",
