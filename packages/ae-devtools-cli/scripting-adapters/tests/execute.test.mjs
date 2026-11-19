@@ -186,6 +186,8 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     footageName: "x.aep", parentFolder: null, selected: true, id: 1,
     solidName: "Proxy Solid", placeholderName: "Proxy Placeholder",
     forceAlphabetical: true, useProxy: true,
+    moduleIndex: 1, templateName: "Lossless",
+    includeSourceXMP: true, postRenderAction: "SET_PROXY",
     vertices: [[0, 0], [10, 0], [10, 10]],
     inTangents: [[0, 0], [0, 0], [0, 0]],
     outTangents: [[0, 0], [0, 0], [0, 0]],
@@ -207,7 +209,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "read.itemById") args.id = 1;
     if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
-    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addBoxText","layer.addCamera","layer.addLight","text.setText","text.setPaint","text.setBoxMetrics","text.setCharAttributes","text.readDocument","layer.replaceSource","render.duplicateQueueItem","layer.addShape","shape.readContents","shape.addPath","marker.setLayerMarker","marker.readLayerMarkers"].includes(op.id)) args.compName = "C";
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","render.listTemplates","render.applyTemplate","render.saveTemplate","render.listOutputModules","render.addOutputModule","render.applyOutputModuleTemplate","render.saveOutputModuleTemplate","render.setOutputModuleOptions","layer.addSolid","layer.addText","layer.addBoxText","layer.addCamera","layer.addLight","text.setText","text.setPaint","text.setBoxMetrics","text.setCharAttributes","text.readDocument","layer.replaceSource","render.duplicateQueueItem","layer.addShape","shape.readContents","shape.addPath","marker.setLayerMarker","marker.readLayerMarkers"].includes(op.id)) args.compName = "C";
     // Batch-3 layer creators get distinct names so text.setText can
     // resolve the text layer unambiguously.
     if (op.id === "layer.addSolid") args.name = "Solid 1";
@@ -1243,4 +1245,104 @@ test("issue #298 batch: AVItem proxy surface — file/solid/placeholder, main-vs
   }
   const byId = await go("read.itemProxy", { name: { id: secondId } });
   assert.equal(byId.outcome, "COMPLETED");
+});
+
+test("issue #299 batch: render/output-module templates — apply/save/list, multi-OM, counterexamples", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("render.queueComp", { compName: "C" })).outcome, "COMPLETED");
+
+  // Render-settings templates: deterministic seeded names.
+  const lt = await go("render.listTemplates", { compName: "C" });
+  assert.equal(lt.outcome, "COMPLETED");
+  assert.ok(lt.result.templates.includes("Best Settings"));
+  assert.ok(lt.result.templates.includes("Lossless"));
+  assert.ok(lt.result.templates.includes("Draft"));
+
+  // applyTemplate mutates RQ item settings (Draft payload sets logType 1).
+  const at = await go("render.applyTemplate", { compName: "C", templateName: "Draft" });
+  assert.equal(at.outcome, "COMPLETED");
+  assert.equal(at.result.logType, 1);
+  assert.equal(at.result.timeSpanStart, 0);
+
+  // saveTemplate persists current settings under a new name; re-applying
+  // restores them.
+  await go("render.setTimeSpan", { compName: "C", timeSpanStart: 1, timeSpanDuration: 3 });
+  const sv = await go("render.saveTemplate", { compName: "C", templateName: "My Preset" });
+  assert.equal(sv.outcome, "COMPLETED");
+  assert.ok(sv.result.templates.includes("My Preset"));
+  await go("render.applyTemplate", { compName: "C", templateName: "Draft" });
+  const re = await go("render.applyTemplate", { compName: "C", templateName: "My Preset" });
+  assert.equal(re.result.timeSpanStart, 1);
+  assert.equal(re.result.timeSpanDuration, 3);
+
+  // Unknown template is refused by the host, not silently ignored.
+  assert.notEqual((await go("render.applyTemplate", { compName: "C", templateName: "No Such Template" })).outcome, "COMPLETED");
+  assert.notEqual((await go("render.applyTemplate", { compName: "Ghost", templateName: "Draft" })).outcome, "COMPLETED");
+  assert.equal((await go("render.applyTemplate", { compName: "C", templateName: "" })).reason, "INVALID_ARGS");
+
+  // Output modules: one by default; add a second.
+  const lom = await go("render.listOutputModules", { compName: "C" });
+  assert.equal(lom.result.numOutputModules, 1);
+  assert.equal(lom.result.modules[0].name, "Lossless");
+  assert.ok(lom.result.modules[0].templates.includes("Draft"));
+  assert.equal(lom.result.modules[0].file, null);
+
+  const add = await go("render.addOutputModule", { compName: "C" });
+  assert.equal(add.outcome, "COMPLETED");
+  assert.equal(add.result.numOutputModules, 2);
+  assert.equal(add.result.index, 2);
+  const lom2 = await go("render.listOutputModules", { compName: "C" });
+  assert.equal(lom2.result.numOutputModules, 2);
+  assert.equal(lom2.result.modules[1].name, "Output Module 2");
+
+  // OM template apply/save on module 2; module 1 stays independent.
+  const aot = await go("render.applyOutputModuleTemplate", { compName: "C", moduleIndex: 2, templateName: "Draft" });
+  assert.equal(aot.outcome, "COMPLETED");
+  assert.equal(aot.result.settings["Output File Info"], "[compName].avi");
+  const sot = await go("render.saveOutputModuleTemplate", { compName: "C", moduleIndex: 2, templateName: "My OM" });
+  assert.ok(sot.result.templates.includes("My OM"));
+  const lom3 = await go("render.listOutputModules", { compName: "C" });
+  assert.equal(lom3.result.modules[0].settings, undefined); // no settings in list shape
+  assert.equal(lom3.result.modules[0].file, null);
+
+  // OM options: file/includeSourceXMP/postRenderAction on module 1.
+  const soo = await go("render.setOutputModuleOptions", {
+    compName: "C", moduleIndex: 1,
+    file: "/tmp/out.mov", includeSourceXMP: true, postRenderAction: "SET_PROXY",
+  });
+  assert.equal(soo.outcome, "COMPLETED");
+  assert.equal(soo.result.file, "/tmp/out.mov");
+  assert.equal(soo.result.includeSourceXMP, true);
+  assert.equal(soo.result.postRenderAction, 3); // fake PostRenderAction.SET_PROXY
+  const lom4 = await go("render.listOutputModules", { compName: "C" });
+  assert.equal(lom4.result.modules[0].file, "/tmp/out.mov");
+  assert.equal(lom4.result.modules[0].includeSourceXMP, true);
+  assert.equal(lom4.result.modules[0].postRenderAction, 3);
+  // Module 2 unaffected — independence across output modules.
+  assert.equal(lom4.result.modules[1].file, null);
+
+  // Counterexamples: bad module index, unknown OM template, bad enum,
+  // missing option, wrong comp.
+  assert.notEqual((await go("render.applyOutputModuleTemplate", { compName: "C", moduleIndex: 9, templateName: "Draft" })).outcome, "COMPLETED");
+  assert.notEqual((await go("render.applyOutputModuleTemplate", { compName: "C", moduleIndex: 1, templateName: "Nope" })).outcome, "COMPLETED");
+  assert.equal((await go("render.applyOutputModuleTemplate", { compName: "C", moduleIndex: 0, templateName: "Draft" })).reason, "INVALID_ARGS");
+  assert.equal((await go("render.setOutputModuleOptions", { compName: "C", moduleIndex: 1 })).reason, "INVALID_ARGS");
+  assert.equal((await go("render.setOutputModuleOptions", { compName: "C", moduleIndex: 1, postRenderAction: "BOGUS" })).reason, "INVALID_ARGS");
+  assert.equal((await go("render.setOutputModuleOptions", { compName: "C", moduleIndex: 1.5, includeSourceXMP: true })).reason, "INVALID_ARGS");
+  assert.notEqual((await go("render.listOutputModules", { compName: "Ghost" })).outcome, "COMPLETED");
+
+  // Duplicate queue item copies all output modules; afterwards the comp
+  // name is ambiguous for compName-based ops (itemRef by id unaffected
+  // is a separate resolver path not exercised here).
+  const dq = await go("render.duplicateQueueItem", { compName: "C" });
+  assert.equal(dq.outcome, "COMPLETED");
+  assert.notEqual((await go("render.listOutputModules", { compName: "C" })).outcome, "COMPLETED");
 });

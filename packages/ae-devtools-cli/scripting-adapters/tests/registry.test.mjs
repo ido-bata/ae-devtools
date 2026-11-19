@@ -126,6 +126,10 @@ function sampleArgs(op) {
     else if (n === "placeholderName") a[n] = "Proxy Placeholder";
     else if (n === "forceAlphabetical") a[n] = true;
     else if (n === "useProxy") a[n] = true;
+    else if (n === "moduleIndex") a[n] = 1;
+    else if (n === "templateName") a[n] = "Lossless";
+    else if (n === "postRenderAction") a[n] = "SET_PROXY";
+    else if (n === "includeSourceXMP") a[n] = true;
     else if (n === "fixExpressions") a[n] = false;
     else if (n === "parentFolder") a[n] = null;
     else if (n === "selected") a[n] = true;
@@ -457,6 +461,6 @@ test("coverage claims only reference members actually exercised AND present in t
   const opMembers = {};
   for (const op of OPERATIONS) for (const m of op.members) (opMembers[m] ??= []).push(op.id);
   assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueue.rendering"], ["read.renderQueueStatus"]);
-  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue", "render.getOutputSettings", "render.setOutputSetting", "render.duplicateQueueItem"]);
+  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue", "render.getOutputSettings", "render.setOutputSetting", "render.listTemplates", "render.applyTemplate", "render.saveTemplate", "render.listOutputModules", "render.addOutputModule", "render.applyOutputModuleTemplate", "render.saveOutputModuleTemplate", "render.setOutputModuleOptions", "render.duplicateQueueItem"]);
   assert.deepEqual(opMembers["provisional.ae.scripting.PropertyBase.name"], undefined, "PropertyBase.name was a wrong-owner claim");
 });

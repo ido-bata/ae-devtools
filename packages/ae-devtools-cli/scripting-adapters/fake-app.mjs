@@ -243,6 +243,12 @@ export const KeyframeInterpolationType = { BEZIER: 1, LINEAR: 2, HOLD: 3 };
 export const TrackMatteType = {
   NO_TRACK_MATTE: 0, ALPHA: 1, ALPHA_INVERTED: 2, LUMA: 3, LUMA_INVERTED: 4,
 };
+// PostRenderAction (Issue #299): numeric values are declaration-order
+// stand-ins — the inventory records no numericValue and adapters pass
+// enum NAMES, so the fake mapping is not load-bearing for claims.
+export const PostRenderAction = {
+  NONE: 0, IMPORT: 1, IMPORT_AND_REPLACE_USAGE: 2, SET_PROXY: 3,
+};
 
 // KeyframeEase constructor object. influence is documented as
 // [0.1..100.0]; speed is a finite float whose units depend on the
@@ -1108,6 +1114,137 @@ export function createAdapterFakeApp() {
     items.__nextItemId = 0;
     project.activeItem = null;
   };
+  // Render/output-module template stores (Issue #299). Real templates
+  // are .aer/.aom files in AE's template folders; the fake keeps a
+  // deterministic in-memory registry seeded with AE's shipped template
+  // names. Render-template payloads carry only the RQ-item settings the
+  // fake models; OM-template payloads are OutputModule settings maps.
+  const renderTemplateStore = {
+    "Best Settings": { skipFrames: 0, logType: 0, startTime: 0, timeSpanStart: 0 },
+    "Lossless": { skipFrames: 0, logType: 0, startTime: 0, timeSpanStart: 0 },
+    "Draft": { skipFrames: 0, logType: 1, startTime: 0, timeSpanStart: 0 },
+  };
+  const omTemplateStore = {
+    "Lossless": { "Output File Info": "[compName].mov" },
+    "Draft": { "Output File Info": "[compName].avi" },
+  };
+  const makeOM = (name) => ({
+    name,
+    __owner: null,
+    file: null,
+    includeSourceXMP: false,
+    postRenderAction: 0,
+    __settings: { "Output File Info": "[compName].mov" },
+    get templates() { return Object.keys(omTemplateStore); },
+    getSettings() {
+      const out = {};
+      for (const k in this.__settings) out[k] = this.__settings[k];
+      return out;
+    },
+    setSetting(k, v) { this.__settings[k] = v; },
+    applyTemplate(tname) {
+      if (!Object.prototype.hasOwnProperty.call(omTemplateStore, tname)) {
+        throw new Error("fake-app: unknown output module template: " + tname);
+      }
+      const t = omTemplateStore[tname];
+      for (const k in t) this.__settings[k] = t[k];
+    },
+    saveAsTemplate(tname) {
+      if (typeof tname !== "string" || tname.length === 0) {
+        throw new Error("fake-app: saveAsTemplate requires a non-empty name");
+      }
+      omTemplateStore[tname] = Object.assign({}, this.__settings);
+    },
+    remove() {
+      const arr = this.__owner === null ? null : this.__owner.__oms;
+      if (arr !== null) {
+        const i = arr.indexOf(this);
+        if (i >= 0) arr.splice(i, 1);
+      }
+    },
+  });
+  const makeRQItem = (comp) => {
+    const it = {
+      comp, index: 0, status: 1,
+      timeSpanStart: 0,
+      timeSpanDuration: comp.duration,
+      // Issue #289: queue item control fields (fake defaults).
+      startTime: 0,
+      skipFrames: 0,
+      logType: 0,
+      elapsedSeconds: 0,
+      __oms: [makeOM("Lossless")],
+      // RenderQueueItem.templates: names of available render settings
+      // templates (Issue #299); saveAsTemplate adds to the store.
+      get templates() { return Object.keys(renderTemplateStore); },
+      applyTemplate(tname) {
+        if (!Object.prototype.hasOwnProperty.call(renderTemplateStore, tname)) {
+          throw new Error("fake-app: unknown render settings template: " + tname);
+        }
+        const t = renderTemplateStore[tname];
+        for (const k in t) this[k] = t[k];
+      },
+      saveAsTemplate(tname) {
+        if (typeof tname !== "string" || tname.length === 0) {
+          throw new Error("fake-app: saveAsTemplate requires a non-empty name");
+        }
+        renderTemplateStore[tname] = {
+          skipFrames: this.skipFrames, logType: this.logType,
+          startTime: this.startTime, timeSpanStart: this.timeSpanStart,
+        };
+      },
+      get numOutputModules() { return this.__oms.length; },
+      get outputModules() {
+        const item = this;
+        return collection(item.__oms, {
+          add() {
+            const om = makeOM("Output Module " + (item.__oms.length + 1));
+            om.__owner = item;
+            item.__oms.push(om);
+            return om;
+          },
+        });
+      },
+      outputModule(idx) {
+        const om = this.__oms[idx - 1];
+        if (om === undefined) {
+          throw new Error("fake-app: output module index out of range: " + idx);
+        }
+        return om;
+      },
+      duplicate() {
+        // Copies the RECEIVER's settings (this === source item),
+        // including every output module's settings.
+        const d = makeRQItem(this.comp);
+        d.status = 1;
+        d.timeSpanStart = this.timeSpanStart;
+        d.timeSpanDuration = this.timeSpanDuration;
+        d.startTime = this.startTime;
+        d.skipFrames = this.skipFrames;
+        d.logType = this.logType;
+        d.elapsedSeconds = 0;
+        d.__oms = this.__oms.map((om) => {
+          const c = makeOM(om.name);
+          c.__settings = Object.assign({}, om.__settings);
+          c.file = om.file;
+          c.includeSourceXMP = om.includeSourceXMP;
+          c.postRenderAction = om.postRenderAction;
+          c.__owner = d;
+          return c;
+        });
+        renderItems.push(d);
+        renderItems.forEach((r, j) => { r.index = j + 1; });
+        return d;
+      },
+      remove() {
+        const i = renderItems.indexOf(this);
+        if (i >= 0) renderItems.splice(i, 1);
+        renderItems.forEach((r, j) => { r.index = j + 1; });
+      },
+    };
+    it.__oms.forEach((om) => { om.__owner = it; });
+    return it;
+  };
   const project = {
     activeItem: null,
     save() {},
@@ -1134,87 +1271,8 @@ export function createAdapterFakeApp() {
       __rendered: 0,
       items: collection(renderItems, {
         add(comp) {
-          const it = {
-            comp, index: renderItems.length + 1,
-            // RQItemStatus enum value; fake uses the queued constant.
-            status: 1,
-            timeSpanStart: 0,
-            timeSpanDuration: comp.duration,
-            // Issue #289: queue item control fields (fake defaults).
-            startTime: 0,
-            skipFrames: 0,
-            logType: 0,
-            elapsedSeconds: 0,
-            duplicate() {
-              // Copies the RECEIVER's settings (this === source item).
-              const src = this;
-              const d = {
-                comp: src.comp, index: 0, status: 1,
-                timeSpanStart: src.timeSpanStart, timeSpanDuration: src.timeSpanDuration,
-                startTime: src.startTime, skipFrames: src.skipFrames,
-                logType: src.logType, elapsedSeconds: 0,
-                __om: src.__om === undefined ? undefined : {
-                  name: src.__om.name, templates: [],
-                  __settings: Object.assign({}, src.__om.__settings),
-                  getSettings() {
-                    const out = {};
-                    for (const k in this.__settings) out[k] = this.__settings[k];
-                    return out;
-                  },
-                  setSetting(k, v) { this.__settings[k] = v; },
-                },
-                remove() {
-                  const i = renderItems.indexOf(d);
-                  if (i >= 0) renderItems.splice(i, 1);
-                  renderItems.forEach((r, j) => { r.index = j + 1; });
-                },
-                outputModule(idx) {
-                  if (idx !== 1) throw new Error("fake-app: only output module 1 is modeled");
-                  if (this.__om === undefined) {
-                    this.__om = {
-                      name: "Lossless", templates: [],
-                      __settings: { "Output File Info": "[compName].mov" },
-                      getSettings() {
-                        const out = {};
-                        for (const k in this.__settings) out[k] = this.__settings[k];
-                        return out;
-                      },
-                      setSetting(k, v) { this.__settings[k] = v; },
-                    };
-                  }
-                  return this.__om;
-                },
-                duplicate: src.duplicate,
-              };
-              renderItems.push(d);
-              renderItems.forEach((r, j) => { r.index = j + 1; });
-              return d;
-            },
-            remove() {
-              const i = renderItems.indexOf(it);
-              if (i >= 0) renderItems.splice(i, 1);
-              renderItems.forEach((r, j) => { r.index = j + 1; });
-            },
-            outputModule(idx) {
-              if (idx !== 1) throw new Error("fake-app: only output module 1 is modeled");
-              // One OutputModule instance per queue item — settings must
-              // persist across calls like the real host object.
-              if (this.__om === undefined) {
-                this.__om = {
-                  name: "Lossless",
-                  templates: [],
-                  __settings: { "Output File Info": "[compName].mov" },
-                  getSettings() {
-                    const out = {};
-                    for (const k in this.__settings) out[k] = this.__settings[k];
-                    return out;
-                  },
-                  setSetting(k, v) { this.__settings[k] = v; },
-                };
-              }
-              return this.__om;
-            },
-          };
+          const it = makeRQItem(comp);
+          it.index = renderItems.length + 1;
           renderItems.push(it);
           return it;
         },

@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "98f3ae93d7dcc2245c563187ab1fabbafef43c55359628e4a7d56725368f172d"
+      "sha256": "cd8d5235a3952c42040050b5114d7a08e43420b78e99564426c011e60b84fe40"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -25942,12 +25942,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/omcollection/#omcollectionadd"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.addOutputModule)"
           }
         ]
       }
@@ -25982,12 +25986,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmoduleapplytemplate"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.applyOutputModuleTemplate)"
           }
         ]
       }
@@ -26022,12 +26030,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulefile"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.setOutputModuleOptions)"
           }
         ]
       }
@@ -26111,7 +26123,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings, render.applyOutputModuleTemplate)"
           }
         ]
       }
@@ -26146,12 +26158,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmoduleincludesourcexmp"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.setOutputModuleOptions)"
           }
         ]
       }
@@ -26195,7 +26211,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings, render.listOutputModules, render.addOutputModule, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate)"
           }
         ]
       }
@@ -26230,12 +26246,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulepostrenderaction"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.setOutputModuleOptions)"
           }
         ]
       }
@@ -26310,12 +26330,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulesaveastemplate"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.saveOutputModuleTemplate)"
           }
         ]
       }
@@ -26434,12 +26458,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmoduletemplates"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate)"
           }
         ]
       }
@@ -28984,7 +29012,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting, render.listTemplates, render.applyTemplate, render.saveTemplate, render.listOutputModules, render.addOutputModule, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate, render.setOutputModuleOptions)"
           }
         ]
       }
@@ -33885,7 +33913,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting, render.duplicateQueueItem)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.queueComp, read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting, render.listTemplates, render.applyTemplate, render.saveTemplate, render.listOutputModules, render.addOutputModule, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate, render.setOutputModuleOptions, render.duplicateQueueItem)"
           }
         ]
       }
@@ -34248,12 +34276,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemapplytemplate"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.applyTemplate)"
           }
         ]
       }
@@ -34297,7 +34329,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting, render.duplicateQueueItem)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.removeFromQueue, render.getOutputSettings, render.setOutputSetting, render.listTemplates, render.applyTemplate, render.saveTemplate, render.listOutputModules, render.addOutputModule, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate, render.setOutputModuleOptions, render.duplicateQueueItem)"
           }
         ]
       }
@@ -34509,7 +34541,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.applyTemplate)"
           }
         ]
       }
@@ -34544,12 +34576,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemnumoutputmodules"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.addOutputModule)"
           }
         ]
       }
@@ -34633,7 +34669,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings, render.setOutputSetting)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.getOutputSettings, render.setOutputSetting, render.listOutputModules, render.applyOutputModuleTemplate, render.saveOutputModuleTemplate, render.setOutputModuleOptions)"
           }
         ]
       }
@@ -34668,12 +34704,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemoutputmodules"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listOutputModules, render.addOutputModule)"
           }
         ]
       }
@@ -34832,12 +34872,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemsaveastemplate"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.saveTemplate)"
           }
         ]
       }
@@ -34961,7 +35005,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.applyTemplate)"
           }
         ]
       }
@@ -35005,7 +35049,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.applyTemplate)"
           }
         ]
       }
@@ -35084,12 +35128,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemtemplates"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (render.listTemplates, render.applyTemplate, render.saveTemplate)"
           }
         ]
       }
@@ -35133,7 +35181,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.applyTemplate)"
           }
         ]
       }
@@ -35177,7 +35225,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.renderQueueStatus, render.setTimeSpan, render.applyTemplate)"
           }
         ]
       }
