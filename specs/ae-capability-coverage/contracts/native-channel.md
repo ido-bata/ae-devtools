@@ -124,7 +124,7 @@ Both are zero-argument read-only getters the probe already calls; both stay `imp
 ## 8. Non-goals / explicit limitations
 
 - No mutation/write operations; no consent-token issuance, storage, or verification (`authorizationRef` is opaque).
-- No transport selection, no fallback policy, no ae-a8n-side changes in this slice. The ae-a8n-owned client side (channel preparation, token issuance, request publication, result collection) is tracked as ae-a8n Issue #238 (Slice B).
+- No transport selection, no fallback policy beyond what the channel contract fixes, and no second transport in ae-devtools. The ae-a8n-owned client side (channel preparation, token issuance, request publication, result collection) is implemented in ae-a8n `src/driver/native-channel.ts` under ae-a8n Issue #238 (Slice B; Draft PR ae-a8n#239 at time of writing — merge state is ae-a8n's to report). The fake-environment end-to-end (external request → allowlisted getter → result matching) is the remaining Slice B step on the devtools side.
 - File-channel privacy is not authentication — same limitation as the ae-a8n dispatcher, documented not hidden.
 - `sessionId` is shape-validated only; the plug-in cannot prove which client process supplied it.
 - Windows remains entirely UNVERIFIED.
