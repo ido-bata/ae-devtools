@@ -751,3 +751,85 @@ test("issue #291 batch: FolderItem hierarchy, move, selection, recursive delete"
   const gone = await go("read.itemById", { id: d.result.id });
   assert.notEqual(gone.outcome, "COMPLETED");
 });
+
+test("issue #293 batch: itemRef id/path resolves duplicate names safely", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+  const compArgs = (parentFolder) => ({
+    name: "C", width: 10, height: 10, pixelAspect: 1, duration: 1, frameRate: 30, parentFolder,
+  });
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addFolder", { name: "F" }, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addFolder", { name: "G" }, mut)).outcome, "COMPLETED");
+  const cf = await go("item.addComp", compArgs("F"), mut);
+  const cg = await go("item.addComp", compArgs("G"), mut);
+  assert.equal(cf.outcome, "COMPLETED");
+  assert.equal(cg.outcome, "COMPLETED");
+
+  // Legacy name-only lookup stays fail-closed on duplicate names.
+  const amb = await go("item.setLabel", { name: "C", type: "CompItem", label: 1 }, mut);
+  assert.notEqual(amb.outcome, "COMPLETED");
+
+  // Folder path qualifies the same name without exposing ids to callers.
+  const detailF = await go("read.itemDetail", { name: { name: "C", path: ["F"] } });
+  assert.equal(detailF.outcome, "COMPLETED");
+  assert.equal(detailF.result.item.id, cf.result.id);
+  const detailG = await go("read.itemDetail", { name: { name: "C", path: ["G"] } });
+  assert.equal(detailG.result.item.id, cg.result.id);
+
+  // Stable id is project-scoped and survives reparenting.
+  const byId = await go("item.setLabel", { name: { id: cg.result.id }, type: "CompItem", label: 2 }, mut);
+  assert.equal(byId.outcome, "COMPLETED");
+  const moved = await go("item.setParentFolder", { name: { id: cg.result.id }, type: "CompItem", parentFolder: "F" }, mut);
+  assert.equal(moved.outcome, "COMPLETED");
+  assert.equal(moved.result.parent, "F");
+  const byIdPath = await go("item.setLabel", { name: { id: cg.result.id, path: ["F"] }, type: "CompItem", label: 3 }, mut);
+  assert.equal(byIdPath.outcome, "COMPLETED");
+
+  // id + name/path are consistency checks, not alternate targets.
+  const badName = await go("item.setLabel", { name: { id: cg.result.id, name: "Other" }, type: "CompItem", label: 3 }, mut);
+  assert.notEqual(badName.outcome, "COMPLETED");
+  const badPath = await go("item.setLabel", { name: { id: cg.result.id, path: ["G"] }, type: "CompItem", label: 3 }, mut);
+  assert.notEqual(badPath.outcome, "COMPLETED");
+
+  // Optional project consistency binds a saved project file path; an
+  // unsaved project cannot satisfy the check.
+  const projOk = await go("item.setLabel", { name: { id: cg.result.id, project: "/tmp/fake.aep" }, type: "CompItem", label: 4 }, mut);
+  assert.equal(projOk.outcome, "COMPLETED");
+  const projBad = await go("item.setLabel", { name: { id: cg.result.id, project: "/tmp/other.aep" }, type: "CompItem", label: 5 }, mut);
+  assert.notEqual(projBad.outcome, "COMPLETED");
+  const savedFile = app.project.file;
+  app.project.file = null;
+  const unsaved = await go("item.setLabel", { name: { id: cg.result.id, project: "/tmp/fake.aep" }, type: "CompItem", label: 6 }, mut);
+  app.project.file = savedFile;
+  assert.notEqual(unsaved.outcome, "COMPLETED");
+
+  // Wrong-type and stale ids refuse before mutation.
+  const f = await go("item.addFolder", { name: "H" }, mut);
+  const wrongType = await go("item.setLabel", { name: { id: f.result.id }, type: "CompItem", label: 4 }, mut);
+  assert.notEqual(wrongType.outcome, "COMPLETED");
+  const doomed = await go("item.addComp", compArgs("F"), mut);
+  assert.equal((await go("item.remove", { name: { id: doomed.result.id }, type: "CompItem" }, mut)).outcome, "COMPLETED");
+  const stale = await go("item.setLabel", { name: { id: doomed.result.id }, type: "CompItem", label: 5 }, mut);
+  assert.notEqual(stale.outcome, "COMPLETED");
+
+  // Duplicate folder names make a path segment ambiguous even when the leaf is unique.
+  const h1 = await go("item.addFolder", { name: "H" }, mut);
+  const h2 = await go("item.addFolder", { name: "H" }, mut);
+  await go("item.setParentFolder", { name: { id: cf.result.id }, type: "CompItem", parentFolder: { id: h1.result.id } }, mut);
+  assert.equal((await go("item.addComp", { name: "X", width: 10, height: 10, pixelAspect: 1, duration: 1, frameRate: 30, parentFolder: { id: h1.result.id } }, mut)).outcome, "COMPLETED");
+  const ambPath = await go("item.setLabel", { name: { name: "X", path: ["H"] }, type: "CompItem", label: 6 }, mut);
+  assert.notEqual(ambPath.outcome, "COMPLETED");
+
+  // compName accepts the same itemRef object for comp-targeted ops.
+  const nl = await go("comp.addNullLayer", { compName: { name: "C", path: ["F"] }, layerName: "N1" }, mut);
+  assert.equal(nl.outcome, "COMPLETED");
+  const layers = await go("read.compLayers", { compName: { id: cg.result.id } });
+  assert.equal(layers.outcome, "COMPLETED");
+  assert.equal(layers.result.layers.length, 1);
+});
