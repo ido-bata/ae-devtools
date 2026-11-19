@@ -102,14 +102,17 @@
     "ae.scripting.Item.name": {
       "ops": [
         "read.projectSummary",
-        "read.itemDetail"
+        "read.itemDetail",
+        "comp.duplicate",
+        "item.setLabel"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Item.id": {
       "ops": [
         "read.projectSummary",
-        "read.itemDetail"
+        "read.itemDetail",
+        "comp.duplicate"
       ],
       "evidence": "fake/mock only"
     },
@@ -171,14 +174,18 @@
     "ae.scripting.Project.renderQueue": {
       "ops": [
         "render.queueComp",
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueue.items": {
       "ops": [
         "render.queueComp",
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     },
@@ -218,7 +225,8 @@
     "ae.scripting.Layer.locked": {
       "ops": [
         "read.compLayers",
-        "read.layerDetail"
+        "read.layerDetail",
+        "layer.setState"
       ],
       "evidence": "fake/mock only"
     },
@@ -226,14 +234,17 @@
       "ops": [
         "read.layerDetail",
         "read.propertyValue",
-        "read.keyframes"
+        "read.keyframes",
+        "read.valueAtTime"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.numKeys": {
       "ops": [
         "read.propertyValue",
-        "read.keyframes"
+        "read.keyframes",
+        "anim.removeKeyframe",
+        "read.valueAtTime"
       ],
       "evidence": "fake/mock only"
     },
@@ -263,7 +274,9 @@
     },
     "ae.scripting.RenderQueueItem.comp": {
       "ops": [
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     },
@@ -275,13 +288,15 @@
     },
     "ae.scripting.RenderQueueItem.timeSpanStart": {
       "ops": [
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.setTimeSpan"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueueItem.timeSpanDuration": {
       "ops": [
-        "read.renderQueueStatus"
+        "read.renderQueueStatus",
+        "render.setTimeSpan"
       ],
       "evidence": "fake/mock only"
     },
@@ -324,6 +339,78 @@
     "ae.scripting.CompItem.resolutionFactor": {
       "ops": [
         "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.importFile": {
+      "ops": [
+        "item.import"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.ImportOptions.file": {
+      "ops": [
+        "item.import"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.duplicate": {
+      "ops": [
+        "comp.duplicate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.label": {
+      "ops": [
+        "item.setLabel"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.startTime": {
+      "ops": [
+        "layer.setTiming"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.stretch": {
+      "ops": [
+        "layer.setTiming"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.solo": {
+      "ops": [
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.shy": {
+      "ops": [
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.label": {
+      "ops": [
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.removeKey": {
+      "ops": [
+        "anim.removeKeyframe"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.valueAtTime": {
+      "ops": [
+        "read.valueAtTime"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.remove": {
+      "ops": [
+        "render.removeFromQueue"
       ],
       "evidence": "fake/mock only"
     }

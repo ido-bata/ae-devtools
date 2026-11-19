@@ -58,7 +58,7 @@ t("doctor reports environment without contacting AE", () => {
 
 t("discover lists registry ops, honest evidence", () => {
   const r = run(["discover"]).body;
-  assert.equal(r.operationCount, 26);
+  assert.equal(r.operationCount, 35);
   assert.equal(r.evidence.realHostVerified, 0);
 });
 

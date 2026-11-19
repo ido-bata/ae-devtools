@@ -22,7 +22,7 @@ export function fakeHostContext(app) {
     File: class { constructor(p) { this.fsName = p; this.exists = true; } },
     CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
     CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
-    AVItem: app.AVItem,
+    AVItem: app.AVItem, ImportOptions: app.ImportOptions,
   };
 }
 

@@ -80,6 +80,28 @@ function makeProperty(value, opts = {}) {
       this.isTimeVarying = this.numKeys > 0;
       this.value = this.__keys[this.__keys.length - 1].value;
     },
+    // Real API: removes the keyframe at a 1-based key INDEX; out of
+    // range throws (same contract as setValueAtKey).
+    removeKey(keyIndex) {
+      if (!Number.isInteger(keyIndex) || keyIndex < 1 || keyIndex > this.numKeys) {
+        throw new Error("fake-app: invalid keyframe index " + keyIndex);
+      }
+      this.__keys.splice(keyIndex - 1, 1);
+      this.numKeys = this.__keys.length;
+      this.isTimeVarying = this.numKeys > 0;
+    },
+    // Approximation: returns the value of the last key at-or-before t
+    // (AE interpolates; the fake only needs a deterministic, honest
+    // read-back for contract tests — not motion-accurate sampling).
+    valueAtTime(t) {
+      if (this.numKeys === 0) return Array.isArray(this.value) ? this.value.slice() : this.value;
+      var v = this.__keys[0].value;
+      for (var i = 0; i < this.__keys.length; i++) {
+        if (this.__keys[i].time <= t) v = this.__keys[i].value;
+        else break;
+      }
+      return Array.isArray(v) ? v.slice() : v;
+    },
     get expression() { return this.__expr || ""; },
     set expression(v) {
       if (!expressionAllowed) throw new Error("fake-app: expression not allowed on this property");
@@ -133,6 +155,12 @@ function makeLayer(name, comp) {
     __parent: null,
     enabled: true,
     locked: false,
+    solo: false,
+    shy: false,
+    label: 0,
+    comment: "",
+    startTime: 0,
+    stretch: 100,
     inPoint: 0,
     outPoint: comp ? comp.duration : 0,
     __pos: makeProperty([0, 0]),
@@ -201,6 +229,26 @@ function makeComp(name, w, h, par, dur, owner) {
     },
     __reindex() { comp.__layers.forEach((l, i) => { l.index = i + 1; }); },
     resolutionFactor: 1,
+    label: 0,
+    comment: "",
+    duplicate() {
+      const d = makeComp(this.name + " copy", this.width, this.height,
+        this.pixelAspect, this.duration, owner);
+      d.frameRate = this.frameRate;
+      for (const l of this.__layers) {
+        const nl = makeLayer(l.name, d);
+        nl.startTime = l.startTime;
+        nl.stretch = l.stretch;
+        nl.solo = l.solo;
+        nl.shy = l.shy;
+        nl.label = l.label;
+        nl.locked = l.locked;
+        d.__layers.push(nl);
+      }
+      d.__reindex();
+      owner.push(d);
+      return d;
+    },
     __moveLayer(layer, to) {
       const i = comp.__layers.indexOf(layer);
       if (i < 0) return;
@@ -227,6 +275,40 @@ function makeComp(name, w, h, par, dur, owner) {
   return comp;
 }
 
+// ImportOptions is a global ExtendScript constructor (not app.*).
+// The fake models only the file attribute; importAs variants are a
+// recorded non-claim until a batch needs them.
+export class ImportOptions {
+  constructor() {
+    this.file = null;
+    this.importAs = null;
+  }
+}
+
+function makeFootage(path, owner) {
+  const f = new FootageItem();
+  const base = String(path).split("/").pop().split("\\").pop();
+  Object.assign(f, {
+    name: base,
+    typeName: "Footage",
+    id: owner.length + 1,
+    label: 0,
+    comment: "",
+    duration: 10,
+    width: 1920,
+    height: 1080,
+    pixelAspect: 1,
+    frameRate: 30,
+    footageMissing: false,
+    mainSource: { file: { fsName: String(path) } },
+    remove() {
+      const i = owner.indexOf(f);
+      if (i >= 0) owner.splice(i, 1);
+    },
+  });
+  return f;
+}
+
 export function createAdapterFakeApp() {
   const items = [];
   const renderItems = [];
@@ -235,6 +317,17 @@ export function createAdapterFakeApp() {
     save() {},
     close() {},
     file: { fsName: "/tmp/fake.aep" },
+    importFile(io) {
+      if (io === null || io.file === null || io.file === undefined) {
+        throw new Error("fake-app: ImportOptions.file is required");
+      }
+      if (io.file.exists === false) {
+        throw new Error("fake-app: import file not found: " + io.file.fsName);
+      }
+      const f = makeFootage(io.file.fsName, items);
+      items.push(f);
+      return f;
+    },
     renderQueue: {
       rendering: false,
       __rendered: 0,
@@ -246,6 +339,11 @@ export function createAdapterFakeApp() {
             status: 1,
             timeSpanStart: 0,
             timeSpanDuration: comp.duration,
+            remove() {
+              const i = renderItems.indexOf(it);
+              if (i >= 0) renderItems.splice(i, 1);
+              renderItems.forEach((r, j) => { r.index = j + 1; });
+            },
           };
           renderItems.push(it);
           return it;
@@ -272,6 +370,8 @@ export function createAdapterFakeApp() {
         name,
         typeName: "Folder",
         id: items.length + 1,
+        label: 0,
+        comment: "",
         remove() {
           const i = items.indexOf(f);
           if (i >= 0) items.splice(i, 1);
@@ -291,6 +391,7 @@ export function createAdapterFakeApp() {
   app.FolderItem = FolderItem;
   app.FootageItem = FootageItem;
   app.AVItem = AVItem;
+  app.ImportOptions = ImportOptions;
   app.__state = {
     items,
     fingerprint: () => JSON.stringify(items.map((i) => ({ n: i.name, t: i.typeName }))),

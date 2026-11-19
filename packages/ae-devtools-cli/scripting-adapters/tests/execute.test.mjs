@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { loadTrustedCodec, createJsxRunner } from "../../trusted-execution/runner.mjs";
 import { runOperation } from "../execute.mjs";
 import { createAdapterFakeApp } from "../fake-app.mjs";
+import { fakeHostContext } from "../fake-host.mjs";
 
 const codec = loadTrustedCodec();
 const PIN = { sessionId: "sess-exec", aeVersion: "26.5.3", dispatchId: "disp-1" };
@@ -22,16 +23,7 @@ function makeHostTransport(app) {
     send(text) {
       calls.push(text);
       const env = codec.parse(text);
-      const ctx = vm.createContext({
-        app,
-        JSON, Math, String, Number, Boolean, Array, Object, Date, RegExp,
-        Error, TypeError, ReferenceError, parseInt, parseFloat, isNaN, isFinite,
-        undefined,
-        File: class File { constructor(p) { this.fsName = p; this.exists = true; } },
-        CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
-        CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
-        AVItem: app.AVItem,
-      });
+      const ctx = vm.createContext(fakeHostContext(app));
       let result;
       try {
         result = vm.runInContext("(function(){\n" + env.source + "\n})()", ctx, { filename: "adapter.jsx" });
@@ -170,6 +162,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30, x: 0, y: 0,
     propertyPath: ["ADBE Transform Group", "ADBE Position"], time: 0, keyIndex: 1, value: [0, 0],
     expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
+    label: 3, startTime: 0, stretch: 100, timeSpanStart: 0, timeSpanDuration: 5,
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -182,10 +175,11 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "item.addFolder") args.name = "F";
     if (op.id === "item.remove") { args.name = "F"; args.type = "FolderItem"; }
     if (op.id === "read.itemDetail") args.name = "C";
+    if (op.id === "comp.duplicate" || op.id === "item.setLabel") args.name = "C";
     if (op.id === "layer.setParent") args.parentName = null;
-    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate"].includes(op.id)) args.compName = "C";
-    // setKeyframe needs an existing key: seed one via setValueAtTime first.
-    if (op.id === "anim.setKeyframe") {
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue"].includes(op.id)) args.compName = "C";
+    // Keyframe ops need an existing key: seed one via setValueAtTime first.
+    if (op.id === "anim.setKeyframe" || op.id === "anim.removeKeyframe") {
       await runOperation({ opId: "anim.setValueAtTime",
         args: { compName: "C", layerName: "Null 1", propertyPath: args.propertyPath, time: 0, value: [0, 0] },
         consentProvider: provider, confirmDestructive: true, ...t });
@@ -205,4 +199,87 @@ test("render.renderQueued requires confirmRender in addition to consent+destruct
   assert.equal(t.transport.calls.length, 0);
   const ok = await runOperation({ opId: "render.renderQueued", args: {}, consentProvider: provider, confirmRender: true, ...t });
   assert.equal(ok.outcome, "COMPLETED");
+});
+
+test("issue #275 batch: import/duplicate/label/timing/state/keyframe/render-queue semantics", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  // Setup: project + comp + null layer.
+  assert.equal((await go("project.new", {}, { confirmDestructive: true })).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("comp.addNullLayer", { compName: "C", layerName: "Null 1" })).outcome, "COMPLETED");
+
+  // item.import: real state change — a FootageItem appears in the project.
+  const imp = await go("item.import", { path: "/tmp/clip.mov" });
+  assert.equal(imp.outcome, "COMPLETED");
+  assert.equal(imp.result.name, "clip.mov");
+  const summary = await go("read.projectSummary");
+  assert.ok(summary.result.items.some((i) => i.name === "clip.mov" && i.typeName === "Footage"));
+
+  // comp.duplicate: new comp with copied layers, source untouched.
+  const dup = await go("comp.duplicate", { name: "C" });
+  assert.equal(dup.outcome, "COMPLETED");
+  assert.equal(dup.result.duplicate, "C copy");
+  const dupLayers = await go("read.compLayers", { compName: "C copy" });
+  assert.equal(dupLayers.result.count, 1);
+  assert.equal(dupLayers.result.layers[0].name, "Null 1");
+
+  // item.setLabel: arg validation + read-back through item detail path.
+  assert.equal((await go("item.setLabel", { name: "C", type: "CompItem", label: 17 })).reason, "INVALID_ARGS");
+  const lbl = await go("item.setLabel", { name: "C", type: "CompItem", label: 5 });
+  assert.equal(lbl.outcome, "COMPLETED");
+  assert.equal(lbl.result.label, 5);
+  // Wrong-type guard: name exists but is not a FolderItem.
+  const wrongType = await go("item.setLabel", { name: "C", type: "FolderItem", label: 1 });
+  assert.notEqual(wrongType.outcome, "COMPLETED");
+
+  // layer.setTiming / setState: partial-update semantics + validation.
+  assert.equal((await go("layer.setTiming", { compName: "C", layerName: "Null 1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("layer.setTiming", { compName: "C", layerName: "Null 1", stretch: 0 })).reason, "INVALID_ARGS");
+  const timing = await go("layer.setTiming", { compName: "C", layerName: "Null 1", startTime: 1.5, stretch: 50 });
+  assert.equal(timing.outcome, "COMPLETED");
+  assert.equal(timing.result.startTime, 1.5);
+  assert.equal(timing.result.stretch, 50);
+  const state = await go("layer.setState", { compName: "C", layerName: "Null 1", solo: true, label: 9 });
+  assert.equal(state.outcome, "COMPLETED");
+  assert.equal(state.result.solo, true);
+  assert.equal(state.result.label, 9);
+  assert.equal(state.result.locked, false);
+
+  // Keyframes: seed two keys, read valueAtTime, remove by index.
+  const PATH = ["ADBE Transform Group", "ADBE Position"];
+  await go("anim.setValueAtTime", { compName: "C", layerName: "Null 1", propertyPath: PATH, time: 0, value: [0, 0] });
+  await go("anim.setValueAtTime", { compName: "C", layerName: "Null 1", propertyPath: PATH, time: 2, value: [10, 20] });
+  const atT = await go("read.valueAtTime", { compName: "C", layerName: "Null 1", propertyPath: PATH, time: 2 });
+  assert.equal(atT.outcome, "COMPLETED");
+  assert.deepEqual(atT.result.value, [10, 20]);
+  const keys = await go("read.keyframes", { compName: "C", layerName: "Null 1", propertyPath: PATH });
+  assert.equal(keys.result.numKeys, 2);
+  const rm = await go("anim.removeKeyframe", { compName: "C", layerName: "Null 1", propertyPath: PATH, keyIndex: 2 });
+  assert.equal(rm.outcome, "COMPLETED");
+  assert.equal(rm.result.numKeys, 1);
+  // Out-of-range key index is a host-level failure, not silent success.
+  const rmBad = await go("anim.removeKeyframe", { compName: "C", layerName: "Null 1", propertyPath: PATH, keyIndex: 5 });
+  assert.notEqual(rmBad.outcome, "COMPLETED");
+
+  // Render queue: set span, verify via read-back, then remove.
+  await go("render.queueComp", { compName: "C" });
+  const span = await go("render.setTimeSpan", { compName: "C", timeSpanStart: 1, timeSpanDuration: 3 });
+  assert.equal(span.outcome, "COMPLETED");
+  assert.equal(span.result.timeSpanStart, 1);
+  assert.equal(span.result.timeSpanDuration, 3);
+  const rq = await go("read.renderQueueStatus");
+  const item = rq.result.items.find((i) => i.comp === "C");
+  assert.equal(item.timeSpanStart, 1);
+  assert.equal(item.timeSpanDuration, 3);
+  // Removing a comp that is not queued is a host-level failure.
+  const rmMiss = await go("render.removeFromQueue", { compName: "NoSuchComp" });
+  assert.notEqual(rmMiss.outcome, "COMPLETED");
+  const rmOk = await go("render.removeFromQueue", { compName: "C" });
+  assert.equal(rmOk.outcome, "COMPLETED");
+  assert.equal(rmOk.result.remaining, 0);
 });

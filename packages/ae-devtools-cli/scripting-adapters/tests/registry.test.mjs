@@ -89,6 +89,10 @@ function sampleArgs(op) {
     else if (n === "keyIndex") a[n] = 1;
     else if (n === "value") a[n] = 1;
     else if (n === "effectMatchName") a[n] = "ADBE Gaussian Blur 2";
+    else if (n === "label") a[n] = 3;
+    else if (n === "startTime" || n === "timeSpanStart") a[n] = 0;
+    else if (n === "stretch" || n === "timeSpanDuration") a[n] = 100;
+    else if (n === "solo" || n === "shy" || n === "locked") a[n] = true;
     else a[n] = `sample-${n}`;
   }
   return a;
@@ -402,6 +406,6 @@ test("coverage claims only reference members actually exercised AND present in t
   const opMembers = {};
   for (const op of OPERATIONS) for (const m of op.members) (opMembers[m] ??= []).push(op.id);
   assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueue.rendering"], ["read.renderQueueStatus"]);
-  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus"]);
+  assert.deepEqual(opMembers["provisional.ae.scripting.RenderQueueItem.comp"], ["read.renderQueueStatus", "render.setTimeSpan", "render.removeFromQueue"]);
   assert.deepEqual(opMembers["provisional.ae.scripting.PropertyBase.name"], undefined, "PropertyBase.name was a wrong-owner claim");
 });
