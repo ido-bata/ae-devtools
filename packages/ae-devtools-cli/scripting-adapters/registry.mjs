@@ -203,6 +203,39 @@ function __adp_vectorTree(group) {
   }
   return out;
 }
+// Proxy source snapshot (Issue #298): proxySource is a FootageSource
+// subclass — discriminate with instanceof on the concrete classes,
+// never localized typeName. mainSource stays independent; only
+// proxySource is serialized here. Fields not modeled by the fake
+// (e.g. SolidSource.width) are read but not claimed.
+function __adp_proxySnapshot(it) {
+  var ps = it.proxySource;
+  if (ps === null || ps === undefined) return null;
+  var out = { useProxy: it.useProxy === true };
+  if (ps instanceof FileSource) {
+    out.kind = "file";
+    out.file = ps.file === null || ps.file === undefined ? null : String(ps.file.fsName);
+    out.missingFootagePath = String(ps.missingFootagePath || "");
+    out.isStill = ps.isStill === true;
+  } else if (ps instanceof SolidSource) {
+    out.kind = "solid";
+    out.color = ps.color === undefined ? null : ps.color;
+    out.name = String(ps.name || "");
+    out.width = ps.width;
+    out.height = ps.height;
+    out.pixelAspect = ps.pixelAspect;
+  } else if (ps instanceof PlaceholderSource) {
+    out.kind = "placeholder";
+    out.name = String(ps.name || "");
+    out.width = ps.width;
+    out.height = ps.height;
+    out.frameRate = ps.frameRate;
+    out.duration = ps.duration;
+  } else {
+    out.kind = "unknown";
+  }
+  return out;
+}
 // Hand-rolled JSON serializer: ExtendScript's JSON support is NOT
 // guaranteed across AE versions, and host objects crash native
 // JSON.stringify on circular refs. Adapter results are plain
@@ -2198,6 +2231,220 @@ return __adp_json({
     conformFrameRate: src.conformFrameRate === true,
     missingFootagePath: String(src.missingFootagePath || "")
   }
+});
+`,
+  },
+  {
+    id: "item.setProxy",
+    title: "Set a footage item's proxy to a file",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVItem", "setProxy"), S("AVItem", "proxySource"), S("AVItem", "useProxy"),
+      S("FileSource", "file"), S("FileSource", "missingFootagePath"),
+      S("FootageSource", "isStill"),
+    ],
+    args: ["name", "path"],
+    validate: (a) => {
+      requireArgs(a, ["name", "path"]);
+      if (typeof a.path !== "string" || a.path.length === 0) {
+        throw new Error("item.setProxy: path must be a non-empty string");
+      }
+    },
+    // Real signature: setProxy(file) where file is an ExtendScript File.
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+var f = new File(${js(a.path)});
+if (f.exists === false) __adp_fail("proxy file not found: " + ${js(a.path)});
+it.setProxy(f);
+return __adp_json({ ok: true, item: String(it.name), useProxy: it.useProxy === true, proxy: __adp_proxySnapshot(it) });
+`,
+  },
+  {
+    id: "item.setProxyWithSequence",
+    title: "Set a footage item's proxy to a file sequence",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVItem", "setProxyWithSequence"), S("AVItem", "proxySource"), S("AVItem", "useProxy"),
+      S("FileSource", "file"), S("FileSource", "missingFootagePath"),
+      S("FootageSource", "isStill"),
+    ],
+    args: ["name", "path", "forceAlphabetical"],
+    validate: (a) => {
+      requireArgs(a, ["name", "path"]);
+      if (typeof a.path !== "string" || a.path.length === 0) {
+        throw new Error("item.setProxyWithSequence: path must be a non-empty string");
+      }
+      if (a.forceAlphabetical !== undefined && typeof a.forceAlphabetical !== "boolean") {
+        throw new Error("item.setProxyWithSequence: forceAlphabetical must be a boolean");
+      }
+    },
+    // Real signature: setProxyWithSequence(file, forceAlphabetical).
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+var f = new File(${js(a.path)});
+if (f.exists === false) __adp_fail("proxy file not found: " + ${js(a.path)});
+it.setProxyWithSequence(f, ${a.forceAlphabetical === true ? "true" : "false"});
+return __adp_json({ ok: true, item: String(it.name), useProxy: it.useProxy === true, proxy: __adp_proxySnapshot(it) });
+`,
+  },
+  {
+    id: "item.setProxyWithSolid",
+    title: "Set a footage item's proxy to a solid color source",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVItem", "setProxyWithSolid"), S("AVItem", "proxySource"), S("AVItem", "useProxy"),
+      S("SolidSource", "color"),
+    ],
+    args: ["name", "color", "solidName", "width", "height", "pixelAspect"],
+    validate: (a) => {
+      requireArgs(a, ["name", "color", "solidName", "width", "height", "pixelAspect"]);
+      if (!Array.isArray(a.color) || a.color.length !== 3 ||
+          a.color.some((c) => typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 1)) {
+        throw new Error("item.setProxyWithSolid: color must be [r,g,b] with components in 0..1");
+      }
+      if (typeof a.solidName !== "string") {
+        throw new Error("item.setProxyWithSolid: solidName must be a string");
+      }
+      // Documented ranges: width/height int 1..30000, pixelAspect 0.01..100.
+      for (const n of ["width", "height"]) {
+        if (!Number.isInteger(a[n]) || a[n] < 1 || a[n] > 30000) {
+          throw new Error(`item.setProxyWithSolid: ${n} must be an integer in 1..30000`);
+        }
+      }
+      if (!(typeof a.pixelAspect === "number" && Number.isFinite(a.pixelAspect) &&
+            a.pixelAspect >= 0.01 && a.pixelAspect <= 100)) {
+        throw new Error("item.setProxyWithSolid: pixelAspect must be in 0.01..100");
+      }
+    },
+    // Real signature: setProxyWithSolid(color, name, width, height, pixelAspect).
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+it.setProxyWithSolid([${a.color.join(", ")}], ${js(a.solidName)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.pixelAspect)});
+return __adp_json({ ok: true, item: String(it.name), useProxy: it.useProxy === true, proxy: __adp_proxySnapshot(it) });
+`,
+  },
+  {
+    id: "item.setProxyWithPlaceholder",
+    title: "Set a footage item's proxy to a placeholder source",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVItem", "setProxyWithPlaceholder"), S("AVItem", "proxySource"), S("AVItem", "useProxy"),
+    ],
+    args: ["name", "placeholderName", "width", "height", "frameRate", "duration"],
+    validate: (a) => {
+      requireArgs(a, ["name", "placeholderName", "width", "height", "frameRate", "duration"]);
+      if (typeof a.placeholderName !== "string") {
+        throw new Error("item.setProxyWithPlaceholder: placeholderName must be a string");
+      }
+      // Documented ranges: width/height int 4..30000, frameRate int
+      // 1..99, duration 0..10800.
+      for (const n of ["width", "height"]) {
+        if (!Number.isInteger(a[n]) || a[n] < 4 || a[n] > 30000) {
+          throw new Error(`item.setProxyWithPlaceholder: ${n} must be an integer in 4..30000`);
+        }
+      }
+      if (!Number.isInteger(a.frameRate) || a.frameRate < 1 || a.frameRate > 99) {
+        throw new Error("item.setProxyWithPlaceholder: frameRate must be an integer in 1..99");
+      }
+      if (!(typeof a.duration === "number" && Number.isFinite(a.duration) &&
+            a.duration >= 0 && a.duration <= 10800)) {
+        throw new Error("item.setProxyWithPlaceholder: duration must be in 0..10800");
+      }
+    },
+    // Real signature: setProxyWithPlaceholder(name, width, height, frameRate, duration).
+    // PlaceholderSource exposes no inventoried member attributes, so the
+    // snapshot fields are read but not claimed.
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+it.setProxyWithPlaceholder(${js(a.placeholderName)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.frameRate)}, ${Number(a.duration)});
+return __adp_json({ ok: true, item: String(it.name), useProxy: it.useProxy === true, proxy: __adp_proxySnapshot(it) });
+`,
+  },
+  {
+    id: "item.setProxyToNone",
+    title: "Remove a footage item's proxy",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVItem", "setProxyToNone"), S("AVItem", "proxySource"), S("AVItem", "useProxy"),
+    ],
+    args: ["name"],
+    validate: (a) => requireArgs(a, ["name"]),
+    // Real behavior: proxySource becomes null and useProxy false; the
+    // mainSource is untouched.
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+it.setProxyToNone();
+return __adp_json({ ok: true, item: String(it.name), useProxy: it.useProxy === true, proxy: __adp_proxySnapshot(it) });
+`,
+  },
+  {
+    id: "item.setUseProxy",
+    title: "Toggle a footage item's useProxy flag",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("AVItem", "useProxy"), S("AVItem", "proxySource"),
+    ],
+    args: ["name", "useProxy"],
+    validate: (a) => {
+      requireArgs(a, ["name"]);
+      if (typeof a.useProxy !== "boolean") {
+        throw new Error("item.setUseProxy: useProxy must be a boolean");
+      }
+    },
+    // useProxy is documented read/write; toggling it does not change
+    // proxySource (the assigned proxy stays for re-enabling).
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+it.useProxy = ${a.useProxy ? "true" : "false"};
+return __adp_json({ ok: true, item: String(it.name), useProxy: it.useProxy === true, proxy: __adp_proxySnapshot(it) });
+`,
+  },
+  {
+    id: "read.itemProxy",
+    title: "FootageItem proxy vs main source snapshot (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "298",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("AVItem", "proxySource"), S("AVItem", "useProxy"),
+      S("FootageItem", "mainSource"), S("FileSource", "file"),
+      S("FileSource", "missingFootagePath"), S("FootageSource", "isStill"),
+      S("SolidSource", "color"),
+    ],
+    args: ["name"],
+    validate: (a) => requireArgs(a, ["name"]),
+    // mainSource and proxySource are independent: FileSource.reload
+    // applies to mainSource only and is intentionally not exposed here.
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+var ms = it.mainSource;
+return __adp_json({
+  ok: true, item: String(it.name),
+  useProxy: it.useProxy === true,
+  mainSource: ms === null || ms === undefined ? null : {
+    kind: ms instanceof FileSource ? "file" : (ms instanceof SolidSource ? "solid" : (ms instanceof PlaceholderSource ? "placeholder" : "unknown")),
+    file: ms.file === null || ms.file === undefined ? null : String(ms.file.fsName)
+  },
+  proxy: __adp_proxySnapshot(it)
 });
 `,
   },

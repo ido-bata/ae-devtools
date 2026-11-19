@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "c089eadeaeef025ac56081add31110576bd2156a35d21849b1881a1e5164df02"
+      "sha256": "98f3ae93d7dcc2245c563187ab1fabbafef43c55359628e4a7d56725368f172d"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -14829,12 +14829,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/avitem/#avitemproxysource"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxy, item.setProxyWithSequence, item.setProxyWithSolid, item.setProxyWithPlaceholder, item.setProxyToNone, item.setUseProxy, read.itemProxy)"
           }
         ]
       }
@@ -14869,12 +14873,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/avitem/#avitemsetproxy"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxy)"
           }
         ]
       }
@@ -14909,12 +14917,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/avitem/#avitemsetproxytonone"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxyToNone)"
           }
         ]
       }
@@ -14949,12 +14961,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/avitem/#avitemsetproxywithplaceholder"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxyWithPlaceholder)"
           }
         ]
       }
@@ -14989,12 +15005,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/avitem/#avitemsetproxywithsequence"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxyWithSequence)"
           }
         ]
       }
@@ -15029,12 +15049,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/avitem/#avitemsetproxywithsolid"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxyWithSolid)"
           }
         ]
       }
@@ -15118,7 +15142,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail, item.setProxy, item.setProxyWithSequence, item.setProxyWithSolid, item.setProxyWithPlaceholder, item.setProxyToNone, item.setUseProxy, read.itemProxy)"
           }
         ]
       }
@@ -19022,7 +19046,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail, item.setProxy, item.setProxyWithSequence, read.itemProxy)"
           }
         ]
       }
@@ -19066,7 +19090,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail, item.setProxy, item.setProxyWithSequence, read.itemProxy)"
           }
         ]
       }
@@ -20882,7 +20906,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail, read.itemProxy)"
           }
         ]
       }
@@ -21498,7 +21522,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.footageDetail, item.setProxy, item.setProxyWithSequence, read.itemProxy)"
           }
         ]
       }
@@ -35764,12 +35788,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/sources/solidsource/#solidsourcecolor"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setProxyWithSolid, read.itemProxy)"
           }
         ]
       }

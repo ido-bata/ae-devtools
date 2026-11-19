@@ -20,10 +20,14 @@ export function fakeHostContext(app) {
   return {
     app, JSON, Math, String, Number, Boolean, Array, Object, Date, RegExp,
     Error, TypeError, ReferenceError, parseInt, parseFloat, isNaN, isFinite, undefined,
-    File: class { constructor(p) { this.fsName = p; this.exists = true; } },
+    // Fake convention: paths ending in ".missing" simulate absent files
+    // so missing-footage counterexamples can run without real fs state.
+    File: class { constructor(p) { this.fsName = p; this.exists = !String(p).endsWith(".missing"); } },
     CloseOptions: { DO_NOT_SAVE_CHANGES: 2 },
     CompItem: app.CompItem, FolderItem: app.FolderItem, FootageItem: app.FootageItem,
     ImportOptions: app.ImportOptions,
+    FootageSource: app.FootageSource, FileSource: app.FileSource,
+    SolidSource: app.SolidSource, PlaceholderSource: app.PlaceholderSource,
     // Enum globals referenced by generated adapter sources by NAME
     // (Issue #287). Values are the fake stand-ins — see fake-app.mjs.
     KeyframeInterpolationType, TrackMatteType, KeyframeEase, MarkerValue, Shape,
