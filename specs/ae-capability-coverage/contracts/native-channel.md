@@ -170,9 +170,20 @@ AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte                          (args: pr
 AEGP_LayerSuite9.AEGP_GetTrackMatteLayer                               (args: projectIndex+layer aeRefLayer — emits aeRefLayer, see §7d)
 AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState                      (zero-arg, #270 stage 2)
 AEGP_RQItemSuite4.AEGP_GetNumRQItems                                 (zero-arg, #270 stage 2)
+AEGP_ProjSuite6.AEGP_ProjectIsDirty                                  (args: project aeRefProject — project-handle getter, see §7e)
+AEGP_ProjSuite6.AEGP_GetProjectBitDepth                              (args: project aeRefProject — project-handle getter, see §7e)
+AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay                           (args: project aeRefProject — project-handle getter, see §7e)
+AEGP_RQItemSuite4.AEGP_GetRQItemByIndex                              (args: offset+limit — RQ-item discovery/descriptor issuance, see §7f)
+AEGP_RQItemSuite4.AEGP_GetRenderState                                (args: projectIndex+rqItem aeRefRQItem — RQ-item getter, see §7f)
+AEGP_RQItemSuite4.AEGP_GetStartedTime                                (args: projectIndex+rqItem aeRefRQItem — RQ-item getter, see §7f)
+AEGP_RQItemSuite4.AEGP_GetElapsedTime                                (args: projectIndex+rqItem aeRefRQItem — RQ-item getter, see §7f)
+AEGP_RQItemSuite4.AEGP_GetLogType                                    (args: projectIndex+rqItem aeRefRQItem — RQ-item getter, see §7f)
+AEGP_RQItemSuite4.AEGP_GetComment                                    (args: projectIndex+rqItem aeRefRQItem — RQ-item getter, see §7f)
+AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem                  (args: projectIndex+rqItem aeRefRQItem — RQ-item getter, see §7f)
+AEGP_RQItemSuite4.AEGP_GetCompFromRQItem                             (args: projectIndex+rqItem aeRefRQItem — emits bound comp aeRefItem, see §7f)
 ```
 
-All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Stage 4 (#318) extends the same pattern to **derived handles and item detail**: the thirteen `AEGP_CompSuite13` read-only getters take the item descriptor and derive the `AEGP_CompH` host-side via `AEGP_GetCompFromItem` inside the request window (§7c), and nine `AEGP_ItemSuite9` read-only detail getters (`GetItemType`/`GetItemFlags`/`IsItemSelected`/`GetItemLabel`/`GetItemDuration`/`GetItemCurrentTime`/`GetItemDimensions`/`GetItemPixelAspectRatio`/`GetItemComment`) run directly on the resolved `AEGP_ItemH` — same `{projectIndex, item}` contract, no derived handle. `AEGP_GetItemParentFolder` and `AEGP_GetItemMRUView` stay out: they return host handles of other identity kinds (folder item / item-view) needing their own descriptor story. `AEGP_GetCompShutterFrameRange` is deliberately excluded: it takes an `A_Time` input argument, and arg-bearing (non-descriptor) inputs are a separate slice. The layer slice (#318) adds twenty-one `AEGP_LayerSuite9` read-only members on the same pattern extended one level deeper (§7d): the layer handle is never taken from the wire — `layer` is an `aeRefLayer` descriptor that embeds its parent comp's §7b item descriptor, and `AEGP_GetCompLayerByIndex` is the layer **descriptor issuance** operation. `AEGP_GetActiveLayer`, members needing `A_Time`/`A_FloatRect`/stream arguments, source/parent-handle paths needing additional identity kinds, and all mutating members stay out. Project/RQ-item handle kinds extend the same pattern in later stages. Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. The identity slice (#270) completes the project-item identity path: `AEGP_GetItemID` is the **descriptor issuance** operation and `AEGP_GetFirstProjItem` is the **discovery/enumeration** operation, so a client never hand-assembles a descriptor — it enumerates items (or re-issues one descriptor) and stores the returned `aeRef` verbatim. Stage 4 (#318) extends the same pattern to **derived handles and item detail**: the thirteen `AEGP_CompSuite13` read-only getters take the item descriptor and derive the `AEGP_CompH` host-side via `AEGP_GetCompFromItem` inside the request window (§7c), and nine `AEGP_ItemSuite9` read-only detail getters (`GetItemType`/`GetItemFlags`/`IsItemSelected`/`GetItemLabel`/`GetItemDuration`/`GetItemCurrentTime`/`GetItemDimensions`/`GetItemPixelAspectRatio`/`GetItemComment`) run directly on the resolved `AEGP_ItemH` — same `{projectIndex, item}` contract, no derived handle. `AEGP_GetItemParentFolder` and `AEGP_GetItemMRUView` stay out: they return host handles of other identity kinds (folder item / item-view) needing their own descriptor story. `AEGP_GetCompShutterFrameRange` is deliberately excluded: it takes an `A_Time` input argument, and arg-bearing (non-descriptor) inputs are a separate slice. The layer slice (#318) adds twenty-one `AEGP_LayerSuite9` read-only members on the same pattern extended one level deeper (§7d): the layer handle is never taken from the wire — `layer` is an `aeRefLayer` descriptor that embeds its parent comp's §7b item descriptor, and `AEGP_GetCompLayerByIndex` is the layer **descriptor issuance** operation. `AEGP_GetActiveLayer`, members needing `A_Time`/`A_FloatRect`/stream arguments, source/parent-handle paths needing additional identity kinds, and all mutating members stay out. The project/RQ-item slice (#318 Stage 4) completes the remaining handle kinds on the same pattern (§7e/§7f): projects use the corroborated-positional `aeRefProject` descriptor (the SDK has no project id) and RQ items use the atomic-select `aeRefRQItem` descriptor with an observable fingerprint — `AEGP_GetRQItemByIndex` is the RQ-item **descriptor issuance** operation. Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
@@ -198,6 +209,9 @@ The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `pack
 | `AEGP_LayerSuite9.*` layer-handle getters (`GetLayerIndex`, `GetLayerName`, `GetLayerFlags`, `GetLayerQuality`, `GetLayerObjectType`, `IsLayer3D`, `IsLayer2D`, `GetLayerID`, `GetLayerLabel`, `GetLayerSamplingQuality`, `GetLayerSourceItemID`, `IsLayerVideoReallyOn`, `IsLayerAudioReallyOn`, `DoesLayerHaveTrackMatte`, `GetTrackMatteLayer`) | `{"projectIndex": <integer 0..1000000>, "layer": <aeRefLayer>}` — exactly these two fields (§7d). Result payloads are typed per getter — see §7d |
 | `AEGP_LayerSuite9.AEGP_GetLayerCurrentTime` / `GetLayerInPoint` / `GetLayerDuration` | `{"projectIndex": <integer 0..1000000>, "layer": <aeRefLayer>, "timeMode": <integer 0..1>}` — `timeMode` is `AEGP_LTimeMode` (`LayerTime`=0, `CompTime`=1); required, never defaulted. Result `{"currentTime"|"inPoint"|"duration": {"value": <int>, "scale": <uint>}}` (`A_Time`) |
 | `AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte` | `{"projectIndex": <integer 0..1000000>, "layer": <aeRefLayer>, "fillMustBeActive": <integer 0..1>}` — required boolean-as-integer; result `{"isTrackMatte": <bool>}` |
+| `AEGP_ProjSuite6.*` project getters (`AEGP_ProjectIsDirty`, `AEGP_GetProjectBitDepth`, `AEGP_GetProjectTimeDisplay`) | `{"project": <aeRefProject>}` — exactly one field (§7e); the descriptor carries the index, no separate `projectIndex`. Result payloads: `AEGP_ProjectIsDirty` → `{"dirty": <bool>}`; `AEGP_GetProjectBitDepth` → `{"bitDepth": <int>}`; `AEGP_GetProjectTimeDisplay` → `{"timeDisplay": {…}}` (`AEGP_TimeDisplay3`) |
+| `AEGP_RQItemSuite4.AEGP_GetRQItemByIndex` | `{"offset": <integer 0..1000000>, "limit": <integer 1..32>}` — exactly these two fields (§7f). **RQ-item discovery/descriptor issuance**: result `{"items": [{"index","projectIndex","rqItem":{"aeRef":{…}}}], "numRQItems": <int>}` — `rqItem` may be `null` for undescribable slots |
+| `AEGP_RQItemSuite4.*` RQ-item getters (`GetRenderState`, `GetStartedTime`, `GetElapsedTime`, `GetLogType`, `GetComment`, `GetNumOutputModulesForRQItem`, `GetCompFromRQItem`) | `{"projectIndex": <integer 0..1000000>, "rqItem": <aeRefRQItem>}` — exactly these two fields (§7f). Result payloads: `GetRenderState` → `{"status": <int>}`; `GetStartedTime`/`GetElapsedTime` → `{"startedTime"\|"elapsedTime": {"value":<int>,"scale":<uint>}\|null}`; `GetLogType` → `{"logType": <int>}`; `GetComment` → `{"comment": "<string>"}`; `GetNumOutputModulesForRQItem` → `{"numOutputModules": <int>}`; `GetCompFromRQItem` → `{"comp": {"aeRef": {<§7b item descriptor>}}, "projectIndex": <int>}` |
 
 Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.
 
@@ -336,6 +350,73 @@ All `completed` results carry `mayHaveMutated:false` (read-only):
 - `AEGP_GetActiveLayer` — the SDK signature takes no comp argument; there is no comp binding to resolve against, so a descriptor cannot name its scope. Excluded until an explicit comp-scoped variant exists.
 - Getters taking `A_Time`/`A_FloatRect`/stream inputs or returning additional host handles (`GetLayerSourceItem`, `GetLayerParentComp`, `GetLayerSourceTextDocument`, etc.) — each needs its own serializable argument/identity story first.
 - All mutating members — out of scope until the FR-07/US3 permission model and the ae-a8n-owned authorization/audit/`UNKNOWN` contract exist.
+
+## 7e. `aeRefProject` descriptors and `AEGP_ProjSuite6` getters (Issue #318)
+
+The SDK exposes **no stable project identifier** — `AEGP_ProjSuite6` offers only `AEGP_GetNumProjects`/`AEGP_GetProjectByIndex`/`AEGP_GetProjectName`/`AEGP_GetProjectPath`. Project identity is therefore a *corroborated positional* contract, not an id contract:
+
+```json
+{"aeRef": {"type": "project",
+           "index": <integer>,
+           "name": "<string>",
+           "path": "<string>"}}
+```
+
+- `type` is exactly `"project"`. `index` is the 0-based `AEGP_GetProjectByIndex` position (bound 0..1000000). `name` is the live `AEGP_GetProjectName` (non-empty, ≤1024 UTF-8 bytes). `path` is the live `AEGP_GetProjectPath` UTF-8 string — **empty string for an unsaved project**; required key, may be empty.
+- Project-scoped ops take `{"project": <aeRefProject>}` — one argument, no separate `projectIndex` (the descriptor carries it).
+
+### Project resolution semantics
+
+1. `AEGP_GetNumProjects` bounds-checks `index` (out of range → `STALE_REFERENCE`), `AEGP_GetProjectByIndex` yields `projectH` inside the request window.
+2. `AEGP_GetProjectName` + `AEGP_GetProjectPath` are read and compared: `name` must match exactly; `path` must match exactly **when the descriptor's path is non-empty**. An empty descriptor path accepts any live path — saving an untitled project does not rebind its identity (documented tolerance, not a detection claim).
+3. **Collision rule**: every open project is scanned; if more than one project satisfies the descriptor's (name, path) corroboration, resolution refuses `STALE_REFERENCE` ("project identity ambiguous"). Two identically-named untitled projects therefore cannot be addressed — fail closed rather than risk a silent project switch after a close/reopen shifts indices. There is no project-reorder API in the SDK, but project close/open shifts `GetProjectByIndex` positions, which is exactly the ABA this rule covers.
+4. `projectH` is borrowed for the request window only; all suite acquires/releases stay inside the `opCalls` evidence window.
+
+### Project getter payloads
+
+| operationId | args | result `result` payload |
+| --- | --- | --- |
+| `AEGP_ProjSuite6.AEGP_ProjectIsDirty` | `{"project": <aeRefProject>}` | `{"dirty": <bool>}` |
+| `AEGP_ProjSuite6.AEGP_GetProjectBitDepth` | `{"project": <aeRefProject>}` | `{"bitDepth": <int>}` (`AEGP_ProjBitDepth`: 8=0, 16=1, 32=2) |
+| `AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay` | `{"project": <aeRefProject>}` | `{"timeDisplay": {"displayMode": <int>, "footageDisplayMode": <int>, "displayDropFrame": <bool>, "useFeetFrames": <bool>, "timebase": <int>, "framesPerFoot": <int>, "framesDisplayMode": <int>}}` (`AEGP_TimeDisplay3`) |
+
+`AEGP_GetProjectRootFolder` is deferred: it returns an `AEGP_ItemH`, but the root folder is not a top-level project item — its `AEGP_GetItemID` is outside the `GetFirstProjItem` scan, so an emitted aeRef could never resolve. It needs a folder-scoped identity story first.
+
+## 7f. `aeRefRQItem` descriptors and `AEGP_RQItemSuite4` getters (Issue #318)
+
+The SDK exposes **no stable render-queue-item identifier**, and `AEGP_RQItemRefH` is explicitly invalidated by *any* queue reordering, addition, or removal (`AEGP_RQItemSuite4` header note: "DO NOT CACHE THEM"). The safe operation model is therefore **atomic select+read inside a single dispatch**: the descriptor pins (queue index, bound comp identity, observable fingerprint); resolution re-derives the handle and re-verifies every pin before the getter runs — the handle never survives the request window.
+
+```json
+{"aeRef": {"type": "rqItem",
+           "index": <integer>,
+           "comp": {"aeRef": {<§7b item descriptor, type must corroborate "comp">>},
+           "status": <integer>,
+           "numOutputModules": <integer>}}
+```
+
+- `type` is exactly `"rqItem"`. `index` is the 0-based `AEGP_GetRQItemByIndex` position (bound 0..1000000). `comp` is a required §7b item descriptor — the queue entry's bound composition is the primary identity. `status` (`AEGP_RenderItemStatusType`) and `numOutputModules` (`AEGP_GetNumOutputModulesForRQItem`) are the **observable fingerprint** captured at issuance.
+- RQ-item ops take `{"projectIndex": <int>, "rqItem": <aeRefRQItem>}` — `projectIndex` selects the project that owns the bound comp, exactly like the comp/layer ops.
+
+### RQ-item resolution semantics (all inside one dispatch)
+
+1. `comp` → `ResolveAeRefItem` (the same shared resolver; `wantProjectIdentity` set for issuance/enumeration). Live type must be `AEGP_ItemType_COMP`.
+2. `AEGP_RQItemSuite4` + `AEGP_CompSuite13` are acquired inside the request window; `AEGP_GetNumRQItems` bounds-checks `index`; `AEGP_GetRQItemByIndex` yields the borrowed `AEGP_RQItemRefH`.
+3. `AEGP_GetCompFromRQItem(rqH)` → `compH` → `AEGP_GetItemFromComp` → `itemH`; that item's live `AEGP_GetItemID` must equal the descriptor comp's live `AEGP_GetItemID`. A queue shift that rebinds the slot to a different comp → `STALE_REFERENCE`.
+4. Fingerprint: live `AEGP_GetRenderState` must equal `status` and `AEGP_GetNumOutputModulesForRQItem` must equal `numOutputModules` — mismatch → `STALE_REFERENCE`.
+5. **Honest residual**: the SDK exposes no per-entry id, so a queue mutation that leaves (index, comp, status, numOutputModules) all unchanged is indistinguishable — e.g. swapping two queue entries bound to the *same* comp with identical status/module count, or a settings change fully reverted. This is documented, not claimed-detectable. Mutations are out of scope regardless.
+
+### RQ-item enumeration and getter payloads
+
+`AEGP_GetRQItemByIndex` doubles as the **descriptor issuance / discovery** op: `{"offset": <int 0..1000000>, "limit": <int 1..32>}` → `{"items": [{"index": <int>, "projectIndex": <int>, "rqItem": {"aeRef": {<aeRefRQItem>}}}], "numRQItems": <int>}`. For each slot the plug-in resolves the bound comp to its owning project (bounded scan over open projects for the comp's live `AEGP_GetItemID`), reads the live fingerprint, and emits a ready-to-use descriptor plus the `projectIndex` needed to use it. A slot whose comp cannot be resolved to a project item is emitted with `"rqItem": null` (undescribable, counted — never a fabricated descriptor).
+
+| operationId | args | result `result` payload |
+| --- | --- | --- |
+| `AEGP_RQItemSuite4.AEGP_GetRenderState` | `{projectIndex, rqItem}` | `{"status": <int>}` (`AEGP_RenderItemStatusType`) |
+| `AEGP_RQItemSuite4.AEGP_GetStartedTime` / `AEGP_GetElapsedTime` | `{projectIndex, rqItem}` | `{"startedTime"\|"elapsedTime": {"value": <int>, "scale": <uint>}}` or `null` when never started/rendered (`{0,1}` sentinel → `null`) |
+| `AEGP_RQItemSuite4.AEGP_GetLogType` | `{projectIndex, rqItem}` | `{"logType": <int>}` (`AEGP_LogType`) |
+| `AEGP_RQItemSuite4.AEGP_GetComment` | `{projectIndex, rqItem}` | `{"comment": "<string>"}` — UTF-16 mem handle → UTF-8, ≤1024 bytes |
+| `AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem` | `{projectIndex, rqItem}` | `{"numOutputModules": <int>}` |
+| `AEGP_RQItemSuite4.AEGP_GetCompFromRQItem` | `{projectIndex, rqItem}` | `{"comp": {"aeRef": {<§7b item descriptor>}}, "projectIndex": <int>}` — bound comp emitted as a descriptor, never a handle |
 
 ## 8. Non-goals / explicit limitations
 

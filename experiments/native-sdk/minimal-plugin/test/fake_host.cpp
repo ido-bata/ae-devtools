@@ -682,10 +682,33 @@ static A_Err FakeGetNumRQItems(A_long* numP)
     return A_Err_NONE;
 }
 
+static AEGP_CompH MakeCompHandle(int projIndex, int itemIndex);
+
+/* Returns NULL in legacy mode (rqItemMeta never configured) so the
+   getters fall back to the pre-§7f hardcoded values the probe tests
+   pin; once tests configure rqItemMeta, every slot resolves per-item
+   (out-of-range slots get the struct defaults). */
+static const FakeRQItemMeta* RQMetaFor(int index)
+{
+    static const FakeRQItemMeta kDefault;
+    if (!g_host || g_host->rqItemMeta.empty())
+    {
+        return NULL;
+    }
+    if (index < 0 || index >= (int)g_host->rqItemMeta.size())
+    {
+        return &kDefault;
+    }
+    return &g_host->rqItemMeta[index];
+}
+
 static AEGP_RQItemRefH NewRQItemHandle(int index)
 {
     struct _AEGP_RenderQueueItem* p = new struct _AEGP_RenderQueueItem;
+    const FakeRQItemMeta* m = RQMetaFor(index);
     p->index = index;
+    p->compProject = m ? m->compProject : -1;
+    p->compItem = m ? m->compItem : -1;
     return (AEGP_RQItemRefH)WrapPayload(p);
 }
 
@@ -704,48 +727,85 @@ static A_Err FakeGetRQItemByIndex(A_long idxL, AEGP_RQItemRefH* rq_item_refPH)
     return A_Err_NONE;
 }
 
+static const _AEGP_RenderQueueItem* RQPayload(AEGP_RQItemRefH rq_itemH)
+{
+    return *(struct _AEGP_RenderQueueItem**)rq_itemH;
+}
+
 static A_Err FakeGetRenderState(AEGP_RQItemRefH rq_itemH,
                                 AEGP_RenderItemStatusType* statusP)
 {
-    (void)rq_itemH;
-    *statusP = 0; /* QUEUED */
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *statusP = m ? m->status : AEGP_RenderItemStatus_NEEDS_OUTPUT;
     return A_Err_NONE;
 }
 
 static A_Err FakeGetStartedTime(AEGP_RQItemRefH rq_itemH, A_Time* render_timePT)
 {
-    (void)rq_itemH;
-    render_timePT->value = 0;
-    render_timePT->scale = 1;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *render_timePT = m ? m->startedTime : (A_Time){0, 1};
     return A_Err_NONE;
 }
 
 static A_Err FakeGetElapsedTime(AEGP_RQItemRefH rq_itemH, A_Time* render_timePT)
 {
-    (void)rq_itemH;
-    render_timePT->value = 0;
-    render_timePT->scale = 1;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *render_timePT = m ? m->elapsedTime : (A_Time){0, 1};
     return A_Err_NONE;
 }
 
 static A_Err FakeGetLogType(AEGP_RQItemRefH rq_itemH, AEGP_LogType* logtypeP)
 {
-    (void)rq_itemH;
-    *logtypeP = AEGP_LogType_ERRORS_ONLY;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *logtypeP = m ? m->logType : AEGP_LogType_ERRORS_ONLY;
     return A_Err_NONE;
 }
 
 static A_Err FakeGetNumOutputModulesForRQItem(AEGP_RQItemRefH rq_itemH,
                                               A_long* num_itemsPL)
 {
-    (void)rq_itemH;
-    *num_itemsPL = 1;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *num_itemsPL = m ? m->numOutputModules : 1;
     return A_Err_NONE;
 }
 
 static A_Err FakeGetComment(AEGP_RQItemRefH rq_itemH, AEGP_MemHandle* unicodeH)
 {
-    (void)rq_itemH;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    if (m && !m->comment.units.empty())
+    {
+        *unicodeH = NewMemHandleFromSpec(m->comment);
+        return A_Err_NONE;
+    }
+    if (m)
+    {
+        *unicodeH = NewMemHandleFromSpec(FakeNameSpec());
+        return A_Err_NONE;
+    }
     FakeNameSpec spec = g_host->MakeNameSpec(FakeHost::U16("fake rq comment"));
     *unicodeH = NewMemHandleFromSpec(spec);
     return A_Err_NONE;
@@ -753,8 +813,18 @@ static A_Err FakeGetComment(AEGP_RQItemRefH rq_itemH, AEGP_MemHandle* unicodeH)
 
 static A_Err FakeGetCompFromRQItem(AEGP_RQItemRefH rq_itemH, AEGP_CompH* compPH)
 {
-    (void)rq_itemH;
-    *compPH = NULL; /* fake host has no comp objects */
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const _AEGP_RenderQueueItem* p = RQPayload(rq_itemH);
+    *compPH = NULL;
+    if (p->compProject < 0 || p->compItem < 0) return A_Err_NONE;
+    if (p->compProject >= (int)g_host->projects.size()) return A_Err_NONE;
+    FakeProject& proj = g_host->projects[p->compProject];
+    if (p->compItem >= (int)proj.itemTypes.size()) return A_Err_NONE;
+    if (proj.itemTypes[p->compItem] != AEGP_ItemType_COMP) return A_Err_NONE;
+    *compPH = MakeCompHandle(p->compProject, p->compItem);
     return A_Err_NONE;
 }
 

@@ -135,6 +135,26 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
   "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
+  /* Issue #318 §7e: project-scoped read-only getters on the
+     aeRefProject descriptor — the SDK exposes no project id, so
+     identity is index + name + path corroboration plus a host-side
+     collision scan (contract §7e). */
+  "AEGP_ProjSuite6.AEGP_ProjectIsDirty",
+  "AEGP_ProjSuite6.AEGP_GetProjectBitDepth",
+  "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay",
+  /* Issue #318 §7f: RQ-item read-only getters on the aeRefRQItem
+     descriptor — index + bound-comp aeRef + (status,
+     numOutputModules) fingerprint re-verified atomically inside one
+     dispatch (contract §7f). GetRQItemByIndex doubles as descriptor
+     issuance/enumeration ({offset, limit}). */
+  "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
+  "AEGP_RQItemSuite4.AEGP_GetRenderState",
+  "AEGP_RQItemSuite4.AEGP_GetStartedTime",
+  "AEGP_RQItemSuite4.AEGP_GetElapsedTime",
+  "AEGP_RQItemSuite4.AEGP_GetLogType",
+  "AEGP_RQItemSuite4.AEGP_GetComment",
+  "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
+  "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
 ] as const;
 export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
 
@@ -213,6 +233,33 @@ export type NativeIntakeArgConstraint =
          compH → layer scan) is host-side and failure is
          STALE_REFERENCE. */
       kind: "aeRefLayer";
+    }
+  | {
+      /* Issue #318 §7e (contract native-channel.md §7e): a project
+         identity descriptor in the `aeRefProject` wire form —
+         {"aeRef":{"type":"project","index":<int>,"name":"<str>",
+         "path":"<str>"}}. The SDK exposes no stable project id, so
+         `index` is the 0-based AEGP_GetProjectByIndex position and
+         name/path corroborate; the host additionally scans all open
+         projects and refuses ambiguous identity. `path` may be empty
+         (unsaved project). Shape only — resolution failure is
+         STALE_REFERENCE. */
+      kind: "aeRefProject";
+    }
+  | {
+      /* Issue #318 §7f (contract native-channel.md §7f): a render-queue
+         item descriptor in the `aeRefRQItem` wire form —
+         {"aeRef":{"type":"rqItem","index":<int>,
+         "comp":{"aeRef":{<item descriptor>}},"status":<int32>,
+         "numOutputModules":<int>}}. `index` is the 0-based
+         AEGP_GetRQItemByIndex position; `comp` is the required
+         §7b item-descriptor binding (type must corroborate "comp");
+         status/numOutputModules are the observable fingerprint. All
+         pins are re-verified inside one dispatch — AEGP_RQItemRefH
+         is invalidated by any queue change and never leaves the
+         request window. Shape only — resolution failure is
+         STALE_REFERENCE. */
+      kind: "aeRefRQItem";
     };
 
 /** operationId → exact arg-name → constraint map. Absent = zero-arg op. */
@@ -428,6 +475,52 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
     projectIndex: { kind: "integer", min: 0, max: 1000000 },
     layer: { kind: "aeRefLayer" },
   },
+  /* ProjSuite6 getters (Issue #318 §7e): the aeRefProject descriptor
+     carries the project index — no separate projectIndex arg. */
+  "AEGP_ProjSuite6.AEGP_ProjectIsDirty": {
+    project: { kind: "aeRefProject" },
+  },
+  "AEGP_ProjSuite6.AEGP_GetProjectBitDepth": {
+    project: { kind: "aeRefProject" },
+  },
+  "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay": {
+    project: { kind: "aeRefProject" },
+  },
+  /* RQItemSuite4 (Issue #318 §7f): GetRQItemByIndex is enumeration /
+     descriptor issuance ({offset, limit}); the getters take the
+     comp's projectIndex plus the aeRefRQItem descriptor. */
+  "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex": {
+    offset: { kind: "integer", min: 0, max: 1000000 },
+    limit: { kind: "integer", min: 1, max: 32 },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetRenderState": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetStartedTime": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetElapsedTime": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetLogType": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetComment": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
+  "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    rqItem: { kind: "aeRefRQItem" },
+  },
 };
 
 function isPlainArgsObject(v: unknown): v is Record<string, unknown> {
@@ -490,6 +583,10 @@ export function validateNativeIntakeArgs(
       errors.push(...validateAeRefItemArg(k, v));
     } else if (spec.kind === "aeRefLayer") {
       errors.push(...validateAeRefLayerArg(k, v));
+    } else if (spec.kind === "aeRefProject") {
+      errors.push(...validateAeRefProjectArg(k, v));
+    } else if (spec.kind === "aeRefRQItem") {
+      errors.push(...validateAeRefRQItemArg(k, v));
     }
   }
   return errors;
@@ -601,6 +698,89 @@ function validateAeRefLayerArg(argName: string, v: unknown): string[] {
     bad("aeRef.layerId must be an integer in [-2147483648, 2147483647]");
   }
   errors.push(...validateAeRefItemArg(`${argName}.comp`, ref.comp));
+  return errors;
+}
+
+/* Shape-check an `aeRefProject` descriptor (contract §7e):
+   {"aeRef":{"type":"project","index","name","path"}} — exactly those
+   four inner keys. `path` may be empty (unsaved project); the host
+   treats an empty descriptor path as "accept any live path".
+   Shape only; resolution failure is STALE_REFERENCE. */
+function validateAeRefProjectArg(argName: string, v: unknown): string[] {
+  const errors: string[] = [];
+  const bad = (m: string): string => {
+    errors.push(`argument "${argName}": ${m}`);
+    return m;
+  };
+  if (!isPlainArgsObject(v)) return [bad("must be an object")];
+  const outerKeys = Object.keys(v);
+  if (outerKeys.length !== 1 || outerKeys[0] !== "aeRef") {
+    return [bad('must be exactly {"aeRef": {...}}')];
+  }
+  const ref = v.aeRef;
+  if (!isPlainArgsObject(ref)) return [bad("aeRef must be a plain object")];
+  const refKeys = Object.keys(ref).sort();
+  const want = ["index", "name", "path", "type"];
+  if (refKeys.length !== want.length ||
+      refKeys.some((k, i) => k !== want[i])) {
+    return [bad('aeRef must carry exactly "type","index","name","path"')];
+  }
+  if (ref.type !== "project") bad('aeRef.type must be "project"');
+  if (typeof ref.index !== "number" || !Number.isInteger(ref.index) ||
+      ref.index < 0 || ref.index > 1000000) {
+    bad("aeRef.index must be an integer in [0, 1000000]");
+  }
+  if (typeof ref.name !== "string" || ref.name.length === 0 ||
+      utf8.encode(ref.name).length > AEREF_MAX_NAME_BYTES) {
+    bad("aeRef.name must be a non-empty string ≤ 1024 UTF-8 bytes");
+  }
+  if (typeof ref.path !== "string" ||
+      utf8.encode(ref.path).length > AEREF_MAX_STR_CHARS) {
+    bad("aeRef.path must be a string ≤ 4096 UTF-8 bytes (may be empty)");
+  }
+  return errors;
+}
+
+/* Shape-check an `aeRefRQItem` descriptor (contract §7f):
+   {"aeRef":{"type":"rqItem","index","comp","status",
+   "numOutputModules"}} — exactly those five inner keys. `comp`
+   recursively uses the §7b item-descriptor shape. Shape only;
+   resolution failure is STALE_REFERENCE. */
+function validateAeRefRQItemArg(argName: string, v: unknown): string[] {
+  const errors: string[] = [];
+  const bad = (m: string): string => {
+    errors.push(`argument "${argName}": ${m}`);
+    return m;
+  };
+  if (!isPlainArgsObject(v)) return [bad("must be an object")];
+  const outerKeys = Object.keys(v);
+  if (outerKeys.length !== 1 || outerKeys[0] !== "aeRef") {
+    return [bad('must be exactly {"aeRef": {...}}')];
+  }
+  const ref = v.aeRef;
+  if (!isPlainArgsObject(ref)) return [bad("aeRef must be a plain object")];
+  const refKeys = Object.keys(ref).sort();
+  const want = ["comp", "index", "numOutputModules", "status", "type"];
+  if (refKeys.length !== want.length ||
+      refKeys.some((k, i) => k !== want[i])) {
+    return [bad(
+      'aeRef must carry exactly "type","index","comp","status","numOutputModules"')];
+  }
+  if (ref.type !== "rqItem") bad('aeRef.type must be "rqItem"');
+  if (typeof ref.index !== "number" || !Number.isInteger(ref.index) ||
+      ref.index < 0 || ref.index > 1000000) {
+    bad("aeRef.index must be an integer in [0, 1000000]");
+  }
+  errors.push(...validateAeRefItemArg(`${argName}.comp`, ref.comp));
+  if (typeof ref.status !== "number" || !Number.isInteger(ref.status) ||
+      ref.status < -2147483648 || ref.status > 2147483647) {
+    bad("aeRef.status must be an integer in [-2147483648, 2147483647]");
+  }
+  if (typeof ref.numOutputModules !== "number" ||
+      !Number.isInteger(ref.numOutputModules) ||
+      ref.numOutputModules < 0 || ref.numOutputModules > 1000000) {
+    bad("aeRef.numOutputModules must be a non-negative integer ≤ 1000000");
+  }
   return errors;
 }
 

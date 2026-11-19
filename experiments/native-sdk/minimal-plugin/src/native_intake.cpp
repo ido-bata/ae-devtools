@@ -480,8 +480,10 @@ enum
 {
     ARGK_INT = 0,   /* bounded integer: min..max inclusive */
     ARGK_AEREFITEM, /* aeRef project-item descriptor (Issue #270 Stage 3) */
-    ARGK_AEREFLAYER /* aeRef layer descriptor embedding its comp aeRef
-                       (Issue #318 Stage 4 layer slice) */
+    ARGK_AEREFLAYER, /* aeRef layer descriptor embedding its comp aeRef
+                        (Issue #318 layer slice) */
+    ARGK_AEREFPROJECT, /* aeRef project descriptor (Issue #318 §7e) */
+    ARGK_AEREFRQITEM   /* aeRef render-queue-item descriptor (§7f) */
 };
 
 typedef struct
@@ -573,6 +575,26 @@ static const IntakeArgSpec S_LAYER_MATTE_ARGS[] = {
     { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
     { "layer", ARGK_AEREFLAYER, 0.0, 0.0 },
     { "fillMustBeActive", ARGK_INT, 0.0, 1.0 },
+};
+
+/* Issue #318 §7e: project-scoped getters take the aeRefProject
+   descriptor alone — the descriptor carries the project index. */
+static const IntakeArgSpec S_PROJECT_ARGS[] = {
+    { "project", ARGK_AEREFPROJECT, 0.0, 0.0 },
+};
+
+/* Issue #318 §7f: RQ-item getters take the comp's projectIndex plus
+   the aeRefRQItem descriptor (index + comp aeRef + fingerprint). */
+static const IntakeArgSpec S_RQITEM_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "rqItem", ARGK_AEREFRQITEM, 0.0, 0.0 },
+};
+
+/* AEGP_GetRQItemByIndex doubles as RQ descriptor issuance/enumeration:
+   {offset, limit} pages the queue. */
+static const IntakeArgSpec S_RQENUM_ARGS[] = {
+    { "offset", ARGK_INT, 0.0, 1000000.0 },
+    { "limit", ARGK_INT, 1.0, 32.0 },
 };
 
 static const AllowEntry S_ALLOWLIST[] = {
@@ -716,6 +738,42 @@ static const AllowEntry S_ALLOWLIST[] = {
       "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState", NULL, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
       "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, 0 },
+    /* Issue #318 §7e: project-scoped read-only getters on the
+       aeRefProject descriptor (§7e). GetProjectRootFolder stays out —
+       the root folder is not a top-level item, so its itemId is outside
+       the GetFirstProjItem scan and an emitted aeRef could never
+       resolve. */
+    { "AEGP_ProjSuite6.AEGP_ProjectIsDirty",
+      "AEGP_ProjSuite6.AEGP_ProjectIsDirty", S_PROJECT_ARGS, 1 },
+    { "AEGP_ProjSuite6.AEGP_GetProjectBitDepth",
+      "AEGP_ProjSuite6.AEGP_GetProjectBitDepth", S_PROJECT_ARGS, 1 },
+    { "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay",
+      "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", S_PROJECT_ARGS, 1 },
+    /* Issue #318 §7f: RQ-item read-only getters on the aeRefRQItem
+       descriptor — index + bound-comp aeRef + (status,
+       numOutputModules) fingerprint, all re-verified atomically inside
+       the request window. GetRQItemByIndex doubles as descriptor
+       issuance/enumeration ({offset, limit}). GetNextRQItem stays out:
+       it takes a borrowed RQItemRefH which cannot cross the wire.
+       Mutating members (SetRenderState, SetLogType, SetComment,
+       AddDefaultOutputModule, RemoveOutputModule, DeleteRQItem) are
+       out of scope. */
+    { "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
+      "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", S_RQENUM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetRenderState",
+      "AEGP_RQItemSuite4.AEGP_GetRenderState", S_RQITEM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetStartedTime",
+      "AEGP_RQItemSuite4.AEGP_GetStartedTime", S_RQITEM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetElapsedTime",
+      "AEGP_RQItemSuite4.AEGP_GetElapsedTime", S_RQITEM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetLogType",
+      "AEGP_RQItemSuite4.AEGP_GetLogType", S_RQITEM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetComment",
+      "AEGP_RQItemSuite4.AEGP_GetComment", S_RQITEM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
+      "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem", S_RQITEM_ARGS, 2 },
+    { "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
+      "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem", S_RQITEM_ARGS, 2 },
 };
 static const int S_ALLOWLIST_COUNT =
     (int)(sizeof(S_ALLOWLIST) / sizeof(S_ALLOWLIST[0]));
@@ -733,6 +791,8 @@ static const AllowEntry* AllowFind(const char* opIdZ, size_t len)
 
 static int ValidateAeRefItem(JVal* v, char* detailZ, size_t detailCap);
 static int ValidateAeRefLayer(JVal* v, char* detailZ, size_t detailCap);
+static int ValidateAeRefProject(JVal* v, char* detailZ, size_t detailCap);
+static int ValidateAeRefRQItem(JVal* v, char* detailZ, size_t detailCap);
 static int AeRefTypeToItemType(JVal* typeV, AEGP_ItemType* outP);
 
 /* Per-operation args validation (Issue #270 Stage 1). `args` is the
@@ -784,6 +844,16 @@ static int ValidateArgs(
         if (spec->kind == ARGK_AEREFLAYER)
         {
             if (!ValidateAeRefLayer(v, detailZ, detailCap)) return 0;
+            continue;
+        }
+        if (spec->kind == ARGK_AEREFPROJECT)
+        {
+            if (!ValidateAeRefProject(v, detailZ, detailCap)) return 0;
+            continue;
+        }
+        if (spec->kind == ARGK_AEREFRQITEM)
+        {
+            if (!ValidateAeRefRQItem(v, detailZ, detailCap)) return 0;
             continue;
         }
         if (v->kind != JK_NUM || !isfinite(v->num) ||
@@ -1000,6 +1070,172 @@ static int ValidateAeRefLayer(JVal* v, char* detailZ, size_t detailCap)
        recursive shape check; its type must corroborate "comp" at
        resolution time. */
     if (!ValidateAeRefItem(compV, detailZ, detailCap)) return 0;
+    return 1;
+}
+
+/* aeRefProject descriptor shape check (Issue #318 §7e; contract
+   native-channel.md §7e). Wire form:
+     {"aeRef":{"type":"project","index":<int>,"name":"<str>","path":"<str>"}}
+   Exactly these four keys; index is the 0-based GetProjectByIndex
+   position; name non-empty ≤1024 UTF-8 bytes; path may be empty
+   (unsaved project). Shape only — resolution is host-side. */
+static int ValidateAeRefProject(JVal* v, char* detailZ, size_t detailCap)
+{
+    JVal* ref;
+    JVal* typeV;
+    JVal* idxV;
+    JVal* nameV;
+    JVal* pathV;
+    size_t i;
+    static const char* keys[] = { "type", "index", "name", "path" };
+    if (!v || v->kind != JK_OBJ || v->npairs != 1)
+    {
+        snprintf(detailZ, detailCap, "aeRefProject arg must be an object with exactly \"aeRef\"");
+        return 0;
+    }
+    ref = JGet(v, "aeRef");
+    if (!ref || ref->kind != JK_OBJ || ref->npairs != 4)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefProject must carry exactly type,index,name,path");
+        return 0;
+    }
+    for (i = 0; i < ref->npairs; i++)
+    {
+        JPair* p = &ref->pairs[i];
+        size_t k;
+        int ok = 0;
+        for (k = 0; k < sizeof(keys) / sizeof(keys[0]); k++)
+            if (strlen(keys[k]) == p->klen && memcmp(keys[k], p->key, p->klen) == 0)
+            { ok = 1; break; }
+        if (!ok)
+        {
+            snprintf(detailZ, detailCap, "aeRefProject carries unsupported key");
+            return 0;
+        }
+    }
+    typeV = JGet(ref, "type");
+    idxV = JGet(ref, "index");
+    nameV = JGet(ref, "name");
+    pathV = JGet(ref, "path");
+    if (!typeV || !idxV || !nameV || !pathV)
+    {
+        snprintf(detailZ, detailCap, "aeRefProject requires type, index, name, path");
+        return 0;
+    }
+    if (typeV->kind != JK_STR || !JStrEq(typeV, "project"))
+    {
+        snprintf(detailZ, detailCap, "aeRefProject.type must be \"project\"");
+        return 0;
+    }
+    if (idxV->kind != JK_NUM || !isfinite(idxV->num) ||
+        floor(idxV->num) != idxV->num || idxV->num < 0.0 || idxV->num > 1000000.0)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefProject.index must be an integer in [0, 1000000]");
+        return 0;
+    }
+    if (nameV->kind != JK_STR || nameV->slen == 0 ||
+        nameV->slen > AEREF_NAME_MAX)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefProject.name must be a non-empty string ≤ 1024 UTF-8 bytes");
+        return 0;
+    }
+    if (pathV->kind != JK_STR || pathV->slen > AEREF_MAX_STR)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefProject.path must be a string ≤ 4096 UTF-8 bytes (may be empty)");
+        return 0;
+    }
+    return 1;
+}
+
+/* aeRefRQItem descriptor shape check (Issue #318 §7f; contract
+   native-channel.md §7f). Wire form:
+     {"aeRef":{"type":"rqItem","index":<int>,
+               "comp":{"aeRef":{<item descriptor>}},
+               "status":<int>,"numOutputModules":<int>}}
+   Exactly these five keys. index is the 0-based GetRQItemByIndex
+   position; comp is the bound composition's §7b item descriptor
+   (recursive shape check); status is AEGP_RenderItemStatusType
+   (int32 range); numOutputModules is a non-negative count. Shape
+   only — resolution re-verifies every pin atomically. */
+static int ValidateAeRefRQItem(JVal* v, char* detailZ, size_t detailCap)
+{
+    JVal* ref;
+    JVal* typeV;
+    JVal* idxV;
+    JVal* compV;
+    JVal* statusV;
+    JVal* nomV;
+    size_t i;
+    static const char* keys[] = { "type", "index", "comp", "status", "numOutputModules" };
+    if (!v || v->kind != JK_OBJ || v->npairs != 1)
+    {
+        snprintf(detailZ, detailCap, "aeRefRQItem arg must be an object with exactly \"aeRef\"");
+        return 0;
+    }
+    ref = JGet(v, "aeRef");
+    if (!ref || ref->kind != JK_OBJ || ref->npairs != 5)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefRQItem must carry exactly type,index,comp,status,numOutputModules");
+        return 0;
+    }
+    for (i = 0; i < ref->npairs; i++)
+    {
+        JPair* p = &ref->pairs[i];
+        size_t k;
+        int ok = 0;
+        for (k = 0; k < sizeof(keys) / sizeof(keys[0]); k++)
+            if (strlen(keys[k]) == p->klen && memcmp(keys[k], p->key, p->klen) == 0)
+            { ok = 1; break; }
+        if (!ok)
+        {
+            snprintf(detailZ, detailCap, "aeRefRQItem carries unsupported key");
+            return 0;
+        }
+    }
+    typeV = JGet(ref, "type");
+    idxV = JGet(ref, "index");
+    compV = JGet(ref, "comp");
+    statusV = JGet(ref, "status");
+    nomV = JGet(ref, "numOutputModules");
+    if (!typeV || !idxV || !compV || !statusV || !nomV)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefRQItem requires type, index, comp, status, numOutputModules");
+        return 0;
+    }
+    if (typeV->kind != JK_STR || !JStrEq(typeV, "rqItem"))
+    {
+        snprintf(detailZ, detailCap, "aeRefRQItem.type must be \"rqItem\"");
+        return 0;
+    }
+    if (idxV->kind != JK_NUM || !isfinite(idxV->num) ||
+        floor(idxV->num) != idxV->num || idxV->num < 0.0 || idxV->num > 1000000.0)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefRQItem.index must be an integer in [0, 1000000]");
+        return 0;
+    }
+    if (!ValidateAeRefItem(compV, detailZ, detailCap)) return 0;
+    if (statusV->kind != JK_NUM || !isfinite(statusV->num) ||
+        floor(statusV->num) != statusV->num ||
+        statusV->num < -2147483648.0 || statusV->num > 2147483647.0)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefRQItem.status must be an integer in int32 range");
+        return 0;
+    }
+    if (nomV->kind != JK_NUM || !isfinite(nomV->num) ||
+        floor(nomV->num) != nomV->num || nomV->num < 0.0 || nomV->num > 1000000.0)
+    {
+        snprintf(detailZ, detailCap,
+                 "aeRefRQItem.numOutputModules must be a non-negative integer");
+        return 0;
+    }
     return 1;
 }
 
@@ -3432,6 +3668,858 @@ static void ExecLayerGetter(
    publish==1; the caller removes the .claimed file afterwards.
    `mtimeMs` is the claimed file's mtime — the deadline base, matching
    the ae-a8n dispatcher convention (mtime + timeoutMs). */
+/* ================= Issue #318 Stage 4: project + RQ-item identity ====
+   §7e aeRefProject: the SDK has no project id — identity is
+   index + name + path corroboration with a collision scan (§7e).
+   §7f aeRefRQItem: no RQ-item id and RQItemRefH dies on any queue
+   change — identity is index + bound-comp itemId + (status,
+   numOutputModules) fingerprint, all re-verified inside ONE dispatch
+   (atomic select+read; the handle never leaves the request window). */
+
+/* Resolve an aeRefProject descriptor to a borrowed projectH inside the
+   request window. projP is the fingerprint-held suite; the memory suite
+   is acquired/released internally for the path read. On success
+   returns 1 with *projectHOut set (borrowed — caller must NOT free);
+   name/path are re-fetched into out params for payload use. On failure
+   returns 0 with `v` carrying the verdict. */
+static int ResolveProjectRef(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    JVal* ref,
+    AEGP_ProjectH* projectHOut,
+    long* indexOut,
+    ReqVerdict* v)
+{
+    JVal* idxV = JGet(ref, "index");
+    JVal* nameV = JGet(ref, "name");
+    JVal* pathV = JGet(ref, "path");
+    long wantIndex = (long)idxV->num;
+    const void* memSuite = NULL;
+    const AEGP_MemorySuite1* memP = NULL;
+    AEGP_ProjectH projectH = NULL;
+    A_long numProjects = 0;
+    A_Err perr;
+    char liveName[AEGP_MAX_PROJ_NAME_SIZE + 1];
+    char livePath[PROJ_STR_MAX + 1];
+    A_Err ferr = A_Err_NONE;
+
+    *projectHOut = NULL;
+    *indexOut = wantIndex;
+
+    if (!projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex ||
+        !projP->AEGP_GetProjectName || !projP->AEGP_GetProjectPath)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "project suite entries unavailable for identity resolve");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    memSuite = IntakeAcquireSuite(utilP, basicP,
+                                  kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    if (!memSuite)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "memory suite unavailable for project identity resolve");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    memP = (const AEGP_MemorySuite1*)memSuite;
+
+#define PROJRES_NOT_SENT(msg) do { \
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
+        snprintf(v->detail, sizeof(v->detail), "%s", msg); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define PROJRES_FAILED(fmt, err) do { \
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
+        snprintf(v->outcome, sizeof(v->outcome), "failed"); \
+        snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define PROJRES_STALE(why) do { \
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
+        VerdictRefuse(v, "STALE_REFERENCE", why); \
+        return 0; } while (0)
+
+    perr = projP->AEGP_GetNumProjects(&numProjects);
+    IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetNumProjects",
+                   (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+    if (perr != A_Err_NONE)
+        PROJRES_FAILED("AEGP_GetNumProjects err=%ld", perr);
+    if (wantIndex < 0 || wantIndex >= (long)numProjects)
+        PROJRES_STALE("project index out of range");
+    perr = projP->AEGP_GetProjectByIndex(wantIndex, &projectH);
+    IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetProjectByIndex",
+                   (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+    if (perr != A_Err_NONE || !projectH)
+        PROJRES_FAILED("AEGP_GetProjectByIndex err=%ld", perr);
+
+    /* corroborate name + path against live identity */
+    {
+        int fpi = FetchProjectIdentity(utilP, projP, memP, projectH,
+                                     1, 1, liveName, sizeof(liveName),
+                                     livePath, sizeof(livePath), &ferr);
+        if (fpi == FPI_AEGP_ERR)
+            PROJRES_FAILED("project identity read err=%ld", ferr);
+        if (fpi == FPI_TRUNCATED)
+            PROJRES_FAILED("project path exceeds descriptor bound err=%ld", ferr);
+    }
+    if (!JStrEqCStr(nameV, liveName))
+        PROJRES_STALE("project name mismatch");
+    /* path: descriptor empty → accept any live path (save tolerance);
+       non-empty → exact match required. */
+    if (pathV->slen > 0 && !JStrEqCStr(pathV, livePath))
+        PROJRES_STALE("project path mismatch");
+
+    /* collision scan: count open projects satisfying the same
+       (name, path) corroboration. >1 → ambiguous → fail closed (§7e). */
+    {
+        long matches = 0;
+        long pi;
+        for (pi = 0; pi < (long)numProjects && matches <= 1; pi++)
+        {
+            AEGP_ProjectH ph2 = NULL;
+            char n2[AEGP_MAX_PROJ_NAME_SIZE + 1];
+            char p2[PROJ_STR_MAX + 1];
+            A_Err e2;
+            int f2;
+            perr = projP->AEGP_GetProjectByIndex(pi, &ph2);
+            IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetProjectByIndex",
+                           (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+            if (perr != A_Err_NONE || !ph2) continue;
+            f2 = FetchProjectIdentity(utilP, projP, memP, ph2,
+                                    1, 1, n2, sizeof(n2), p2, sizeof(p2), &e2);
+            if (f2 != FPI_OK) continue;
+            if (!JStrEqCStr(nameV, n2)) continue;
+            if (pathV->slen > 0 && !JStrEqCStr(pathV, p2)) continue;
+            matches++;
+        }
+        if (matches > 1)
+            PROJRES_STALE("project identity ambiguous");
+    }
+
+#undef PROJRES_NOT_SENT
+#undef PROJRES_FAILED
+#undef PROJRES_STALE
+    IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    *projectHOut = projectH;
+    return 1;
+}
+
+/* Project-scoped read-only getters (§7e): {"project": <aeRefProject>}
+   → resolve → typed getter → typed JSON. */
+static void ExecProjectGetter(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* projArg = JGet(args, "project");
+    JVal* ref = projArg ? JGet(projArg, "aeRef") : NULL;
+    AEGP_ProjectH projectH = NULL;
+    long index = 0;
+    const char* opId = allow->operationId;
+    A_Err oerr = A_Err_STRUCT;
+
+    if (!ResolveProjectRef(utilP, projP, basicP, ref, &projectH, &index, v))
+        return;
+
+    if (strcmp(opId, "AEGP_ProjSuite6.AEGP_ProjectIsDirty") == 0)
+    {
+        A_Boolean dirty = FALSE;
+        if (!projP->AEGP_ProjectIsDirty) goto notsent;
+        oerr = projP->AEGP_ProjectIsDirty(projectH, &dirty);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload), "{\"dirty\":%s}",
+                     dirty ? "true" : "false");
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_ProjSuite6.AEGP_GetProjectBitDepth") == 0)
+    {
+        AEGP_ProjBitDepth depth = 0;
+        if (!projP->AEGP_GetProjectBitDepth) goto notsent;
+        oerr = projP->AEGP_GetProjectBitDepth(projectH, &depth);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload), "{\"bitDepth\":%d}",
+                     (int)depth);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+    else /* AEGP_GetProjectTimeDisplay */
+    {
+        AEGP_TimeDisplay3 td;
+        if (!projP->AEGP_GetProjectTimeDisplay) goto notsent;
+        memset(&td, 0, sizeof(td));
+        oerr = projP->AEGP_GetProjectTimeDisplay(projectH, &td);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                "{\"timeDisplay\":{\"displayMode\":%d,\"footageDisplayMode\":%d,"
+                "\"displayDropFrame\":%s,\"useFeetFrames\":%s,\"timebase\":%d,"
+                "\"framesPerFoot\":%d,\"framesDisplayMode\":%d}}",
+                (int)td.display_mode, (int)td.footage_display_mode,
+                td.display_dropframeB ? "true" : "false",
+                td.use_feet_framesB ? "true" : "false",
+                (int)td.timebaseC, (int)td.frames_per_footC,
+                (int)td.frames_display_mode);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            v->havePayload = 1;
+        }
+    }
+
+    if (oerr == A_Err_NONE && v->havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+    }
+    else if (oerr == A_Err_STRUCT && !v->havePayload)
+    {
+        /* unreachable: notsent label handles missing entries */
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail), "getter returned no result");
+        v->havePayload = 0; v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail), "%s err=%ld", opId, (long)oerr);
+        v->havePayload = 0; v->mayHaveMutated = 0;
+    }
+    return;
+
+notsent:
+    snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+    snprintf(v->detail, sizeof(v->detail), "project suite entry unavailable");
+    v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+}
+
+/* ---- §7f RQ-item resolution -------------------------------------- */
+
+typedef struct
+{
+    ItemResolution item;          /* comp item resolution (suites held) */
+    const void* compSuite;
+    const void* rqItemSuite;
+    const AEGP_CompSuite13* compP;
+    const AEGP_RQItemSuite4* rqItemP;
+    AEGP_RQItemRefH rqH;          /* borrowed — never freed, never leaves window */
+    long rqIndex;
+    long wantItemId;              /* descriptor comp's live itemId (-1 = legacy) */
+    long wantStatus;
+    long wantNumOM;
+} RQResolution;
+
+static void ReleaseRQResolution(
+    const AEGP_UtilitySuite6* utilP,
+    struct SPBasicSuite* basicP,
+    RQResolution* r)
+{
+    if (r->rqItemSuite)
+        IntakeReleaseSuite(utilP, basicP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+    if (r->compSuite)
+        IntakeReleaseSuite(utilP, basicP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    ReleaseResolution(utilP, basicP, &r->item);
+    memset(r, 0, sizeof(*r));
+}
+
+/* Resolve an aeRefRQItem descriptor + projectIndex to a live
+   AEGP_RQItemRefH inside ONE dispatch (§7f): comp aeRef → shared item
+   resolver → comp's live itemId; queue index → RQItemByIndex →
+   GetCompFromRQItem → GetItemFromComp → live itemId must match;
+   (status, numOutputModules) fingerprint must match. All pins
+   re-verified before the caller's getter runs. */
+static int ResolveRQItemRef(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    long projectIndex,
+    JVal* ref,
+    RQResolution* r,
+    ReqVerdict* v)
+{
+    JVal* idxV = JGet(ref, "index");
+    JVal* compArg = JGet(ref, "comp");
+    JVal* compRef = compArg ? JGet(compArg, "aeRef") : NULL;
+    JVal* statusV = JGet(ref, "status");
+    JVal* nomV = JGet(ref, "numOutputModules");
+    long rqIndex = (long)idxV->num;
+    AEGP_RQItemRefH rqH = NULL;
+    AEGP_CompH boundCompH = NULL;
+    AEGP_ItemH boundItemH = NULL;
+    A_long boundItemId = 0;
+    A_long numRQ = 0;
+    AEGP_RenderItemStatusType liveStatus = 0;
+    A_long liveNumOM = 0;
+    A_Err e;
+
+    memset(r, 0, sizeof(*r));
+    r->rqIndex = rqIndex;
+    r->wantStatus = (long)statusV->num;
+    r->wantNumOM = (long)nomV->num;
+    r->wantItemId = -1;
+
+    /* 1. bound comp via the shared item resolver (project identity
+       fetched so callers can emit descriptors). */
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projectIndex, compRef, 1, " (resolve)",
+                          &r->item, v))
+        return 0;
+    if (r->item.type != AEGP_ItemType_COMP)
+    {
+        ReleaseResolution(utilP, basicP, &r->item);
+        VerdictRefuse(v, "STALE_REFERENCE", "rqItem comp binding is not a comp");
+        return 0;
+    }
+    e = r->item.itemP->AEGP_GetItemID
+        ? r->item.itemP->AEGP_GetItemID(r->item.itemH, &boundItemId)
+        : A_Err_STRUCT;
+    IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemID",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE)
+    {
+        ReleaseResolution(utilP, basicP, &r->item);
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_GetItemID err=%ld", (long)e);
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    r->wantItemId = (long)(unsigned int)boundItemId;
+
+    /* 2. RQ-item + comp suites inside the window */
+    r->rqItemSuite = IntakeAcquireSuite(utilP, basicP,
+                                        kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+    r->compSuite = IntakeAcquireSuite(utilP, basicP,
+                                      kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    if (!r->rqItemSuite || !r->compSuite)
+    {
+        ReleaseRQResolution(utilP, basicP, r);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "RQ-item/comp suite unavailable for identity resolve");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return 0;
+    }
+    r->rqItemP = (const AEGP_RQItemSuite4*)r->rqItemSuite;
+    r->compP = (const AEGP_CompSuite13*)r->compSuite;
+
+#define RQRES_NOT_SENT(msg) do { \
+        ReleaseRQResolution(utilP, basicP, r); \
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
+        snprintf(v->detail, sizeof(v->detail), "%s", msg); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define RQRES_FAILED(fmt, err) do { \
+        ReleaseRQResolution(utilP, basicP, r); \
+        snprintf(v->outcome, sizeof(v->outcome), "failed"); \
+        snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        return 0; } while (0)
+#define RQRES_STALE(why) do { \
+        ReleaseRQResolution(utilP, basicP, r); \
+        VerdictRefuse(v, "STALE_REFERENCE", why); \
+        return 0; } while (0)
+
+    if (!r->rqItemP->AEGP_GetNumRQItems || !r->rqItemP->AEGP_GetRQItemByIndex ||
+        !r->rqItemP->AEGP_GetCompFromRQItem ||
+        !r->rqItemP->AEGP_GetRenderState ||
+        !r->rqItemP->AEGP_GetNumOutputModulesForRQItem ||
+        !r->compP->AEGP_GetItemFromComp ||
+        !r->item.itemP->AEGP_GetItemID)
+        RQRES_NOT_SENT("RQ-item suite entries unavailable for identity resolve");
+
+    e = r->rqItemP->AEGP_GetNumRQItems(&numRQ);
+    IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE)
+        RQRES_FAILED("AEGP_GetNumRQItems err=%ld", e);
+    if (rqIndex < 0 || rqIndex >= (long)numRQ)
+        RQRES_STALE("rqItem index out of range");
+
+    e = r->rqItemP->AEGP_GetRQItemByIndex(rqIndex, &rqH);
+    IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE || !rqH)
+        RQRES_FAILED("AEGP_GetRQItemByIndex err=%ld", e);
+    r->rqH = rqH;
+
+    /* 3. bound comp identity: rqH → compH → itemH → live itemId */
+    e = r->rqItemP->AEGP_GetCompFromRQItem(rqH, &boundCompH);
+    IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE || !boundCompH)
+        RQRES_STALE("rqItem has no bound comp");
+    e = r->compP->AEGP_GetItemFromComp(boundCompH, &boundItemH);
+    IntakeOpRecord(utilP, "AEGP_CompSuite13.AEGP_GetItemFromComp",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE || !boundItemH)
+        RQRES_FAILED("AEGP_GetItemFromComp err=%ld", e);
+    e = r->item.itemP->AEGP_GetItemID(boundItemH, &boundItemId);
+    IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemID",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE)
+        RQRES_FAILED("AEGP_GetItemID err=%ld", e);
+    if ((long)(unsigned int)boundItemId != r->wantItemId)
+        RQRES_STALE("rqItem comp binding mismatch");
+
+    /* 4. fingerprint: status + numOutputModules */
+    e = r->rqItemP->AEGP_GetRenderState(rqH, &liveStatus);
+    IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetRenderState",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE)
+        RQRES_FAILED("AEGP_GetRenderState err=%ld", e);
+    if ((long)liveStatus != r->wantStatus)
+        RQRES_STALE("rqItem status changed");
+    e = r->rqItemP->AEGP_GetNumOutputModulesForRQItem(rqH, &liveNumOM);
+    IntakeOpRecord(utilP,
+                   "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
+                   (long)e, e == A_Err_NONE ? " (resolve)" : NULL);
+    if (e != A_Err_NONE)
+        RQRES_FAILED("AEGP_GetNumOutputModulesForRQItem err=%ld", e);
+    if ((long)liveNumOM != r->wantNumOM)
+        RQRES_STALE("rqItem output-module count changed");
+
+#undef RQRES_NOT_SENT
+#undef RQRES_FAILED
+#undef RQRES_STALE
+    return 1;
+}
+
+/* RQ-item read-only getters (§7f): {projectIndex, rqItem} → atomic
+   resolve → typed getter → typed JSON. */
+static void ExecRQItemGetter(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* rqArg = JGet(args, "rqItem");
+    JVal* ref = rqArg ? JGet(rqArg, "aeRef") : NULL;
+    long projIndex = ArgsInt(allow, args, 0);
+    RQResolution r;
+    const char* opId = allow->operationId;
+    A_Err oerr = A_Err_STRUCT;
+    int havePayload = 0;
+
+    if (!ResolveRQItemRef(utilP, projP, basicP, plugin_id,
+                          projIndex, ref, &r, v))
+        return;
+
+    if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetRenderState") == 0)
+    {
+        AEGP_RenderItemStatusType st = 0;
+        oerr = r.rqItemP->AEGP_GetRenderState(r.rqH, &st);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload), "{\"status\":%ld}",
+                     (long)st);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetStartedTime") == 0 ||
+             strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetElapsedTime") == 0)
+    {
+        int isStarted = strcmp(opId,
+            "AEGP_RQItemSuite4.AEGP_GetStartedTime") == 0;
+        A_Time t = {0, 0};
+        oerr = isStarted ? r.rqItemP->AEGP_GetStartedTime(r.rqH, &t)
+                         : r.rqItemP->AEGP_GetElapsedTime(r.rqH, &t);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            /* {0,1} sentinel = never started/rendered → null */
+            if (t.value == 0 && t.scale == 1)
+                snprintf(v->payload, sizeof(v->payload),
+                         "{\"%s\":null}", isStarted ? "startedTime" : "elapsedTime");
+            else
+                snprintf(v->payload, sizeof(v->payload),
+                         "{\"%s\":{\"value\":%ld,\"scale\":%lu}}",
+                         isStarted ? "startedTime" : "elapsedTime",
+                         (long)t.value, (unsigned long)t.scale);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetLogType") == 0)
+    {
+        AEGP_LogType lt = 0;
+        oerr = r.rqItemP->AEGP_GetLogType(r.rqH, &lt);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload), "{\"logType\":%ld}",
+                     (long)lt);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            havePayload = 1;
+        }
+    }
+    else if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetComment") == 0)
+    {
+        AEGP_MemHandle mh = NULL;
+        char cm[1100];
+        IntakeMemStatus ms;
+        oerr = r.rqItemP->AEGP_GetComment(r.rqH, &mh);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            ms = IntakeReadMemHandleUtf8(utilP, r.item.memP, mh, cm, sizeof(cm));
+            if (ms == IMH_OK || ms == IMH_TRUNCATED)
+            {
+                char esc[6600];
+                JsonEscape(esc, sizeof(esc), cm);
+                snprintf(v->payload, sizeof(v->payload),
+                         "{\"comment\":\"%s\"}", esc);
+                v->payload[sizeof(v->payload) - 1] = '\0';
+                havePayload = 1;
+            }
+            else oerr = A_Err_STRUCT;
+        }
+    }
+    else if (strcmp(opId,
+                    "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem") == 0)
+    {
+        A_long nom = 0;
+        oerr = r.rqItemP->AEGP_GetNumOutputModulesForRQItem(r.rqH, &nom);
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        if (oerr == A_Err_NONE)
+        {
+            snprintf(v->payload, sizeof(v->payload),
+                     "{\"numOutputModules\":%ld}", (long)nom);
+            v->payload[sizeof(v->payload) - 1] = '\0';
+            havePayload = 1;
+        }
+    }
+    else /* AEGP_GetCompFromRQItem — emit comp descriptor, never handle */
+    {
+        AEGP_CompH boundCompH = NULL;
+        AEGP_ItemH boundItemH = NULL;
+        A_long boundItemId = 0;
+        oerr = r.rqItemP->AEGP_GetCompFromRQItem(r.rqH, &boundCompH);
+        IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
+                       (long)oerr, oerr == A_Err_NONE ? " (result)" : NULL);
+        if (oerr == A_Err_NONE && boundCompH)
+        {
+            A_Err e2 = r.compP->AEGP_GetItemFromComp(boundCompH, &boundItemH);
+            IntakeOpRecord(utilP, "AEGP_CompSuite13.AEGP_GetItemFromComp",
+                           (long)e2, e2 == A_Err_NONE ? " (result)" : NULL);
+            if (e2 == A_Err_NONE && boundItemH)
+            {
+                A_Err e3 = r.item.itemP->AEGP_GetItemID(boundItemH, &boundItemId);
+                IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemID",
+                               (long)e3, e3 == A_Err_NONE ? " (result)" : NULL);
+                if (e3 == A_Err_NONE)
+                {
+                    /* reuse the resolved comp's own descriptor — it IS
+                       the bound comp (identity already proven equal) */
+                    JBuf b;
+                    JBInit(&b, v->payload, sizeof(v->payload));
+                    JBPut(&b, "{\"comp\":{\"aeRef\":{\"type\":\"");
+                    JBPut(&b, ItemTypeToAeRefTag(r.item.type));
+                    JBPut(&b, "\",\"name\":\""); JBEsc(&b, r.item.name);
+                    JBPut(&b, "\",\"path\":[0],\"itemId\":");
+                    JBNum(&b, (long)(unsigned int)boundItemId);
+                    JBPut(&b, ",\"projectName\":\"");
+                    JBEsc(&b, r.item.projectName);
+                    JBPut(&b, "\",\"projectPath\":\"");
+                    JBEsc(&b, r.item.projectPath);
+                    JBPut(&b, "\"}},\"projectIndex\":");
+                    JBNum(&b, projIndex);
+                    JBPut(&b, "}");
+                    if (!b.of)
+                    {
+                        *b.cur = '\0';
+                        havePayload = 1;
+                    }
+                    else oerr = A_Err_STRUCT;
+                }
+                else oerr = e3;
+            }
+            else oerr = e2;
+        }
+    }
+
+    ReleaseRQResolution(utilP, basicP, &r);
+    v->havePayload = havePayload;
+    if (havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail), "%s err=%ld", opId, (long)oerr);
+        v->havePayload = 0; v->mayHaveMutated = 0;
+    }
+}
+
+/* Locate the open project that owns a top-level item by live itemId.
+   Returns 1 with *projIndexOut set, or 0. Bounded scan; used by RQ
+   enumeration to recover the projectIndex a descriptor needs. */
+static int FindProjectForItemId(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    unsigned int wantId,
+    long* projIndexOut)
+{
+    const void* itemSuite = IntakeAcquireSuite(utilP, basicP,
+        kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    const AEGP_ItemSuite9* itemP = itemSuite
+        ? (const AEGP_ItemSuite9*)itemSuite : NULL;
+    A_long numProjects = 0;
+    A_Err perr;
+    long pi;
+    int found = 0;
+    *projIndexOut = -1;
+    if (!itemP || !itemP->AEGP_GetFirstProjItem ||
+        !itemP->AEGP_GetNextProjItem || !itemP->AEGP_GetItemID ||
+        !projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex)
+    {
+        if (itemSuite) IntakeReleaseSuite(utilP, basicP,
+            kAEGPItemSuite, kAEGPItemSuiteVersion9);
+        return 0;
+    }
+    perr = projP->AEGP_GetNumProjects(&numProjects);
+    IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetNumProjects",
+                   (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+    if (perr != A_Err_NONE) { found = -1; goto done; }
+    for (pi = 0; pi < (long)numProjects && !found; pi++)
+    {
+        AEGP_ProjectH ph = NULL;
+        AEGP_ItemH ih = NULL;
+        perr = projP->AEGP_GetProjectByIndex(pi, &ph);
+        IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetProjectByIndex",
+                       (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE || !ph) continue;
+        perr = itemP->AEGP_GetFirstProjItem(ph, &ih);
+        IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
+                       (long)perr, perr == A_Err_NONE ? " (resolve)" : NULL);
+        if (perr != A_Err_NONE) continue;
+        while (ih)
+        {
+            A_long id = 0;
+            AEGP_ItemH nextH = NULL;
+            A_Err e2 = itemP->AEGP_GetItemID(ih, &id);
+            IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemID",
+                           (long)e2, e2 == A_Err_NONE ? " (resolve)" : NULL);
+            if (e2 == A_Err_NONE && (unsigned int)id == wantId)
+            { found = 1; *projIndexOut = pi; break; }
+            e2 = itemP->AEGP_GetNextProjItem(ph, ih, &nextH);
+            IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetNextProjItem",
+                           (long)e2, e2 == A_Err_NONE ? " (resolve)" : NULL);
+            if (e2 != A_Err_NONE) break;
+            ih = nextH;
+        }
+    }
+done:
+    IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    return found == 1;
+}
+
+/* AEGP_GetRQItemByIndex as RQ descriptor issuance/enumeration (§7f):
+   {offset, limit} → per-slot aeRefRQItem descriptors + the projectIndex
+   each bound comp lives in. Slots whose comp cannot be resolved are
+   emitted with "rqItem":null — never a fabricated descriptor. */
+static void EnumerateRQItems(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    long offset = ArgsInt(allow, args, 0);
+    long limit = ArgsInt(allow, args, 1);
+    const void* rqSuite = IntakeAcquireSuite(utilP, basicP,
+        kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+    const void* compSuite = IntakeAcquireSuite(utilP, basicP,
+        kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    const void* memSuite = IntakeAcquireSuite(utilP, basicP,
+        kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    const AEGP_RQItemSuite4* rqP = rqSuite
+        ? (const AEGP_RQItemSuite4*)rqSuite : NULL;
+    const AEGP_CompSuite13* compP = compSuite
+        ? (const AEGP_CompSuite13*)compSuite : NULL;
+    const AEGP_MemorySuite1* memP = memSuite
+        ? (const AEGP_MemorySuite1*)memSuite : NULL;
+    const void* itemSuite = IntakeAcquireSuite(utilP, basicP,
+        kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    const AEGP_ItemSuite9* itemP = itemSuite
+        ? (const AEGP_ItemSuite9*)itemSuite : NULL;
+    A_long numRQ = 0;
+    A_Err e;
+    long i;
+    JBuf b;
+    int of = 0;
+
+    if (!rqP || !compP || !memP || !itemP ||
+        !rqP->AEGP_GetNumRQItems || !rqP->AEGP_GetRQItemByIndex ||
+        !rqP->AEGP_GetCompFromRQItem || !rqP->AEGP_GetRenderState ||
+        !rqP->AEGP_GetNumOutputModulesForRQItem ||
+        !compP->AEGP_GetItemFromComp ||
+        !itemP->AEGP_GetItemID || !itemP->AEGP_GetItemType ||
+        !itemP->AEGP_GetItemName || !itemP->AEGP_GetFirstProjItem ||
+        !itemP->AEGP_GetNextProjItem)
+    {
+        if (rqSuite) IntakeReleaseSuite(utilP, basicP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+        if (compSuite) IntakeReleaseSuite(utilP, basicP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        if (memSuite) IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+        if (itemSuite) IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "RQ-item suite entries unavailable for enumeration");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+
+    e = rqP->AEGP_GetNumRQItems(&numRQ);
+    IntakeOpRecord(utilP, allow->opRecordId, (long)e, NULL);
+    if (e != A_Err_NONE)
+    {
+        IntakeReleaseSuite(utilP, basicP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+        IntakeReleaseSuite(utilP, basicP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
+        IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+        IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_GetNumRQItems err=%ld", (long)e);
+        v->havePayload = 0; v->mayHaveMutated = 0;
+        return;
+    }
+
+    JBInit(&b, v->payload, sizeof(v->payload));
+    JBPut(&b, "{\"items\":[");
+    {
+        long emitted = 0;
+        for (i = offset; i < offset + limit && i < (long)numRQ; i++)
+        {
+            AEGP_RQItemRefH rqH = NULL;
+            AEGP_CompH compH = NULL;
+            AEGP_ItemH itemH = NULL;
+            A_long itemId = 0;
+            AEGP_ItemType itype = AEGP_ItemType_NONE;
+            AEGP_RenderItemStatusType st = 0;
+            A_long nom = 0;
+            int describable = 0;
+            long projIndex = -1;
+            char nm[AEREF_NAME_MAX + 1];
+            char pn[AEGP_MAX_PROJ_NAME_SIZE + 1];
+            char pp[PROJ_STR_MAX + 1];
+            AEGP_MemHandle nameH = NULL;
+
+            e = rqP->AEGP_GetRQItemByIndex(i, &rqH);
+            IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
+                           (long)e, NULL);
+            if (e != A_Err_NONE || !rqH) continue;
+            if (emitted) JBPut(&b, ",");
+            JBPut(&b, "{\"index\":"); JBNum(&b, i);
+            /* fingerprint */
+            e = rqP->AEGP_GetRenderState(rqH, &st);
+            IntakeOpRecord(utilP, "AEGP_RQItemSuite4.AEGP_GetRenderState",
+                           (long)e, NULL);
+            e = rqP->AEGP_GetNumOutputModulesForRQItem(rqH, &nom);
+            IntakeOpRecord(utilP,
+                "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
+                (long)e, NULL);
+            /* bound comp → item → id */
+            if (e == A_Err_NONE &&
+                rqP->AEGP_GetCompFromRQItem(rqH, &compH) == A_Err_NONE &&
+                compH &&
+                compP->AEGP_GetItemFromComp(compH, &itemH) == A_Err_NONE &&
+                itemH &&
+                itemP->AEGP_GetItemID(itemH, &itemId) == A_Err_NONE &&
+                itemP->AEGP_GetItemType(itemH, &itype) == A_Err_NONE &&
+                ItemTypeToAeRefTag(itype) != NULL &&
+                FindProjectForItemId(utilP, projP, basicP,
+                                     (unsigned int)itemId, &projIndex))
+            {
+                /* project identity for the comp's aeRef */
+                AEGP_ProjectH ph = NULL;
+                A_Err pe = projP->AEGP_GetProjectByIndex(projIndex, &ph);
+                IntakeOpRecord(utilP, "AEGP_ProjSuite6.AEGP_GetProjectByIndex",
+                               (long)pe, NULL);
+                if (pe == A_Err_NONE && ph)
+                {
+                    A_Err fe = A_Err_NONE;
+                    int fpi = FetchProjectIdentity(utilP, projP, memP, ph,
+                        1, 1, pn, sizeof(pn), pp, sizeof(pp), &fe);
+                    e = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
+                    IntakeOpRecord(utilP, "AEGP_ItemSuite9.AEGP_GetItemName",
+                                   (long)e, e == A_Err_NONE ? " (result)" : NULL);
+                    if (fpi == FPI_OK && e == A_Err_NONE && nameH)
+                    {
+                        IntakeMemStatus ms = IntakeReadMemHandleUtf8(
+                            utilP, memP, nameH, nm, sizeof(nm));
+                        if (ms == IMH_OK && strlen(nm) <= AEREF_NAME_MAX)
+                            describable = 1;
+                    }
+                }
+            }
+            if (describable)
+            {
+                JBPut(&b, ",\"projectIndex\":"); JBNum(&b, projIndex);
+                JBPut(&b, ",\"rqItem\":{\"aeRef\":{\"type\":\"rqItem\",");
+                JBPut(&b, "\"index\":"); JBNum(&b, i);
+                JBPut(&b, ",\"comp\":{\"aeRef\":{\"type\":\"");
+                JBPut(&b, ItemTypeToAeRefTag(itype));
+                JBPut(&b, "\",\"name\":\""); JBEsc(&b, nm);
+                JBPut(&b, "\",\"path\":[0],\"itemId\":");
+                JBNum(&b, (long)(unsigned int)itemId);
+                JBPut(&b, ",\"projectName\":\""); JBEsc(&b, pn);
+                JBPut(&b, "\",\"projectPath\":\""); JBEsc(&b, pp);
+                JBPut(&b, "\"}},\"status\":"); JBNum(&b, (long)st);
+                JBPut(&b, ",\"numOutputModules\":"); JBNum(&b, (long)nom);
+                JBPut(&b, "}}}");
+            }
+            else
+            {
+                JBPut(&b, ",\"projectIndex\":null,\"rqItem\":null}");
+            }
+            emitted++;
+        }
+    }
+    JBPut(&b, "],\"numRQItems\":"); JBNum(&b, (long)numRQ); JBPut(&b, "}");
+    of = b.of;
+    IntakeReleaseSuite(utilP, basicP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
+    IntakeReleaseSuite(utilP, basicP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
+    IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    if (of)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "enumeration payload exceeds result bound");
+        v->havePayload = 0; v->mayHaveMutated = 0;
+        return;
+    }
+    *b.cur = '\0';
+    snprintf(v->outcome, sizeof(v->outcome), "completed");
+    v->havePayload = 1;
+    v->mayHaveMutated = 0;
+}
+
 static void ProcessClaimed(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -3873,6 +4961,33 @@ static void ProcessClaimed(
         else if (IsLayerGetterOpId(allow->operationId))
         {
             ExecLayerGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
+        }
+        /* ---- Issue #318 §7e: project-scoped getters -----------------
+           {project:<aeRefProject>} → index+name+path corroboration +
+           collision scan → borrowed projectH → typed getter. */
+        else if (strncmp(allow->operationId, "AEGP_ProjSuite6.", 16) == 0 &&
+                 strcmp(allow->operationId,
+                        "AEGP_ProjSuite6.AEGP_GetNumProjects") != 0)
+        {
+            ExecProjectGetter(utilP, projP, basicP, allow, args, &v);
+        }
+        /* ---- Issue #318 §7f: RQ-item identity ----------------------
+           GetRQItemByIndex is enumeration/issuance ({offset,limit});
+           the remaining RQItemSuite4 members resolve the aeRefRQItem
+           descriptor atomically (index + bound-comp itemId +
+           fingerprint) inside this dispatch. */
+        else if (strcmp(allow->operationId,
+                        "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex") == 0)
+        {
+            EnumerateRQItems(utilP, projP, basicP, plugin_id,
+                             allow, args, &v);
+        }
+        else if (strncmp(allow->operationId, "AEGP_RQItemSuite4.", 18) == 0 &&
+                 strcmp(allow->operationId,
+                        "AEGP_RQItemSuite4.AEGP_GetNumRQItems") != 0)
+        {
+            ExecRQItemGetter(utilP, projP, basicP, plugin_id,
+                             allow, args, &v);
         }
         /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
         else if (strcmp(allow->operationId,

@@ -1371,6 +1371,13 @@ static void CheckResultDoc(TmpChan& c, const char* id,
     {
         CHECK(JStrEq(JGet(res, "schema"), "ae-devtools/native-dispatch/v1"));
         CHECK(JStrEq(JGet(res, "requestId"), id));
+        if (!JStrEq(JGet(res, "outcome"), wantOutcome))
+            printf("FAIL result %s: outcome=%s want=%s detail=%s\n", id,
+                   JGet(res, "outcome") && JGet(res, "outcome")->kind == JK_STR
+                       ? JGet(res, "outcome")->str : "?",
+                   wantOutcome,
+                   JGet(res, "detail") && JGet(res, "detail")->kind == JK_STR
+                       ? JGet(res, "detail")->str : "?");
         CHECK(JStrEq(JGet(res, "outcome"), wantOutcome));
         JVal* rc = JGet(res, "refusalCode");
         if (wantRefusal)
@@ -3560,6 +3567,498 @@ static void TestIntakeChannelPrivacyViolation()
     CHECK(h->LogContains("native.error: channel privacy check failed"));
 }
 
+/* Issue #318 §7e: aeRefProject descriptor → index+name+path
+   corroboration + collision scan → borrowed projectH → typed
+   ProjSuite6 getter. Covers the three getters, name/path mismatch,
+   index reuse after close/open (project vector mutation), empty-path
+   save tolerance, and the ambiguous-identity collision refusal. */
+static void TestIntakeProjectGetters()
+{
+    auto h = MakeFakeHost();
+    FakeProject& p0 = h->AddProject("Shot01");
+    p0.path = "/tmp/shot01.aep";
+    p0.dirty = TRUE;
+    p0.bitDepth = AEGP_ProjBitDepth_16;
+    p0.timeDisplay.display_mode = 1;
+    p0.timeDisplay.footage_display_mode = 2;
+    p0.timeDisplay.display_dropframeB = TRUE;
+    p0.timeDisplay.use_feet_framesB = FALSE;
+    p0.timeDisplay.timebaseC = 'f';
+    p0.timeDisplay.frames_per_footC = 24;
+    p0.timeDisplay.frames_display_mode = 3;
+    FakeProject& p1 = h->AddProject("Untitled");
+    p1.path = "";
+    h->numProjects = 2;
+    TmpChan c;
+    IntakeEntry(*h, c);
+
+    const char* proj0 =
+        "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":0,"
+        "\"name\":\"Shot01\",\"path\":\"/tmp/shot01.aep\"}}}";
+    const char* proj1 =
+        "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":1,"
+        "\"name\":\"Untitled\",\"path\":\"\"}}}";
+
+    /* ---- three typed getters on project 0 (one request per tick) ---- */
+    WriteReq0600(c.Path("inbox/pd.request.json"),
+                 ReqJsonArgs("pd", kTok, 30000,
+                    "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", proj0));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "pd", &doc);
+        JVal* d = pay ? JGet(pay, "dirty") : NULL;
+        CHECK(d != NULL && d->kind == JK_TRUE);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "pd", "completed", NULL);
+    }
+    WriteReq0600(c.Path("inbox/pb.request.json"),
+                 ReqJsonArgs("pb", kTok, 30000,
+                    "AEGP_ProjSuite6.AEGP_GetProjectBitDepth", "26.5", proj0));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "pb", &doc);
+        JVal* bd = PayloadNum(pay, "bitDepth");
+        CHECK(bd != NULL && bd->num == 1.0); /* AEGP_ProjBitDepth_16 */
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "pb", "completed", NULL);
+    }
+    WriteReq0600(c.Path("inbox/pt.request.json"),
+                 ReqJsonArgs("pt", kTok, 30000,
+                    "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", "26.5", proj0));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "pt", &doc);
+        JVal* td = pay ? JGet(pay, "timeDisplay") : NULL;
+        CHECK(td != NULL);
+        JVal* tb = td ? PayloadNum(td, "timebase") : NULL;
+        CHECK(tb != NULL && tb->num == (double)'f');
+        JVal* fpf = td ? PayloadNum(td, "framesPerFoot") : NULL;
+        CHECK(fpf != NULL && fpf->num == 24.0);
+        JVal* df = td ? JGet(td, "displayDropFrame") : NULL;
+        CHECK(df != NULL && df->kind == JK_TRUE);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "pt", "completed", NULL);
+    }
+
+    /* ---- untitled project: empty path descriptor resolves ---- */
+    WriteReq0600(c.Path("inbox/pu.request.json"),
+                 ReqJsonArgs("pu", kTok, 30000,
+                    "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", proj1));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "pu", "completed", NULL);
+
+    /* ---- empty descriptor path tolerates a later save (path gains
+       value): document tolerance, resolution still succeeds ---- */
+    {
+        const char* savedArgs =
+            "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":1,"
+            "\"name\":\"Untitled\",\"path\":\"\"}}}";
+        h->projects[1].path = "/tmp/now-saved.aep";
+        WriteReq0600(c.Path("inbox/ps.request.json"),
+                     ReqJsonArgs("ps", kTok, 30000,
+                        "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5",
+                        savedArgs));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "ps", "completed", NULL);
+        h->projects[1].path = "";
+    }
+
+    /* ---- wrong name → STALE_REFERENCE ---- */
+    {
+        const char* bad =
+            "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":0,"
+            "\"name\":\"Other\",\"path\":\"/tmp/shot01.aep\"}}}";
+        WriteReq0600(c.Path("inbox/pn.request.json"),
+                     ReqJsonArgs("pn", kTok, 30000,
+                        "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", bad));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pn", "refused", "STALE_REFERENCE");
+    }
+
+    /* ---- wrong path → STALE_REFERENCE ---- */
+    {
+        const char* bad =
+            "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":0,"
+            "\"name\":\"Shot01\",\"path\":\"/tmp/other.aep\"}}}";
+        WriteReq0600(c.Path("inbox/pp.request.json"),
+                     ReqJsonArgs("pp", kTok, 30000,
+                        "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", bad));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pp", "refused", "STALE_REFERENCE");
+    }
+
+    /* ---- index reuse after close/open: a new project inserted at
+       index 0 shifts Shot01 to index 1 — the old descriptor's index
+       now resolves to a different project → name mismatch → STALE ---- */
+    {
+        FakeProject fresh = h->AddProject("NewFirst");
+        fresh.path = "/tmp/newfirst.aep";
+        /* AddProject appends; emulate close/open reorder by rebuilding
+           the vector so NewFirst sits at index 0 */
+        std::vector<FakeProject> reordered;
+        reordered.push_back(fresh);
+        reordered.push_back(h->projects[0]);
+        reordered.push_back(h->projects[1]);
+        h->projects = reordered;
+        h->numProjects = 3;
+        WriteReq0600(c.Path("inbox/pr.request.json"),
+                     ReqJsonArgs("pr", kTok, 30000,
+                        "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", proj0));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pr", "refused", "STALE_REFERENCE");
+        /* …but a descriptor carrying the live index still resolves */
+        const char* proj0moved =
+            "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":1,"
+            "\"name\":\"Shot01\",\"path\":\"/tmp/shot01.aep\"}}}";
+        WriteReq0600(c.Path("inbox/pr2.request.json"),
+                     ReqJsonArgs("pr2", kTok, 30000,
+                        "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5",
+                        proj0moved));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pr2", "completed", NULL);
+    }
+
+    /* ---- malformed descriptor shape → MALFORMED_REQUEST ---- */
+    {
+        const char* bad1 =
+            "{\"project\":{\"aeRef\":{\"type\":\"item\",\"index\":0,"
+            "\"name\":\"Shot01\",\"path\":\"/tmp/shot01.aep\"}}}";
+        WriteReq0600(c.Path("inbox/pm.request.json"),
+                     ReqJsonArgs("pm", kTok, 30000,
+                        "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", bad1));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "pm", "refused", "MALFORMED_REQUEST");
+    }
+}
+
+/* Issue #318 §7f: aeRefRQItem descriptor → comp aeRef resolve →
+   queue index → bound-comp itemId + (status,numOutputModules)
+   fingerprint, all re-verified inside ONE dispatch. Covers
+   enumeration/issuance, all seven getters, queue reorder (index
+   reuse), comp rebind, fingerprint change, duplicate same-comp
+   entries, and malformed shapes. */
+static void TestIntakeRQItemGetters()
+{
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "ClipA",  AEGP_ItemType_COMP,    6101 },
+        { "ClipB",  AEGP_ItemType_COMP,    6102 },
+    });
+    h->numProjects = 1;
+    h->numRQItems = 3;
+    h->rqItemMeta.resize(3);
+    /* slot 0: ClipA, queued, 1 OM, comment */
+    h->rqItemMeta[0].compProject = 0;
+    h->rqItemMeta[0].compItem = 0;
+    h->rqItemMeta[0].status = AEGP_RenderItemStatus_QUEUED;
+    h->rqItemMeta[0].numOutputModules = 1;
+    h->rqItemMeta[0].comment =
+        h->MakeNameSpec(FakeHost::U16("render note"));
+    h->rqItemMeta[0].logType = AEGP_LogType_PLUS_SETTINGS;
+    h->rqItemMeta[0].startedTime = {12, 30};
+    h->rqItemMeta[0].elapsedTime = {34, 30};
+    /* slot 1: ClipB, rendering, 2 OMs */
+    h->rqItemMeta[1].compProject = 0;
+    h->rqItemMeta[1].compItem = 1;
+    h->rqItemMeta[1].status = AEGP_RenderItemStatus_RENDERING;
+    h->rqItemMeta[1].numOutputModules = 2;
+    /* slot 2: SAME comp as slot 0 but different status — two queue
+       entries bound to one comp must still resolve independently */
+    h->rqItemMeta[2].compProject = 0;
+    h->rqItemMeta[2].compItem = 0;
+    h->rqItemMeta[2].status = AEGP_RenderItemStatus_UNQUEUED;
+    h->rqItemMeta[2].numOutputModules = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+
+    /* ---- enumeration: GetRQItemByIndex issues descriptors ---- */
+    WriteReq0600(c.Path("inbox/rq.request.json"),
+                 ReqJsonArgs("rq", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", "26.5",
+                    "{\"offset\":0,\"limit\":32}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rq", &doc);
+        JVal* items = pay ? JGet(pay, "items") : NULL;
+        JVal* num = pay ? PayloadNum(pay, "numRQItems") : NULL;
+        CHECK(items != NULL && items->kind == JK_ARR && items->nitems == 3);
+        CHECK(num != NULL && num->num == 3.0);
+        if (items && items->nitems > 0)
+        {
+            JVal* it0 = items->items[0];
+            JVal* rq = JGet(it0, "rqItem");
+            JVal* ref = rq ? JGet(rq, "aeRef") : NULL;
+            CHECK(ref != NULL);
+            JVal* ty = ref ? JGet(ref, "type") : NULL;
+            CHECK(ty != NULL && JStrEq(ty, "rqItem"));
+            JVal* idx = ref ? PayloadNum(ref, "index") : NULL;
+            CHECK(idx != NULL && idx->num == 0.0);
+            JVal* cmp = ref ? JGet(ref, "comp") : NULL;
+            JVal* cref = cmp ? JGet(cmp, "aeRef") : NULL;
+            JVal* cid = cref ? PayloadNum(cref, "itemId") : NULL;
+            CHECK(cid != NULL && cid->num == 6101.0);
+            JVal* st = ref ? PayloadNum(ref, "status") : NULL;
+            CHECK(st != NULL &&
+                  st->num == (double)AEGP_RenderItemStatus_QUEUED);
+            JVal* pi = JGet(it0, "projectIndex");
+            CHECK(pi != NULL && pi->num == 0.0);
+        }
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rq", "completed", NULL);
+    }
+
+    /* ---- hand-built descriptor for slot 0 (ClipA binding) ---- */
+    std::string rqArgs0 =
+        std::string("{\"projectIndex\":0,\"rqItem\":{\"aeRef\":{"
+                    "\"type\":\"rqItem\",\"index\":0,\"comp\":{\"aeRef\":{")
+        + "\"type\":\"comp\",\"name\":\"ClipA\",\"path\":[0],"
+        "\"itemId\":6101,\"projectName\":\"Shot01\","
+        "\"projectPath\":\"/tmp/shot01.aep\"}},\"status\":"
+        + std::to_string((long)AEGP_RenderItemStatus_QUEUED)
+        + ",\"numOutputModules\":1}}}";
+
+    /* ---- typed getters ---- */
+    WriteReq0600(c.Path("inbox/rs.request.json"),
+                 ReqJsonArgs("rs", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5",
+                    rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rs", &doc);
+        JVal* st = PayloadNum(pay, "status");
+        CHECK(st != NULL && st->num == (double)AEGP_RenderItemStatus_QUEUED);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rs", "completed", NULL);
+    }
+
+    WriteReq0600(c.Path("inbox/rm.request.json"),
+                 ReqJsonArgs("rm", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
+                    "26.5", rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rm", &doc);
+        JVal* n = PayloadNum(pay, "numOutputModules");
+        CHECK(n != NULL && n->num == 1.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rm", "completed", NULL);
+    }
+
+    WriteReq0600(c.Path("inbox/rt.request.json"),
+                 ReqJsonArgs("rt", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetStartedTime", "26.5",
+                    rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rt", &doc);
+        JVal* t = pay ? JGet(pay, "startedTime") : NULL;
+        JVal* val = t ? PayloadNum(t, "value") : NULL;
+        CHECK(val != NULL && val->num == 12.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rt", "completed", NULL);
+    }
+
+    WriteReq0600(c.Path("inbox/re.request.json"),
+                 ReqJsonArgs("re", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetElapsedTime", "26.5",
+                    rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "re", &doc);
+        JVal* t = pay ? JGet(pay, "elapsedTime") : NULL;
+        JVal* val = t ? PayloadNum(t, "value") : NULL;
+        CHECK(val != NULL && val->num == 34.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "re", "completed", NULL);
+    }
+
+    WriteReq0600(c.Path("inbox/rl.request.json"),
+                 ReqJsonArgs("rl", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetLogType", "26.5",
+                    rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rl", &doc);
+        JVal* lt = PayloadNum(pay, "logType");
+        CHECK(lt != NULL && lt->num == (double)AEGP_LogType_PLUS_SETTINGS);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rl", "completed", NULL);
+    }
+
+    WriteReq0600(c.Path("inbox/rc.request.json"),
+                 ReqJsonArgs("rc", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetComment", "26.5",
+                    rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rc", &doc);
+        JVal* cm = pay ? JGet(pay, "comment") : NULL;
+        CHECK(cm != NULL && cm->kind == JK_STR &&
+              cm->slen == strlen("render note") &&
+              memcmp(cm->str, "render note", cm->slen) == 0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rc", "completed", NULL);
+    }
+
+    /* GetCompFromRQItem → bound comp emitted as descriptor */
+    WriteReq0600(c.Path("inbox/rk.request.json"),
+                 ReqJsonArgs("rk", kTok, 30000,
+                    "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem", "26.5",
+                    rqArgs0.c_str()));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    {
+        JVal* doc = NULL;
+        JVal* pay = ResultPayload(c, "rk", &doc);
+        JVal* cmp = pay ? JGet(pay, "comp") : NULL;
+        JVal* cref = cmp ? JGet(cmp, "aeRef") : NULL;
+        JVal* cid = cref ? PayloadNum(cref, "itemId") : NULL;
+        JVal* pi = pay ? PayloadNum(pay, "projectIndex") : NULL;
+        CHECK(cid != NULL && cid->num == 6101.0);
+        CHECK(pi != NULL && pi->num == 0.0);
+        if (doc) JFree(doc);
+        CheckResultDoc(c, "rk", "completed", NULL);
+    }
+
+    /* ---- duplicate same-comp entries resolve independently ---- */
+    {
+        std::string rqArgs2 = rqArgs0;
+        /* slot 2: same comp, UNQUEUED status, index 2 */
+        size_t si = rqArgs2.find("\"index\":0");
+        CHECK(si != std::string::npos);
+        rqArgs2.replace(si + 8, 1, "2");
+        size_t sp = rqArgs2.find("\"status\":");
+        CHECK(sp != std::string::npos);
+        rqArgs2.replace(sp + 9, 1, "1"); /* UNQUEUED = 1 */
+        WriteReq0600(c.Path("inbox/rd.request.json"),
+                     ReqJsonArgs("rd", kTok, 30000,
+                        "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5",
+                        rqArgs2.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        {
+            JVal* doc = NULL;
+            JVal* pay = ResultPayload(c, "rd", &doc);
+            JVal* st = PayloadNum(pay, "status");
+            CHECK(st != NULL &&
+                  st->num == (double)AEGP_RenderItemStatus_UNQUEUED);
+            if (doc) JFree(doc);
+            CheckResultDoc(c, "rd", "completed", NULL);
+        }
+    }
+
+    /* ---- stale: index out of range after queue emptied ---- */
+    {
+        h->numRQItems = 0;
+        WriteReq0600(c.Path("inbox/ro.request.json"),
+                     ReqJsonArgs("ro", kTok, 30000,
+                        "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5",
+                        rqArgs0.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "ro", "refused", "STALE_REFERENCE");
+        h->numRQItems = 3;
+    }
+
+    /* ---- stale: queue reorder — slot 0 now binds ClipB; the old
+       descriptor's comp binding no longer matches → STALE ---- */
+    {
+        FakeRQItemMeta m0 = h->rqItemMeta[0];
+        FakeRQItemMeta m1 = h->rqItemMeta[1];
+        h->rqItemMeta[0] = m1;
+        h->rqItemMeta[1] = m0;
+        WriteReq0600(c.Path("inbox/rq2.request.json"),
+                     ReqJsonArgs("rq2", kTok, 30000,
+                        "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5",
+                        rqArgs0.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "rq2", "refused", "STALE_REFERENCE");
+        h->rqItemMeta[0] = m0;
+        h->rqItemMeta[1] = m1;
+    }
+
+    /* ---- stale: fingerprint change (status mutated in place) ---- */
+    {
+        h->rqItemMeta[0].status = AEGP_RenderItemStatus_DONE;
+        WriteReq0600(c.Path("inbox/rf.request.json"),
+                     ReqJsonArgs("rf", kTok, 30000,
+                        "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5",
+                        rqArgs0.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "rf", "refused", "STALE_REFERENCE");
+        h->rqItemMeta[0].status = AEGP_RenderItemStatus_QUEUED;
+    }
+
+    /* ---- stale: comp deleted/recreated with a new itemId ---- */
+    {
+        p.itemMeta[0].id = 6999; /* ClipA recreated → new id */
+        WriteReq0600(c.Path("inbox/rc2.request.json"),
+                     ReqJsonArgs("rc2", kTok, 30000,
+                        "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5",
+                        rqArgs0.c_str()));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "rc2", "refused", "STALE_REFERENCE");
+        p.itemMeta[0].id = 6101;
+    }
+
+    /* ---- malformed descriptor → MALFORMED_REQUEST ---- */
+    {
+        const char* bad =
+            "{\"projectIndex\":0,\"rqItem\":{\"aeRef\":{\"type\":\"rqItem\","
+            "\"index\":0,\"status\":2,\"numOutputModules\":1}}}";
+        WriteReq0600(c.Path("inbox/rm2.request.json"),
+                     ReqJsonArgs("rm2", kTok, 30000,
+                        "AEGP_RQItemSuite4.AEGP_GetRenderState", "26.5", bad));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "rm2", "refused", "MALFORMED_REQUEST");
+    }
+}
+
+/* §7e collision counterexample: two identically-named untitled
+   projects satisfy the same (name, empty-path) corroboration — the
+   resolver must refuse STALE_REFERENCE rather than silently pick one.
+   Separate host: MakeFakeHost installs a process-global g_host, so a
+   second host cannot coexist inside another test's lifetime. */
+static void TestIntakeProjectCollision()
+{
+    auto h = MakeFakeHost();
+    FakeProject& a = h->AddProject("Dup");
+    a.path = "";
+    FakeProject& b = h->AddProject("Dup");
+    b.path = "";
+    h->numProjects = 2;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    const char* dup =
+        "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":0,"
+        "\"name\":\"Dup\",\"path\":\"\"}}}";
+    WriteReq0600(c.Path("inbox/pc.request.json"),
+                 ReqJsonArgs("pc", kTok, 30000,
+                    "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", dup));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "pc", "refused", "STALE_REFERENCE");
+    /* same name but distinct paths → unambiguous → resolves */
+    h->projects[1].path = "/tmp/dup-b.aep";
+    const char* dupB =
+        "{\"project\":{\"aeRef\":{\"type\":\"project\",\"index\":1,"
+        "\"name\":\"Dup\",\"path\":\"/tmp/dup-b.aep\"}}}";
+    WriteReq0600(c.Path("inbox/pc2.request.json"),
+                 ReqJsonArgs("pc2", kTok, 30000,
+                    "AEGP_ProjSuite6.AEGP_ProjectIsDirty", "26.5", dupB));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "pc2", "completed", NULL);
+}
+
 int main(int argc, char** argv)
 {
     /* --channel-server <root> <requestId> [deadlineMs]: drive the real
@@ -3582,6 +4081,36 @@ int main(int argc, char** argv)
                 h->MakeNameSpec(FakeHost::U16Codepoints({'C', 'a', 'f', 0xE9})),
             });
             h->numProjects = 1;
+        }
+        /* "with-rq": §7f fixture — one project, two comp items, three
+           queue slots (ClipA×2 different status, ClipB) for manual
+           channel debugging. */
+        if (argc > 5 && strcmp(argv[5], "with-rq") == 0)
+        {
+            FakeProject& p = h->AddProject("Shot01");
+            p.path = "/tmp/shot01.aep";
+            p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+            SetupProjectItems(*h, 0, {
+                { "ClipA", AEGP_ItemType_COMP, 6101 },
+                { "ClipB", AEGP_ItemType_COMP, 6102 },
+            });
+            h->numProjects = 1;
+            h->numRQItems = 3;
+            h->rqItemMeta.resize(3);
+            h->rqItemMeta[0].compProject = 0;
+            h->rqItemMeta[0].compItem = 0;
+            h->rqItemMeta[0].status = AEGP_RenderItemStatus_QUEUED;
+            h->rqItemMeta[0].numOutputModules = 1;
+            h->rqItemMeta[0].comment =
+                h->MakeNameSpec(FakeHost::U16("render note"));
+            h->rqItemMeta[1].compProject = 0;
+            h->rqItemMeta[1].compItem = 1;
+            h->rqItemMeta[1].status = AEGP_RenderItemStatus_RENDERING;
+            h->rqItemMeta[1].numOutputModules = 2;
+            h->rqItemMeta[2].compProject = 0;
+            h->rqItemMeta[2].compItem = 0;
+            h->rqItemMeta[2].status = AEGP_RenderItemStatus_UNQUEUED;
+            h->rqItemMeta[2].numOutputModules = 1;
         }
         setenv("AE_DEVTOOLS_NATIVE_CHANNEL", argv[2], 1);
         if (CallEntry(*h) != A_Err_NONE)
@@ -3680,6 +4209,9 @@ int main(int argc, char** argv)
     TestIntakeCompGetters();
     TestIntakeItemGetters();
     TestIntakeLayerGetters();
+    TestIntakeProjectGetters();
+    TestIntakeProjectCollision();
+    TestIntakeRQItemGetters();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();
