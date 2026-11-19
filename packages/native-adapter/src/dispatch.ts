@@ -167,6 +167,7 @@ export function validateNativeIntakeArgs(
   if (errors.length > 0) return errors;
   for (const k of keys) {
     const spec = schema[k];
+    if (!spec) continue;
     const v = args[k];
     if (spec.kind === "integer") {
       if (typeof v !== "number" || !Number.isInteger(v)) {

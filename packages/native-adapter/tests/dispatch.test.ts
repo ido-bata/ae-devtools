@@ -242,7 +242,7 @@ describe("NATIVE_INTAKE_ARG_SCHEMAS / validateNativeIntakeArgs — Issue #270 St
 
   test("schema keys are exactly the intake allowlist members", () => {
     for (const id of Object.keys(NATIVE_INTAKE_ARG_SCHEMAS)) {
-      expect(NATIVE_INTAKE_OPERATIONS).toContain(id);
+      expect((NATIVE_INTAKE_OPERATIONS as readonly string[]).includes(id)).toBe(true);
     }
   });
   test("zero-arg ops accept absent/null args and refuse everything else", () => {
