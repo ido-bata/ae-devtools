@@ -181,6 +181,95 @@ try {
     );
   }
 
+  /* Issue #270 Stage 1: the first arg-bearing read-only op.
+     AEGP_ItemSuite9.AEGP_GetTypeName takes {"itemType": <int 1..4>} —
+     the defined non-NONE AEGP_ItemType span. */
+  const TN_ID = "e2e-req-3";
+  const tnRequest = {
+    v: 1,
+    token,
+    timeoutMs: TIMEOUT_MS,
+    request: {
+      schema: "ae-devtools/native-dispatch/v1",
+      requestId: TN_ID,
+      session: { sessionId: "e2e-session", aeVersion: "26.5" },
+      operationId: "AEGP_ItemSuite9.AEGP_GetTypeName",
+      args: { itemType: 2 },
+      authorizationRef: "e2e-opaque",
+    },
+  };
+  writeFileSync(join(root, "inbox", `${TN_ID}.request.json`), `${JSON.stringify(tnRequest)}\n`, {
+    mode: 0o600,
+  });
+  const run3 = spawnSync(BIN, ["--channel-server", root, TN_ID, "20000"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+  });
+  check(run3.status === 0, `arg-bearing request delivered a result (exit ${run3.status})`);
+  if (run3.status === 0) {
+    const tnPath = join(root, "outbox", `${TN_ID}.result.json`);
+    const tnRaw = readFileSync(tnPath, "utf-8");
+    check(!tnRaw.includes(token), "token absent from arg-bearing result");
+    const tnDoc = JSON.parse(tnRaw) as Record<string, any>;
+    const tnErrors = validateDispatchResult(tnDoc.result);
+    check(
+      tnErrors.length === 0,
+      `arg-bearing DispatchResult validates (${tnErrors.join("; ") || "clean"})`,
+    );
+    check(
+      tnDoc.result?.outcome === "completed" &&
+        typeof tnDoc.result?.result?.typeName === "string" &&
+        tnDoc.result.result.typeName.length > 0,
+      `GetTypeName completed with typeName (got ${JSON.stringify(tnDoc.result?.result)})`,
+    );
+    check(
+      Array.isArray(tnDoc.result?.opCalls) &&
+        tnDoc.result.opCalls.includes("AEGP_ItemSuite9.AEGP_GetTypeName"),
+      "opCalls links the GetTypeName op record",
+    );
+  }
+
+  /* Negative: unpermitted args (NONE=0) refuse MALFORMED_REQUEST before
+     any AEGP call — contract-valid refused result, no opCalls. */
+  const BAD_ID = "e2e-req-4";
+  const badRequest = {
+    v: 1,
+    token,
+    timeoutMs: TIMEOUT_MS,
+    request: {
+      schema: "ae-devtools/native-dispatch/v1",
+      requestId: BAD_ID,
+      session: { sessionId: "e2e-session", aeVersion: "26.5" },
+      operationId: "AEGP_ItemSuite9.AEGP_GetTypeName",
+      args: { itemType: 0 },
+      authorizationRef: "e2e-opaque",
+    },
+  };
+  writeFileSync(join(root, "inbox", `${BAD_ID}.request.json`), `${JSON.stringify(badRequest)}\n`, {
+    mode: 0o600,
+  });
+  const run4 = spawnSync(BIN, ["--channel-server", root, BAD_ID, "20000"], {
+    encoding: "utf-8",
+    timeout: 30_000,
+  });
+  check(run4.status === 0, `bad-args request delivered a result (exit ${run4.status})`);
+  if (run4.status === 0) {
+    const badDoc = JSON.parse(
+      readFileSync(join(root, "outbox", `${BAD_ID}.result.json`), "utf-8"),
+    ) as Record<string, any>;
+    const badErrors = validateDispatchResult(badDoc.result);
+    check(
+      badErrors.length === 0,
+      `bad-args DispatchResult validates (${badErrors.join("; ") || "clean"})`,
+    );
+    check(
+      badDoc.result?.outcome === "refused" &&
+        badDoc.result?.refusalCode === "MALFORMED_REQUEST" &&
+        badDoc.result?.opCalls === undefined,
+      `bad args refused MALFORMED_REQUEST pre-dispatch (got ${badDoc.result?.outcome}/${badDoc.result?.refusalCode})`,
+    );
+  }
+
   console.log(failures === 0 ? "\nE2E PASS (fake/mock only)" : `\nE2E FAIL (${failures})`);
   process.exit(failures === 0 ? 0 : 1);
 } finally {

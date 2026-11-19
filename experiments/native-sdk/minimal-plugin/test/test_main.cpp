@@ -1329,6 +1329,21 @@ static std::string ResultPath(TmpChan& c, const char* id)
     return c.Path((std::string("outbox/") + id + ".result.json").c_str());
 }
 
+/* Variant of ReqJson with a verbatim `args` JSON member (Issue #270). */
+static std::string ReqJsonArgs(const char* id, const char* tok,
+                               long timeoutMs, const char* op,
+                               const char* aeVer, const char* argsJson)
+{
+    char b[2048];
+    snprintf(b, sizeof(b),
+        "{\"v\":1,\"token\":\"%s\",\"timeoutMs\":%ld,\"request\":{"
+        "\"schema\":\"ae-devtools/native-dispatch/v1\",\"requestId\":\"%s\","
+        "\"session\":{\"sessionId\":\"sess-1\",\"aeVersion\":\"%s\"},"
+        "\"operationId\":\"%s\",\"args\":%s,\"authorizationRef\":\"opaque\"}}",
+        tok, timeoutMs, id, aeVer, op, argsJson ? argsJson : "null");
+    return std::string(b);
+}
+
 /* Byte-level contract check for an outbox result document (Issue #271).
    The file must be ONE complete JSON document — substring checks alone
    missed an extra closing brace that made every EmitResult output
@@ -1465,6 +1480,139 @@ static void TestIntakeVersionOp()
     CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
     CHECK(r.find("\"major\":26") != std::string::npos);
     CheckResultDoc(c, "v", "completed", NULL);
+}
+
+/* ---- Issue #270 Stage 1: read-only args codec ------------------------ */
+
+static void TestIntakeGetTypeNameCompleted()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    WriteReq0600(c.Path("inbox/tn.request.json"),
+                 ReqJsonArgs("tn", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetTypeName", "26.5",
+                             "{\"itemType\":2}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "tn"));
+    CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+    CHECK(r.find("\"typeName\":\"fake-type-2\"") != std::string::npos);
+    CheckResultDoc(c, "tn", "completed", NULL);
+    /* the op record chain shows suite acquire → call → release inside
+       this request's evidence window */
+    CHECK(r.find("SPBasicSuite.AcquireSuite") != std::string::npos);
+    CHECK(r.find("AEGP_ItemSuite9.AEGP_GetTypeName") != std::string::npos);
+    CHECK(r.find("SPBasicSuite.ReleaseSuite") != std::string::npos);
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetTypeName err=0 t=2"));
+    CHECK(r.find(kTok) == std::string::npos);
+}
+
+static void TestIntakeArgsRejected()
+{
+    /* Every unpermitted args shape refuses MALFORMED_REQUEST before any
+       AEGP call: the result carries no opCalls at all (attestation runs
+       after args validation), and the probe's own buffered op records
+       never enter the result file. */
+    static const struct { const char* id; const char* args; } cases[] = {
+        { "a0", "{\"itemType\":0}" },          /* AEGP_ItemType_NONE */
+        { "a5", "{\"itemType\":5}" },          /* NUM_TYPES1: undefined */
+        { "a9", "{\"itemType\":99}" },         /* far out of range */
+        { "an", "{\"itemType\":-1}" },         /* negative */
+        { "af", "{\"itemType\":1.5}" },        /* non-integral */
+        { "as", "{\"itemType\":\"2\"}" },      /* wrong type */
+        { "ab", "{\"itemType\":true}" },       /* wrong type */
+        { "ae", "{\"itemType\":2,\"extra\":1}" }, /* extra field */
+        { "am", "{\"other\":2}" },             /* missing itemType */
+        { "aa", "{}" },                       /* empty object */
+        { "ar", "[2]" },                      /* array, not object */
+        { "an2", "2" },                       /* bare number */
+        { "an3", "null" },                    /* missing args for arg-op */
+    };
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    size_t i;
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        std::string p = c.Path((std::string("inbox/") + cases[i].id +
+                               ".request.json").c_str());
+        WriteReq0600(p, ReqJsonArgs(cases[i].id, kTok, 30000,
+                                    "AEGP_ItemSuite9.AEGP_GetTypeName",
+                                    "26.5", cases[i].args));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        std::string r = Slurp(ResultPath(c, cases[i].id));
+        CHECK(r.find("\"outcome\":\"refused\"") != std::string::npos);
+        CHECK(r.find("MALFORMED_REQUEST") != std::string::npos);
+        /* refused before attestation/execution: no host calls recorded
+           for this request at all */
+        CHECK(r.find("opCalls") == std::string::npos);
+        CHECK(r.find("AEGP_ItemSuite9") == std::string::npos);
+        CheckResultDoc(c, cases[i].id, "refused", "MALFORMED_REQUEST");
+    }
+}
+
+static void TestIntakeArgsOnZeroArgOpRejected()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    /* the pre-existing zero-arg getters still refuse any args value —
+       Slice A semantics preserved */
+    WriteReq0600(c.Path("inbox/z.request.json"),
+                 ReqJsonArgs("z", kTok, 30000,
+                             "AEGP_ProjSuite6.AEGP_GetNumProjects", "26.5",
+                             "{\"itemType\":2}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "z"));
+    CHECK(r.find("MALFORMED_REQUEST") != std::string::npos);
+    CHECK(r.find("opCalls") == std::string::npos);
+    CheckResultDoc(c, "z", "refused", "MALFORMED_REQUEST");
+}
+
+static void TestIntakeGetTypeNameSuiteFailure()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    h->failAcquireItem = true;
+    h->PopulateSuites();
+    WriteReq0600(c.Path("inbox/sf.request.json"),
+                 ReqJsonArgs("sf", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetTypeName", "26.5",
+                             "{\"itemType\":2}"));
+    {
+        /* failAcquireItem also breaks the probe's own stage-2 item
+           suite, so the hook returns an error — the intake verdict is
+           already published by then. */
+        A_long ms = 0;
+        (void)h->idleHook(NULL, NULL, &ms);
+    }
+    std::string r = Slurp(ResultPath(c, "sf"));
+    /* environment-proven non-dispatch: not-sent, retryable as a new
+       request — never executed, never UNKNOWN */
+    CHECK(r.find("\"outcome\":\"not-sent\"") != std::string::npos);
+    /* the op itself was never invoked: only the failed AcquireSuite
+       record appears in opCalls */
+    CHECK(r.find("AEGP_ItemSuite9.AEGP_GetTypeName") == std::string::npos);
+    CheckResultDoc(c, "sf", "not-sent", NULL);
+}
+
+static void TestIntakeGetTypeNameOpFailure()
+{
+    auto h = MakeFakeHost();
+    TmpChan c;
+    IntakeEntry(*h, c);
+    h->itemMetaErr = A_Err_GENERIC; /* FakeGetTypeName surfaces it */
+    WriteReq0600(c.Path("inbox/of.request.json"),
+                 ReqJsonArgs("of", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetTypeName", "26.5",
+                             "{\"itemType\":4}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "of"));
+    CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
+    CHECK(r.find("mayHaveMutated\":false") != std::string::npos);
+    CheckResultDoc(c, "of", "failed", NULL);
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetTypeName err="));
 }
 
 static void TestIntakeUnknownOperation()
@@ -1862,6 +2010,11 @@ int main(int argc, char** argv)
     TestIntakeDisabledByDefault();
     TestIntakeCompletedGetNumProjects();
     TestIntakeVersionOp();
+    TestIntakeGetTypeNameCompleted();
+    TestIntakeArgsRejected();
+    TestIntakeArgsOnZeroArgOpRejected();
+    TestIntakeGetTypeNameSuiteFailure();
+    TestIntakeGetTypeNameOpFailure();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();

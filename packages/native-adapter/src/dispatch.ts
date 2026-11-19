@@ -67,8 +67,117 @@ export type DispatchSchema = typeof DISPATCH_SCHEMA;
 export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_ProjSuite6.AEGP_GetNumProjects",
   "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
+  "AEGP_ItemSuite9.AEGP_GetTypeName",
 ] as const;
 export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
+
+// ---------------------------------------------------------------------------
+// Per-operation intake argument schema (Issue #270 Stage 1)
+// ---------------------------------------------------------------------------
+//
+// The envelope's `args` codec (isDispatchArgValue) only proves the value is
+// ES3-serializable; it says nothing about what a given operation accepts.
+// Each intake-allowlisted operation carries an explicit argument contract
+// here — the devtools-side canonical statement of it. The C++ mirror lives
+// in `native_intake.cpp` (`S_ALLOWLIST` arg specs); the two must stay in
+// sync, and `tests/dispatch.test.ts` pins the shapes.
+//
+// Rules encoded by `validateNativeIntakeArgs`:
+//
+// - An operation with NO schema entry is zero-argument: `args` must be
+//   absent or `null`. Any other value refuses `MALFORMED_REQUEST`.
+// - An operation WITH a schema requires `args` to be a plain object whose
+//   key set is EXACTLY the schema's keys — missing and extra fields both
+//   refuse. There is no positional/array form and no partial application.
+// - Every declared field must satisfy its constraint. Stage 1 defines only
+//   bounded integers (AEGP enum/scalar arguments); identity-bearing
+//   arguments (host handles such as AEGP_ItemH) are NOT expressible here —
+//   they require the CAP027 identity-descriptor work and stay refused.
+//
+// `AEGP_ItemSuite9.AEGP_GetTypeName(AEGP_ItemType item_type, ...)` takes the
+// item-type enum as `A_short`. Per AE_GeneralPlug.h the defined values are
+// NONE=0, FOLDER=1, COMP=2, SOLID_defunct=3, FOOTAGE=4 (NUM_TYPES1=5).
+// NONE is not a valid GetTypeName input (the probe already treats it that
+// way), so the permitted range is the defined non-NONE span [1, 4].
+// SOLID_defunct is a defined enum value: it is passed through and the
+// host-defined name is returned; whether real AE still names it is a
+// real-host question this fake-level contract does not settle.
+
+export type NativeIntakeArgConstraint = {
+  kind: "integer";
+  /** Inclusive bounds on the integer value. */
+  min: number;
+  max: number;
+};
+
+/** operationId → exact arg-name → constraint map. Absent = zero-arg op. */
+export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
+  Record<string, Readonly<Record<string, NativeIntakeArgConstraint>>>
+> = {
+  "AEGP_ItemSuite9.AEGP_GetTypeName": {
+    itemType: { kind: "integer", min: 1, max: 4 },
+  },
+};
+
+function isPlainArgsObject(v: unknown): v is Record<string, unknown> {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Validate `args` against the intake argument contract for `operationId`.
+ * Returns the list of problems; empty means the plug-in-side codec would
+ * accept it. This is the devtools-side mirror of the C++ check — both must
+ * refuse the same inputs before any AEGP call. Only meaningful for
+ * `NATIVE_INTAKE_OPERATIONS` members; other ids are refused outright.
+ */
+export function validateNativeIntakeArgs(
+  operationId: unknown,
+  args: unknown,
+): string[] {
+  const errors: string[] = [];
+  if (typeof operationId !== "string" ||
+      !(NATIVE_INTAKE_OPERATIONS as readonly string[]).includes(operationId)) {
+    return ["operation is not in the native intake allowlist"];
+  }
+  const schema = NATIVE_INTAKE_ARG_SCHEMAS[operationId];
+  const noArgs = args === undefined || args === null;
+  if (!schema) {
+    if (!noArgs) errors.push("operation takes no arguments; args must be absent or null");
+    return errors;
+  }
+  if (noArgs) {
+    errors.push("operation requires an args object");
+    return errors;
+  }
+  if (!isPlainArgsObject(args)) {
+    errors.push("args must be a plain object keyed by argument name");
+    return errors;
+  }
+  const keys = Object.keys(schema);
+  const given = Object.keys(args);
+  const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+  for (const k of keys) {
+    if (!has(args, k)) errors.push(`missing required argument "${k}"`);
+  }
+  for (const k of given) {
+    if (!has(schema, k)) errors.push(`unexpected argument "${k}"`);
+  }
+  if (errors.length > 0) return errors;
+  for (const k of keys) {
+    const spec = schema[k];
+    const v = args[k];
+    if (spec.kind === "integer") {
+      if (typeof v !== "number" || !Number.isInteger(v)) {
+        errors.push(`argument "${k}" must be an integer`);
+      } else if (v < spec.min || v > spec.max) {
+        errors.push(`argument "${k}" must be in [${spec.min}, ${spec.max}]`);
+      }
+    }
+  }
+  return errors;
+}
 
 /** Outcome vocabulary — trusted-execution.md §4 / catalog spelling. */
 export const DISPATCH_OUTCOMES = [

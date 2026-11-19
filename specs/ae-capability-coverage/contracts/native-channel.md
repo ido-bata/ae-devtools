@@ -1,6 +1,6 @@
 # Contract — native intake channel (`ae-devtools/native-channel/v1`)
 
-- Status: **Implemented for Issue #267 Slice A** (merged via PR #268, `release-0-5-0` @ `a7ac89f`), implemented by `experiments/native-sdk/minimal-plugin/src/native_intake.cpp` inside the NativeProbe idle hook. Machine-readable shapes: `packages/native-adapter/src/dispatch.ts` (`NATIVE_INTAKE_*` constants).
+- Status: **Implemented for Issue #267 Slice A** (merged via PR #268, `release-0-5-0` @ `a7ac89f`), extended for **Issue #270 Stage 1** (per-operation read-only args codec + `AEGP_ItemSuite9.AEGP_GetTypeName`), implemented by `experiments/native-sdk/minimal-plugin/src/native_intake.cpp` inside the NativeProbe idle hook. Machine-readable shapes: `packages/native-adapter/src/dispatch.ts` (`NATIVE_INTAKE_*` constants, `NATIVE_INTAKE_ARG_SCHEMAS`).
 - Sibling contracts: [native-dispatch.md](native-dispatch.md) (the semantic `native-dispatch/v1` envelope this channel carries), [native-probe-result.md](native-probe-result.md) (in-host `op `/marker evidence), [native-adapter.md](native-adapter.md) (pre-dispatch negotiation).
 - Ownership: per ADR-0005 D7, transport / IPC / serialization / execution authorization / timeout / UNKNOWN non-resend are **ae-a8n-owned (©)**. This contract fixes only the **devtools-owned surface**: the on-disk encoding and the plug-in-side intake semantics for the first read-only vertical slice. It does not select a transport, does not mint or verify consent tokens, and does not claim process identity.
 
@@ -67,7 +67,7 @@ POSIX privacy is enforced per tick, fail-closed: root/`inbox`/`outbox`/`channel.
 | `timeoutMs` | finite number in `[0, 3600000]` (1 h ceiling); deadline = request-file mtime + `timeoutMs` (same convention as the ae-a8n dispatcher). Out-of-bounds values refuse `MALFORMED_REQUEST`; already-expired requests refuse `STALE_REQUEST` **before execution**; an unreadable mtime yields `not-sent` (freshness unproven) |
 | `target` | optional instance binding. A request naming a different instance is **not claimed** (left for its instance); the plug-in's instance id is reported in `state.json` |
 | `request` | the `native-dispatch/v1` envelope, unchanged. `requestId` must equal the file-name stem and, on this file channel, must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` (the semantic envelope keeps "non-empty string"; the file channel narrows it so names are path-safe and JSON-escape-free) |
-| `args` | Slice A accepts only absent/`null` — every allowlisted operation is zero-argument. Any other value refuses `MALFORMED_REQUEST` |
+| `args` | Per-operation schema (Issue #270 Stage 1, §7a): absent/`null` for zero-argument operations; for argument-bearing operations a JSON object whose key set is **exactly** the declared argument names, each value satisfying its declared type/range constraint. Any deviation refuses `MALFORMED_REQUEST` before session attestation and before any AEGP call. Identity-bearing arguments (host handles) are never expressible — external JSON never becomes a host handle or pointer |
 | `authorizationRef` | accepted and ignored; grant issuance/verification is ae-a8n-owned |
 
 Parser bounds (file-channel implementation limits, stricter than the semantic envelope's): input ≤ 64 KiB, JSON depth ≤ 32, ≤ 8192 nodes, duplicate object keys rejected, trailing garbage rejected, non-finite numbers rejected. The parser is a self-contained unit (`src/native_json.{h,cpp}`, libc only) separate from channel logic for auditability.
@@ -82,8 +82,9 @@ After claim (`*.request.json` → `*.claimed` rename; one request per idle dispa
 4. `request.requestId` === file-name stem → `MALFORMED_REQUEST`
 5. `target` present and ≠ instance → `refused` `WRONG_TARGET` (defence in depth; the pre-claim filter normally prevents this)
 6. `timeoutMs` finite and deadline (file mtime + `timeoutMs`) not passed → `refused` `STALE_REQUEST`
-7. `request` envelope shape: `schema` exact, `requestId`/`session.sessionId`/`session.aeVersion` non-empty, `sdkRelease` shape when present, `operationId` string, `args` absent-or-null → `MALFORMED_REQUEST`
+7. `request` envelope shape: `schema` exact, `requestId`/`session.sessionId`/`session.aeVersion` non-empty, `sdkRelease` shape when present, `operationId` string → `MALFORMED_REQUEST` (`args` shape is checked per-operation at step 8a)
 8. `operationId` ∈ `NATIVE_INTAKE_OPERATIONS` → `refused` `OPERATION_NOT_DISPATCHABLE` (unknown ids and non-allowlisted registry ids share this code)
+8a. `args` satisfies the operation's declared argument schema (§7a) → `refused` `MALFORMED_REQUEST`. Runs before the duplicate check, session attestation, and any AEGP call — unpermitted input never reaches the host
 9. duplicate `requestId` (seen-ring, last 64 claimed ids) → `refused` `DUPLICATE_REQUEST`
 10. session attestation: `AEGP_GetDriverImplementationVersion` must succeed (`not-sent` otherwise — environment-proven non-dispatch), `session.aeVersion` must equal the observed `"M.m"` and any `channel.json` pin → `refused` `WRONG_TARGET`
 11. execute the allowlisted getter → `completed` (`err==0`) or `failed` (`err!=0`, `mayHaveMutated:false` — allowlisted ops are read-only getters)
@@ -112,14 +113,27 @@ After claim (`*.request.json` → `*.claimed` rename; one request per idle dispa
 
 Every allowlisted AEGP call emits the standard `op <Suite>.<member> err=<n>` record plus `native.request id=<id>` / `native.result id=<id> outcome=<o>[ code=<c>]` marker lines in the debug log (see native-probe-result.md). `result.opCalls` lists the op-record ids emitted inside the request window, giving the `native-probe-result/v1` linkage. Intake-level failures (channel privacy violation, publish failure) emit `native.error:` diagnostics; channel-configuration violations are log-once guarded, per-request publish failures log per request.
 
-## 7. `NATIVE_INTAKE_OPERATIONS` — the Slice A allowlist
+## 7. `NATIVE_INTAKE_OPERATIONS` — the intake allowlist
 
 ```
-AEGP_ProjSuite6.AEGP_GetNumProjects
-AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion
+AEGP_ProjSuite6.AEGP_GetNumProjects                                  (zero-arg)
+AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion               (zero-arg)
+AEGP_ItemSuite9.AEGP_GetTypeName                                     (args: see §7a)
 ```
 
-Both are zero-argument read-only getters the probe already calls; both stay `implemented-unverified`. Widening the allowlist is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Widening the allowlist is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+
+## 7a. Per-operation argument schemas (Issue #270 Stage 1)
+
+The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `packages/native-adapter/src/dispatch.ts`; the plug-in enforces the mirror in `native_intake.cpp` (`S_ALLOWLIST` arg specs). Both refuse identically — validation runs host-side before any AEGP call, so the TS schema is the client-facing contract and the C++ table is the enforcement.
+
+| operationId | args contract |
+| --- | --- |
+| `AEGP_ProjSuite6.AEGP_GetNumProjects` | none — `args` absent or `null` |
+| `AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion` | none — `args` absent or `null` |
+| `AEGP_ItemSuite9.AEGP_GetTypeName` | `{"itemType": <integer>}` — exactly one field; `itemType` is the `AEGP_ItemType` (`A_short`) enum, permitted range **[1, 4]** = the defined non-`NONE` values (`FOLDER`=1, `COMP`=2, `SOLID_defunct`=3, `FOOTAGE`=4; `NUM_TYPES1`=5 per `AE_GeneralPlug.h`). `NONE`=0 and any undefined/out-of-range/non-integral/wrong-typed value refuses `MALFORMED_REQUEST`. `SOLID_defunct` is a defined enum value passed through to the host; what real AE returns for it is a real-host question this contract does not settle |
+
+Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.
 
 ## 8. Non-goals / explicit limitations
 

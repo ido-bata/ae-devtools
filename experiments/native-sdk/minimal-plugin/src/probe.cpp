@@ -1956,7 +1956,7 @@ static A_Err ProbeIdleHook(
        AE_DEVTOOLS_NATIVE_CHANNEL, off by default. Runs inside the same
        host-dispatched context with the fingerprint suites already
        held; it never disturbs the probe trigger state. */
-    NativeIntakeTick(utilP, projP, s_aegp_plugin_id);
+    NativeIntakeTick(utilP, projP, s_basicP, s_aegp_plugin_id);
 
     /* Stage 2: project-set fingerprint. A failed count query or a
        failed fingerprint component invalidates the stored fingerprint

@@ -25,12 +25,15 @@ void NativeIntakeConfigure(const char* channelRootZ);
 /* Called once per idle-hook dispatch, after the fingerprint suites
    (utility/project/memory) are acquired and entry-validated. Polls the
    channel inbox for at most one request, executes it through the
-   read-only allowlist, and publishes the typed result. Never affects
-   the probe's own trigger state; all failures are per-request typed
-   outcomes or logged diagnostics. */
+   read-only allowlist, and publishes the typed result. `basicP` lets an
+   arg-bearing allowlisted op acquire the extra suite it needs inside
+   the request window (Issue #270). Never affects the probe's own
+   trigger state; all failures are per-request typed outcomes or
+   logged diagnostics. */
 void NativeIntakeTick(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
     AEGP_PluginID plugin_id);
 
 #ifdef __cplusplus
