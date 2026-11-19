@@ -38,6 +38,8 @@ struct _AEGP_Project
 struct _AEGP_RenderQueueItem
 {
     int index;
+    int compProject;  /* bound comp's project index; -1 = unbound */
+    int compItem;     /* bound comp's item index; -1 = unbound */
 };
 struct _AEGP_ItemView
 {
@@ -156,6 +158,24 @@ struct FakeProject
     std::vector<FakeItemMeta> itemMeta;
 };
 
+/* Per-queue-item metadata returned by the Issue #318 §7f
+   AEGP_RQItemSuite4 getters. Parallel to queue positions; missing
+   entries fall back to defaults (unbound comp, QUEUED, 1 OM). The
+   bound comp is identified by (project index, item index) — the fake
+   has no real comp objects, so the binding is positional metadata,
+   matching how FakeCompMeta is parallel to itemMeta. */
+struct FakeRQItemMeta
+{
+    int compProject = -1;   /* -1 → no bound comp (GetCompFromRQItem NULL) */
+    int compItem = -1;
+    AEGP_RenderItemStatusType status = AEGP_RenderItemStatus_QUEUED;
+    A_long numOutputModules = 1;
+    FakeNameSpec comment;
+    AEGP_LogType logType = AEGP_LogType_ERRORS_ONLY;
+    A_Time startedTime = {0, 1};   /* {0,1} sentinel = never started */
+    A_Time elapsedTime = {0, 1};
+};
+
 struct FakeHost
 {
     /* ---- configuration ---- */
@@ -168,9 +188,11 @@ struct FakeHost
     int getProjectByIndexErr = A_Err_NONE; /* when != NONE, GetProjectByIndex fails */
 
     int numRQItems = 0;          /* items the fake render queue reports */
+    std::vector<FakeRQItemMeta> rqItemMeta; /* per-slot §7f metadata */
     int rqStateErr = A_Err_NONE; /* when != NONE, GetRenderQueueState fails */
     int rqItemsErr = A_Err_NONE; /* when != NONE, GetNumRQItems fails */
     int rqItemByIndexErr = A_Err_NONE; /* when != NONE, GetRQItemByIndex fails */
+    int rqItemQueryErr = A_Err_NONE; /* when != NONE, all RQItemSuite4 getters fail */
 
     /* Issue #63 extended read-only getters. */
     int projectTimeDisplayErr = A_Err_NONE; /* GetProjectTimeDisplay fails */

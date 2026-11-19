@@ -278,7 +278,18 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
       "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
       "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
       "AEGP_ProjSuite6.AEGP_GetNumProjects",
+      "AEGP_ProjSuite6.AEGP_GetProjectBitDepth",
+      "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay",
+      "AEGP_ProjSuite6.AEGP_ProjectIsDirty",
+      "AEGP_RQItemSuite4.AEGP_GetComment",
+      "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
+      "AEGP_RQItemSuite4.AEGP_GetElapsedTime",
+      "AEGP_RQItemSuite4.AEGP_GetLogType",
+      "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
       "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
+      "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
+      "AEGP_RQItemSuite4.AEGP_GetRenderState",
+      "AEGP_RQItemSuite4.AEGP_GetStartedTime",
       "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
       "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
       "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
@@ -590,5 +601,67 @@ describe("layer:<aeRefLayer> arg — Issue #318 LayerSuite9 getters", () => {
       comp: { aeRef: { type: "comp", name: "Nope", path: [42], itemId: 1 } },
     } } };
     expect(validateNativeIntakeArgs(LID, ghost)).toEqual([]);
+  });
+});
+
+describe("project:<aeRefProject> / rqItem:<aeRefRQItem> args — Issue #318 Stage 4", () => {
+  const PD = "AEGP_ProjSuite6.AEGP_ProjectIsDirty";
+  const RS = "AEGP_RQItemSuite4.AEGP_GetRenderState";
+  const RQENUM = "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex";
+  const compRef = { aeRef: {
+    type: "comp", name: "ClipA", path: [0], itemId: 6101,
+    projectName: "Shot01", projectPath: "/tmp/shot01.aep",
+  } };
+  test("aeRefProject shape is exact — keys, type, index, name, path", () => {
+    const wrap = (inner: Record<string, unknown>) =>
+      ({ project: { aeRef: inner } });
+    const good = { type: "project", index: 0, name: "Shot01", path: "/tmp/s.aep" };
+    expect(validateNativeIntakeArgs(PD, wrap(good))).toEqual([]);
+    expect(validateNativeIntakeArgs(PD,
+      wrap({ ...good, path: "" }))).toEqual([]); // unsaved project
+    for (const bad of [
+      { project: good },                                                  // no aeRef wrapper
+      wrap({ type: "item", index: 0, name: "S", path: "/p" }),            // wrong type
+      wrap({ type: "project", index: -1, name: "S", path: "/p" }),
+      wrap({ type: "project", index: 1000001, name: "S", path: "/p" }),
+      wrap({ type: "project", index: 0.5, name: "S", path: "/p" }),
+      wrap({ type: "project", index: 0, name: "", path: "/p" }),          // empty name
+      wrap({ type: "project", index: 0, name: "S" }),                     // missing path
+      wrap({ type: "project", index: 0, name: "S", path: "/p", x: 1 }),   // extra key
+      wrap({ type: "project", index: 0, name: "S", path: 7 }),            // path not str
+      { projectIndex: 0 },                                                // missing project
+    ]) {
+      expect(validateNativeIntakeArgs(PD, bad)).not.toEqual([]);
+    }
+  });
+  test("aeRefRQItem shape is exact — comp binding + fingerprint", () => {
+    const wrap = (inner: Record<string, unknown>) =>
+      ({ projectIndex: 0, rqItem: { aeRef: inner } });
+    const good = { type: "rqItem", index: 0, comp: compRef,
+                   status: 2, numOutputModules: 1 };
+    expect(validateNativeIntakeArgs(RS, wrap(good))).toEqual([]);
+    for (const bad of [
+      wrap({ type: "rqItem", index: 0, status: 2, numOutputModules: 1 }), // missing comp
+      wrap({ ...good, type: "item" }),
+      wrap({ ...good, index: -1 }),
+      wrap({ ...good, status: 2147483648 }),
+      wrap({ ...good, status: -2147483649 }),
+      wrap({ ...good, numOutputModules: -1 }),
+      wrap({ ...good, numOutputModules: 1.5 }),
+      wrap({ ...good, extra: true }),
+      wrap({ ...good, comp: { aeRef: { type: "comp", name: "C" } } }),   // comp missing path
+      { rqItem: { aeRef: good } },                                       // missing projectIndex
+    ]) {
+      expect(validateNativeIntakeArgs(RS, bad)).not.toEqual([]);
+    }
+  });
+  test("RQ enumeration args are bounded {offset, limit}", () => {
+    expect(validateNativeIntakeArgs(RQENUM, { offset: 0, limit: 32 })).toEqual([]);
+    for (const bad of [
+      { offset: 0 }, { offset: 0, limit: 0 }, { offset: 0, limit: 33 },
+      { offset: -1, limit: 1 }, { offset: 0, limit: 1, x: 1 },
+    ]) {
+      expect(validateNativeIntakeArgs(RQENUM, bad)).not.toEqual([]);
+    }
   });
 });
