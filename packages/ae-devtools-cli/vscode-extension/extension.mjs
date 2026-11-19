@@ -177,6 +177,7 @@ export async function activate(context) {
   );
 
   reg("ae-devtools.discover", () => controller.discover());
+  reg("ae-devtools.sessionStatus", () => controller.sessionStatus());
   reg("ae-devtools.inspect", async () => {
     const opId = await promptOpId();
     if (!opId) return { schema: "ae-devtools.vscode-extension/v1", status: "cancelled", detail: "no operation id entered" };

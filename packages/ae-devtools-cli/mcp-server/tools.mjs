@@ -27,7 +27,7 @@
  * Every result payload carries the session/registry evidence level —
  * fake/mock results are never presented as real-host verification.
  */
-import { discover, inspect, execute, verify } from "../dev-loop/devloop.mjs";
+import { discover, inspect, execute, verify, sessionStatus, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 
@@ -90,6 +90,12 @@ export const TOOLS = [
       required: ["consent"],
       additionalProperties: false,
     },
+  },
+  {
+    name: "ae_session",
+    description:
+      "Report session/API metadata: configured session kind, whether a session is open/opening/failed/closed in this server process, and the evidence level of an open session. Metadata only — never opens a session and never dispatches.",
+    inputSchema: { ...OBJECT, properties: {}, additionalProperties: false },
   },
 ];
 
@@ -292,6 +298,20 @@ export async function callTool(name, args = {}, ctx = {}) {
         result,
         ...(diagnostics !== null ? { diagnostics } : {}),
       }, isBadOutcome(result));
+    }
+    case "ae_session": {
+      const peek = typeof ctx.peekSession === "function" ? ctx.peekSession() : {};
+      return toolResult({
+        schema: MCP_SCHEMA,
+        evidenceLevel: "metadata only — this call never opens a session",
+        ...sessionStatus({
+          session: peek.session ?? null,
+          sessionKind: ctx.sessionKind ?? null,
+          opening: peek.opening === true,
+          failed: peek.failed === true,
+        }),
+        api: { mcp: MCP_SCHEMA, devLoop: DEVLOOP_SCHEMA },
+      });
     }
     default:
       return toolResult({ schema: MCP_SCHEMA, error: `unhandled tool '${name}'` }, true);

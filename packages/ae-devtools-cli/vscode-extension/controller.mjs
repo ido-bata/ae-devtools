@@ -83,6 +83,8 @@ export function createController(options = {}) {
   });
 
   let sessionPromise = null;
+  let resolvedSession = null;
+  let sessionFailed = false;
   const getSession = () => {
     sessionPromise ??= (async () => {
       // Marker BEFORE open: a launch that dies mid-open still leaves
@@ -91,18 +93,26 @@ export function createController(options = {}) {
       try {
         const s = await sessionFactory(sessionKind, { aeA8nRoot, installDir });
         guard.mark(s);
+        resolvedSession = s;
         return s;
       } catch (e) {
         guard.failOpen();
         throw e;
       }
     })();
+    sessionPromise.catch(() => { sessionFailed = true; });
     return sessionPromise;
   };
 
   async function tool(name, args) {
     const res = await callTool(name, args ?? {}, {
       getSession,
+      sessionKind,
+      peekSession: () => ({
+        session: resolvedSession,
+        opening: sessionPromise !== null && resolvedSession === null && !sessionFailed,
+        failed: sessionFailed,
+      }),
       onRequestEvent: (ev) => guard.request(ev),
     });
     // callTool wraps the payload as MCP text content; unwrap it so
@@ -149,6 +159,11 @@ export function createController(options = {}) {
     /** Registry metadata only — never opens a session. */
     discover(args = {}) {
       return tool("ae_discover", args);
+    },
+
+    /** Session/API metadata — reports open-session state; never opens one. */
+    sessionStatus() {
+      return tool("ae_session", {});
     },
 
     /** Op schema/metadata — never executes, never opens a session. */

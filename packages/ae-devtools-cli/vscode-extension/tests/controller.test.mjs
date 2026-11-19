@@ -57,6 +57,23 @@ test("discover returns registry ops with honest metadata, no session opened", as
   assert.equal(spy.calls.length, 0);
 });
 
+test("sessionStatus reports closed then open state without dispatching itself (CAP049)", async () => {
+  const spy = factorySpy();
+  const c = createController({ sessionFactory: spy.factory, ui: recordingUi() });
+  const before = await c.sessionStatus();
+  assert.equal(before.session.state, "closed");
+  assert.equal(before.session.kind, "fake");
+  assert.equal(before.session.evidenceLevel, undefined);
+  assert.equal(spy.calls.length, 0, "sessionStatus must never open a session");
+
+  await c.execute({ opId: "read.projectSummary", args: {} });
+  const after = await c.sessionStatus();
+  assert.equal(after.session.state, "open");
+  assert.equal(after.session.evidenceLevel, "fake/mock only");
+  assert.ok(after.session.pin && typeof after.session.pin === "object");
+  assert.equal(spy.calls.length, 1);
+});
+
 test("inspect returns op metadata; unknown op is a typed result, never executes", async () => {
   const spy = factorySpy();
   const c = createController({ sessionFactory: spy.factory, ui: recordingUi() });
