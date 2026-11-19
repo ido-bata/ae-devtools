@@ -97,6 +97,10 @@ function sampleArgs(op) {
     else if (n === "comment") a[n] = "sample comment";
     else if (n === "setting") a[n] = "Output File Info";
     else if (n === "resolutionFactor") a[n] = 0.5;
+    else if (n === "color") a[n] = [1, 0, 0];
+    else if (n === "text") a[n] = "sample text";
+    else if (n === "lightType") a[n] = 2;
+    else if (n === "intensity") a[n] = 100;
     else a[n] = `sample-${n}`;
   }
   return a;

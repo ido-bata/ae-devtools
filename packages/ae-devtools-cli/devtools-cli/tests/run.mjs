@@ -56,9 +56,10 @@ t("doctor reports environment without contacting AE", () => {
   assert.equal(typeof r.a8nTransportPresent, "boolean");
 });
 
-t("discover lists registry ops, honest evidence", () => {
+t("discover lists registry ops, honest evidence", async () => {
   const r = run(["discover"]).body;
-  assert.equal(r.operationCount, 42);
+  const { OPERATIONS } = await import("../../scripting-adapters/registry.mjs");
+  assert.equal(r.operationCount, OPERATIONS.length);
   assert.equal(r.evidence.realHostVerified, 0);
 });
 

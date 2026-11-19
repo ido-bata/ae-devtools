@@ -1244,6 +1244,209 @@ comp.resolutionFactor = ${Number(a.resolutionFactor)};
 return __adp_json({ ok: true, comp: comp.name, resolutionFactor: comp.resolutionFactor });
 `,
   },
+  // ---- Issue #281: coverage batch 3 — layer creation + footage/project
+  // read detail. Layer creation covers the dev-loop "generate content"
+  // step; footage/project reads expose state the loop must verify. ----
+  {
+    id: "layer.addSolid",
+    title: "Add a solid-color layer to a comp",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: true,
+    members: [S("LayerCollection", "addSolid")],
+    args: ["compName", "name", "width", "height", "pixelAspect", "color", "duration"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "name", "width", "height", "pixelAspect", "color", "duration"]);
+      for (const n of ["width", "height", "pixelAspect", "duration"]) {
+        if (!Number.isFinite(Number(a[n]))) throw new Error(`layer.addSolid: ${n} must be a finite number`);
+      }
+      if (!Array.isArray(a.color) || a.color.length !== 3 ||
+          a.color.some((c) => typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 1)) {
+        throw new Error("layer.addSolid: color must be [r,g,b] with components in 0..1");
+      }
+    },
+    // Real signature: addSolid(color, name, width, height, pixelAspect, duration).
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = comp.layers.addSolid(${jsLit(a.color)}, ${js(a.name)}, ${Number(a.width)}, ${Number(a.height)}, ${Number(a.pixelAspect)}, ${Number(a.duration)});
+return __adp_json({ ok: true, layer: layer.name, index: layer.index });
+`,
+  },
+  {
+    id: "layer.addText",
+    title: "Add a text layer with initial text",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: true,
+    members: [S("LayerCollection", "addText"), S("TextDocument", "text")],
+    args: ["compName", "name", "text"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "name", "text"]);
+      if (typeof a.text !== "string") throw new Error("layer.addText: text must be a string");
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = comp.layers.addText(${js(a.name)});
+// TextDocument is reached via the stable matchName path, not a
+// locale-dependent display name.
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+doc.text = ${js(a.text)};
+return __adp_json({ ok: true, layer: layer.name, index: layer.index, text: doc.text });
+`,
+  },
+  {
+    id: "layer.addCamera",
+    title: "Add a camera layer to a comp",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: true,
+    members: [S("LayerCollection", "addCamera")],
+    args: ["compName", "name"],
+    validate: (a) => requireArgs(a, ["compName", "name"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = comp.layers.addCamera(${js(a.name)});
+return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
+`,
+  },
+  {
+    id: "layer.addLight",
+    title: "Add a light layer to a comp",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: true,
+    members: [S("LayerCollection", "addLight")],
+    args: ["compName", "name", "lightType", "intensity"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "name"]);
+      // Real signature: addLight(name, lightType, lightIntensity).
+      // lightType is the LightType enum (1=parallel,2=spot,3=point,4=ambient).
+      if (a.lightType !== undefined && a.lightType !== null &&
+          (!Number.isInteger(a.lightType) || a.lightType < 1 || a.lightType > 4)) {
+        throw new Error("layer.addLight: lightType must be an integer 1-4 (LightType enum)");
+      }
+      if (a.intensity !== undefined && a.intensity !== null &&
+          !Number.isFinite(Number(a.intensity))) {
+        throw new Error("layer.addLight: intensity must be a finite number");
+      }
+    },
+    source: (a) => {
+      const hasType = a.lightType !== undefined && a.lightType !== null;
+      const hasIntensity = a.intensity !== undefined && a.intensity !== null;
+      const args = [js(a.name)];
+      if (hasType) args.push(String(a.lightType));
+      if (hasIntensity) args.push(String(Number(a.intensity)));
+      return `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = comp.layers.addLight(${args.join(", ")});
+return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
+`;
+    },
+  },
+  {
+    id: "text.setText",
+    title: "Set a text layer's TextDocument text",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: true,
+    members: [S("TextDocument", "text"), S("PropertyGroup", "property")],
+    args: ["compName", "layerName", "text"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "text"]);
+      if (typeof a.text !== "string") throw new Error("text.setText: text must be a string");
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+doc.text = ${js(a.text)};
+return __adp_json({ ok: true, layer: layer.name, text: doc.text });
+`,
+  },
+  {
+    id: "read.footageDetail",
+    title: "FootageItem + FootageSource detail (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("AVItem", "hasVideo"), S("AVItem", "hasAudio"),
+      S("AVItem", "frameDuration"), S("AVItem", "useProxy"),
+      S("AVItem", "footageMissing"), S("AVItem", "duration"),
+      S("FootageItem", "mainSource"), S("FootageItem", "file"),
+      S("FileSource", "file"),
+      S("FootageSource", "alphaMode"), S("FootageSource", "hasAlpha"),
+      S("FootageSource", "isStill"), S("FootageSource", "loop"),
+      S("FootageSource", "nativeFrameRate"), S("FootageSource", "conformFrameRate"),
+      S("FileSource", "missingFootagePath"),
+    ],
+    args: ["name"],
+    validate: (a) => requireArgs(a, ["name"]),
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, FootageItem);
+var src = it.mainSource;
+return __adp_json({
+  ok: true,
+  item: {
+    name: String(it.name),
+    hasVideo: it.hasVideo === true,
+    hasAudio: it.hasAudio === true,
+    frameDuration: it.frameDuration,
+    useProxy: it.useProxy === true,
+    footageMissing: it.footageMissing === true,
+    duration: it.duration,
+    width: it.width,
+    height: it.height,
+    pixelAspect: it.pixelAspect,
+    frameRate: it.frameRate
+  },
+  source: {
+    file: src.file === null || src.file === undefined ? null : String(src.file.fsName),
+    alphaMode: String(src.alphaMode),
+    hasAlpha: src.hasAlpha === true,
+    isStill: src.isStill === true,
+    loop: src.loop === true,
+    nativeFrameRate: src.nativeFrameRate,
+    conformFrameRate: src.conformFrameRate === true,
+    missingFootagePath: String(src.missingFootagePath || "")
+  }
+});
+`,
+  },
+  {
+    id: "read.projectSettings",
+    title: "Project settings snapshot (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "281",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("Project", "bitsPerChannel"), S("Project", "expressionEngine"),
+      S("Project", "displayStartFrame"), S("Project", "framesUseFeetFrames"),
+      S("Project", "footageTimecodeDisplayStartType"), S("Project", "file"),
+    ],
+    args: [],
+    source: () => `${PRELUDE}
+var p = app.project;
+return __adp_json({
+  ok: true,
+  settings: {
+    bitsPerChannel: p.bitsPerChannel,
+    expressionEngine: p.expressionEngine,
+    displayStartFrame: p.displayStartFrame,
+    framesUseFeetFrames: p.framesUseFeetFrames === true,
+    footageTimecodeDisplayStartType: p.footageTimecodeDisplayStartType,
+    file: p.file === null || p.file === undefined ? null : String(p.file.fsName)
+  }
+});
+`,
+  },
 ];
 
 const BY_ID = new Map(OPERATIONS.map((op) => [op.id, op]));

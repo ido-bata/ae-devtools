@@ -180,7 +180,8 @@ test("ae_discover lists ops with honest evidence; opens no session", async () =>
     name: "ae_discover", arguments: {},
   }));
   assert.equal(isError, false);
-  assert.equal(payload.operationCount, 42);
+  const { OPERATIONS } = await import("../../scripting-adapters/registry.mjs");
+  assert.equal(payload.operationCount, OPERATIONS.length);
   assert.equal(payload.evidence.realHostVerified, 0);
   assert.equal(payload.evidenceLevel, "registry metadata — no dispatch");
   assert.equal(calls.count, 0, "discover must not open a session");

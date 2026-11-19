@@ -164,7 +164,7 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     expression: "0", effectMatchName: "ADBE Gaussian Blur 2",
     label: 3, startTime: 0, stretch: 100, timeSpanStart: 0, timeSpanDuration: 5,
     audioEnabled: true, enabled: true, comment: "note", setting: "Output File Info",
-    resolutionFactor: 0.5,
+    resolutionFactor: 0.5, color: [1, 0, 0], text: "hello", lightType: 2, intensity: 100,
   };
   const { OPERATIONS } = await import("../registry.mjs");
   // project.new resets state — run it first, then the rest in order.
@@ -180,7 +180,17 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (["comp.duplicate", "item.setLabel", "item.setComment", "comp.setResolutionFactor"].includes(op.id)) args.name = "C";
     if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
-    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue"].includes(op.id)) args.compName = "C";
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText"].includes(op.id)) args.compName = "C";
+    // Batch-3 layer creators get distinct names so text.setText can
+    // resolve the text layer unambiguously.
+    if (op.id === "layer.addSolid") args.name = "Solid 1";
+    if (op.id === "layer.addText") args.name = "Text 1";
+    if (op.id === "layer.addCamera") args.name = "Cam 1";
+    if (op.id === "layer.addLight") args.name = "Light 1";
+    if (op.id === "text.setText") args.layerName = "Text 1";
+    // Footage detail reads the item imported earlier by item.import
+    // (path /tmp/x.aep → footage name "x.aep").
+    if (op.id === "read.footageDetail") args.name = "x.aep";
     // Output-module ops need "C" back in the queue: render.removeFromQueue
     // (earlier batch) already dequeued it. Re-queue exactly once — a second
     // queueComp would make the comp-name match ambiguous.
@@ -365,4 +375,64 @@ test("issue #279 batch: av-state/property-detail/expression-toggle/output-module
   assert.equal((await go("comp.setResolutionFactor", { name: "C", resolutionFactor: -1 })).reason, "INVALID_ARGS");
   const detail = await go("read.itemDetail", { name: "C" });
   assert.equal(detail.result.item.resolutionFactor, 0.5);
+});
+
+test("issue #281 batch: layer creation + text + footage/project read detail", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+
+  assert.equal((await go("project.new", {}, { confirmDestructive: true })).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+
+  // layer.addSolid: real signature order + persisted spec read-back via comp layers.
+  assert.equal((await go("layer.addSolid", { compName: "C", name: "BG", width: 50, height: 50, pixelAspect: 1, color: [0, 0, 0], duration: 5 })).outcome, "COMPLETED");
+  assert.equal((await go("layer.addSolid", { compName: "C", name: "Bad", width: 1, height: 1, pixelAspect: 1, color: [2, 0, 0], duration: 1 })).reason, "INVALID_ARGS");
+  const layers = await go("read.compLayers", { compName: "C" });
+  assert.equal(layers.result.count, 1);
+  assert.equal(layers.result.layers[0].name, "BG");
+
+  // layer.addText + text.setText: TextDocument reachable via matchName path.
+  const lt = await go("layer.addText", { compName: "C", name: "Title", text: "v1" });
+  assert.equal(lt.outcome, "COMPLETED");
+  assert.equal(lt.result.text, "v1");
+  const ts = await go("text.setText", { compName: "C", layerName: "Title", text: "v2 — 修正" });
+  assert.equal(ts.outcome, "COMPLETED");
+  assert.equal(ts.result.text, "v2 — 修正");
+  // Non-text layer has no TextDocument — honest host failure, not silent ok.
+  const badText = await go("text.setText", { compName: "C", layerName: "BG", text: "x" });
+  assert.notEqual(badText.outcome, "COMPLETED");
+
+  // layer.addCamera / addLight: 3D-layer flag read-back.
+  const cam = await go("layer.addCamera", { compName: "C", name: "Cam 1" });
+  assert.equal(cam.outcome, "COMPLETED");
+  assert.equal(cam.result.threeDLayer, true);
+  const light = await go("layer.addLight", { compName: "C", name: "Key", lightType: 2, intensity: 80 });
+  assert.equal(light.outcome, "COMPLETED");
+  assert.equal(light.result.threeDLayer, true);
+  // lightType outside the LightType enum range refuses before dispatch.
+  assert.equal((await go("layer.addLight", { compName: "C", name: "Bad", lightType: 9 })).reason, "INVALID_ARGS");
+
+  // read.footageDetail: import footage, then read AVItem + FootageSource fields.
+  await go("item.import", { path: "/tmp/clip.mov" });
+  const fd = await go("read.footageDetail", { name: "clip.mov" });
+  assert.equal(fd.outcome, "COMPLETED");
+  assert.equal(fd.result.item.hasVideo, true);
+  assert.equal(fd.result.item.hasAudio, false);
+  assert.equal(fd.result.item.useProxy, false);
+  assert.equal(fd.result.source.file, "/tmp/clip.mov");
+  assert.equal(fd.result.source.alphaMode, "IGNORE");
+  assert.equal(fd.result.source.isStill, false);
+  // Wrong-type guard: a comp name is not a FootageItem.
+  const wrongType = await go("read.footageDetail", { name: "C" });
+  assert.notEqual(wrongType.outcome, "COMPLETED");
+
+  // read.projectSettings: project-level fields snapshot.
+  const ps = await go("read.projectSettings");
+  assert.equal(ps.outcome, "COMPLETED");
+  assert.equal(ps.result.settings.bitsPerChannel, 16);
+  assert.equal(ps.result.settings.framesUseFeetFrames, false);
+  assert.equal(ps.result.settings.file, "/tmp/fake.aep");
 });

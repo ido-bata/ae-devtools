@@ -161,11 +161,13 @@ function makeFxGroup(layer) {
   };
 }
 
-function makeLayer(name, comp) {
+function makeLayer(name, comp, kind) {
+  kind = kind || "av";
   const layer = {
     name,
     comp,
     index: 0,
+    kind, // fake-only discriminator: "av"|"text"|"camera"|"light"|"null"|"solid"
     __parent: null,
     enabled: true,
     locked: false,
@@ -183,6 +185,9 @@ function makeLayer(name, comp) {
     outPoint: comp ? comp.duration : 0,
     __pos: makeProperty([0, 0], { matchName: "ADBE Position" }),
     __fx: null,
+    // TextDocument model: only text layers carry one. The real API
+    // reaches it via the matchName path Text Properties > Text Document.
+    __textDoc: kind === "text" ? { text: "", pointText: true, boxText: false } : null,
     property(group) {
       // Real AE resolves both display name and matchName; we only
       // implement the stable matchName path adapters must use.
@@ -200,12 +205,24 @@ function makeLayer(name, comp) {
         if (layer.__fx === null) layer.__fx = makeFxGroup(layer);
         return layer.__fx;
       }
+      if (group === "ADBE Text Properties" || group === "Text") {
+        if (layer.__textDoc === null) {
+          throw new Error("fake-app: layer has no text document (not a text layer)");
+        }
+        return {
+          property(sub) {
+            if (sub === "ADBE Text Document" || sub === "Source Text") return layer.__textDoc;
+            throw new Error("fake-app: no such text property " + sub);
+          },
+        };
+      }
       throw new Error("fake-app: no such property group " + group);
     },
     moveToBeginning() { comp.__moveLayer(layer, "top"); },
     moveToEnd() { comp.__moveLayer(layer, "bottom"); },
     duplicate() {
-      const l = makeLayer(this.name + " copy", comp);
+      const l = makeLayer(this.name + " copy", comp, this.kind);
+      if (l.__textDoc !== null && this.__textDoc !== null) l.__textDoc.text = this.__textDoc.text;
       comp.__layers.push(l);
       comp.__reindex();
       return l;
@@ -254,7 +271,8 @@ function makeComp(name, w, h, par, dur, owner) {
         this.pixelAspect, this.duration, owner);
       d.frameRate = this.frameRate;
       for (const l of this.__layers) {
-        const nl = makeLayer(l.name, d);
+        const nl = makeLayer(l.name, d, l.kind);
+        if (nl.__textDoc !== null && l.__textDoc !== null) nl.__textDoc.text = l.__textDoc.text;
         nl.startTime = l.startTime;
         nl.stretch = l.stretch;
         nl.solo = l.solo;
@@ -278,13 +296,42 @@ function makeComp(name, w, h, par, dur, owner) {
   Object.defineProperty(comp, "numLayers", { get() { return comp.__layers.length; } });
   comp.layers = collection(comp.__layers, {
     addNull(d) {
-      const l = makeLayer("Null " + (comp.__layers.length + 1), comp);
+      const l = makeLayer("Null " + (comp.__layers.length + 1), comp, "null");
       comp.__layers.push(l);
       comp.__reindex();
       return l;
     },
+    // Real signature: addSolid(color, name, width, height, pixelAspect, duration).
+    // The fake keeps the solid spec so read-back can verify it persisted.
     addSolid(color, lname, w2, h2, par2, d2) {
-      const l = makeLayer(lname, comp);
+      const l = makeLayer(lname, comp, "solid");
+      l.__solid = {
+        color: Array.isArray(color) ? color.slice() : color,
+        width: w2, height: h2, pixelAspect: par2, duration: d2,
+      };
+      comp.__layers.push(l);
+      comp.__reindex();
+      return l;
+    },
+    addText(tname) {
+      const l = makeLayer(tname, comp, "text");
+      comp.__layers.push(l);
+      comp.__reindex();
+      return l;
+    },
+    addCamera(cname) {
+      const l = makeLayer(cname, comp, "camera");
+      l.threeDLayer = true;
+      comp.__layers.push(l);
+      comp.__reindex();
+      return l;
+    },
+    // Real signature: addLight(name, lightType, lightIntensity);
+    // lightType is the LightType enum, stored verbatim by the fake.
+    addLight(lname, ltype, intensity) {
+      const l = makeLayer(lname, comp, "light");
+      l.threeDLayer = true;
+      l.__light = { lightType: ltype === undefined ? null : ltype, intensity: intensity === undefined ? null : intensity };
       comp.__layers.push(l);
       comp.__reindex();
       return l;
@@ -318,7 +365,23 @@ function makeFootage(path, owner) {
     pixelAspect: 1,
     frameRate: 30,
     footageMissing: false,
-    mainSource: { file: { fsName: String(path) } },
+    hasVideo: true,
+    hasAudio: false,
+    frameDuration: 1 / 30,
+    useProxy: false,
+    // FootageSource model: fields the read ops consume. Fake defaults —
+    // real values depend on the imported media.
+    mainSource: {
+      file: { fsName: String(path) },
+      alphaMode: "IGNORE",
+      hasAlpha: false,
+      isStill: false,
+      loop: false,
+      conformFrameRate: true,
+      nativeFrameRate: 30,
+      missingFootagePath: "",
+      reload() {},
+    },
     remove() {
       const i = owner.indexOf(f);
       if (i >= 0) owner.splice(i, 1);
@@ -335,6 +398,13 @@ export function createAdapterFakeApp() {
     save() {},
     close() {},
     file: { fsName: "/tmp/fake.aep" },
+    // Project settings read surface (Issue #281 batch 3). Fake defaults
+    // only — real values depend on host/project state.
+    bitsPerChannel: 16,
+    expressionEngine: 2,
+    displayStartFrame: 0,
+    framesUseFeetFrames: false,
+    footageTimecodeDisplayStartType: 0,
     importFile(io) {
       if (io === null || io.file === null || io.file === undefined) {
         throw new Error("fake-app: ImportOptions.file is required");
