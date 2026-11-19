@@ -47,14 +47,6 @@ import { sampleArgs } from "../tests/sample-args.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
 const SYMBOLS_JSON = join(here, "..", "..", "..", "..", "inventories", "scripting", "generated", "symbols.json");
 
-if (!existsSync(SYMBOLS_JSON)) {
-  console.log("audit-member-kinds: symbols.json not present (published tarball) — skipping");
-  process.exit(0);
-}
-
-const symbols = JSON.parse(readFileSync(SYMBOLS_JSON, "utf8")).symbols;
-const byId = new Map(symbols.map((s) => [s.id, s]));
-
 // Arg-variant overrides: each entry is merged over sampleArgs(op) to
 // produce one generated source. Only args that switch which host
 // members get exercised need entries.
@@ -82,10 +74,55 @@ const ACCUMULATORS = new Set([
   "ent", "tmp",
 ]);
 
-const findings = [];
-const stats = { ops: 0, claims: 0, methods: 0, attributes: 0, sources: 0 };
+// Extract the argument list of every `.name(...)` call in `src`.
+// Naive paren matcher — sufficient because generated sources never
+// nest unbalanced parens inside string literals.
+function callArgCounts(src, name) {
+  const counts = [];
+  const re = new RegExp("\\." + name + "\\s*\\(", "g");
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    let depth = 1;          // () depth relative to the call's open paren
+    let j = re.lastIndex;
+    let commas = 0;
+    let hasArg = false;
+    let quote = null;       // ', ", or ` string state
+    let esc = false;
+    const stack = [];       // (), [], {} depths inside the arg list
+    while (j < src.length && depth > 0) {
+      const c = src[j];
+      if (quote !== null) {
+        if (esc) esc = false;
+        else if (c === "\\") esc = true;
+        else if (c === quote) quote = null;
+      } else if (c === '"' || c === "'" || c === "`") {
+        quote = c;
+      } else if (c === "(") { depth++; stack.push("("); }
+      else if (c === "[") stack.push("[");
+      else if (c === "{") stack.push("{");
+      else if (c === ")") {
+        if (stack.length > 0 && stack[stack.length - 1] === "(") stack.pop();
+        depth--;
+      }
+      else if (c === "]" || c === "}") stack.pop();
+      else if (c === "," && stack.length === 0) commas++;
+      if (depth > 0 && !/\s/.test(c)) hasArg = true;
+      j++;
+    }
+    if (depth === 0) counts.push(hasArg ? commas + 1 : 0);
+    re.lastIndex = j;
+  }
+  return counts;
+}
 
-for (const op of OPERATIONS) {
+export function auditMemberKinds(symbolsPath = SYMBOLS_JSON) {
+  const findings = [];
+  const stats = { ops: 0, claims: 0, methods: 0, attributes: 0, sources: 0, arityChecked: 0 };
+  if (!existsSync(symbolsPath)) return { stats, findings, skipped: true };
+  const symbols = JSON.parse(readFileSync(symbolsPath, "utf8")).symbols;
+  const byId = new Map(symbols.map((s) => [s.id, s]));
+
+  for (const op of OPERATIONS) {
   const argSets = [sampleArgs(op)];
   for (const v of VARIANTS[op.id] || []) argSets.push({ ...sampleArgs(op), ...v });
 
@@ -95,6 +132,7 @@ for (const op of OPERATIONS) {
   // plain data, not host attributes).
   const called = new Set();
   const written = new Set();
+  const sources = [];
   for (const args of argSets) {
     let src;
     try {
@@ -103,6 +141,7 @@ for (const op of OPERATIONS) {
       findings.push({ op: op.id, member: "(buildSource)", issue: `source generation failed: ${e.message}` });
       continue;
     }
+    sources.push(src);
     stats.sources++;
     for (const m of src.matchAll(/\.([A-Za-z_$][\w$]*)\s*\(/g)) called.add(m[1]);
     const tail = src.startsWith(PRELUDE) ? src.slice(PRELUDE.length) : src;
@@ -140,16 +179,57 @@ for (const op of OPERATIONS) {
         issue: `read-only attribute '${name}' is assigned in generated source`,
       });
     }
+    // Arity check where the inventory records a signature. Optional
+    // params appear as `[, name]` groups in the raw signature text;
+    // valid call arity is required..required+optional.
+    if (sym.kind === "method" && Array.isArray(sym.signature) && sym.signature.length > 0) {
+      stats.arityChecked++;
+      const sigStr = sym.signature.join(",");
+      // Required params = commas at bracket depth 0, plus one.
+      let depth = 0, required = 1;
+      for (const ch of sigStr) {
+        if (ch === "[") depth++;
+        else if (ch === "]") depth--;
+        else if (ch === "," && depth === 0) required++;
+      }
+      // Optional params = non-empty comma-separated items inside
+      // every [...] group (", prefType" -> 1, "a, b" -> 2).
+      let optional = 0;
+      for (const m of sigStr.matchAll(/\[([^\]]*)\]/g)) {
+        optional += m[1].split(",").filter((s) => s.trim() !== "").length;
+      }
+      const minA = required, maxA = required + optional;
+      for (const src of sources) {
+        for (const n of callArgCounts(src, name)) {
+          if (n < minA || n > maxA) {
+            findings.push({
+              op: op.id, member: memberId, kind: sym.kind,
+              issue: `method '${name}' called with ${n} arg(s); documented signature allows ${minA}..${maxA} (${sigStr})`,
+            });
+          }
+        }
+      }
+    }
   }
+  }
+  return { stats, findings };
 }
 
-console.log(`audit-member-kinds: ${stats.ops} ops, ${stats.sources} sources, ${stats.claims} claims (${stats.methods} methods, ${stats.attributes} attributes)`);
-if (findings.length === 0) {
-  console.log("audit-member-kinds: no findings");
-  process.exit(0);
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) {
+  const { stats, findings, skipped } = auditMemberKinds();
+  if (skipped) {
+    console.log("audit-member-kinds: symbols.json not present (published tarball) — skipping");
+    process.exit(0);
+  }
+  console.log(`audit-member-kinds: ${stats.ops} ops, ${stats.sources} sources, ${stats.claims} claims (${stats.methods} methods, ${stats.attributes} attributes, ${stats.arityChecked} arity-checked)`);
+  if (findings.length === 0) {
+    console.log("audit-member-kinds: no findings");
+    process.exit(0);
+  }
+  for (const f of findings) {
+    console.log(`FINDING ${f.op} :: ${f.member}\n  ${f.issue}`);
+  }
+  console.log(`audit-member-kinds: ${findings.length} finding(s) — verify each against Adobe docs before treating as a bug`);
+  process.exit(1);
 }
-for (const f of findings) {
-  console.log(`FINDING ${f.op} :: ${f.member}\n  ${f.issue}`);
-}
-console.log(`audit-member-kinds: ${findings.length} finding(s) — verify each against Adobe docs before treating as a bug`);
-process.exit(1);
