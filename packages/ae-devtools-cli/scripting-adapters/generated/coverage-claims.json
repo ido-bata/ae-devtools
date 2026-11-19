@@ -79,7 +79,8 @@
         "item.setLabel",
         "item.setComment",
         "comp.setResolutionFactor",
-        "read.compSettings"
+        "read.compSettings",
+        "layer.addShape"
       ],
       "evidence": "fake/mock only"
     },
@@ -132,7 +133,8 @@
     "ae.scripting.Property.setValue": {
       "ops": [
         "layer.setTransformPosition",
-        "anim.setValue"
+        "anim.setValue",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
@@ -141,7 +143,9 @@
         "layer.setTransformPosition",
         "read.layerDetail",
         "read.propertyValue",
-        "read.propertyDetail"
+        "read.propertyDetail",
+        "shape.readContents",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
@@ -254,13 +258,15 @@
     },
     "ae.scripting.PropertyGroup.addProperty": {
       "ops": [
-        "effect.add"
+        "effect.add",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.PropertyGroup.canAddProperty": {
       "ops": [
-        "effect.add"
+        "effect.add",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
@@ -422,7 +428,9 @@
         "text.setStyle",
         "text.readStyle",
         "anim.setInterpolation",
-        "anim.setTemporalEase"
+        "anim.setTemporalEase",
+        "shape.readContents",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
@@ -670,7 +678,9 @@
     },
     "ae.scripting.PropertyBase.matchName": {
       "ops": [
-        "read.propertyDetail"
+        "read.propertyDetail",
+        "shape.readContents",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
@@ -1188,13 +1198,6 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.class.MarkerValue": {
-      "ops": [
-        "marker.setLayerMarker",
-        "marker.setCompMarker"
-      ],
-      "evidence": "fake/mock only"
-    },
     "ae.scripting.Layer.marker": {
       "ops": [
         "marker.setLayerMarker",
@@ -1285,6 +1288,47 @@
       "ops": [
         "marker.setCompMarker",
         "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addShape": {
+      "ops": [
+        "layer.addShape"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyGroup.numProperties": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.vertices": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.inTangents": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.outTangents": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.closed": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     }

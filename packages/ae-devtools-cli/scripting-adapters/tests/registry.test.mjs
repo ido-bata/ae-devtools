@@ -126,6 +126,9 @@ function sampleArgs(op) {
     else if (n === "duration") a[n] = 1;
     else if (n === "eventCuePoint") a[n] = true;
     else if (n === "params") a[n] = { cue: "in", label2: "x" };
+    else if (n === "vertices") a[n] = [[0, 0], [10, 0], [10, 10]];
+    else if (n === "inTangents" || n === "outTangents") a[n] = [[0, 0], [0, 0], [0, 0]];
+    else if (n === "closed") a[n] = true;
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";
     else if (n === "default") a[n] = "d";
     else if (n === "value" && op.id.startsWith("pref.")) a[n] = "v";
