@@ -117,6 +117,9 @@ function sampleArgs(op) {
     else if (n === "displayStartFrame") a[n] = 0;
     else if (["motionBlur", "frameBlending", "draft3d", "hideShyLayers", "preserveNestedFrameRate", "dropFrame"].includes(n)) a[n] = true;
     else if (n === "footageName") a[n] = "clip.mov";
+    else if (n === "parentFolder") a[n] = null;
+    else if (n === "selected") a[n] = true;
+    else if (n === "id") a[n] = 1;
     else if (n === "section") a[n] = "General";
     else if (n === "key") a[n] = "SomeKey";
     else if (n === "type" && op.id.startsWith("pref.")) a[n] = "string";

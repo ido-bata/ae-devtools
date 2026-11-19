@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "5eb8fbd4c791ae24903403efbc1fb405cb8ed0fc552fc7e28a18d716b6921919"
+      "sha256": "9b9860a9a0815717f6fd4e4a04dee3868372dbcc86681aaa4a117b429ff3f7d5"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -19137,12 +19137,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/folderitem/#folderitemitem"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectTree)"
           }
         ]
       }
@@ -19217,12 +19221,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/folderitem/#folderitemnumitems"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectTree)"
           }
         ]
       }
@@ -22430,7 +22438,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.itemDetail, comp.duplicate)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setParentFolder, item.setSelected, read.projectSummary, read.projectTree, read.itemById, read.itemDetail, comp.duplicate)"
           },
           {
             "kind": "real-host",
@@ -22527,7 +22535,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.itemDetail, comp.duplicate, item.setLabel, item.setComment, comp.setResolutionFactor, read.compSettings)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setParentFolder, item.setSelected, read.projectSummary, read.projectTree, read.itemById, read.itemDetail, comp.duplicate, item.setLabel, item.setComment, comp.setResolutionFactor, read.compSettings)"
           },
           {
             "kind": "real-host",
@@ -22567,12 +22575,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemparentfolder"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.addComp, item.addFolder, item.setParentFolder, read.projectSummary, read.projectTree, read.itemById)"
           }
         ]
       }
@@ -22700,12 +22712,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/item/item/#itemselected"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setSelected, read.projectSummary, read.projectTree, read.itemById)"
           }
         ]
       }
@@ -22793,7 +22809,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.itemDetail)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setParentFolder, item.setSelected, read.projectSummary, read.projectTree, read.itemById, read.itemDetail)"
           },
           {
             "kind": "real-host",
@@ -28391,12 +28407,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectitembyid"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.itemById)"
           }
         ]
       }
@@ -28431,12 +28451,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectitems"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary)"
           }
         ]
       }
@@ -28711,12 +28735,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectnumitems"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.projectSummary, read.projectTree)"
           }
         ]
       }
@@ -29035,12 +29063,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectrootfolder"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.addComp, item.addFolder, item.setParentFolder, read.projectSummary, read.projectTree)"
           }
         ]
       }
@@ -29168,12 +29200,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/general/project/#projectselection"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (item.setSelected, read.projectSummary, read.projectTree)"
           }
         ]
       }
