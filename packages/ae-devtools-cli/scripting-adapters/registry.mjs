@@ -15,8 +15,12 @@
  *     tests verify every id exists in inventories/scripting/generated.
  *   - `mutating` marks ops that change project/AE state; consumers
  *     (agent loop) use it for dirty-state gating.
- *   - Object references are resolved BY NAME with type guards inside
- *     the generated source (CAP031) — never by stale handles.
+ *   - Object references are resolved through a common item selector
+ *     inside the generated source — legacy name strings keep the
+ *     project-wide name+type search, while itemRef objects
+ *     {id?, name?, path?, project?} add stable-id, folder-path, and
+ *     saved-project consistency checks with ambiguity/mismatch
+ *     refusal (CAP031, Issue #293).
  *   - An op listed here is `implemented` at adapter level only;
  *     verification stays `not-run`/`fake` until real-host evidence.
  *
@@ -40,19 +44,20 @@ function __adp_fail(msg) { throw new Error("adapter: " + msg); }
 function __adp_items() { return app.project.items; }
 // Type discrimination uses instanceof (locale-independent). typeName
 // is localized and must NOT be used for branching (PR #46 review).
-function __adp_findItem(name, ctor) {
-  var items = __adp_items();
+function __adp_typeMatch(it, ctor) {
+  if (ctor === null) return true;
+  try { return it instanceof ctor; } catch (e) { return false; }
+}
+function __adp_findInColl(coll, name, ctor, scope) {
   var found = null;
   var sawName = false;
-  for (var i = 1; i <= items.length; i++) {
-    var it = items[i];
+  for (var i = 1; i <= coll.length; i++) {
+    var it = coll[i];
     if (it.name === name) {
       sawName = true;
-      var match = false;
-      try { match = (ctor === null) || (it instanceof ctor); } catch (e) { match = false; }
-      if (match) {
+      if (__adp_typeMatch(it, ctor)) {
         if (found !== null) {
-          __adp_fail("ambiguous item name '" + name + "': multiple matches — rename or qualify");
+          __adp_fail("ambiguous " + scope + " name '" + name + "': multiple matches — qualify with id or path");
         }
         found = it;
       }
@@ -60,8 +65,72 @@ function __adp_findItem(name, ctor) {
   }
   if (found !== null) return found;
   if (sawName) __adp_fail("name '" + name + "' exists but is not the requested type");
-  __adp_fail("item not found: " + name);
+  __adp_fail(scope + " not found: " + name);
   return null;
+}
+function __adp_isArray(v) { return Object.prototype.toString.call(v) === "[object Array]"; }
+function __adp_resolveFolderPath(path) {
+  if (path === undefined || path === null) return null;
+  if (!__adp_isArray(path)) __adp_fail("item path must be an array of folder names");
+  var cur = app.project.rootFolder;
+  for (var i = 0; i < path.length; i++) {
+    var seg = path[i];
+    if (typeof seg !== "string" || seg.length === 0) __adp_fail("item path segment must be a non-empty string");
+    var found = null;
+    var count = 0;
+    var coll = cur.items;
+    for (var j = 1; j <= coll.length; j++) {
+      var it = coll[j];
+      if (it instanceof FolderItem && it.name === seg) { count++; found = it; }
+    }
+    if (count === 0) __adp_fail("folder path not found at '" + seg + "'");
+    if (count > 1) __adp_fail("ambiguous folder path segment '" + seg + "': rename folders or qualify deeper");
+    cur = found;
+  }
+  return cur;
+}
+function __adp_findItemRef(ref, ctor) {
+  var id = ref.id;
+  var name = ref.name;
+  var path = ref.path;
+  var project = ref.project;
+  if (project !== undefined && project !== null) {
+    if (typeof project !== "string") __adp_fail("item ref project must be a project file path string");
+    var pf = app.project.file;
+    if (pf === null || pf === undefined) __adp_fail("item ref project check requires a saved project file");
+    if (String(pf.fsName) !== project) __adp_fail("item ref project mismatch");
+  }
+  if (id !== undefined && id !== null) {
+    if (typeof id !== "number" || !isFinite(id) || Math.floor(id) !== id) {
+      __adp_fail("item ref id must be an integer");
+    }
+    var byId = app.project.itemByID(id);
+    if (byId === null) __adp_fail("item not found: id " + id);
+    if (!__adp_typeMatch(byId, ctor)) __adp_fail("item id " + id + " exists but is not the requested type");
+    if (name !== undefined && name !== null && byId.name !== name) {
+      __adp_fail("item id/name mismatch: id " + id + " is '" + byId.name + "', not '" + name + "'");
+    }
+    if (path !== undefined && path !== null) {
+      var wantFolder = __adp_resolveFolderPath(path);
+      var actualFolder = byId.parentFolder;
+      var sameFolder = actualFolder === wantFolder;
+      if (!sameFolder && actualFolder !== null && actualFolder !== undefined &&
+          wantFolder !== null && actualFolder.id !== undefined && actualFolder.id === wantFolder.id) {
+        sameFolder = true;
+      }
+      if (!sameFolder) __adp_fail("item id/path mismatch: id " + id);
+    }
+    return byId;
+  }
+  if (name === undefined || name === null) __adp_fail("item ref requires id or name");
+  var folder = __adp_resolveFolderPath(path);
+  var coll = folder === null ? __adp_items() : folder.items;
+  var scope = folder === null ? "item" : "item in folder path";
+  return __adp_findInColl(coll, name, ctor, scope);
+}
+function __adp_findItem(name, ctor) {
+  if (name !== null && typeof name === "object") return __adp_findItemRef(name, ctor);
+  return __adp_findInColl(__adp_items(), name, ctor, "item");
 }
 function __adp_findLayer(comp, name) {
   var layers = comp.layers;
@@ -159,6 +228,17 @@ function requireArgs(args, names) {
   }
 }
 
+// Item selectors accept either a legacy name string or an itemRef
+// object {id?, name?, path?, project?}. The ExtendScript resolver
+// enforces the actual guarantees; this only keeps non-selector values
+// out early.
+function isItemRef(v) {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+function isFolderSelector(v) {
+  return typeof v === "string" || isItemRef(v);
+}
+
 export const OPERATIONS = [
   {
     id: "project.new",
@@ -237,8 +317,8 @@ return __adp_json({ ok: true });
       for (const n of ["width", "height", "pixelAspect", "duration", "frameRate"]) {
         if (!Number.isFinite(Number(a[n]))) throw new Error(`item.addComp: ${n} must be a finite number`);
       }
-      if (a.parentFolder !== undefined && a.parentFolder !== null && typeof a.parentFolder !== "string") {
-        throw new Error("item.addComp: parentFolder must be a folder name or null for root");
+      if (a.parentFolder !== undefined && a.parentFolder !== null && !isFolderSelector(a.parentFolder)) {
+        throw new Error("item.addComp: parentFolder must be a folder name/itemRef or null for root");
       }
     },
     source: (a) => `${PRELUDE}
@@ -260,8 +340,8 @@ return __adp_json({ ok: true, id: comp.id, name: comp.name, parent: comp.parentF
     args: ["name", "parentFolder"],
     validate: (a) => {
       requireArgs(a, ["name"]);
-      if (a.parentFolder !== undefined && a.parentFolder !== null && typeof a.parentFolder !== "string") {
-        throw new Error("item.addFolder: parentFolder must be a folder name or null for root");
+      if (a.parentFolder !== undefined && a.parentFolder !== null && !isFolderSelector(a.parentFolder)) {
+        throw new Error("item.addFolder: parentFolder must be a folder name/itemRef or null for root");
       }
     },
     source: (a) => `${PRELUDE}
@@ -307,8 +387,8 @@ return __adp_json({ ok: true, removed: ${js(a.name)} });
       if (["CompItem", "FolderItem", "FootageItem"].indexOf(a.type) === -1) {
         throw new Error("item.setParentFolder: type must be one of CompItem|FolderItem|FootageItem");
       }
-      if (a.parentFolder !== undefined && a.parentFolder !== null && typeof a.parentFolder !== "string") {
-        throw new Error("item.setParentFolder: parentFolder must be a folder name or null for root");
+      if (a.parentFolder !== undefined && a.parentFolder !== null && !isFolderSelector(a.parentFolder)) {
+        throw new Error("item.setParentFolder: parentFolder must be a folder name/itemRef or null for root");
       }
     },
     source: (a) => `${PRELUDE}
