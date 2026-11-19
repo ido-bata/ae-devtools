@@ -102,7 +102,12 @@ function sampleArgs(op) {
     else if (n === "centerPoint") a[n] = [0, 0];
     else if (n === "fontSize") a[n] = 100;
     else if (n === "justification") a[n] = 1;
-    else if (n === "fillColor") a[n] = [1, 0, 0];
+    else if (n === "fillColor" || n === "strokeColor") a[n] = [1, 0, 0];
+    else if (["applyFill", "applyStroke", "strokeOverFill", "autoLeading"].includes(n)) a[n] = true;
+    else if (n === "strokeWidth") a[n] = 5;
+    else if (n === "boxTextSize") a[n] = [200, 100];
+    else if (n === "boxTextPos") a[n] = [0, 0];
+    else if (["baselineShift", "horizontalScale", "verticalScale"].includes(n)) a[n] = 0;
     else if (n === "tracking" || n === "leading") a[n] = 0;
     else if (["inPoint"].includes(n)) a[n] = 0;
     else if (n === "outPoint") a[n] = 10;

@@ -1837,6 +1837,250 @@ return __adp_json({
 `,
   },
   {
+    id: "layer.addBoxText",
+    title: "Add a paragraph (box) text layer",
+    domain: "project-items-comps-layers",
+    issue: "297",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("LayerCollection", "addBoxText"),
+      S("TextDocument", "boxText"), S("TextDocument", "pointText"),
+      S("TextDocument", "boxTextSize"), S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "name", "width", "height"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "name", "width", "height"]);
+      for (const n of ["width", "height"]) {
+        if (!(typeof a[n] === "number" && Number.isFinite(a[n]) && a[n] > 0)) {
+          throw new Error(`layer.addBoxText: ${n} must be a positive finite number`);
+        }
+      }
+    },
+    // Real signature: addBoxText([width, height]) — no name argument.
+    // Vertical variants (addVerticalText/addVerticalBoxText) are AE
+    // 24.2+ and deferred: the fake has no version gate.
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = comp.layers.addBoxText([${Number(a.width)}, ${Number(a.height)}]);
+layer.name = ${js(a.name)};
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+return __adp_json({
+  ok: true, layer: layer.name, index: layer.index,
+  pointText: doc.pointText === true, boxText: doc.boxText === true,
+  boxTextSize: doc.boxTextSize
+});
+`,
+  },
+  {
+    id: "text.setPaint",
+    title: "Set TextDocument fill/stroke paint attributes",
+    domain: "project-items-comps-layers",
+    issue: "297",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("TextDocument", "applyFill"), S("TextDocument", "applyStroke"),
+      S("TextDocument", "strokeColor"), S("TextDocument", "strokeWidth"),
+      S("TextDocument", "strokeOverFill"), S("TextDocument", "autoLeading"),
+      S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName", "applyFill", "applyStroke", "strokeColor", "strokeWidth", "strokeOverFill", "autoLeading"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const set = ["applyFill", "applyStroke", "strokeColor", "strokeWidth", "strokeOverFill", "autoLeading"]
+        .filter((k) => a[k] !== undefined);
+      if (set.length === 0) {
+        throw new Error("text.setPaint: at least one paint field is required");
+      }
+      for (const k of ["applyFill", "applyStroke", "strokeOverFill", "autoLeading"]) {
+        if (a[k] !== undefined && typeof a[k] !== "boolean") {
+          throw new Error(`text.setPaint: ${k} must be a boolean`);
+        }
+      }
+      // strokeColor is [r,g,b]; per docs, setting it also sets
+      // applyStroke to true (modeled by the fake).
+      if (a.strokeColor !== undefined) {
+        if (!Array.isArray(a.strokeColor) || a.strokeColor.length !== 3 ||
+            a.strokeColor.some((c) => typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 1)) {
+          throw new Error("text.setPaint: strokeColor must be [r,g,b] with components in 0..1");
+        }
+      }
+      // strokeWidth: documented range 0-1000 (0 silently clips to 0.01).
+      if (a.strokeWidth !== undefined &&
+          !(typeof a.strokeWidth === "number" && Number.isFinite(a.strokeWidth) &&
+            a.strokeWidth >= 0 && a.strokeWidth <= 1000)) {
+        throw new Error("text.setPaint: strokeWidth must be a finite number in 0..1000");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+${a.applyFill !== undefined ? `doc.applyFill = ${a.applyFill ? "true" : "false"};` : ""}
+${a.applyStroke !== undefined ? `doc.applyStroke = ${a.applyStroke ? "true" : "false"};` : ""}
+${a.strokeColor !== undefined ? `doc.strokeColor = [${a.strokeColor.join(", ")}];` : ""}
+${a.strokeWidth !== undefined ? `doc.strokeWidth = ${a.strokeWidth};` : ""}
+${a.strokeOverFill !== undefined ? `doc.strokeOverFill = ${a.strokeOverFill ? "true" : "false"};` : ""}
+${a.autoLeading !== undefined ? `doc.autoLeading = ${a.autoLeading ? "true" : "false"};` : ""}
+// strokeColor throws on read when applyStroke is false; report null
+// instead of failing the whole read-back.
+var sc = null;
+if (doc.applyStroke === true) { sc = doc.strokeColor; }
+return __adp_json({
+  ok: true, layer: layer.name,
+  applyFill: doc.applyFill === true, applyStroke: doc.applyStroke === true,
+  strokeColor: sc, strokeWidth: doc.strokeWidth,
+  strokeOverFill: doc.strokeOverFill === true,
+  autoLeading: doc.autoLeading
+});
+`,
+  },
+  {
+    id: "text.setBoxMetrics",
+    title: "Set TextDocument box metrics (boxTextSize/boxTextPos)",
+    domain: "project-items-comps-layers",
+    issue: "297",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("TextDocument", "boxTextSize"), S("TextDocument", "boxTextPos"),
+      S("TextDocument", "boxText"), S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName", "boxTextSize", "boxTextPos"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      if (a.boxTextSize === undefined && a.boxTextPos === undefined) {
+        throw new Error("text.setBoxMetrics: boxTextSize and/or boxTextPos is required");
+      }
+      // boxTextSize: array of two integers, minimum 1.
+      if (a.boxTextSize !== undefined &&
+          (!Array.isArray(a.boxTextSize) || a.boxTextSize.length !== 2 ||
+           a.boxTextSize.some((v) => !Number.isInteger(v) || v < 1))) {
+        throw new Error("text.setBoxMetrics: boxTextSize must be [width, height] integers >= 1");
+      }
+      if (a.boxTextPos !== undefined &&
+          (!Array.isArray(a.boxTextPos) || a.boxTextPos.length !== 2 ||
+           a.boxTextPos.some((v) => typeof v !== "number" || !Number.isFinite(v)))) {
+        throw new Error("text.setBoxMetrics: boxTextPos must be [x, y] finite numbers");
+      }
+    },
+    // Both attributes throw on the real host (and in the fake) when the
+    // layer is not box text.
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+${a.boxTextSize !== undefined ? `doc.boxTextSize = [${a.boxTextSize.join(", ")}];` : ""}
+${a.boxTextPos !== undefined ? `doc.boxTextPos = [${a.boxTextPos.join(", ")}];` : ""}
+return __adp_json({
+  ok: true, layer: layer.name,
+  boxText: doc.boxText === true,
+  boxTextSize: doc.boxTextSize, boxTextPos: doc.boxTextPos
+});
+`,
+  },
+  {
+    id: "text.setCharAttributes",
+    title: "Set TextDocument character attributes (baselineShift/horizontalScale/verticalScale)",
+    domain: "project-items-comps-layers",
+    issue: "297",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("TextDocument", "baselineShift"), S("TextDocument", "horizontalScale"),
+      S("TextDocument", "verticalScale"), S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName", "baselineShift", "horizontalScale", "verticalScale"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const set = ["baselineShift", "horizontalScale", "verticalScale"].filter((k) => a[k] !== undefined);
+      if (set.length === 0) {
+        throw new Error("text.setCharAttributes: at least one attribute is required");
+      }
+      for (const k of set) {
+        if (!(typeof a[k] === "number" && Number.isFinite(a[k]))) {
+          throw new Error(`text.setCharAttributes: ${k} must be a finite number`);
+        }
+      }
+    },
+    // fauxBold/fauxItalic are read-write only from AE 24.0 — deferred.
+    // tsume is deferred: the docs describe contradictory value ranges.
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+${a.baselineShift !== undefined ? `doc.baselineShift = ${a.baselineShift};` : ""}
+${a.horizontalScale !== undefined ? `doc.horizontalScale = ${a.horizontalScale};` : ""}
+${a.verticalScale !== undefined ? `doc.verticalScale = ${a.verticalScale};` : ""}
+return __adp_json({
+  ok: true, layer: layer.name,
+  baselineShift: doc.baselineShift,
+  horizontalScale: doc.horizontalScale,
+  verticalScale: doc.verticalScale
+});
+`,
+  },
+  {
+    id: "text.readDocument",
+    title: "Read a text layer's full modeled TextDocument attribute set (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "297",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("TextDocument", "text"), S("TextDocument", "pointText"),
+      S("TextDocument", "boxText"), S("TextDocument", "paragraphCount"),
+      S("TextDocument", "composedLineCount"),
+      S("TextDocument", "font"), S("TextDocument", "fontFamily"),
+      S("TextDocument", "fontSize"), S("TextDocument", "fontStyle"),
+      S("TextDocument", "justification"), S("TextDocument", "fillColor"),
+      S("TextDocument", "tracking"), S("TextDocument", "leading"),
+      S("TextDocument", "autoLeading"),
+      S("TextDocument", "applyFill"), S("TextDocument", "applyStroke"),
+      S("TextDocument", "strokeColor"), S("TextDocument", "strokeWidth"),
+      S("TextDocument", "strokeOverFill"),
+      S("TextDocument", "boxTextSize"), S("TextDocument", "boxTextPos"),
+      S("TextDocument", "baselineShift"), S("TextDocument", "horizontalScale"),
+      S("TextDocument", "verticalScale"),
+      S("TextDocument", "fauxBold"), S("TextDocument", "fauxItalic"),
+      S("TextDocument", "smallCaps"), S("TextDocument", "subscript"),
+      S("TextDocument", "superscript"), S("TextDocument", "allCaps"),
+      S("PropertyGroup", "property"),
+    ],
+    args: ["compName", "layerName"],
+    validate: (a) => requireArgs(a, ["compName", "layerName"]),
+    // Conditionally-readable attributes report null when their gate is
+    // closed instead of throwing (same convention as text.setPaint).
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+var doc = layer.property("ADBE Text Properties").property("ADBE Text Document");
+var fc = null, sc = null, bts = null, btp = null;
+if (doc.applyFill === true) { fc = doc.fillColor; }
+if (doc.applyStroke === true) { sc = doc.strokeColor; }
+if (doc.boxText === true) { bts = doc.boxTextSize; btp = doc.boxTextPos; }
+return __adp_json({
+  ok: true, layer: layer.name, text: doc.text,
+  pointText: doc.pointText === true, boxText: doc.boxText === true,
+  paragraphCount: doc.paragraphCount, composedLineCount: doc.composedLineCount,
+  font: doc.font, fontFamily: doc.fontFamily, fontSize: doc.fontSize,
+  fontStyle: doc.fontStyle, justification: doc.justification,
+  fillColor: fc, tracking: doc.tracking, leading: doc.leading,
+  autoLeading: doc.autoLeading,
+  applyFill: doc.applyFill === true, applyStroke: doc.applyStroke === true,
+  strokeColor: sc, strokeWidth: doc.strokeWidth,
+  strokeOverFill: doc.strokeOverFill === true,
+  boxTextSize: bts, boxTextPos: btp,
+  baselineShift: doc.baselineShift,
+  horizontalScale: doc.horizontalScale, verticalScale: doc.verticalScale,
+  fauxBold: doc.fauxBold === true, fauxItalic: doc.fauxItalic === true,
+  smallCaps: doc.smallCaps === true, subscript: doc.subscript === true,
+  superscript: doc.superscript === true, allCaps: doc.allCaps === true
+});
+`,
+  },
+  {
     id: "layer.setLayerFlags",
     title: "Set AVLayer stacking/render flags (adjustment/preserveTransparency/frameBlending/collapseTransformation)",
     domain: "project-items-comps-layers",

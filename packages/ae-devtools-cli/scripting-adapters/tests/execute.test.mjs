@@ -168,6 +168,10 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     section: "S", key: "K", default: "d",
     font: "F", fontStyle: "S", fontSize: 100, justification: 1,
     fillColor: [1, 0, 0], tracking: 0, leading: 100,
+    applyFill: true, applyStroke: true, strokeOverFill: true, autoLeading: true,
+    strokeColor: [1, 0, 0], strokeWidth: 5,
+    boxTextSize: [200, 100], boxTextPos: [0, 0],
+    baselineShift: 0, horizontalScale: 100, verticalScale: 100,
     adjustmentLayer: true, preserveTransparency: false,
     frameBlending: true, collapseTransformation: false,
     inPoint: 0, outPoint: 5,
@@ -201,14 +205,17 @@ test("every registered op dispatches through the runner end-to-end", async () =>
     if (op.id === "read.itemById") args.id = 1;
     if (op.id === "render.setOutputSetting") args.value = "h264";
     if (op.id === "layer.setParent") args.parentName = null;
-    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addCamera","layer.addLight","text.setText","layer.replaceSource","render.duplicateQueueItem","layer.addShape","shape.readContents","shape.addPath","marker.setLayerMarker","marker.readLayerMarkers"].includes(op.id)) args.compName = "C";
+    if (["comp.addNullLayer","layer.setTransformPosition","layer.reorder","layer.setParent","layer.duplicate","layer.setTiming","layer.setState","anim.removeKeyframe","read.valueAtTime","render.setTimeSpan","render.removeFromQueue","layer.addSolid","layer.addText","layer.addBoxText","layer.addCamera","layer.addLight","text.setText","text.setPaint","text.setBoxMetrics","text.setCharAttributes","text.readDocument","layer.replaceSource","render.duplicateQueueItem","layer.addShape","shape.readContents","shape.addPath","marker.setLayerMarker","marker.readLayerMarkers"].includes(op.id)) args.compName = "C";
     // Batch-3 layer creators get distinct names so text.setText can
     // resolve the text layer unambiguously.
     if (op.id === "layer.addSolid") args.name = "Solid 1";
     if (op.id === "layer.addText") args.name = "Text 1";
+    if (op.id === "layer.addBoxText") args.name = "Box 1";
     if (op.id === "layer.addCamera") args.name = "Cam 1";
     if (op.id === "layer.addLight") args.name = "Light 1";
-    if (["text.setText", "text.setStyle", "text.readStyle"].includes(op.id)) args.layerName = "Text 1";
+    if (["text.setText", "text.setStyle", "text.readStyle", "text.setPaint", "text.setCharAttributes"].includes(op.id)) args.layerName = "Text 1";
+    // Box-metric ops need the paragraph (box) text layer created above.
+    if (["text.setBoxMetrics", "text.readDocument"].includes(op.id)) args.layerName = "Box 1";
     // layer.addShape names its layer "N" (VALUE.name); shape.* ops must
     // target that shape layer, not the earlier "Null 1".
     if (op.id === "layer.addShape") args.name = "N";
@@ -1032,4 +1039,101 @@ test("issue #296 batch: ShapeLayer addShape + Contents path slice — write, rea
   assert.equal(dupRead.result.numProperties, 1);
   const dupShape = dupRead.result.contents[0].children.find((c) => c.matchName === "ADBE Vector Shape");
   assert.deepEqual(dupShape.shape.vertices, V);
+});
+
+test("issue #297 batch: TextDocument residual attributes — box text, paint, char attrs, counterexamples", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app);
+  const provider = approvingProvider();
+  const go = (opId, args = {}, extra = {}) =>
+    runOperation({ opId, args, consentProvider: provider, ...t, ...extra });
+  const mut = { confirmDestructive: true };
+
+  assert.equal((await go("project.new", {}, mut)).outcome, "COMPLETED");
+  assert.equal((await go("item.addComp", { name: "C", width: 10, height: 10, pixelAspect: 1, duration: 5, frameRate: 30 })).outcome, "COMPLETED");
+  assert.equal((await go("layer.addText", { compName: "C", name: "Text 1", text: "hi" })).outcome, "COMPLETED");
+
+  // Point text: box metrics are gated off and report null, not throw.
+  const rd0 = await go("text.readDocument", { compName: "C", layerName: "Text 1" });
+  assert.equal(rd0.outcome, "COMPLETED");
+  assert.equal(rd0.result.pointText, true);
+  assert.equal(rd0.result.boxText, false);
+  assert.equal(rd0.result.boxTextSize, null);
+  assert.equal(rd0.result.boxTextPos, null);
+  assert.equal(rd0.result.paragraphCount, 1);
+  // AE 24.x attributes are not modeled — they must not appear.
+  assert.equal(rd0.result.lineOrientation, undefined);
+  assert.equal(rd0.result.fontCapsOption, undefined);
+
+  // paragraphCount tracks newline-separated paragraphs.
+  await go("text.setText", { compName: "C", layerName: "Text 1", text: "a\nb\nc" });
+  const rd1 = await go("text.readDocument", { compName: "C", layerName: "Text 1" });
+  assert.equal(rd1.result.paragraphCount, 3);
+
+  // Box metrics throw on point text (real host and fake agree).
+  assert.notEqual((await go("text.setBoxMetrics", { compName: "C", layerName: "Text 1", boxTextSize: [100, 100] })).outcome, "COMPLETED");
+
+  // addBoxText creates a paragraph (box) text layer.
+  const add = await go("layer.addBoxText", { compName: "C", name: "Box 1", width: 200, height: 100 });
+  assert.equal(add.outcome, "COMPLETED");
+  assert.equal(add.result.boxText, true);
+  assert.equal(add.result.pointText, false);
+  assert.deepEqual(add.result.boxTextSize, [200, 100]);
+
+  // Box metrics write + read-back on box text.
+  const bm = await go("text.setBoxMetrics", { compName: "C", layerName: "Box 1", boxTextSize: [300, 150], boxTextPos: [10, 20] });
+  assert.equal(bm.outcome, "COMPLETED");
+  assert.deepEqual(bm.result.boxTextSize, [300, 150]);
+  assert.deepEqual(bm.result.boxTextPos, [10, 20]);
+  const rd2 = await go("text.readDocument", { compName: "C", layerName: "Box 1" });
+  assert.deepEqual(rd2.result.boxTextSize, [300, 150]);
+  assert.deepEqual(rd2.result.boxTextPos, [10, 20]);
+
+  // Paint: applyFill=false hides fillColor on read; setting strokeColor
+  // enables applyStroke per the documented side effect.
+  const p = await go("text.setPaint", {
+    compName: "C", layerName: "Box 1",
+    applyFill: false, strokeColor: [0, 0, 1], strokeWidth: 5, strokeOverFill: true,
+  });
+  assert.equal(p.outcome, "COMPLETED");
+  assert.equal(p.result.applyFill, false);
+  assert.equal(p.result.applyStroke, true);
+  assert.deepEqual(p.result.strokeColor, [0, 0, 1]);
+  assert.equal(p.result.strokeWidth, 5);
+  const rd3 = await go("text.readDocument", { compName: "C", layerName: "Box 1" });
+  assert.equal(rd3.result.fillColor, null);
+  assert.deepEqual(rd3.result.strokeColor, [0, 0, 1]);
+
+  // Disabling applyStroke gates strokeColor reads to null.
+  await go("text.setPaint", { compName: "C", layerName: "Box 1", applyStroke: false });
+  const rd4 = await go("text.readDocument", { compName: "C", layerName: "Box 1" });
+  assert.equal(rd4.result.strokeColor, null);
+
+  // strokeWidth 0 is silently clipped to 0.01 (documented behavior).
+  const sw = await go("text.setPaint", { compName: "C", layerName: "Box 1", strokeWidth: 0 });
+  assert.equal(sw.result.strokeWidth, 0.01);
+
+  // Character attributes write + read-back.
+  const ca = await go("text.setCharAttributes", { compName: "C", layerName: "Box 1", baselineShift: 12, horizontalScale: 90, verticalScale: 80 });
+  assert.equal(ca.outcome, "COMPLETED");
+  assert.equal(ca.result.baselineShift, 12);
+  assert.equal(ca.result.horizontalScale, 90);
+  assert.equal(ca.result.verticalScale, 80);
+
+  // Duplicated box text keeps independent document state.
+  await go("layer.duplicate", { compName: "C", layerName: "Box 1" });
+  const rdDup = await go("text.readDocument", { compName: "C", layerName: "Box 1 copy" });
+  assert.equal(rdDup.result.boxText, true);
+  assert.deepEqual(rdDup.result.boxTextSize, [300, 150]);
+
+  // Arg validation refuses malformed input before dispatch.
+  assert.equal((await go("layer.addBoxText", { compName: "C", name: "B2", width: 0, height: 10 })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setBoxMetrics", { compName: "C", layerName: "Box 1", boxTextSize: [100.5, 100] })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setBoxMetrics", { compName: "C", layerName: "Box 1", boxTextSize: [0, 100] })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setBoxMetrics", { compName: "C", layerName: "Box 1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setPaint", { compName: "C", layerName: "Box 1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setPaint", { compName: "C", layerName: "Box 1", strokeWidth: 1001 })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setPaint", { compName: "C", layerName: "Box 1", strokeColor: [1, 0] })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setCharAttributes", { compName: "C", layerName: "Box 1" })).reason, "INVALID_ARGS");
+  assert.equal((await go("text.setCharAttributes", { compName: "C", layerName: "Box 1", baselineShift: "x" })).reason, "INVALID_ARGS");
 });

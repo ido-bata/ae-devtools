@@ -39,7 +39,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "1328006384048d1f5e5294f77cda934913d2fe518802d84050b60ab0ec7ea91d"
+      "sha256": "c089eadeaeef025ac56081add31110576bd2156a35d21849b1881a1e5164df02"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -24574,12 +24574,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/layer/layercollection/#layercollectionaddboxtext"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addBoxText)"
           }
         ]
       }
@@ -33693,7 +33697,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, read.propertyValue, read.keyframes, read.valueAtTime, read.propertyDetail, anim.setExpressionEnabled, text.setText, text.setStyle, text.readStyle, anim.setInterpolation, anim.setTemporalEase, shape.readContents, shape.addPath)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (read.layerDetail, read.propertyValue, read.keyframes, read.valueAtTime, read.propertyDetail, anim.setExpressionEnabled, text.setText, text.setStyle, text.readStyle, layer.addBoxText, text.setPaint, text.setBoxMetrics, text.setCharAttributes, text.readDocument, anim.setInterpolation, anim.setTemporalEase, shape.readContents, shape.addPath)"
           }
         ]
       }
@@ -36000,12 +36004,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentallcaps"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -36040,12 +36048,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentapplyfill"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setPaint, text.readDocument)"
           }
         ]
       }
@@ -36080,12 +36092,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentapplystroke"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setPaint, text.readDocument)"
           }
         ]
       }
@@ -36200,12 +36216,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentautoleading"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setPaint, text.readDocument)"
           }
         ]
       }
@@ -36320,12 +36340,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentbaselineshift"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setCharAttributes, text.readDocument)"
           }
         ]
       }
@@ -36560,12 +36584,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxtext"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addBoxText, text.setBoxMetrics, text.readDocument)"
           }
         ]
       }
@@ -36600,12 +36628,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxtextpos"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setBoxMetrics, text.readDocument)"
           }
         ]
       }
@@ -36640,12 +36672,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxtextsize"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addBoxText, text.setBoxMetrics, text.readDocument)"
           }
         ]
       }
@@ -36800,12 +36836,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentcomposedlinecount"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -37080,12 +37120,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfauxbold"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -37120,12 +37164,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfauxitalic"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -37169,7 +37217,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -37253,7 +37301,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -37368,12 +37416,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfontfamily"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -37497,7 +37549,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -37541,7 +37593,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -37616,12 +37668,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumenthorizontalscale"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setCharAttributes, text.readDocument)"
           }
         ]
       }
@@ -37665,7 +37721,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -37749,7 +37805,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -38024,12 +38080,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentparagraphcount"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -38104,12 +38164,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentpointtext"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addBoxText, text.readDocument)"
           }
         ]
       }
@@ -38224,12 +38288,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentsmallcaps"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -38384,12 +38452,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentstrokecolor"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setPaint, text.readDocument)"
           }
         ]
       }
@@ -38424,12 +38496,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentstrokeoverfill"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setPaint, text.readDocument)"
           }
         ]
       }
@@ -38464,12 +38540,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentstrokewidth"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setPaint, text.readDocument)"
           }
         ]
       }
@@ -38504,12 +38584,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentsubscript"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -38544,12 +38628,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentsuperscript"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.readDocument)"
           }
         ]
       }
@@ -38593,7 +38681,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addText, text.setText, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (layer.addText, text.setText, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -38637,7 +38725,7 @@
           },
           {
             "kind": "automated-test",
-            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle)"
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setStyle, text.readStyle, text.readDocument)"
           }
         ]
       }
@@ -38712,12 +38800,16 @@
       "coverage": {
         "inventory": "source-reviewed",
         "reachability": "unknown",
-        "implementation": "unknown",
-        "verification": "not-run",
+        "implementation": "adapter-present",
+        "verification": "automated-fake",
         "evidenceRefs": [
           {
             "kind": "source-doc",
             "ref": "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentverticalscale"
+          },
+          {
+            "kind": "automated-test",
+            "ref": "packages/ae-devtools-cli/scripting-adapters (text.setCharAttributes, text.readDocument)"
           }
         ]
       }

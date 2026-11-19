@@ -548,6 +548,124 @@ function makeFxGroup(layer) {
   };
 }
 
+// TextDocument model (Issues #285/#297). Fields documented as
+// conditional in the AE scripting reference throw on access in the
+// fake too: fillColor requires applyFill, strokeColor requires
+// applyStroke, and boxTextSize/boxTextPos require boxText. Setting a
+// gated color also enables its apply flag, matching the docs.
+// Defaults are the fake's approximation — real-host defaults may
+// differ. Attributes gated to AE 24.x (lineOrientation, the 24.x
+// paragraph/box options, CharacterRange/ParagraphRange accessors) are
+// intentionally NOT modeled; there is no version gate in the fake.
+function makeTextDoc(box) {
+  const d = {
+    text: "",
+    pointText: box !== true,
+    boxText: box === true,
+    // Style fields (Issue #285).
+    font: "ArialMT",
+    fontSize: 100,
+    fontStyle: "Regular",
+    justification: 0,
+    tracking: 0,
+    leading: 0,
+    // Residual attributes (Issue #297).
+    fontFamily: "Arial",
+    autoLeading: true,
+    applyFill: true,
+    applyStroke: false,
+    strokeOverFill: false,
+    __strokeWidth: 0,
+    baselineShift: 0,
+    horizontalScale: 100,
+    verticalScale: 100,
+    fauxBold: false,
+    fauxItalic: false,
+    smallCaps: false,
+    subscript: false,
+    superscript: false,
+    allCaps: false,
+    // composedLineCount is read-only and, per the docs, does not
+    // recompute after the TextDocument is initialized — the fake
+    // freezes it at 1 rather than pretending to run a line breaker.
+    composedLineCount: 1,
+    // Backing store for the conditionally-readable fields.
+    __state: {
+      fillColor: [0, 0, 0],
+      strokeColor: [0, 0, 0],
+      boxTextSize: box === true ? [100, 100] : [0, 0],
+      boxTextPos: [0, 0],
+    },
+  };
+  Object.defineProperty(d, "fillColor", {
+    get() {
+      if (this.applyFill !== true) throw new Error("fake-app: fillColor requires applyFill");
+      return this.__state.fillColor;
+    },
+    set(v) { this.applyFill = true; this.__state.fillColor = Array.isArray(v) ? v.slice() : v; },
+    enumerable: true,
+  });
+  Object.defineProperty(d, "strokeColor", {
+    get() {
+      if (this.applyStroke !== true) throw new Error("fake-app: strokeColor requires applyStroke");
+      return this.__state.strokeColor;
+    },
+    set(v) { this.applyStroke = true; this.__state.strokeColor = Array.isArray(v) ? v.slice() : v; },
+    enumerable: true,
+  });
+  for (const k of ["boxTextSize", "boxTextPos"]) {
+    Object.defineProperty(d, k, {
+      get() {
+        if (this.boxText !== true) throw new Error("fake-app: " + k + " requires boxText");
+        return this.__state[k];
+      },
+      set(v) {
+        if (this.boxText !== true) throw new Error("fake-app: " + k + " requires boxText");
+        this.__state[k] = Array.isArray(v) ? v.slice() : v;
+      },
+      enumerable: true,
+    });
+  }
+  // strokeWidth: documented range 0-1000; a set value of 0 is silently
+  // clipped to 0.01 by the real host — the fake models that clip.
+  Object.defineProperty(d, "strokeWidth", {
+    get() { return this.__strokeWidth; },
+    set(v) {
+      const n = typeof v === "number" && isFinite(v) ? v : 0;
+      this.__strokeWidth = n < 0.01 ? 0.01 : n > 1000 ? 1000 : n;
+    },
+    enumerable: true,
+  });
+  Object.defineProperty(d, "paragraphCount", {
+    // Paragraphs are newline-separated; always >= 1.
+    get() {
+      const parts = String(this.text).split(/\r\n|\r|\n/);
+      return parts.length < 1 ? 1 : parts.length;
+    },
+    enumerable: true,
+  });
+  // Clone support for layer/comp duplication: copies every own field
+  // except the conditional getters (read via __state instead).
+  const CONDITIONAL = ["fillColor", "strokeColor", "boxTextSize", "boxTextPos", "paragraphCount", "composedLineCount"];
+  d.__snapshot = function () {
+    const s = {};
+    for (const k in this) {
+      if (k === "__state" || CONDITIONAL.indexOf(k) >= 0) continue;
+      s[k] = this[k];
+    }
+    s.__state = JSON.parse(JSON.stringify(this.__state));
+    s.composedLineCount = this.composedLineCount;
+    return s;
+  };
+  d.__restore = function (s) {
+    for (const k in s) {
+      if (k === "__state") { this.__state = JSON.parse(JSON.stringify(s.__state)); continue; }
+      this[k] = s[k];
+    }
+  };
+  return d;
+}
+
 function makeLayer(name, comp, kind) {
   kind = kind || "av";
   const layer = {
@@ -589,20 +707,7 @@ function makeLayer(name, comp, kind) {
     __fx: null,
     // TextDocument model: only text layers carry one. The real API
     // reaches it via the matchName path Text Properties > Text Document.
-    __textDoc: kind === "text" ? {
-      text: "",
-      pointText: true,
-      boxText: false,
-      // TextDocument style fields (Issue #285). Defaults are the fake's
-      // approximation of AE's defaults — real-host defaults may differ.
-      font: "ArialMT",
-      fontSize: 100,
-      fontStyle: "Regular",
-      justification: 0,
-      fillColor: [0, 0, 0],
-      tracking: 0,
-      leading: 0,
-    } : null,
+    __textDoc: kind === "text" ? makeTextDoc(false) : null,
     // Layer.marker (Issue #295): a lazily-created keyframed property
     // whose values are MarkerValue objects. All layer kinds carry one,
     // matching the Layer base class.
@@ -698,7 +803,7 @@ function makeLayer(name, comp, kind) {
       const l = makeLayer(this.name + " copy", comp, this.kind);
       l.__source = this.__source;
       if (l.__textDoc !== null && this.__textDoc !== null) {
-        for (var k in this.__textDoc) l.__textDoc[k] = this.__textDoc[k];
+        l.__textDoc.__restore(this.__textDoc.__snapshot());
       }
       copyMarkers(this.__marker, l.marker);
       if (this.__shapeContents !== null) l.__shapeContents = clonePropNode(this.__shapeContents);
@@ -762,7 +867,9 @@ function makeComp(name, w, h, par, dur, owner, parent) {
       }
       for (const l of this.__layers) {
         const nl = makeLayer(l.name, d, l.kind);
-        if (nl.__textDoc !== null && l.__textDoc !== null) nl.__textDoc.text = l.__textDoc.text;
+        if (nl.__textDoc !== null && l.__textDoc !== null) {
+          nl.__textDoc.__restore(l.__textDoc.__snapshot());
+        }
         nl.startTime = l.startTime;
         nl.stretch = l.stretch;
         nl.solo = l.solo;
@@ -817,6 +924,21 @@ function makeComp(name, w, h, par, dur, owner, parent) {
     },
     addText(tname) {
       const l = makeLayer(tname, comp, "text");
+      comp.__layers.push(l);
+      comp.__reindex();
+      return l;
+    },
+    // Real signature: addBoxText([width, height]) — no name argument;
+    // adapters rename via layer.name afterwards. Creates a paragraph
+    // (box) text layer; pointText is false.
+    addBoxText(wh) {
+      if (!Array.isArray(wh) || wh.length !== 2 ||
+          wh.some((v) => typeof v !== "number" || !isFinite(v) || v <= 0)) {
+        throw new Error("fake-app: addBoxText requires [width, height] positive numbers");
+      }
+      const l = makeLayer("Text Layer " + (comp.__layers.length + 1), comp, "text");
+      l.__textDoc = makeTextDoc(true);
+      l.__textDoc.__state.boxTextSize = [wh[0], wh[1]];
       comp.__layers.push(l);
       comp.__reindex();
       return l;

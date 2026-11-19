@@ -427,6 +427,11 @@
         "text.setText",
         "text.setStyle",
         "text.readStyle",
+        "layer.addBoxText",
+        "text.setPaint",
+        "text.setBoxMetrics",
+        "text.setCharAttributes",
+        "text.readDocument",
         "anim.setInterpolation",
         "anim.setTemporalEase",
         "shape.readContents",
@@ -749,7 +754,8 @@
       "ops": [
         "layer.addText",
         "text.setText",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
@@ -768,49 +774,209 @@
     "ae.scripting.TextDocument.font": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.TextDocument.fontSize": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.TextDocument.fontStyle": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.TextDocument.justification": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.TextDocument.fillColor": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.TextDocument.tracking": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.TextDocument.leading": {
       "ops": [
         "text.setStyle",
-        "text.readStyle"
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addBoxText": {
+      "ops": [
+        "layer.addBoxText"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.boxText": {
+      "ops": [
+        "layer.addBoxText",
+        "text.setBoxMetrics",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.pointText": {
+      "ops": [
+        "layer.addBoxText",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.boxTextSize": {
+      "ops": [
+        "layer.addBoxText",
+        "text.setBoxMetrics",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.applyFill": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.applyStroke": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.strokeColor": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.strokeWidth": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.strokeOverFill": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.autoLeading": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.boxTextPos": {
+      "ops": [
+        "text.setBoxMetrics",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.baselineShift": {
+      "ops": [
+        "text.setCharAttributes",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.horizontalScale": {
+      "ops": [
+        "text.setCharAttributes",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.verticalScale": {
+      "ops": [
+        "text.setCharAttributes",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.paragraphCount": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.composedLineCount": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fontFamily": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fauxBold": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fauxItalic": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.smallCaps": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.subscript": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.superscript": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.allCaps": {
+      "ops": [
+        "text.readDocument"
       ],
       "evidence": "fake/mock only"
     },
