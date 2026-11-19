@@ -777,7 +777,8 @@ return __adp_json({ ok: true, rendered: true });
       S("AVLayer", "adjustmentLayer"), S("AVLayer", "preserveTransparency"),
       S("AVLayer", "frameBlending"), S("AVLayer", "collapseTransformation"),
       S("AVLayer", "hasTrackMatte"), S("AVLayer", "trackMatteType"),
-      S("AVLayer", "trackMatteLayer"), S("AVLayer", "timeRemapEnabled"),
+      S("AVLayer", "trackMatteLayer"), S("AVLayer", "isTrackMatte"),
+      S("AVLayer", "timeRemapEnabled"),
     ],
     args: ["compName"],
     validate: (a) => requireArgs(a, ["compName"]),
@@ -798,9 +799,10 @@ for (var i = 1; i <= layers.length; i++) {
     preserveTransparency: l.preserveTransparency !== false,
     frameBlending: l.frameBlending === true,
     collapseTransformation: l.collapseTransformation === true,
-    hasTrackMatte: (typeof l.hasTrackMatte === "function") ? l.hasTrackMatte() : l.__trackMatte !== null,
+    hasTrackMatte: l.hasTrackMatte === true,
     trackMatteType: l.trackMatteType === undefined ? 0 : l.trackMatteType,
     trackMatteLayer: l.trackMatteLayer === null || l.trackMatteLayer === undefined ? null : String(l.trackMatteLayer.name),
+    isTrackMatte: l.isTrackMatte === true,
     timeRemapEnabled: l.timeRemapEnabled === true,
     parent: l.parent === null || l.parent === undefined ? null : String(l.parent.name)
   });
@@ -2024,6 +2026,9 @@ return __adp_json({
     source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
 var inT = ${a.inType !== undefined ? `KeyframeInterpolationType[${js(a.inType)}]` : "prop.keyInInterpolationType(" + a.keyIndex + ")"};
 var outT = ${a.outType !== undefined ? `KeyframeInterpolationType[${js(a.outType)}]` : "prop.keyOutInterpolationType(" + a.keyIndex + ")"};
+if (!prop.isInterpolationTypeValid(inT) || !prop.isInterpolationTypeValid(outT)) {
+  __adp_fail("interpolation type is not valid for this property");
+}
 prop.setInterpolationTypeAtKey(${a.keyIndex}, inT, outT);
 return __adp_json({
   ok: true,
@@ -2054,20 +2059,29 @@ return __adp_json({
       if (a.inEase === undefined && a.outEase === undefined) {
         throw new Error("anim.setTemporalEase: inEase and/or outEase is required");
       }
+      const isEase = (e) => e !== null && typeof e === "object" && !Array.isArray(e) &&
+        typeof e.speed === "number" && Number.isFinite(e.speed) &&
+        typeof e.influence === "number" && Number.isFinite(e.influence) &&
+        e.influence >= 0.1 && e.influence <= 100;
       for (const k of ["inEase", "outEase"]) {
         const e = a[k];
         if (e === undefined) continue;
-        if (e === null || typeof e !== "object" ||
-            typeof e.speed !== "number" || !Number.isFinite(e.speed) ||
-            typeof e.influence !== "number" || !Number.isFinite(e.influence)) {
-          throw new Error(`anim.setTemporalEase: ${k} must be {speed:number, influence:number}`);
+        if (!Array.isArray(e) || e.length < 1 || e.length > 3 || !e.every(isEase)) {
+          throw new Error(`anim.setTemporalEase: ${k} must be an array of 1..3 {speed:number, influence:number(0.1..100)}`);
         }
       }
       jsPath(a.propertyPath);
     },
     source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
-var inE = ${a.inEase !== undefined ? `{ speed: ${a.inEase.speed}, influence: ${a.inEase.influence} }` : "prop.keyInTemporalEase(" + a.keyIndex + ")"};
-var outE = ${a.outEase !== undefined ? `{ speed: ${a.outEase.speed}, influence: ${a.outEase.influence} }` : "prop.keyOutTemporalEase(" + a.keyIndex + ")"};
+function __adp_keyframeEases(spec) {
+  var out = [];
+  for (var i = 0; i < spec.length; i++) {
+    out.push(new KeyframeEase(spec[i].speed, spec[i].influence));
+  }
+  return out;
+}
+var inE = ${a.inEase !== undefined ? `__adp_keyframeEases(${js(a.inEase)})` : "prop.keyInTemporalEase(" + a.keyIndex + ")"};
+var outE = ${a.outEase !== undefined ? `__adp_keyframeEases(${js(a.outEase)})` : "prop.keyOutTemporalEase(" + a.keyIndex + ")"};
 prop.setTemporalEaseAtKey(${a.keyIndex}, inE, outE);
 return __adp_json({
   ok: true,
@@ -2087,7 +2101,7 @@ return __adp_json({
     members: [
       S("AVLayer", "setTrackMatte"), S("AVLayer", "removeTrackMatte"),
       S("AVLayer", "hasTrackMatte"), S("AVLayer", "trackMatteType"),
-      S("AVLayer", "trackMatteLayer"), S("AVLayer", "isTrackMatte"),
+      S("AVLayer", "trackMatteLayer"),
     ],
     args: ["compName", "layerName", "matteLayerName", "matteType"],
     validate: (a) => {
@@ -2114,7 +2128,7 @@ if (${js(a.matteType)} === "NO_TRACK_MATTE") {
 }
 return __adp_json({
   ok: true, layer: layer.name,
-  hasTrackMatte: layer.hasTrackMatte(),
+  hasTrackMatte: layer.hasTrackMatte === true,
   trackMatteType: layer.trackMatteType,
   trackMatteLayer: layer.trackMatteLayer === null ? null : String(layer.trackMatteLayer.name)
 });
@@ -2136,7 +2150,7 @@ return __adp_json({
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
-if (typeof layer.canSetTimeRemapEnabled === "function" && !layer.canSetTimeRemapEnabled()) {
+if (layer.canSetTimeRemapEnabled !== true) {
   __adp_fail("time remapping is not available on this layer");
 }
 layer.timeRemapEnabled = ${a.enabled ? "true" : "false"};
@@ -2248,19 +2262,25 @@ return __adp_json({
   },
   {
     id: "layer.replaceSource",
-    title: "Replace an AV layer's source footage",
+    title: "Replace an AV layer's source AVItem",
     domain: "project-items-comps-layers",
     issue: "289",
     permission: "execute",
     mutating: true,
     members: [S("AVLayer", "replaceSource"), S("AVLayer", "source")],
-    args: ["compName", "layerName", "footageName"],
-    validate: (a) => requireArgs(a, ["compName", "layerName", "footageName"]),
+    args: ["compName", "layerName", "footageName", "fixExpressions"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "footageName", "fixExpressions"]);
+      if (typeof a.fixExpressions !== "boolean") throw new Error("layer.replaceSource: fixExpressions must be a boolean");
+    },
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = __adp_findLayer(comp, ${js(a.layerName)});
-var footage = __adp_findItem(${js(a.footageName)}, FootageItem);
-layer.replaceSource(footage);
+var footage = __adp_findItem(${js(a.footageName)}, null);
+if (!(footage instanceof CompItem) && !(footage instanceof FootageItem)) {
+  __adp_fail("replaceSource source must be a CompItem or FootageItem");
+}
+layer.replaceSource(footage, ${a.fixExpressions ? "true" : "false"});
 return __adp_json({
   ok: true, layer: layer.name,
   source: layer.source === null ? null : String(layer.source.name)

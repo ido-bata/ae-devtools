@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "9b9860a9a0815717f6fd4e4a04dee3868372dbcc86681aaa4a117b429ff3f7d5"
+      "sha256": "9e82093cba6aaf3656c5e011b063fde669458629fe8c7952fac44a4271ea367a"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",

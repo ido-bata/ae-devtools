@@ -13,7 +13,7 @@
  * requestId. Return null/undefined to run the dispatch normally.
  */
 import vm from "node:vm";
-import { KeyframeInterpolationType, TrackMatteType } from "./fake-app.mjs";
+import { KeyframeInterpolationType, TrackMatteType, KeyframeEase } from "./fake-app.mjs";
 
 /** The ExtendScript global surface the adapter sources expect. */
 export function fakeHostContext(app) {
@@ -26,7 +26,7 @@ export function fakeHostContext(app) {
     ImportOptions: app.ImportOptions,
     // Enum globals referenced by generated adapter sources by NAME
     // (Issue #287). Values are the fake stand-ins — see fake-app.mjs.
-    KeyframeInterpolationType, TrackMatteType,
+    KeyframeInterpolationType, TrackMatteType, KeyframeEase,
   };
 }
 

@@ -381,6 +381,12 @@
       ],
       "evidence": "fake/mock only"
     },
+    "ae.scripting.AVLayer.isTrackMatte": {
+      "ops": [
+        "read.compLayers"
+      ],
+      "evidence": "fake/mock only"
+    },
     "ae.scripting.AVLayer.timeRemapEnabled": {
       "ops": [
         "read.compLayers",
@@ -1074,12 +1080,6 @@
       "evidence": "fake/mock only"
     },
     "ae.scripting.AVLayer.removeTrackMatte": {
-      "ops": [
-        "layer.setTrackMatte"
-      ],
-      "evidence": "fake/mock only"
-    },
-    "ae.scripting.AVLayer.isTrackMatte": {
       "ops": [
         "layer.setTrackMatte"
       ],

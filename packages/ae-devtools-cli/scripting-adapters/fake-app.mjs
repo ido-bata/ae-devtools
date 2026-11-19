@@ -176,6 +176,29 @@ export const TrackMatteType = {
   NO_TRACK_MATTE: 0, ALPHA: 1, ALPHA_INVERTED: 2, LUMA: 3, LUMA_INVERTED: 4,
 };
 
+// KeyframeEase constructor object. influence is documented as
+// [0.1..100.0]; speed is a finite float whose units depend on the
+// property. Public fields stay enumerable so __adp_json serializes
+// {speed,influence} like the host read-back.
+export class KeyframeEase {
+  constructor(speed, influence) {
+    if (typeof speed !== "number" || !isFinite(speed)) {
+      throw new Error("fake-app: KeyframeEase.speed must be a finite number");
+    }
+    if (typeof influence !== "number" || !isFinite(influence) || influence < 0.1 || influence > 100) {
+      throw new Error("fake-app: KeyframeEase.influence must be in 0.1..100");
+    }
+    this.speed = speed;
+    this.influence = influence;
+  }
+}
+
+function defaultEaseList(dims) {
+  const out = [];
+  for (let i = 0; i < dims; i++) out.push(new KeyframeEase(0, 33.33));
+  return out;
+}
+
 function makeProperty(value, opts = {}) {
   const expressionAllowed = opts.expressionAllowed !== false;
   const prop = {
@@ -234,10 +257,11 @@ function makeProperty(value, opts = {}) {
           return;
         }
       }
+      const dims = Array.isArray(v) ? v.length : 1;
       this.__keys.push({
         time: t, value: Array.isArray(v) ? v.slice() : v,
         inType: KeyframeInterpolationType.BEZIER, outType: KeyframeInterpolationType.BEZIER,
-        easeIn: { speed: 0, influence: 33.33 }, easeOut: { speed: 0, influence: 33.33 },
+        easeIn: defaultEaseList(dims), easeOut: defaultEaseList(dims),
       });
       this.numKeys = this.__keys.length;
       this.isTimeVarying = this.numKeys > 0;
@@ -280,28 +304,25 @@ function makeProperty(value, opts = {}) {
     },
     keyInTemporalEase(i) {
       if (!Number.isInteger(i) || i < 1 || i > this.numKeys) throw new Error("fake-app: invalid keyframe index " + i);
-      const e = this.__keys[i - 1].easeIn;
-      return { speed: e.speed, influence: e.influence };
+      return this.__keys[i - 1].easeIn.map((e) => new KeyframeEase(e.speed, e.influence));
     },
     keyOutTemporalEase(i) {
       if (!Number.isInteger(i) || i < 1 || i > this.numKeys) throw new Error("fake-app: invalid keyframe index " + i);
-      const e = this.__keys[i - 1].easeOut;
-      return { speed: e.speed, influence: e.influence };
+      return this.__keys[i - 1].easeOut.map((e) => new KeyframeEase(e.speed, e.influence));
     },
     setTemporalEaseAtKey(keyIndex, inEase, outEase) {
       if (!Number.isInteger(keyIndex) || keyIndex < 1 || keyIndex > this.numKeys) {
         throw new Error("fake-app: invalid keyframe index " + keyIndex);
       }
-      for (const e of [inEase, outEase]) {
-        if (e === null || typeof e !== "object" ||
-            typeof e.speed !== "number" || !isFinite(e.speed) ||
-            typeof e.influence !== "number" || !isFinite(e.influence)) {
-          throw new Error("fake-app: temporal ease requires {speed,influence} numbers");
-        }
-      }
       const k = this.__keys[keyIndex - 1];
-      k.easeIn = { speed: inEase.speed, influence: inEase.influence };
-      k.easeOut = { speed: outEase.speed, influence: outEase.influence };
+      const dims = Array.isArray(k.value) ? k.value.length : 1;
+      const valid = (arr) => Array.isArray(arr) && arr.length === dims &&
+        arr.every((e) => e instanceof KeyframeEase);
+      if (!valid(inEase) || !valid(outEase)) {
+        throw new Error("fake-app: temporal ease requires arrays of KeyframeEase matching property dimensions");
+      }
+      k.easeIn = inEase.map((e) => new KeyframeEase(e.speed, e.influence));
+      k.easeOut = outEase.map((e) => new KeyframeEase(e.speed, e.influence));
     },
     // Approximation: returns the value of the last key at-or-before t
     // (AE interpolates; the fake only needs a deterministic, honest
@@ -445,22 +466,24 @@ function makeLayer(name, comp, kind) {
       }
       throw new Error("fake-app: no such property group " + group);
     },
-    // AVLayer.source / replaceSource (Issue #289). The fake accepts
-    // FootageItem only — real AE accepts any AVItem and checks usage;
-    // that restriction is a real-host verification item.
+    // AVLayer.source / replaceSource (Issue #289/#300). replaceSource
+    // takes an AVItem (CompItem or FootageItem) plus fixExpressions;
+    // deeper usage/cycle checks remain real-host verification items.
     get source() { return layer.__source; },
-    replaceSource(item) {
-      if (!(item instanceof FootageItem)) {
-        throw new Error("fake-app: replaceSource requires a FootageItem");
+    replaceSource(item, fixExpressions) {
+      if (!(item instanceof FootageItem) && !(item instanceof CompItem)) {
+        throw new Error("fake-app: replaceSource requires a CompItem or FootageItem");
       }
       layer.__source = item;
+      layer.__fixExpressions = fixExpressions === true;
       return item;
     },
-    // Fake approximation: every modeled AV layer can time-remap.
-    // Real AE restricts this (e.g. no time remap on some layer types);
-    // that gate is a real-host verification item.
-    canSetTimeRemapEnabled() { return true; },
-    hasTrackMatte() { return layer.__trackMatte !== null; },
+    // Fake approximation: modeled AV/solid/null layers can time-remap;
+    // text/camera/light cannot. Real AE has its own availability rules.
+    get canSetTimeRemapEnabled() {
+      return layer.kind === "av" || layer.kind === "solid" || layer.kind === "null";
+    },
+    get hasTrackMatte() { return layer.__trackMatte !== null; },
     get isTrackMatte() { return layer.__isTrackMatte === true; },
     get trackMatteLayer() { return layer.__trackMatte === null ? null : layer.__trackMatte.layer; },
     get trackMatteType() { return layer.__trackMatte === null ? 0 : layer.__trackMatte.type; },
