@@ -502,6 +502,16 @@ typedef struct
     int nargs;
 } AllowEntry;
 
+/* Record the dispatched op's own AEGP call under its allowlist id —
+   the common case (no extra evidence string). */
+static void RecordAllowOp(
+    const AEGP_UtilitySuite6* utilP,
+    const AllowEntry* allow,
+    A_Err err)
+{
+    IntakeOpRecord(utilP, allow->opRecordId, (long)err, NULL);
+}
+
 /* AEGP_ItemType (AE_GeneralPlug.h): NONE=0 FOLDER=1 COMP=2
    SOLID_defunct=3 FOOTAGE=4, NUM_TYPES1=5. GetTypeName rejects NONE;
    the permitted span is the defined non-NONE values [1, 4]. */
@@ -1455,6 +1465,25 @@ static void VerdictRefuse(ReqVerdict* r, const char* codeZ, const char* detailZ)
     r->publish = 1;
 }
 
+/* Terminal verdict for a dispatched read-only request: outcome +
+   bounded detail, and the fixed flag triple (no payload, never
+   mutated, always publish). Every intake op is read-only, so the
+   flags live here once instead of being re-typed at ~30 sites where
+   a typo could silently flip mayHaveMutated. */
+static void VerdictSet(ReqVerdict* v, const char* outcomeZ,
+                       const char* detailFmt, ...)
+{
+    va_list ap;
+    va_start(ap, detailFmt);
+    snprintf(v->outcome, sizeof(v->outcome), "%s", outcomeZ);
+    vsnprintf(v->detail, sizeof(v->detail), detailFmt, ap);
+    va_end(ap);
+    v->detail[sizeof(v->detail) - 1] = '\0';
+    v->havePayload = 0;
+    v->mayHaveMutated = 0;
+    v->publish = 1;
+}
+
 /* ---- identity resolution + payload emit (Issue #270 identity slice)
    Contract: native-channel.md §7b. One shared resolver serves every
    identity-bearing intake op — project/comp/layer/RQ-item descriptor
@@ -1659,10 +1688,7 @@ static int ResolveAeRefItem(
         (wantName && !projP->AEGP_GetProjectName) ||
         (wantPath && !projP->AEGP_GetProjectPath))
     {
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "project suite entries unavailable for identity resolve");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "project suite entries unavailable for identity resolve");
         return 0;
     }
     {
@@ -1673,10 +1699,7 @@ static int ResolveAeRefItem(
             perr == A_Err_NONE ? " (resolve)" : NULL);
         if (perr != A_Err_NONE)
         {
-            snprintf(v->outcome, sizeof(v->outcome), "failed");
-            snprintf(v->detail, sizeof(v->detail),
-                     "AEGP_GetNumProjects err=%ld", (long)perr);
-            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            VerdictSet(v, "failed", "AEGP_GetNumProjects err=%ld", (long)perr);
             return 0;
         }
         if (projectIndex < 0 || projectIndex >= (long)numProjects)
@@ -1690,10 +1713,7 @@ static int ResolveAeRefItem(
             perr == A_Err_NONE ? " (resolve)" : NULL);
         if (perr != A_Err_NONE || !projectH)
         {
-            snprintf(v->outcome, sizeof(v->outcome), "failed");
-            snprintf(v->detail, sizeof(v->detail),
-                     "AEGP_GetProjectByIndex err=%ld", (long)perr);
-            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            VerdictSet(v, "failed", "AEGP_GetProjectByIndex err=%ld", (long)perr);
             return 0;
         }
     }
@@ -1709,10 +1729,7 @@ static int ResolveAeRefItem(
             kAEGPItemSuite, kAEGPItemSuiteVersion9);
         if (memSuite) IntakeReleaseSuite(utilP, basicP,
             kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "item/memory suite unavailable for identity resolve");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "item/memory suite unavailable for identity resolve");
         return 0;
     }
     itemP = (const AEGP_ItemSuite9*)itemSuite;
@@ -2021,10 +2038,7 @@ static void EnumerateProjItems(
     if (!projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex ||
         !projP->AEGP_GetProjectName || !projP->AEGP_GetProjectPath)
     {
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "project suite entries unavailable for enumeration");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "project suite entries unavailable for enumeration");
         return;
     }
     {
@@ -2035,10 +2049,7 @@ static void EnumerateProjItems(
             perr == A_Err_NONE ? " (enum)" : NULL);
         if (perr != A_Err_NONE)
         {
-            snprintf(v->outcome, sizeof(v->outcome), "failed");
-            snprintf(v->detail, sizeof(v->detail),
-                     "AEGP_GetNumProjects err=%ld", (long)perr);
-            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            VerdictSet(v, "failed", "AEGP_GetNumProjects err=%ld", (long)perr);
             return;
         }
         if (projectIndex < 0 || projectIndex >= (long)numProjects)
@@ -2052,10 +2063,7 @@ static void EnumerateProjItems(
             perr == A_Err_NONE ? " (enum)" : NULL);
         if (perr != A_Err_NONE || !projectH)
         {
-            snprintf(v->outcome, sizeof(v->outcome), "failed");
-            snprintf(v->detail, sizeof(v->detail),
-                     "AEGP_GetProjectByIndex err=%ld", (long)perr);
-            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            VerdictSet(v, "failed", "AEGP_GetProjectByIndex err=%ld", (long)perr);
             return;
         }
     }
@@ -2070,10 +2078,7 @@ static void EnumerateProjItems(
             kAEGPItemSuite, kAEGPItemSuiteVersion9);
         if (memSuite) IntakeReleaseSuite(utilP, basicP,
             kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "item/memory suite unavailable for enumeration");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "item/memory suite unavailable for enumeration");
         return;
     }
     itemP = (const AEGP_ItemSuite9*)itemSuite;
@@ -2302,10 +2307,7 @@ static void ExecCompGetter(
     if (!compSuite)
     {
         ReleaseResolution(utilP, basicP, &res);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "AEGP Comp Suite unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "AEGP Comp Suite unavailable");
         return;
     }
     compP = (const AEGP_CompSuite13*)compSuite;
@@ -2315,10 +2317,7 @@ static void ExecCompGetter(
         IntakeReleaseSuite(utilP, basicP,
                            kAEGPCompSuite, kAEGPCompSuiteVersion13);
         ReleaseResolution(utilP, basicP, &res);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "comp suite entry unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "comp suite entry unavailable");
         return;
     }
 
@@ -2330,10 +2329,7 @@ static void ExecCompGetter(
         IntakeReleaseSuite(utilP, basicP,
                            kAEGPCompSuite, kAEGPCompSuiteVersion13);
         ReleaseResolution(utilP, basicP, &res);
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "AEGP_GetCompFromItem err=%ld", (long)cerr);
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "failed", "AEGP_GetCompFromItem err=%ld", (long)cerr);
         return;
     }
 
@@ -2342,7 +2338,7 @@ static void ExecCompGetter(
     {
         A_FpLong fps = 0;
         oerr = compP->AEGP_GetCompFramerate(compH, &fps);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload), "{\"fps\":%.12g}", fps);
@@ -2354,7 +2350,7 @@ static void ExecCompGetter(
     {
         A_Time t = {0, 0};
         oerr = compP->AEGP_GetCompFrameDuration(compH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2368,7 +2364,7 @@ static void ExecCompGetter(
     {
         A_Time t = {0, 0};
         oerr = compP->AEGP_GetCompWorkAreaStart(compH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2382,7 +2378,7 @@ static void ExecCompGetter(
     {
         A_Time t = {0, 0};
         oerr = compP->AEGP_GetCompWorkAreaDuration(compH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2396,7 +2392,7 @@ static void ExecCompGetter(
     {
         A_Time t = {0, 0};
         oerr = compP->AEGP_GetCompDisplayStartTime(compH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2410,7 +2406,7 @@ static void ExecCompGetter(
     {
         A_Boolean dropB = FALSE;
         oerr = compP->AEGP_GetCompDisplayDropFrame(compH, &dropB);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2424,7 +2420,7 @@ static void ExecCompGetter(
         AEGP_DownsampleFactor dsf;
         dsf.xS = 0; dsf.yS = 0;
         oerr = compP->AEGP_GetCompDownsampleFactor(compH, &dsf);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2438,7 +2434,7 @@ static void ExecCompGetter(
     {
         A_Boolean shownB = FALSE;
         oerr = compP->AEGP_GetShowLayerNameOrSourceName(compH, &shownB);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2452,7 +2448,7 @@ static void ExecCompGetter(
     {
         A_Boolean shownB = FALSE;
         oerr = compP->AEGP_GetShowBlendModes(compH, &shownB);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2465,7 +2461,7 @@ static void ExecCompGetter(
     {
         A_long samplesL = 0;
         oerr = compP->AEGP_GetCompSuggestedMotionBlurSamples(compH, &samplesL);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2478,7 +2474,7 @@ static void ExecCompGetter(
     {
         A_long samplesL = 0;
         oerr = compP->AEGP_GetCompMotionBlurAdaptiveSampleLimit(compH, &samplesL);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2492,7 +2488,7 @@ static void ExecCompGetter(
         AEGP_ColorVal bg;
         memset(&bg, 0, sizeof(bg));
         oerr = compP->AEGP_GetCompBGColor(compH, &bg);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2507,7 +2503,7 @@ static void ExecCompGetter(
     {
         A_Ratio angle = {0, 0}, phase = {0, 0};
         oerr = compP->AEGP_GetCompShutterAnglePhase(compH, &angle, &phase);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2618,10 +2614,7 @@ static void ExecItemGetter(
     if (!ItemGetterEntryPresent(res.itemP, opId))
     {
         ReleaseResolution(utilP, basicP, &res);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "item suite entry unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "item suite entry unavailable");
         return;
     }
 
@@ -2629,7 +2622,7 @@ static void ExecItemGetter(
     {
         AEGP_ItemType t = AEGP_ItemType_NONE;
         oerr = res.itemP->AEGP_GetItemType(res.itemH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2642,7 +2635,7 @@ static void ExecItemGetter(
     {
         AEGP_ItemFlags flags = 0;
         oerr = res.itemP->AEGP_GetItemFlags(res.itemH, &flags);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2655,7 +2648,7 @@ static void ExecItemGetter(
     {
         A_Boolean selB = FALSE;
         oerr = res.itemP->AEGP_IsItemSelected(res.itemH, &selB);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2668,7 +2661,7 @@ static void ExecItemGetter(
     {
         AEGP_LabelID label = AEGP_Label_NO_LABEL;
         oerr = res.itemP->AEGP_GetItemLabel(res.itemH, &label);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2681,7 +2674,7 @@ static void ExecItemGetter(
     {
         A_Time t = {0, 0};
         oerr = res.itemP->AEGP_GetItemDuration(res.itemH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2695,7 +2688,7 @@ static void ExecItemGetter(
     {
         A_Time t = {0, 0};
         oerr = res.itemP->AEGP_GetItemCurrentTime(res.itemH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2709,7 +2702,7 @@ static void ExecItemGetter(
     {
         A_long w = 0, hgt = 0;
         oerr = res.itemP->AEGP_GetItemDimensions(res.itemH, &w, &hgt);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2722,7 +2715,7 @@ static void ExecItemGetter(
     {
         A_Ratio par = {0, 0};
         oerr = res.itemP->AEGP_GetItemPixelAspectRatio(res.itemH, &par);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -2738,7 +2731,7 @@ static void ExecItemGetter(
         char comment[ITEM_COMMENT_MAX + 1];
         char esc[ITEM_COMMENT_MAX * 2 + 16];
         oerr = res.itemP->AEGP_GetItemComment(res.itemH, &commentH);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             IntakeMemStatus ms = IntakeReadMemHandleUtf8(
@@ -2898,10 +2891,7 @@ static int ResolveLayerRef(
         if (layerSuite) IntakeReleaseSuite(utilP, basicP,
             kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
         ReleaseResolution(utilP, basicP, &lr->res);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "comp/layer suite unavailable for layer resolve");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "comp/layer suite unavailable for layer resolve");
         return 0;
     }
     compP = (const AEGP_CompSuite13*)compSuite;
@@ -3210,10 +3200,7 @@ static void ExecLayerCompOp(
         if (layerSuite) IntakeReleaseSuite(utilP, basicP,
             kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
         ReleaseResolution(utilP, basicP, &res);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "comp/layer suite unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "comp/layer suite unavailable");
         return;
     }
     compP = (const AEGP_CompSuite13*)compSuite;
@@ -3228,10 +3215,7 @@ static void ExecLayerCompOp(
         IntakeReleaseSuite(utilP, basicP,
                            kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
         ReleaseResolution(utilP, basicP, &res);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "comp/layer suite entry unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "comp/layer suite entry unavailable");
         return;
     }
 
@@ -3246,10 +3230,7 @@ static void ExecLayerCompOp(
             IntakeReleaseSuite(utilP, basicP,
                                kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
             ReleaseResolution(utilP, basicP, &res);
-            snprintf(v->outcome, sizeof(v->outcome), "failed");
-            snprintf(v->detail, sizeof(v->detail),
-                     "AEGP_GetCompFromItem err=%ld", (long)cerr);
-            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            VerdictSet(v, "failed", "AEGP_GetCompFromItem err=%ld", (long)cerr);
             return;
         }
     }
@@ -3258,7 +3239,7 @@ static void ExecLayerCompOp(
     {
         A_long n = 0;
         oerr = layerP->AEGP_GetCompNumLayers(compH, &n);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3272,7 +3253,7 @@ static void ExecLayerCompOp(
         long idx = ArgsInt(allow, args, 2);
         AEGP_LayerH lh = NULL;
         oerr = layerP->AEGP_GetCompLayerByIndex(compH, (A_long)idx, &lh);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE && lh)
         {
             JBuf b;
@@ -3356,10 +3337,7 @@ static void ExecLayerGetter(
     if (!LayerGetterEntryPresent(lr.layerP, opId))
     {
         ReleaseLayerResolution(utilP, basicP, &lr);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "layer suite entry unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "layer suite entry unavailable");
         return;
     }
 
@@ -3367,7 +3345,7 @@ static void ExecLayerGetter(
     {
         A_long idx = 0;
         oerr = lr.layerP->AEGP_GetLayerIndex(lr.layerH, &idx);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3385,7 +3363,7 @@ static void ExecLayerGetter(
         IntakeMemStatus ms1, ms2;
         oerr = lr.layerP->AEGP_GetLayerName(plugin_id, lr.layerH,
                                             &lnH, &snH);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             ms1 = IntakeReadMemHandleUtf8(utilP, lr.res.memP, lnH,
@@ -3414,7 +3392,7 @@ static void ExecLayerGetter(
     {
         AEGP_LayerFlags flags = 0;
         oerr = lr.layerP->AEGP_GetLayerFlags(lr.layerH, &flags);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3427,7 +3405,7 @@ static void ExecLayerGetter(
     {
         AEGP_LayerQuality q = AEGP_LayerQual_BEST;
         oerr = lr.layerP->AEGP_GetLayerQuality(lr.layerH, &q);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3440,7 +3418,7 @@ static void ExecLayerGetter(
     {
         AEGP_ObjectType ot = AEGP_ObjectType_NONE;
         oerr = lr.layerP->AEGP_GetLayerObjectType(lr.layerH, &ot);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3453,7 +3431,7 @@ static void ExecLayerGetter(
     {
         A_Boolean b = FALSE;
         oerr = lr.layerP->AEGP_IsLayer3D(lr.layerH, &b);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3466,7 +3444,7 @@ static void ExecLayerGetter(
     {
         A_Boolean b = FALSE;
         oerr = lr.layerP->AEGP_IsLayer2D(lr.layerH, &b);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3493,7 +3471,7 @@ static void ExecLayerGetter(
             oerr = lr.layerP->AEGP_GetLayerInPoint(lr.layerH, tm, &t);
         else
             oerr = lr.layerP->AEGP_GetLayerDuration(lr.layerH, tm, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3507,7 +3485,7 @@ static void ExecLayerGetter(
     {
         AEGP_LayerIDVal lid = 0;
         oerr = lr.layerP->AEGP_GetLayerID(lr.layerH, &lid);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3520,7 +3498,7 @@ static void ExecLayerGetter(
     {
         AEGP_LabelID label = AEGP_Label_NO_LABEL;
         oerr = lr.layerP->AEGP_GetLayerLabel(lr.layerH, &label);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3533,7 +3511,7 @@ static void ExecLayerGetter(
     {
         AEGP_LayerSamplingQuality q = AEGP_LayerSamplingQual_BILINEAR;
         oerr = lr.layerP->AEGP_GetLayerSamplingQuality(lr.layerH, &q);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3546,7 +3524,7 @@ static void ExecLayerGetter(
     {
         A_long sid = 0;
         oerr = lr.layerP->AEGP_GetLayerSourceItemID(lr.layerH, &sid);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3559,7 +3537,7 @@ static void ExecLayerGetter(
     {
         A_Boolean b = FALSE;
         oerr = lr.layerP->AEGP_IsLayerVideoReallyOn(lr.layerH, &b);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3572,7 +3550,7 @@ static void ExecLayerGetter(
     {
         A_Boolean b = FALSE;
         oerr = lr.layerP->AEGP_IsLayerAudioReallyOn(lr.layerH, &b);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3585,7 +3563,7 @@ static void ExecLayerGetter(
     {
         A_Boolean b = FALSE;
         oerr = lr.layerP->AEGP_DoesLayerHaveTrackMatte(lr.layerH, &b);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3599,7 +3577,7 @@ static void ExecLayerGetter(
         A_Boolean fill = (A_Boolean)ArgsInt(allow, args, 2);
         A_Boolean b = FALSE;
         oerr = lr.layerP->AEGP_IsLayerUsedAsTrackMatte(lr.layerH, fill, &b);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3614,7 +3592,7 @@ static void ExecLayerGetter(
         JBuf b;
         A_Err e2 = A_Err_NONE;
         oerr = lr.layerP->AEGP_GetTrackMatteLayer(lr.layerH, &matteH);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             JBInit(&b, v->payload, sizeof(v->payload));
@@ -3710,20 +3688,14 @@ static int ResolveProjectRef(
     if (!projP->AEGP_GetNumProjects || !projP->AEGP_GetProjectByIndex ||
         !projP->AEGP_GetProjectName || !projP->AEGP_GetProjectPath)
     {
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "project suite entries unavailable for identity resolve");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "project suite entries unavailable for identity resolve");
         return 0;
     }
     memSuite = IntakeAcquireSuite(utilP, basicP,
                                   kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
     if (!memSuite)
     {
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "memory suite unavailable for project identity resolve");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "memory suite unavailable for project identity resolve");
         return 0;
     }
     memP = (const AEGP_MemorySuite1*)memSuite;
@@ -3835,7 +3807,7 @@ static void ExecProjectGetter(
         A_Boolean dirty = FALSE;
         if (!projP->AEGP_ProjectIsDirty) goto notsent;
         oerr = projP->AEGP_ProjectIsDirty(projectH, &dirty);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload), "{\"dirty\":%s}",
@@ -3849,7 +3821,7 @@ static void ExecProjectGetter(
         AEGP_ProjBitDepth depth = 0;
         if (!projP->AEGP_GetProjectBitDepth) goto notsent;
         oerr = projP->AEGP_GetProjectBitDepth(projectH, &depth);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload), "{\"bitDepth\":%d}",
@@ -3864,7 +3836,7 @@ static void ExecProjectGetter(
         if (!projP->AEGP_GetProjectTimeDisplay) goto notsent;
         memset(&td, 0, sizeof(td));
         oerr = projP->AEGP_GetProjectTimeDisplay(projectH, &td);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -3889,22 +3861,16 @@ static void ExecProjectGetter(
     else if (oerr == A_Err_STRUCT && !v->havePayload)
     {
         /* unreachable: notsent label handles missing entries */
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail), "getter returned no result");
-        v->havePayload = 0; v->mayHaveMutated = 0;
+        VerdictSet(v, "failed", "getter returned no result");
     }
     else
     {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail), "%s err=%ld", opId, (long)oerr);
-        v->havePayload = 0; v->mayHaveMutated = 0;
+        VerdictSet(v, "failed", "%s err=%ld", opId, (long)oerr);
     }
     return;
 
 notsent:
-    snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-    snprintf(v->detail, sizeof(v->detail), "project suite entry unavailable");
-    v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+    VerdictSet(v, "not-sent", "project suite entry unavailable");
 }
 
 /* ---- §7f RQ-item resolution -------------------------------------- */
@@ -3993,10 +3959,7 @@ static int ResolveRQItemRef(
     if (e != A_Err_NONE)
     {
         ReleaseResolution(utilP, basicP, &r->item);
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "AEGP_GetItemID err=%ld", (long)e);
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "failed", "AEGP_GetItemID err=%ld", (long)e);
         return 0;
     }
     r->wantItemId = (long)(unsigned int)boundItemId;
@@ -4009,10 +3972,7 @@ static int ResolveRQItemRef(
     if (!r->rqItemSuite || !r->compSuite)
     {
         ReleaseRQResolution(utilP, basicP, r);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "RQ-item/comp suite unavailable for identity resolve");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "RQ-item/comp suite unavailable for identity resolve");
         return 0;
     }
     r->rqItemP = (const AEGP_RQItemSuite4*)r->rqItemSuite;
@@ -4127,7 +4087,7 @@ static void ExecRQItemGetter(
     {
         AEGP_RenderItemStatusType st = 0;
         oerr = r.rqItemP->AEGP_GetRenderState(r.rqH, &st);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload), "{\"status\":%ld}",
@@ -4144,7 +4104,7 @@ static void ExecRQItemGetter(
         A_Time t = {0, 0};
         oerr = isStarted ? r.rqItemP->AEGP_GetStartedTime(r.rqH, &t)
                          : r.rqItemP->AEGP_GetElapsedTime(r.rqH, &t);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             /* {0,1} sentinel = never started/rendered → null */
@@ -4164,7 +4124,7 @@ static void ExecRQItemGetter(
     {
         AEGP_LogType lt = 0;
         oerr = r.rqItemP->AEGP_GetLogType(r.rqH, &lt);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload), "{\"logType\":%ld}",
@@ -4179,7 +4139,7 @@ static void ExecRQItemGetter(
         char cm[1100];
         IntakeMemStatus ms;
         oerr = r.rqItemP->AEGP_GetComment(r.rqH, &mh);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             ms = IntakeReadMemHandleUtf8(utilP, r.item.memP, mh, cm, sizeof(cm));
@@ -4200,7 +4160,7 @@ static void ExecRQItemGetter(
     {
         A_long nom = 0;
         oerr = r.rqItemP->AEGP_GetNumOutputModulesForRQItem(r.rqH, &nom);
-        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+        RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
             snprintf(v->payload, sizeof(v->payload),
@@ -4267,9 +4227,7 @@ static void ExecRQItemGetter(
     }
     else
     {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail), "%s err=%ld", opId, (long)oerr);
-        v->havePayload = 0; v->mayHaveMutated = 0;
+        VerdictSet(v, "failed", "%s err=%ld", opId, (long)oerr);
     }
 }
 
@@ -4387,25 +4345,19 @@ static void EnumerateRQItems(
         if (compSuite) IntakeReleaseSuite(utilP, basicP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
         if (memSuite) IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
         if (itemSuite) IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
-        snprintf(v->detail, sizeof(v->detail),
-                 "RQ-item suite entries unavailable for enumeration");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        VerdictSet(v, "not-sent", "RQ-item suite entries unavailable for enumeration");
         return;
     }
 
     e = rqP->AEGP_GetNumRQItems(&numRQ);
-    IntakeOpRecord(utilP, allow->opRecordId, (long)e, NULL);
+    RecordAllowOp(utilP, allow, e);
     if (e != A_Err_NONE)
     {
         IntakeReleaseSuite(utilP, basicP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
         IntakeReleaseSuite(utilP, basicP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
         IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1);
         IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "AEGP_GetNumRQItems err=%ld", (long)e);
-        v->havePayload = 0; v->mayHaveMutated = 0;
+        VerdictSet(v, "failed", "AEGP_GetNumRQItems err=%ld", (long)e);
         return;
     }
 
@@ -4508,10 +4460,7 @@ static void EnumerateRQItems(
     IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
     if (of)
     {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "enumeration payload exceeds result bound");
-        v->havePayload = 0; v->mayHaveMutated = 0;
+        VerdictSet(v, "failed", "enumeration payload exceeds result bound");
         return;
     }
     *b.cur = '\0';
@@ -5121,7 +5070,7 @@ static void ProcessClaimed(
                     }
                     else
                     {
-                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+                        RecordAllowOp(utilP, allow, oerr);
                         snprintf(v.outcome, sizeof(v.outcome), "failed");
                         snprintf(v.detail, sizeof(v.detail),
                                  "AEGP_GetRenderQueueState err=%ld", (long)oerr);
@@ -5150,7 +5099,7 @@ static void ProcessClaimed(
                     }
                     else
                     {
-                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, NULL);
+                        RecordAllowOp(utilP, allow, oerr);
                         snprintf(v.outcome, sizeof(v.outcome), "failed");
                         snprintf(v.detail, sizeof(v.detail),
                                  "AEGP_GetNumRQItems err=%ld", (long)oerr);
