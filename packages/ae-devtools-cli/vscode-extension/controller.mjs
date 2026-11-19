@@ -168,7 +168,9 @@ export function createController(options = {}) {
         : payload.session,
       requestId: inner.requestId,
     });
-    if (records.length === 0) return payload;
+    // Always attach the publish plan — including an empty one — so the
+    // Problems panel can clear stale ae-devtools entries after a clean
+    // execute/verify instead of preserving the previous failure (Issue #302).
     return { ...payload, diagnostics: buildPublishPlan(records) };
   }
 

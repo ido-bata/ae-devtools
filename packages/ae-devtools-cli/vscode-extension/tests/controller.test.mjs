@@ -190,6 +190,21 @@ test("adapter payload failure reports FAILED outcome, never COMPLETED (Issue #19
   }
 });
 
+test("execute/verify attach an explicit empty diagnostics plan when nothing failed (Issue #302)", async () => {
+  const c = createController({
+    sessionFactory: async () => openFakeSession(),
+    ui: recordingUi(),
+  });
+  const ex = await c.execute({ opId: "read.projectSummary", args: {} });
+  assert.equal(ex.diagnostics?.schema, "ae-devtools.vscode-diagnostics/v1");
+  assert.equal(ex.diagnostics.summary.total, 0);
+  assert.deepEqual(ex.diagnostics.items, []);
+  const vf = await c.verify();
+  assert.equal(vf.diagnostics?.schema, "ae-devtools.vscode-diagnostics/v1");
+  assert.equal(vf.diagnostics.summary.total, 0);
+  await c.close();
+});
+
 // ---- run-guard residue markers for a8n sessions (Issue #198, 案 C) ----
 
 function tempRunsDir() {
