@@ -737,6 +737,272 @@ if (it instanceof CompItem) {
 return __adp_json({ ok: true, item: detail });
 `,
   },
+  // ---- Issue #275: coverage batch — real-use ops over existing domains ----
+  {
+    id: "item.import",
+    title: "Import a footage file into the project",
+    domain: "project-items-comps-layers",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [S("Project", "importFile"), S("ImportOptions", "file")],
+    args: ["path"],
+    validate: (a) => {
+      requireArgs(a, ["path"]);
+      if (typeof a.path !== "string" || a.path.length === 0) {
+        throw new Error("item.import: path must be a non-empty string");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var io = new ImportOptions();
+io.file = new File(${js(a.path)});
+if (io.file.exists === false) __adp_fail("import file not found: " + ${js(a.path)});
+var it = app.project.importFile(io);
+return __adp_json({ ok: true, id: it.id, name: it.name, typeName: String(it.typeName) });
+`,
+  },
+  {
+    id: "comp.duplicate",
+    title: "Duplicate a composition",
+    domain: "project-items-comps-layers",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [S("CompItem", "duplicate"), S("Item", "name"), S("Item", "id")],
+    args: ["name"],
+    validate: (a) => requireArgs(a, ["name"]),
+    source: (a) => `${PRELUDE}
+var comp = __adp_findItem(${js(a.name)}, CompItem);
+var dup = comp.duplicate();
+return __adp_json({ ok: true, source: comp.name, duplicate: dup.name, id: dup.id });
+`,
+  },
+  {
+    id: "item.setLabel",
+    title: "Set a project item's label index",
+    domain: "project-items-comps-layers",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [S("Item", "label"), S("Item", "name")],
+    args: ["name", "type", "label"],
+    validate: (a) => {
+      requireArgs(a, ["name", "type", "label"]);
+      if (["CompItem", "FolderItem", "FootageItem"].indexOf(a.type) === -1) {
+        throw new Error("item.setLabel: type must be one of CompItem|FolderItem|FootageItem");
+      }
+      if (!Number.isInteger(a.label) || a.label < 0 || a.label > 16) {
+        throw new Error("item.setLabel: label must be an integer 0-16");
+      }
+    },
+    source: (a) => `${PRELUDE}
+var it = __adp_findItem(${js(a.name)}, ${a.type});
+it.label = ${a.label};
+return __adp_json({ ok: true, name: it.name, label: it.label });
+`,
+  },
+  {
+    id: "layer.setTiming",
+    title: "Set a layer's startTime and/or stretch",
+    domain: "project-items-comps-layers",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [S("Layer", "startTime"), S("Layer", "stretch")],
+    args: ["compName", "layerName", "startTime", "stretch"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const hasStart = a.startTime !== undefined && a.startTime !== null;
+      const hasStretch = a.stretch !== undefined && a.stretch !== null;
+      if (!hasStart && !hasStretch) {
+        throw new Error("layer.setTiming: at least one of startTime/stretch is required");
+      }
+      if (hasStart && !Number.isFinite(Number(a.startTime))) {
+        throw new Error("layer.setTiming: startTime must be a finite number");
+      }
+      if (hasStretch) {
+        const st = Number(a.stretch);
+        if (!Number.isFinite(st) || st === 0) {
+          throw new Error("layer.setTiming: stretch must be a finite non-zero number");
+        }
+      }
+    },
+    source: (a) => {
+      const sets = [];
+      if (a.startTime !== undefined && a.startTime !== null) sets.push(`layer.startTime = ${Number(a.startTime)};`);
+      if (a.stretch !== undefined && a.stretch !== null) sets.push(`layer.stretch = ${Number(a.stretch)};`);
+      return `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+${sets.join("\n")}
+return __adp_json({ ok: true, layer: layer.name, startTime: layer.startTime, stretch: layer.stretch });
+`;
+    },
+  },
+  {
+    id: "layer.setState",
+    title: "Set a layer's solo/shy/locked/label state",
+    domain: "project-items-comps-layers",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [S("Layer", "solo"), S("Layer", "shy"), S("Layer", "locked"), S("Layer", "label")],
+    args: ["compName", "layerName", "solo", "shy", "locked", "label"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName"]);
+      const flags = ["solo", "shy", "locked"].filter((k) => a[k] !== undefined && a[k] !== null);
+      const hasLabel = a.label !== undefined && a.label !== null;
+      if (flags.length === 0 && !hasLabel) {
+        throw new Error("layer.setState: at least one of solo/shy/locked/label is required");
+      }
+      for (const k of flags) {
+        if (typeof a[k] !== "boolean") throw new Error(`layer.setState: ${k} must be a boolean`);
+      }
+      if (hasLabel && (!Number.isInteger(a.label) || a.label < 0 || a.label > 16)) {
+        throw new Error("layer.setState: label must be an integer 0-16");
+      }
+    },
+    source: (a) => {
+      const sets = [];
+      for (const k of ["solo", "shy", "locked"]) {
+        if (a[k] !== undefined && a[k] !== null) sets.push(`layer.${k} = ${a[k] ? "true" : "false"};`);
+      }
+      if (a.label !== undefined && a.label !== null) sets.push(`layer.label = ${a.label};`);
+      return `${PRELUDE}
+var comp = __adp_findItem(${js(a.compName)}, CompItem);
+var layer = __adp_findLayer(comp, ${js(a.layerName)});
+${sets.join("\n")}
+return __adp_json({
+  ok: true, layer: layer.name,
+  solo: layer.solo === true, shy: layer.shy === true,
+  locked: layer.locked === true, label: layer.label
+});
+`;
+    },
+  },
+  {
+    id: "anim.removeKeyframe",
+    title: "Remove a keyframe by 1-based key index",
+    domain: "animation-effects-render",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [S("Property", "removeKey"), S("Property", "numKeys")],
+    args: ["compName", "layerName", "propertyPath", "keyIndex"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "keyIndex"]);
+      if (!Number.isInteger(a.keyIndex) || a.keyIndex < 1) {
+        throw new Error("anim.removeKeyframe: keyIndex must be an integer >= 1");
+      }
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+prop.removeKey(${a.keyIndex});
+return __adp_json({ ok: true, property: "keyframe-removed", keyIndex: ${a.keyIndex}, numKeys: prop.numKeys });
+`,
+  },
+  {
+    id: "read.valueAtTime",
+    title: "Read a property's value at a given time (non-mutating)",
+    domain: "project-items-comps-layers",
+    issue: "275",
+    permission: "execute",
+    mutating: false,
+    members: [
+      S("PropertyGroup", "property"),
+      S("Property", "valueAtTime"), S("Property", "numKeys"),
+    ],
+    args: ["compName", "layerName", "propertyPath", "time"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "layerName", "propertyPath", "time"]);
+      if (typeof a.time !== "number" || !Number.isFinite(a.time)) {
+        throw new Error("read.valueAtTime: time must be a finite number");
+      }
+      jsPath(a.propertyPath);
+    },
+    source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
+return __adp_json({
+  ok: true, time: ${a.time},
+  value: prop.valueAtTime(${a.time}),
+  numKeys: prop.numKeys
+});
+`,
+  },
+  {
+    id: "render.setTimeSpan",
+    title: "Set a queued item's render time span",
+    domain: "animation-effects-render",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"),
+      S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"),
+      S("RenderQueueItem", "timeSpanStart"), S("RenderQueueItem", "timeSpanDuration"),
+    ],
+    args: ["compName", "timeSpanStart", "timeSpanDuration"],
+    validate: (a) => {
+      requireArgs(a, ["compName", "timeSpanStart", "timeSpanDuration"]);
+      for (const n of ["timeSpanStart", "timeSpanDuration"]) {
+        if (typeof a[n] !== "number" || !Number.isFinite(a[n])) {
+          throw new Error(`render.setTimeSpan: ${n} must be a finite number`);
+        }
+      }
+    },
+    source: (a) => `${PRELUDE}
+var rq = app.project.renderQueue;
+var items = rq.items;
+var found = null;
+var matches = 0;
+for (var i = 1; i <= items.length; i++) {
+  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
+    found = items[i];
+    matches++;
+  }
+}
+if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
+if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
+found.timeSpanStart = ${Number(a.timeSpanStart)};
+found.timeSpanDuration = ${Number(a.timeSpanDuration)};
+return __adp_json({
+  ok: true, comp: found.comp.name,
+  timeSpanStart: found.timeSpanStart,
+  timeSpanDuration: found.timeSpanDuration
+});
+`,
+  },
+  {
+    id: "render.removeFromQueue",
+    title: "Remove a comp's item from the render queue",
+    domain: "animation-effects-render",
+    issue: "275",
+    permission: "execute",
+    mutating: true,
+    members: [
+      S("Project", "renderQueue"),
+      S("RenderQueue", "items"),
+      S("RenderQueueItem", "comp"), S("RenderQueueItem", "remove"),
+    ],
+    args: ["compName"],
+    validate: (a) => requireArgs(a, ["compName"]),
+    source: (a) => `${PRELUDE}
+var rq = app.project.renderQueue;
+var items = rq.items;
+var found = null;
+var matches = 0;
+for (var i = 1; i <= items.length; i++) {
+  if (items[i].comp !== null && items[i].comp.name === ${js(a.compName)}) {
+    found = items[i];
+    matches++;
+  }
+}
+if (matches === 0) __adp_fail("render queue has no item for comp '" + ${js(a.compName)} + "'");
+if (matches > 1) __adp_fail("render queue has " + matches + " items for comp '" + ${js(a.compName)} + "': ambiguous");
+found.remove();
+return __adp_json({ ok: true, removed: ${js(a.compName)}, remaining: rq.items.length });
+`,
+  },
 ];
 
 const BY_ID = new Map(OPERATIONS.map((op) => [op.id, op]));

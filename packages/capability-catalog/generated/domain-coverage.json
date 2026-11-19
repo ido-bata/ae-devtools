@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "c01ea979db9fe4355177e557da4e296cb5748c2119a4ba901ceb0a2696faf07d"
+      "sha256": "169a24c784750b3760b52c1acf6513a79579900c104c9b3239b7c01fd2335dc2"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 333,
+          "documented": 330,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 22,
+          "automated-fake-tested": 25,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 22,
+          "adapter-present": 25,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 333
+          "unknown": 330
         },
         "verification": {
-          "not-run": 333,
-          "automated-fake": 22,
+          "not-run": 330,
+          "automated-fake": 25,
           "verified-real-host": 0
         }
       },
@@ -1368,10 +1368,10 @@
         {
           "id": "ae.scripting.Property.removeKey",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.selectedKeys",
@@ -1560,10 +1560,10 @@
         {
           "id": "ae.scripting.Property.valueAtTime",
           "category": "property",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Property.valueText",
@@ -1944,10 +1944,10 @@
         {
           "id": "ae.scripting.RenderQueueItem.remove",
           "category": "render-queue",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.RenderQueueItem.render",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 233,
+          "documented": 224,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 20,
+          "automated-fake-tested": 29,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 27,
+          "adapter-present": 36,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 233
+          "unknown": 224
         },
         "verification": {
-          "not-run": 233,
-          "automated-fake": 20,
+          "not-run": 224,
+          "automated-fake": 29,
           "verified-real-host": 7
         }
       },
@@ -3869,10 +3869,10 @@
         {
           "id": "ae.scripting.CompItem.duplicate",
           "category": "comp",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.CompItem.exportAsMotionGraphicsTemplate",
@@ -4325,10 +4325,10 @@
         {
           "id": "ae.scripting.ImportOptions.file",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.ImportOptions.forceAlphabetical",
@@ -4429,10 +4429,10 @@
         {
           "id": "ae.scripting.Item.label",
           "category": "item",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Item.name",
@@ -4637,10 +4637,10 @@
         {
           "id": "ae.scripting.Layer.label",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Layer.locked",
@@ -4757,34 +4757,34 @@
         {
           "id": "ae.scripting.Layer.shy",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Layer.solo",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Layer.startTime",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Layer.stretch",
           "category": "layer",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Layer.time",
@@ -5061,10 +5061,10 @@
         {
           "id": "ae.scripting.Project.importFile",
           "category": "project",
-          "implementation": "unknown",
-          "verification": "not-run",
+          "implementation": "adapter-present",
+          "verification": "automated-fake",
           "reachability": "unknown",
-          "fr05": "documented"
+          "fr05": "automated-fake-tested"
         },
         {
           "id": "ae.scripting.Project.importFileWithDialog",
