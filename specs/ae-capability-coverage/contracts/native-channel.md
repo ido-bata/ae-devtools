@@ -122,11 +122,12 @@ AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion               (zero-arg, 
 AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI                     (zero-arg, #270 stage 2)
 AEGP_UtilitySuite6.AEGP_HostIsActivated                              (zero-arg, #270 stage 2)
 AEGP_ItemSuite9.AEGP_GetTypeName                                     (args: see §7a)
+AEGP_ItemSuite9.AEGP_GetItemName                                     (args: aeRef descriptor, see §7a/§7b)
 AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState                      (zero-arg, #270 stage 2)
 AEGP_RQItemSuite4.AEGP_GetNumRQItems                                 (zero-arg, #270 stage 2)
 ```
 
-All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**: scalar/enum arguments or none, serializable results. Every remaining implemented getter takes an `AEGP_*H` host handle — those wait for the CAP027 identity-descriptor work and are deliberately NOT allowlisted (external JSON must never become a host handle). Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
+All are read-only getters; all stay `implemented-unverified`. Stage 2 added only operations needing **no identity resolution**. Stage 3 (#270) added the first identity-bearing op through the §7b aeRef descriptor path — host handles are still never taken from the wire; `AEGP_ItemH` is resolved host-side inside the request window. Every remaining implemented getter takes an `AEGP_*H` host handle and waits for the same descriptor pattern to be extended to its identity kind (project handles, comp/layer handles, RQ-item handles). Widening further is a separate reviewed change — each addition must be a read-only getter with a defined serializable payload. Mutation operations are out of scope (FR-07/US3 permission model first).
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
@@ -142,8 +143,35 @@ The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `pack
 | `AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState` | none — `args` absent or `null`; result `{"state": <uint>}` (`AEGP_RenderQueueState`); plug-in acquires `AEGP Render Queue Suite` v1 in-window |
 | `AEGP_RQItemSuite4.AEGP_GetNumRQItems` | none — `args` absent or `null`; result `{"numRQItems": <int>}`; plug-in acquires `AEGP Render Queue Item Suite` v4 in-window |
 | `AEGP_ItemSuite9.AEGP_GetTypeName` | `{"itemType": <integer>}` — exactly one field; `itemType` is the `AEGP_ItemType` (`A_short`) enum, permitted range **[1, 4]** = the defined non-`NONE` values (`FOLDER`=1, `COMP`=2, `SOLID_defunct`=3, `FOOTAGE`=4; `NUM_TYPES1`=5 per `AE_GeneralPlug.h`). `NONE`=0 and any undefined/out-of-range/non-integral/wrong-typed value refuses `MALFORMED_REQUEST`. `SOLID_defunct` is a defined enum value passed through to the host; what real AE returns for it is a real-host question this contract does not settle |
+| `AEGP_ItemSuite9.AEGP_GetItemName` | `{"projectIndex": <integer 0..1000000>, "item": <aeRefItem>}` — exactly these two fields. `projectIndex` selects the project via `AEGP_GetProjectByIndex`, bounds-checked against `AEGP_GetNumProjects` at resolution time. `item` is the §7b descriptor. Result `{"name": "<string>"}` — the item's UTF-16 name converted to UTF-8, JSON-escaped, bounded |
 
 Result payload for `GetTypeName`: `{"typeName": "<string>"}` — the `A_char[AEGP_MAX_TYPE_NAME_SIZE]` name buffer, JSON-escaped, bounded. The plug-in acquires `AEGP Item Suite` v9 and releases it inside the request's evidence window (`SPBasicSuite.AcquireSuite`/`ReleaseSuite` op records bracket the `AEGP_GetTypeName` record in `opCalls`); suite-acquire failure or a missing suite entry is `not-sent` (environment-proven non-dispatch), an AEGP error is `failed` with `mayHaveMutated:false`.
+
+## 7b. `aeRefItem` identity descriptors (Issue #270 Stage 3, CAP027 groundwork)
+
+Identity-bearing arguments never cross the wire as handles. An operation that needs an `AEGP_ItemH` takes an **aeRef descriptor** — the same wire shape as the trusted-codec `aeRef` wrapper (trusted-execution.md §2/§3):
+
+```json
+{"aeRef": {"type": "folder" | "comp" | "footage",
+           "name": "<string>",
+           "path": [<non-negative integer>]}}
+```
+
+- `type` maps to `AEGP_ItemType`: `folder`=1, `comp`=2, `footage`=4. `SOLID_defunct` has no live identity and is not expressible.
+- `path` is **exactly one** index — the position in `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` order within the selected project. `AEGP_ItemSuite9` exposes no folder-children enumeration, so deeper paths are `MALFORMED_REQUEST`, not a silent best-effort.
+- `contentHash` and any other inner key are `MALFORMED_REQUEST` — the resolver cannot verify a content hash cheaply, so its presence is refused rather than ignored.
+- `name` must be non-empty; comparison against the live item is **exact UTF-8 byte equality** after the host's UTF-16→UTF-8 conversion.
+
+### Host-side resolution (all inside the request's op-record window)
+
+1. `AEGP_GetNumProjects` bounds-checks `projectIndex`; `AEGP_GetProjectByIndex` yields `projectH`. Out-of-range → `refused`/`STALE_REFERENCE`.
+2. `AEGP_GetFirstProjItem`/`AEGP_GetNextProjItem` walk to `path[0]`. Exhausted before the index → `STALE_REFERENCE`.
+3. `AEGP_GetItemType` must equal the mapped type tag → mismatch is `STALE_REFERENCE`.
+4. `AEGP_GetItemName` yields the name (mem handle → UTF-8); mismatch with `aeRef.name` → `STALE_REFERENCE`.
+
+`STALE_REFERENCE` means *well-formed descriptor, drifted state* — distinct from `MALFORMED_REQUEST` (shape violations refused before any AEGP call, no `opCalls`) per trusted-execution.md §3/§4. AEGP errors during resolution or the op itself are `failed` with `mayHaveMutated:false` (read-only); missing suite/entry is `not-sent`. Resolution emits its own op records (`(resolve)`/`(resolve+result)` extras) inside `opCalls`, so the evidence window shows exactly which host calls produced the handle.
+
+Descriptor *issuance* (how a client learns a valid descriptor) is out of scope for this contract — today it is constructed by hand or from probe output; a snapshot/descriptor API is follow-up work.
 
 ## 8. Non-goals / explicit limitations
 

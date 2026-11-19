@@ -1696,6 +1696,168 @@ static void TestIntakeStage2ArgsStillRejected()
     CheckResultDoc(c, "za", "refused", "MALFORMED_REQUEST");
 }
 
+/* ---- Issue #270 Stage 3: aeRef identity resolution ------------------ */
+
+static void TestIntakeGetItemNameCompleted()
+{
+    /* descriptor → host-side resolve → AEGP_GetItemName → typed result.
+       Item index 1 is "Café" (non-ASCII UTF-16 → UTF-8 round-trip). */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    h->SetItemNames(0, {
+        h->MakeNameSpec(FakeHost::U16("Plate")),
+        h->MakeNameSpec(FakeHost::U16Codepoints({'C', 'a', 'f', 0xE9})),
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    WriteReq0600(c.Path("inbox/in.request.json"),
+                 ReqJsonArgs("in", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Caf\\u00e9\",\"path\":[1]}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "in"));
+    CHECK(r.find("\"outcome\":\"completed\"") != std::string::npos);
+    CHECK(r.find("\"name\":\"Caf") != std::string::npos);
+    CheckResultDoc(c, "in", "completed", NULL);
+    /* resolve + op records all land in this request's opCalls window */
+    CHECK(r.find("AEGP_ProjSuite6.AEGP_GetProjectByIndex") != std::string::npos);
+    CHECK(r.find("AEGP_ItemSuite9.AEGP_GetFirstProjItem") != std::string::npos);
+    CHECK(r.find("AEGP_ItemSuite9.AEGP_GetItemType") != std::string::npos);
+    CHECK(r.find("AEGP_ItemSuite9.AEGP_GetItemName") != std::string::npos);
+    CHECK(r.find("AEGP_MemorySuite1.AEGP_FreeMemHandle") != std::string::npos);
+    CHECK(h->LogContains("op AEGP_ItemSuite9.AEGP_GetItemName err=0 (resolve+result)"));
+    CHECK(r.find(kTok) == std::string::npos);
+}
+
+static void TestIntakeGetItemNameStale()
+{
+    /* Well-formed descriptors that no longer match live state refuse
+       STALE_REFERENCE — never re-resolved, never executed. */
+    static const struct { const char* id; const char* args; } cases[] = {
+        { "p9", "{\"projectIndex\":9,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Plate\",\"path\":[0]}}}" },
+        { "i9", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Plate\",\"path\":[9]}}}" },
+        { "nm", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Nope\",\"path\":[0]}}}" },
+        { "tp", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"footage\",\"name\":\"Plate\",\"path\":[0]}}}" },
+    };
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    h->SetItemNames(0, { h->MakeNameSpec(FakeHost::U16("Plate")) });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    size_t i;
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        WriteReq0600(c.Path((std::string("inbox/") + cases[i].id +
+                             ".request.json").c_str()),
+                     ReqJsonArgs(cases[i].id, kTok, 30000,
+                                 "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                                 cases[i].args));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        std::string r = Slurp(ResultPath(c, cases[i].id));
+        CHECK(r.find("\"outcome\":\"refused\"") != std::string::npos);
+        CHECK(r.find("STALE_REFERENCE") != std::string::npos);
+        CheckResultDoc(c, cases[i].id, "refused", "STALE_REFERENCE");
+        CHECK(r.find("\"name\":") == std::string::npos);
+    }
+}
+
+static void TestIntakeGetItemNameMalformed()
+{
+    /* Descriptor shape violations refuse MALFORMED_REQUEST before any
+       AEGP call — same discipline as the Stage-1 args codec. */
+    static const struct { const char* id; const char* args; } cases[] = {
+        { "m1", "{\"projectIndex\":0}" },                                  /* missing item */
+        { "m2", "{\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0]}},\"projectIndex\":0,\"x\":1}" }, /* extra arg */
+        { "m3", "{\"projectIndex\":0,\"item\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0]}}" }, /* no aeRef wrapper */
+        { "m4", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0],\"contentHash\":\"h\"}}}" }, /* contentHash unsupported */
+        { "m5", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"solid\",\"name\":\"P\",\"path\":[0]}}}" }, /* bad type tag */
+        { "m6", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"\",\"path\":[0]}}}" }, /* empty name */
+        { "m7", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[]}}}" }, /* empty path */
+        { "m8", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0,1]}}}" }, /* deep path unsupported */
+        { "m9", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[-1]}}}" }, /* negative index */
+        { "m10", "{\"projectIndex\":0,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0.5]}}}" }, /* fractional index */
+        { "m11", "{\"projectIndex\":-1,\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"P\",\"path\":[0]}}}" }, /* negative projectIndex */
+    };
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    h->SetItemNames(0, { h->MakeNameSpec(FakeHost::U16("Plate")) });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    size_t i;
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
+    {
+        WriteReq0600(c.Path((std::string("inbox/") + cases[i].id +
+                             ".request.json").c_str()),
+                     ReqJsonArgs(cases[i].id, kTok, 30000,
+                                 "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                                 cases[i].args));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        std::string r = Slurp(ResultPath(c, cases[i].id));
+        CHECK(r.find("MALFORMED_REQUEST") != std::string::npos);
+        /* refused before attestation/resolution: no op records */
+        CHECK(r.find("opCalls") == std::string::npos);
+        CheckResultDoc(c, cases[i].id, "refused", "MALFORMED_REQUEST");
+    }
+}
+
+static void TestIntakeGetItemNameSuiteFailure()
+{
+    /* ItemSuite acquire failure inside the resolve window is
+       environment-proven non-dispatch: not-sent, never executed. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    h->SetItemNames(0, { h->MakeNameSpec(FakeHost::U16("Plate")) });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    h->failAcquireItem = true;
+    h->PopulateSuites();
+    WriteReq0600(c.Path("inbox/isf.request.json"),
+                 ReqJsonArgs("isf", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Plate\",\"path\":[0]}}}"));
+    {
+        A_long ms = 0;
+        (void)h->idleHook(NULL, NULL, &ms);
+    }
+    std::string r = Slurp(ResultPath(c, "isf"));
+    CHECK(r.find("\"outcome\":\"not-sent\"") != std::string::npos);
+    CheckResultDoc(c, "isf", "not-sent", NULL);
+}
+
+static void TestIntakeGetItemNameOpFailure()
+{
+    /* AEGP_GetItemName error after successful resolution is a typed
+       failed outcome — read-only, mayHaveMutated=false. */
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    h->SetItemNames(0, { h->MakeNameSpec(FakeHost::U16("Plate")) });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    h->itemNameErr = A_Err_GENERIC;
+    WriteReq0600(c.Path("inbox/iof.request.json"),
+                 ReqJsonArgs("iof", kTok, 30000,
+                             "AEGP_ItemSuite9.AEGP_GetItemName", "26.5",
+                             "{\"projectIndex\":0,\"item\":{\"aeRef\":"
+                             "{\"type\":\"comp\",\"name\":\"Plate\",\"path\":[0]}}}"));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    std::string r = Slurp(ResultPath(c, "iof"));
+    CHECK(r.find("\"outcome\":\"failed\"") != std::string::npos);
+    CHECK(r.find("mayHaveMutated\":false") != std::string::npos);
+    CheckResultDoc(c, "iof", "failed", NULL);
+}
+
 static void TestIntakeUnknownOperation()
 {
     auto h = MakeFakeHost();
@@ -2019,6 +2181,19 @@ int main(int argc, char** argv)
     if (argc > 3 && strcmp(argv[1], "--channel-server") == 0)
     {
         auto h = MakeFakeHost();
+        /* optional 5th arg "with-items": deterministic project fixture
+           for the Issue #270 Stage 3 aeRef resolution E2E — one project
+           with two top-level COMP items ("Plate", "Café"). */
+        if (argc > 5 && strcmp(argv[5], "with-items") == 0)
+        {
+            FakeProject& p = h->AddProject("E2EShot");
+            p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+            h->SetItemNames(0, {
+                h->MakeNameSpec(FakeHost::U16("Plate")),
+                h->MakeNameSpec(FakeHost::U16Codepoints({'C', 'a', 'f', 0xE9})),
+            });
+            h->numProjects = 1;
+        }
         setenv("AE_DEVTOOLS_NATIVE_CHANNEL", argv[2], 1);
         if (CallEntry(*h) != A_Err_NONE)
             return 4;
@@ -2099,6 +2274,11 @@ int main(int argc, char** argv)
     TestIntakeStage2ZeroArgGetters();
     TestIntakeStage2RQSuiteFailure();
     TestIntakeStage2ArgsStillRejected();
+    TestIntakeGetItemNameCompleted();
+    TestIntakeGetItemNameStale();
+    TestIntakeGetItemNameMalformed();
+    TestIntakeGetItemNameSuiteFailure();
+    TestIntakeGetItemNameOpFailure();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();
