@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/ae-devtools-cli/scripting-adapters/generated/coverage-claims.json",
-      "sha256": "fc3d570b321f44215d7a3e94840304d22ab9c78a6ba7471fb8396ab3dff27ffc"
+      "sha256": "c0cb307cf3a4ceeb0898539a7b16fc38e347abb8a04e2e4ba105b2306080c83b"
     },
     {
       "path": "packages/capability-catalog/real-host-claims.json",
@@ -71,24 +71,24 @@
       "memberCount": 355,
       "counts": {
         "fr05": {
-          "documented": 242,
+          "documented": 244,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 113,
+          "automated-fake-tested": 111,
           "verified-on-real-host": 0,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 113,
+          "adapter-present": 111,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 242
+          "unknown": 244
         },
         "verification": {
-          "not-run": 242,
-          "automated-fake": 113,
+          "not-run": 244,
+          "automated-fake": 111,
           "verified-real-host": 0
         }
       },
@@ -568,18 +568,18 @@
         {
           "id": "ae.scripting.KeyframeEase.influence",
           "category": "keyframe",
-          "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "implementation": "unknown",
+          "verification": "not-run",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "documented"
         },
         {
           "id": "ae.scripting.KeyframeEase.speed",
           "category": "keyframe",
-          "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "implementation": "unknown",
+          "verification": "not-run",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "documented"
         },
         {
           "id": "ae.scripting.MarkerValue.chapter",
@@ -3308,24 +3308,24 @@
       "memberCount": 260,
       "counts": {
         "fr05": {
-          "documented": 148,
+          "documented": 149,
           "reachable": 0,
           "implemented": 0,
-          "automated-fake-tested": 105,
+          "automated-fake-tested": 104,
           "verified-on-real-host": 7,
           "unsupported-with-reason": 0,
           "unknown": 0
         },
         "implementation": {
           "none": 0,
-          "adapter-present": 112,
+          "adapter-present": 111,
           "implemented": 0,
           "unsupported": 0,
-          "unknown": 148
+          "unknown": 149
         },
         "verification": {
-          "not-run": 148,
-          "automated-fake": 105,
+          "not-run": 149,
+          "automated-fake": 104,
           "verified-real-host": 7
         }
       },
@@ -4149,10 +4149,10 @@
         {
           "id": "ae.scripting.FootageItem.file",
           "category": "item",
-          "implementation": "adapter-present",
-          "verification": "automated-fake",
+          "implementation": "unknown",
+          "verification": "not-run",
           "reachability": "unknown",
-          "fr05": "automated-fake-tested"
+          "fr05": "documented"
         },
         {
           "id": "ae.scripting.FootageItem.mainSource",

@@ -96,17 +96,6 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.Item.typeName": {
-      "ops": [
-        "item.setParentFolder",
-        "item.setSelected",
-        "read.projectSummary",
-        "read.projectTree",
-        "read.itemById",
-        "read.itemDetail"
-      ],
-      "evidence": "fake/mock only"
-    },
     "ae.scripting.Item.selected": {
       "ops": [
         "item.setSelected",
@@ -191,6 +180,15 @@
       "ops": [
         "read.projectSummary",
         "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.typeName": {
+      "ops": [
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail"
       ],
       "evidence": "fake/mock only"
     },
@@ -766,7 +764,6 @@
     "ae.scripting.RenderQueueItem.templates": {
       "ops": [
         "render.listTemplates",
-        "render.applyTemplate",
         "render.saveTemplate"
       ],
       "evidence": "fake/mock only"
@@ -784,13 +781,6 @@
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueueItem.numOutputModules": {
-      "ops": [
-        "render.listOutputModules",
-        "render.addOutputModule"
-      ],
-      "evidence": "fake/mock only"
-    },
-    "ae.scripting.RenderQueueItem.outputModules": {
       "ops": [
         "render.listOutputModules",
         "render.addOutputModule"
@@ -821,8 +811,13 @@
     "ae.scripting.OutputModule.templates": {
       "ops": [
         "render.listOutputModules",
-        "render.applyOutputModuleTemplate",
         "render.saveOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.outputModules": {
+      "ops": [
+        "render.addOutputModule"
       ],
       "evidence": "fake/mock only"
     },
@@ -1136,12 +1131,6 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.FootageItem.file": {
-      "ops": [
-        "read.footageDetail"
-      ],
-      "evidence": "fake/mock only"
-    },
     "ae.scripting.FileSource.file": {
       "ops": [
         "read.footageDetail",
@@ -1424,18 +1413,6 @@
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.keyOutTemporalEase": {
-      "ops": [
-        "anim.setTemporalEase"
-      ],
-      "evidence": "fake/mock only"
-    },
-    "ae.scripting.KeyframeEase.speed": {
-      "ops": [
-        "anim.setTemporalEase"
-      ],
-      "evidence": "fake/mock only"
-    },
-    "ae.scripting.KeyframeEase.influence": {
       "ops": [
         "anim.setTemporalEase"
       ],
