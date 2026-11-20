@@ -807,6 +807,20 @@ export async function openAttachedSliceSession(options = {}) {
       aeA8nSource, aeA8nHead, tracePath: ae.tracePath, sessionRoot,
       installDir, appPath, target,
       attached: true,
+      // Host-side project guard (Issue #385): the attested
+      // app.project.file.fsName (ae-a8n's project.info reports exactly
+      // that string). dev-loop surfaces forward it into runOperation,
+      // which injects it into the consent-bound source so the host
+      // re-verifies project identity inside the same evaluation that
+      // performs the op — closing the guard→eval TOCTOU window.
+      // Null when the open project has no file (unsaved) or identity
+      // was unreadable; hostProjectGuardRequired then refuses
+      // mutations that cannot be host-verified.
+      hostProjectGuard:
+        project !== null && typeof project.file === "string" && project.file.length > 0
+          ? project.file
+          : null,
+      hostProjectGuardRequired: true,
       // Re-validation immediately before each mutating dispatch —
       // dev-loop surfaces forward this as `targetGuard` into
       // runOperation, which invokes it after consent approval and

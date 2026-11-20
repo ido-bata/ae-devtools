@@ -178,6 +178,7 @@ export async function verify(input = {}) {
   const {
     runner, pin, projectIdentity, consentProvider, trustedScriptOptIn,
     scriptProvenance, readOpId = "read.projectSummary", readArgs = {}, requestId,
+    hostProjectGuard, hostProjectGuardRequired,
   } = input ?? {};
   const op = (() => { try { return getOperation(readOpId); } catch { return null; } })();
   if (!op || op.mutating) {
@@ -192,5 +193,6 @@ export async function verify(input = {}) {
   return runOperation({
     opId: readOpId, args: readArgs, runner, pin, projectIdentity,
     consentProvider, trustedScriptOptIn, scriptProvenance, requestId,
+    hostProjectGuard, hostProjectGuardRequired,
   });
 }

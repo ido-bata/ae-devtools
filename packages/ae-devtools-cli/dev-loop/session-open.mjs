@@ -43,12 +43,18 @@ const EXP = join(HERE, "..");
  *   { kind, evidenceLevel, runner, pin, close, meta, slice, policy } —
  *   `slice` is the raw slice-session result (a8n kinds) or null (fake);
  *   `policy` carries session-imposed dispatch limits (attached sessions
- *   are read-only, Issue #366).
+ *   are read-only, Issue #366). `hostProjectGuard` /
+ *   `hostProjectGuardRequired` carry the session-attested project file
+ *   identity for the host-side guard (Issue #385); null/false for fake
+ *   and owned sessions.
  */
 export async function openSession(kind = "fake", options = {}) {
   if (kind === "fake") {
     const s = openFakeSession();
-    return { ...s, meta: s.meta ?? null, slice: null, policy: null, targetGuard: null };
+    return {
+      ...s, meta: s.meta ?? null, slice: null, policy: null, targetGuard: null,
+      hostProjectGuard: null, hostProjectGuardRequired: false,
+    };
   }
   if (kind === "a8n-attached") {
     const tdir = join(EXP, "a8n-transport", "attached-session.mjs");
@@ -93,6 +99,15 @@ export async function openSession(kind = "fake", options = {}) {
       // runOperation immediately before each mutating dispatch. Null
       // for sessions without an attested target identity.
       targetGuard: typeof s.revalidateTarget === "function" ? s.revalidateTarget : null,
+      // Host-side project guard (Issue #385): the session-attested
+      // app.project.file.fsName forwarded into runOperation, which
+      // injects it into the consent-bound source. Required on the
+      // attached lane — mutations without an attestable project file
+      // refuse before consent.
+      hostProjectGuard: typeof s.hostProjectGuard === "string" && s.hostProjectGuard.length > 0
+        ? s.hostProjectGuard
+        : null,
+      hostProjectGuardRequired: s.hostProjectGuardRequired === true,
     };
   }
   if (kind === "a8n") {
@@ -129,6 +144,8 @@ export async function openSession(kind = "fake", options = {}) {
       slice: s,
       policy: null,
       targetGuard: null,
+      hostProjectGuard: null,
+      hostProjectGuardRequired: false,
     };
   }
   const e = new Error(`unknown session kind '${kind}' (fake|a8n|a8n-attached)`);
