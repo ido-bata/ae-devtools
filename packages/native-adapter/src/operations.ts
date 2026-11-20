@@ -287,7 +287,7 @@ export const DISPATCH_ENTRIES: readonly OperationEntry[] = [
   probe("AEGP_ItemSuite9", "AEGP_GetItemComment", PROBE_HEADER, "external-command",
     "UTF-16 comment returned in an AE-allocated mem handle; disposed via AEGP_FreeMemHandle. Called by probe.cpp ProbeNamedItem (Issue #63). Build-verified on macOS arm64; AE load/execution UNVERIFIED."),
   probe("AEGP_ItemSuite9", "AEGP_SetItemComment", PROBE_HEADER, "external-command",
-    "First mutating intake op (Issue #327): requiresConsent — the request must carry a valid §7g envelope-level consent MAC verified host-side after session attestation and before the AEGP call. Implemented by experiments/native-sdk/minimal-plugin/src/native_intake.cpp ExecSetItemComment; consent proof in src/native_consent.cpp. UNDOABLE. Build-verified on macOS arm64; AE load/execution UNVERIFIED."),
+    "First mutating intake op (Issue #327): requiresConsent — the request must carry a valid §7g envelope-level consent MAC verified host-side after session attestation and before the AEGP call. Implemented by experiments/native-sdk/minimal-plugin/src/native_ops.cpp ExecSetItemComment; consent proof in src/native_consent.cpp. UNDOABLE. Build-verified on macOS arm64; AE load/execution UNVERIFIED."),
   probe("AEGP_ItemSuite9", "AEGP_GetItemLabel", PROBE_HEADER, "external-command",
     "Called by experiments/native-sdk/minimal-plugin/src/probe.cpp (NativeProbe, Issue #63 read-only expansion). Build-verified on macOS arm64; AE load/execution UNVERIFIED."),
   inv("AEGP_ItemSuite9", "AEGP_SetItemLabel", PROBE_HEADER, "external-command",
