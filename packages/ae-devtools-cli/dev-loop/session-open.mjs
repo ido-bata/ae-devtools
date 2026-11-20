@@ -109,6 +109,11 @@ export async function openSession(kind = "fake", options = {}) {
       aeA8nRoot: typeof options.aeA8nRoot === "string" ? options.aeA8nRoot : undefined,
       installDir: typeof options.installDir === "string" ? options.installDir : undefined,
       workdir: typeof options.workdir === "string" ? options.workdir : undefined,
+      // Dispatch budgets apply to owned sessions too (Issue #383) — the
+      // openers derive a compatible deadline/callTimeout pair and refuse
+      // an explicitly incompatible one.
+      callTimeoutMs: Number.isFinite(options.callTimeoutMs) ? options.callTimeoutMs : undefined,
+      deadlineMs: Number.isFinite(options.deadlineMs) ? options.deadlineMs : undefined,
     });
     return {
       kind: "a8n",

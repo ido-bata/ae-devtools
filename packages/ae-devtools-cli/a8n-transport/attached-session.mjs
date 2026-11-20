@@ -83,6 +83,7 @@ import { createJsxRunner } from "../trusted-execution/runner.mjs";
 import { getOperation } from "../scripting-adapters/registry.mjs";
 import { createDispatchStore, defaultDispatchStoreDir } from "../trusted-execution/dispatch-store.mjs";
 import { createA8nTransport, EVAL_METHOD } from "./transport.mjs";
+import { resolveDispatchBudgets } from "./dispatch-budget.mjs";
 import { openAttachTarget } from "./attach-target.mjs";
 import { resolveAeA8n } from "./ae-a8n-resolve.mjs";
 import {
@@ -288,7 +289,11 @@ async function defaultHostProcessProbe() {
  *                    differs refuses the session after attach
  *   workdir        — scratch dir for the generated host script
  *   callTimeoutMs  — per-dispatch ae.call budget (default 9500)
- *   deadlineMs     — runner deadline (default 10000; keep > callTimeoutMs)
+ *   deadlineMs     — runner deadline; absent derives callTimeoutMs +
+ *                    margin so the deadline always covers the call
+ *                    budget, and an explicit deadline <= callTimeout
+ *                    refuses USAGE (Issue #383, shared with the owned
+ *                    opener via dispatch-budget.mjs)
  *   aeA8nRoot      — local ae-a8n checkout root with a built dist/
  *   mutatingOps    — explicit op-level mutation scope (Issue #366):
  *                    array of registered mutating opIds the caller
@@ -304,6 +309,13 @@ async function defaultHostProcessProbe() {
  */
 export async function openAttachedSliceSession(options = {}) {
   const mutatingOps = normalizeMutatingOps(options.mutatingOps);
+  // Budget validation FIRST (with mutatingOps): an incompatible
+  // callTimeout/deadline pair refuses before ae-a8n resolution,
+  // census or attach — same rule as the owned opener (Issue #383).
+  const budgets = resolveDispatchBudgets({
+    callTimeoutMs: options.callTimeoutMs,
+    deadlineMs: options.deadlineMs,
+  });
   const { AfterEffects, mod: aeA8nMod, cliPath, source: aeA8nSource, head: aeA8nHead } =
     await resolveAeA8n({ aeA8nRoot: options.aeA8nRoot });
   const missing = missingContractExports(aeA8nMod);
@@ -754,14 +766,14 @@ export async function openAttachedSliceSession(options = {}) {
     };
     const transport = createA8nTransport({
       ae,
-      callTimeoutMs: options.callTimeoutMs ?? 9_500,
+      callTimeoutMs: budgets.callTimeoutMs,
     });
     transport.dispatchStore = createDispatchStore({
       dir: options.dispatchStoreDir ?? defaultDispatchStoreDir(),
     });
     const runner = createJsxRunner({
       transport,
-      deadlineMs: options.deadlineMs ?? 10_000,
+      deadlineMs: budgets.deadlineMs,
     });
 
     const target = {
