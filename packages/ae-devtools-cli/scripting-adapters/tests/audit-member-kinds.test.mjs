@@ -19,7 +19,12 @@
  *   - helper reachability: members inside helpers never called from the
  *     op's main body do NOT count as exercised.
  *   - known-gap suppression: documented-but-uninventoried members are
- *     suppressed AND counted, never silent.
+ *     suppressed AND counted, never silent (injected via `knownGaps` —
+ *     the real KNOWN_GAPS set is empty since Issue #329).
+ *   - Issue #329: layer.property() resolves through the documented
+ *     Layer -> PropertyGroup inheritance (no gap needed); plain-JS and
+ *     enum-object receivers are "resolved non-host", not "untyped";
+ *     signature-less method claims are counted as unchecked coverage.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -38,14 +43,15 @@ const sym = (id, owner, member, kind, extra = {}) => ({
   ...extra,
 });
 
-function runAudit({ symbols, ops }) {
+function runAudit({ symbols, ops, knownGaps, enums }) {
   const dir = mkdtempSync(join(tmpdir(), "audit-member-kinds-"));
   const symbolsPath = join(dir, "symbols.json");
-  writeFileSync(symbolsPath, JSON.stringify({ symbols }));
+  writeFileSync(symbolsPath, JSON.stringify({ symbols, enums: enums || [] }));
   const byId = new Map(ops.map((o) => [o.id, o]));
   return auditMemberKinds({
     symbolsPath,
     operations: ops,
+    knownGaps,
     sampleArgsFn: (op) => op._sample || {},
     buildSourceFn: (id, args) => {
       const op = byId.get(id);
@@ -215,9 +221,6 @@ test("known-gap suppression is counted, not silent", () => {
   const symbols = [
     // AVLayer must exist as an owner for the receiver to type.
     sym("t.AVLayer.marker", "AVLayer", "marker", "attribute"),
-    // PropertyGroup.property mirrors the real inventory entry that makes
-    // `Layer.property` an inventory gap rather than a documentation gap.
-    sym("t.PropertyGroup.property", "PropertyGroup", "property", "method"),
   ];
   const op = {
     id: "t.gap",
@@ -225,12 +228,103 @@ test("known-gap suppression is counted, not silent", () => {
     args: [],
     _sample: {},
     source: () => `var l = new AVLayer();
-var n = l.numProperties;
-var p = l.property("ADBE Position");
+var n = l.runtimeOnlyField;
 return n;`,
   };
-  const { findings, stats } = runAudit({ symbols, ops: [op] });
-  assert.ok(!findings.some((f) => f.issue.includes("numProperties") || f.issue.includes(".property")),
+  // The gap is injected (the real KNOWN_GAPS set is empty since #329);
+  // the member is absent from the synthetic inventory on purpose.
+  const { findings, stats } = runAudit({
+    symbols, ops: [op], knownGaps: ["AVLayer.runtimeOnlyField"],
+  });
+  assert.ok(!findings.some((f) => f.issue.includes("runtimeOnlyField")),
     `gap sites must be suppressed, got: ${JSON.stringify(findings)}`);
-  assert.ok(stats.gapSuppressed >= 2, `expected gapSuppressed >= 2, got ${stats.gapSuppressed}`);
+  assert.ok(stats.gapSuppressed >= 1, `expected gapSuppressed >= 1, got ${stats.gapSuppressed}`);
+});
+
+test("layer.property() resolves via documented Layer -> PropertyGroup inheritance", () => {
+  // Issue #329: `Layer baseClass=PropertyGroup` in symbols.json means a
+  // layer IS the root of its property tree. With the corrected INHERITS
+  // chain, layer.property()/numProperties() are documented members —
+  // no KNOWN_GAPS entry and no finding.
+  const symbols = [
+    sym("t.PropertyGroup.property", "PropertyGroup", "property", "method"),
+    sym("t.PropertyGroup.numProperties", "PropertyGroup", "numProperties", "attribute", { access: "read" }),
+    sym("t.AVLayer.marker", "AVLayer", "marker", "attribute"),
+  ];
+  const op = {
+    id: "t.layerprop",
+    members: [],
+    args: [],
+    _sample: {},
+    source: () => `var l = new AVLayer();
+var n = l.numProperties;
+var p = l.property("ADBE Transform Group").property("ADBE Position");
+return n;`,
+  };
+  const { findings } = runAudit({ symbols, ops: [op] });
+  assert.equal(findings.length, 0, `layer property access must be documented, got: ${JSON.stringify(findings)}`);
+});
+
+test("plain-JS receivers are resolved non-host, not untyped", () => {
+  // Issue #329 false-green class: `v.charCodeAt(0).toString(16)` chains
+  // through JS values. The receiver type IS resolved ("js") — it must
+  // not inflate the untyped bucket, and must not produce findings.
+  const op = {
+    id: "t.jschain",
+    members: [],
+    args: [],
+    _sample: {},
+    source: () => `var v = "abc";
+var parts = [];
+for (var i = 0; i < v.length; i++) parts.push(v.charCodeAt(i).toString(16));
+var n = parts.join(",");
+var o = {};
+o.count = parts.length;
+return n + o.count;`,
+  };
+  const { findings, stats } = runAudit({ symbols: [], ops: [op] });
+  assert.equal(findings.length, 0, `unexpected findings: ${JSON.stringify(findings)}`);
+  assert.equal(stats.untypedSites, 0, `JS receivers must not count as untyped, got ${stats.untypedSites}`);
+  assert.ok(stats.nonHostSites > 0, "expected JS receiver sites in the non-host bucket");
+});
+
+test("enum objects type as resolved non-host", () => {
+  const op = {
+    id: "t.enum",
+    members: [],
+    args: [],
+    _sample: {},
+    source: () => `var mode = CloseOptions.DO_NOT_SAVE_CHANGES;
+var other = ImportAsType.FOOTAGE;
+return mode;`,
+  };
+  const { findings, stats } = runAudit({
+    symbols: [],
+    enums: [{ name: "CloseOptions" }, { name: "ImportAsType" }],
+    ops: [op],
+  });
+  assert.equal(findings.length, 0, `unexpected findings: ${JSON.stringify(findings)}`);
+  assert.equal(stats.untypedSites, 0, `enum member reads must resolve, got ${stats.untypedSites} untyped`);
+});
+
+test("signature coverage stats expose unchecked method claims", () => {
+  const symbols = [
+    sym("t.Foo.sig", "Foo", "sig", "method", { signature: ["a"] }),
+    sym("t.Foo.unsig", "Foo", "unsig", "method", { signature: [] }),
+  ];
+  const op = {
+    id: "t.sigcov",
+    members: ["t.Foo.sig", "t.Foo.unsig"],
+    args: [],
+    _sample: {},
+    source: () => `var f = new Foo();
+f.sig(1);
+f.unsig(1, 2, 3);`,
+  };
+  const { findings, stats } = runAudit({ symbols, ops: [op] });
+  assert.equal(findings.length, 0, `unexpected findings: ${JSON.stringify(findings)}`);
+  assert.equal(stats.sigClaims, 1);
+  assert.equal(stats.unsigClaims, 1);
+  assert.deepEqual(stats.unsigMembers, ["Foo.unsig"]);
+  assert.ok(stats.aritySites >= 1, "expected arity-checked call sites");
 });

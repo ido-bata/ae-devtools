@@ -60,6 +60,8 @@ class FootageItem extends AVItem {
     Object.assign(s, {
       color: Array.isArray(color) ? color.slice() : color,
       name: sname, width: w, height: h, pixelAspect: par,
+      // Solids are always still footage (FootageSource.isStill).
+      isStill: true,
     });
     this.__proxySource = s;
     this.useProxy = true;
@@ -69,6 +71,8 @@ class FootageItem extends AVItem {
     Object.assign(s, {
       name: pname, width: w, height: h,
       frameRate: frameRate, duration: duration,
+      // Documented rule: placeholders with a duration of 0 are still.
+      isStill: duration === 0,
     });
     this.__proxySource = s;
     this.useProxy = true;

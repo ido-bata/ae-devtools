@@ -1368,6 +1368,10 @@ declare enum ViewerType {
   VIEWER_FOOTAGE,
 }
 
+declare enum CloseOptions {
+  DO_NOT_SAVE_CHANGES,
+}
+
 declare function clearOutput(...args: any[]): any;
 declare function currentFormatToTime(...args: any[]): any;
 declare function generateRandomNumber(...args: any[]): any;
