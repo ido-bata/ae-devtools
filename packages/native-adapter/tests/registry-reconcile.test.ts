@@ -19,10 +19,11 @@
  *     suite.member + header, which `assertRegistryInvariants` checks.
  *
  * Scope notes:
- * - Only probe.cpp is scanned. fake_host.* implements suite entries
- *   the probe does NOT call (e.g. AEGP_NewMemHandle, SPBasicSuite
- *   IsEqual) — those are host-side fixtures, not probe calls, and
- *   must NOT appear in the registry.
+ * - probe.cpp AND native_intake.cpp are scanned (Issue #327: the
+ *   intake path is a second implementation site). fake_host.*
+ *   implements suite entries the probe does NOT call (e.g.
+ *   AEGP_NewMemHandle, SPBasicSuite IsEqual) — those are host-side
+ *   fixtures, not probe calls, and must NOT appear in the registry.
  * - Member accesses without a call (`if (utilP->AEGP_X)`) are not
  *   matched: the regex requires `(` after the member name.
  * - The receiver→suite map below mirrors probe.cpp's variable names;
@@ -39,6 +40,14 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PROBE_CPP = join(
   HERE,
   "../../../experiments/native-sdk/minimal-plugin/src/probe.cpp",
+);
+/* Issue #327: native_intake.cpp is a second implementation site — the
+   consent-gated mutating op (and every intake getter) makes real
+   suite calls there. Registry `implemented` claims must reconcile
+   against the UNION of both files' call sites. */
+const INTAKE_CPP = join(
+  HERE,
+  "../../../experiments/native-sdk/minimal-plugin/src/native_intake.cpp",
 );
 
 /** probe.cpp local variable → SDK suite struct name (registry `suite`). */
@@ -69,14 +78,23 @@ const CALL_RE = /([A-Za-z_]\w*)\s*->\s*([A-Za-z_]\w*)\s*\(/g;
  */
 const OP_RECORD_RE = /OpRecordV\s*\([^,]+,\s*"([^"]+)"/g;
 
-function probeCallIds(): Set<string> {
-  const src = readFileSync(PROBE_CPP, "utf8");
+/** native_intake.cpp local variable → SDK suite struct name. Differs
+    from probe.cpp: `rqP` there is AEGP_RQItemSuite4 (the RenderQueue
+    suite pointer was renamed rqQueueP to keep the map unambiguous). */
+const INTAKE_RECEIVER_TO_SUITE: Record<string, string> = {
+  ...RECEIVER_TO_SUITE,
+  rqP: "AEGP_RQItemSuite4",
+  rqQueueP: "AEGP_RenderQueueSuite1",
+};
+
+function suiteCallIds(srcPath: string, map: Record<string, string>): Set<string> {
+  const src = readFileSync(srcPath, "utf8");
   const ids = new Set<string>();
   const unmapped = new Set<string>();
   for (const m of src.matchAll(CALL_RE)) {
     const receiver = m[1]!;
     const member = m[2]!;
-    const suite = RECEIVER_TO_SUITE[receiver];
+    const suite = map[receiver];
     if (suite === undefined) {
       unmapped.add(`${receiver}->${member}`);
       continue;
@@ -85,10 +103,17 @@ function probeCallIds(): Set<string> {
   }
   if (unmapped.size > 0) {
     throw new Error(
-      `probe.cpp calls through unmapped receivers: ${[...unmapped].sort().join(", ")}`,
+      `${srcPath}: calls through unmapped receivers: ${[...unmapped].sort().join(", ")}`,
     );
   }
   return ids;
+}
+
+function probeCallIds(): Set<string> {
+  return new Set([
+    ...suiteCallIds(PROBE_CPP, RECEIVER_TO_SUITE),
+    ...suiteCallIds(INTAKE_CPP, INTAKE_RECEIVER_TO_SUITE),
+  ]);
 }
 
 describe("operations registry ↔ probe.cpp reconciliation", () => {

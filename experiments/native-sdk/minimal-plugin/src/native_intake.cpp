@@ -499,7 +499,8 @@ enum
     ARGK_AEREFLAYER, /* aeRef layer descriptor embedding its comp aeRef
                         (Issue #318 layer slice) */
     ARGK_AEREFPROJECT, /* aeRef project descriptor (Issue #318 §7e) */
-    ARGK_AEREFRQITEM   /* aeRef render-queue-item descriptor (§7f) */
+    ARGK_AEREFRQITEM,  /* aeRef render-queue-item descriptor (§7f) */
+    ARGK_STR           /* bounded UTF-8 string: slen <= max bytes */
 };
 
 typedef struct
@@ -549,6 +550,15 @@ static const IntakeArgSpec S_TYPENAME_ARGS[] = {
 static const IntakeArgSpec S_AEREF_ARGS[] = {
     { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
     { "item", ARGK_AEREFITEM, 0.0, 0.0 },
+};
+
+/* AEGP_ItemSuite9.AEGP_SetItemComment (Issue #327): the first
+   mutating op. Same aeRef resolution as the getters plus a bounded
+   UTF-8 `comment` string (2048 bytes, matching ITEM_COMMENT_MAX). */
+static const IntakeArgSpec S_SETCOMMENT_ARGS[] = {
+    { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+    { "item", ARGK_AEREFITEM, 0.0, 0.0 },
+    { "comment", ARGK_STR, 0.0, 2048.0 },
 };
 
 /* AEGP_ItemSuite9.AEGP_GetFirstProjItem as the discovery/enumeration
@@ -701,6 +711,14 @@ static const AllowEntry S_ALLOWLIST[] = {
       "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemComment",
       "AEGP_ItemSuite9.AEGP_GetItemComment", S_AEREF_ARGS, 2, 0 },
+    /* Issue #327: first mutating op — AEGP_ItemSuite9.AEGP_SetItemComment
+       (UNDOABLE). requiresConsent=1: the §7g MAC is verified after
+       session attestation and before the AEGP call; the aeRef item is
+       resolved host-side exactly like the read-only getters. `comment`
+       is bounded UTF-8 (same 2048-byte bound as the getter payload);
+       empty string clears the comment. */
+    { "AEGP_ItemSuite9.AEGP_SetItemComment",
+      "AEGP_ItemSuite9.AEGP_SetItemComment", S_SETCOMMENT_ARGS, 3, 1 },
     /* Issue #318 / #64 layer slice: AEGP_LayerSuite9. The layer handle
        is never taken from the wire — `layer` is an aeRefLayer descriptor
        embedding its parent comp's aeRef item descriptor; resolution is
@@ -885,6 +903,18 @@ static int ValidateArgs(
         if (spec->kind == ARGK_AEREFRQITEM)
         {
             if (!ValidateAeRefRQItem(v, detailZ, detailCap)) return 0;
+            continue;
+        }
+        if (spec->kind == ARGK_STR)
+        {
+            /* Bounded UTF-8 string (Issue #327): slen is the byte
+               count; empty string is permitted (clears the field). */
+            if (v->kind != JK_STR || v->slen > (size_t)spec->max)
+            {
+                snprintf(detailZ, detailCap,
+                         "argument \"%s\" out of permitted range", spec->name);
+                return 0;
+            }
             continue;
         }
         if (v->kind != JK_NUM || !isfinite(v->num) ||
@@ -1397,6 +1427,78 @@ static int IntakeUtf16ToUtf8(
     }
     dstP[di] = '\0';
     return truncatedB ? -1 : (int)di;
+}
+
+/* UTF-8 → A_UTF16Char encoder (Issue #327): the wire args carry UTF-8
+   (JParseString already validated the encoding); AEGP_SetItemComment
+   wants NUL-terminated UTF-16. `dstUnits` bounds the OUTPUT buffer in
+   code units; returns units written (excluding NUL) or -1 on malformed
+   UTF-8 / insufficient space. Surrogate pairs are emitted for
+   codepoints > U+FFFF. */
+static int IntakeUtf8ToUtf16(
+    const char* srcP,
+    size_t srcLen,
+    A_UTF16Char* dstP,
+    size_t dstUnits)
+{
+    size_t si = 0, di = 0;
+    while (si < srcLen)
+    {
+        unsigned char c = (unsigned char)srcP[si];
+        unsigned int cp;
+        size_t need;
+        if (c < 0x80) { cp = c; need = 1; }
+        else if ((c & 0xE0) == 0xC0)
+        {
+            if (si + 1 >= srcLen ||
+                ((unsigned char)srcP[si + 1] & 0xC0) != 0x80) return -1;
+            cp = ((unsigned int)(c & 0x1F) << 6) |
+                 ((unsigned int)(unsigned char)srcP[si + 1] & 0x3F);
+            if (cp < 0x80) return -1; /* overlong */
+            need = 2;
+        }
+        else if ((c & 0xF0) == 0xE0)
+        {
+            if (si + 2 >= srcLen ||
+                ((unsigned char)srcP[si + 1] & 0xC0) != 0x80 ||
+                ((unsigned char)srcP[si + 2] & 0xC0) != 0x80) return -1;
+            cp = ((unsigned int)(c & 0x0F) << 12) |
+                 (((unsigned int)(unsigned char)srcP[si + 1] & 0x3F) << 6) |
+                 ((unsigned int)(unsigned char)srcP[si + 2] & 0x3F);
+            if (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF)) return -1;
+            need = 3;
+        }
+        else if ((c & 0xF8) == 0xF0)
+        {
+            if (si + 3 >= srcLen ||
+                ((unsigned char)srcP[si + 1] & 0xC0) != 0x80 ||
+                ((unsigned char)srcP[si + 2] & 0xC0) != 0x80 ||
+                ((unsigned char)srcP[si + 3] & 0xC0) != 0x80) return -1;
+            cp = ((unsigned int)(c & 0x07) << 18) |
+                 (((unsigned int)(unsigned char)srcP[si + 1] & 0x3F) << 12) |
+                 (((unsigned int)(unsigned char)srcP[si + 2] & 0x3F) << 6) |
+                 ((unsigned int)(unsigned char)srcP[si + 3] & 0x3F);
+            if (cp < 0x10000 || cp > 0x10FFFF) return -1;
+            need = 4;
+        }
+        else return -1;
+        si += need;
+        if (cp < 0x10000)
+        {
+            if (di + 1 >= dstUnits) return -1;
+            dstP[di++] = (A_UTF16Char)cp;
+        }
+        else
+        {
+            unsigned int v = cp - 0x10000;
+            if (di + 2 >= dstUnits) return -1;
+            dstP[di++] = (A_UTF16Char)(0xD800 + (v >> 10));
+            dstP[di++] = (A_UTF16Char)(0xDC00 + (v & 0x3FF));
+        }
+    }
+    if (di + 1 > dstUnits) return -1;
+    dstP[di] = 0;
+    return (int)di;
 }
 
 typedef enum
@@ -2802,6 +2904,89 @@ static void ExecItemGetter(
         v->mayHaveMutated = 0; /* read-only getter */
         v->publish = 1;
     }
+}
+
+/* ---- Issue #327: first mutating op -------------------------------
+   AEGP_ItemSuite9.AEGP_SetItemComment (UNDOABLE). Consent was already
+   verified in ProcessClaimed before dispatch; this executor resolves
+   the aeRef item host-side exactly like the read-only getters, then
+   performs the single mutating AEGP call. mayHaveMutated semantics
+   (contract §7g / trusted-execution §8): false until the AEGP call is
+   actually attempted — once invoked, ANY outcome (success or error)
+   sets mayHaveMutated=1 because the host may have applied the change
+   before reporting failure. Pre-execution refusals (stale identity,
+   missing suite entry, arg/codec failure) keep mayHaveMutated=0. */
+static void ExecSetItemComment(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    JVal* itemArg = JGet(args, "item");
+    JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
+    JVal* commentV = JGet(args, "comment");
+    long projIndex = ArgsInt(allow, args, 0);
+    ItemResolution res;
+    A_Err oerr = A_Err_STRUCT;
+
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projIndex, ref, 0, " (resolve)", &res, v))
+        return; /* v already carries the verdict */
+
+    if (!res.itemP->AEGP_SetItemComment)
+    {
+        ReleaseResolution(utilP, basicP, &res);
+        VerdictSet(v, "not-sent", "item suite entry unavailable");
+        return;
+    }
+
+    {
+        /* comment is bounded UTF-8 (ARGK_STR, ≤ ITEM_COMMENT_MAX
+           bytes); AEGP wants NUL-terminated UTF-16. Worst case the
+           UTF-16 unit count equals the byte count (all-ASCII), plus
+           the NUL — allocate slen+1 units. */
+        size_t u16cap = (commentV ? commentV->slen : 0) + 1;
+        A_UTF16Char* u16 = (A_UTF16Char*)malloc(u16cap * sizeof(A_UTF16Char));
+        int units = -1;
+        if (u16 && commentV && commentV->kind == JK_STR)
+            units = IntakeUtf8ToUtf16(commentV->str, commentV->slen,
+                                      u16, u16cap);
+        if (!u16 || units < 0)
+        {
+            free(u16);
+            ReleaseResolution(utilP, basicP, &res);
+            VerdictSet(v, "failed", "comment is not valid UTF-8");
+            return;
+        }
+        oerr = res.itemP->AEGP_SetItemComment(res.itemH, u16);
+        RecordAllowOp(utilP, allow, oerr);
+        free(u16);
+    }
+
+    ReleaseResolution(utilP, basicP, &res);
+
+    if (oerr == A_Err_NONE)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        snprintf(v->payload, sizeof(v->payload), "{\"commentSet\":true}");
+        v->payload[sizeof(v->payload) - 1] = '\0';
+        v->havePayload = 1;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "%s err=%ld", allow->operationId, (long)oerr);
+        v->havePayload = 0;
+        v->publish = 1;
+    }
+    /* Reaching here means the AEGP entry was invoked (every earlier
+       path returned): the mutation may have been applied even when
+       the call reported an error. */
+    v->mayHaveMutated = 1;
 }
 
 /* ---- AEGP_LayerSuite9 (Issue #318 / #64 layer slice) -----------------
@@ -4966,6 +5151,16 @@ static void ProcessClaimed(
         {
             ExecCompGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
         }
+        /* ---- Issue #327: first mutating op ------------------------
+           requiresConsent=1 — the §7g MAC was verified above, before
+           any AEGP call. The executor owns mayHaveMutated=1 once the
+           mutation entry is invoked. */
+        else if (strcmp(allow->operationId,
+                        "AEGP_ItemSuite9.AEGP_SetItemComment") == 0)
+        {
+            ExecSetItemComment(utilP, projP, basicP, plugin_id,
+                               allow, args, &v);
+        }
         /* ---- Issue #318 / #63: ItemSuite9 read-only detail getters --
            {projectIndex, item:<aeRefItem>} → shared resolver → typed
            getter on the resolved item handle. */
@@ -5125,10 +5320,10 @@ static void ProcessClaimed(
                 extra[0] = '\0';
                 if (isRQState)
                 {
-                    const AEGP_RenderQueueSuite1* rqP = (const AEGP_RenderQueueSuite1*)suite;
+                    const AEGP_RenderQueueSuite1* rqQueueP = (const AEGP_RenderQueueSuite1*)suite;
                     AEGP_RenderQueueState state = 0;
-                    if (rqP->AEGP_GetRenderQueueState)
-                        oerr = rqP->AEGP_GetRenderQueueState(&state);
+                    if (rqQueueP->AEGP_GetRenderQueueState)
+                        oerr = rqQueueP->AEGP_GetRenderQueueState(&state);
                     else
                         oerr = A_Err_STRUCT;
                     if (oerr == A_Err_NONE)

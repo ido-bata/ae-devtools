@@ -246,14 +246,29 @@ channel already has instead of inventing parallel machinery.
   `idempotent:false`; a failed undo is `FAILED`, never folded into the
   original outcome (§4).
 
-### 8.4 What must change before the first mutating op
+### 8.4 Status — first mutating op landed (Issue #327)
 
-1. Catalog/manifest rows for the specific members (access, idempotent,
-   reconcilable flags) — per-op review, not a blanket write class.
-2. `native-channel.md` §4/§8: `mayHaveMutated` semantics for mutating
-   ops + consent-scope fields (`authorizationRef` shape check).
-3. Fake-host mutation fixtures proving: consent-scope mismatch refuses
-   before any AEGP call; `UNKNOWN` path never resends; reconciliation
-   read-back distinguishes landed/not-landed.
-4. Real-host evidence per #223 before any `verified` claim — fake
-   coverage here is `fake/mock only`.
+`AEGP_ItemSuite9.AEGP_SetItemComment` is the first `requiresConsent`
+allowlist entry (native-channel.md §7h):
+
+1. **Catalog/manifest**: `implemented-unverified` via the operations
+   registry; per-op `idempotent`/`reconcilable` flags are fixed in
+   §7h (`idempotent:true`, `reconcilable:true` — effect observable
+   through `GetItemComment`).
+2. **`mayHaveMutated`**: `true` on every attempted mutating call
+   (completed or failed), `false` on all pre-execution outcomes —
+   native-channel.md §4 step 12 / §7h.
+3. **Consent scope**: implemented as the §7g HMAC proof
+   (`native_consent.cpp` + `packages/native-adapter/src/consent.ts`,
+   pinned shared vectors) — stronger than the `authorizationRef`
+   shape check originally sketched here; `authorizationRef` remains
+   the opaque ae-a8n grant reference.
+4. **Fake-host evidence**: `TestIntakeSetItemComment` covers
+   no-consent → `CONSENT_REQUIRED`, missing channel key →
+   `CONSENT_REQUIRED`, wrong MAC → `CONSENT_INVALID`, scope tamper →
+   `CONSENT_INVALID`, stale identity → `STALE_REFERENCE` (no mutation
+   call recorded), AEGP failure → `failed`+`mayHaveMutated:true`,
+   missing suite entry → `not-sent`, and read-back reconciliation via
+   `GetItemComment`. All `fake/mock only`.
+5. Real-host evidence per #223 before any `verified` claim — still
+   open.
