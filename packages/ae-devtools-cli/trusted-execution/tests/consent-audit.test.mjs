@@ -24,7 +24,7 @@ function makeHostTransport(app) {
       const env = codec.parse(text);
       const ctx = vm.createContext(fakeHostContext(app));
       try {
-        const result = vm.runInContext("(function(){\n" + env.source + "\n})()", ctx);
+        const result = vm.runInContext(env.source /* trustedEval contract: evaluated once as a program; function-body sources arrive IIFE-wrapped from the dispatch boundary */, ctx);
         return Promise.resolve(codec.stringify({ ok: true, result, requestId: env.requestId }));
       } catch (err) {
         return Promise.resolve(codec.stringify({
@@ -72,10 +72,14 @@ test("approved decision is durably recorded and correlates with dispatch", async
   assert.match(rec.dispatchKey, /^[0-9a-f]{64}$/);
   // dispatchKey must equal the identity the dispatch-store would use
   // for the same dispatch (correlation across the two audit surfaces).
+  // The consent-bound source is the IIFE-wrapped program the host
+  // actually executes — toProgramSource is the single owner of that
+  // conversion (execute.mjs dispatch boundary).
   const { buildSource } = await import("../../scripting-adapters/registry.mjs");
+  const { toProgramSource } = await import("../../scripting-adapters/execute.mjs");
   const realKey = dispatchIdentity({
     pin: PIN, operationId: "read.projectSummary",
-    args: evalConsentArgs(buildSource("read.projectSummary", {}), {}),
+    args: evalConsentArgs(toProgramSource(buildSource("read.projectSummary", {})), {}),
     projectIdentity: PROJECT,
   });
   assert.equal(rec.dispatchKey, realKey);

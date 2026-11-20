@@ -53,7 +53,7 @@ export function createFakeHostTransport({ app, codec, intercept = null }) {
       }
       const ctx = vm.createContext(fakeHostContext(app));
       try {
-        const result = vm.runInContext("(function(){\n" + env.source + "\n})()", ctx);
+        const result = vm.runInContext(env.source /* trustedEval contract: evaluated once as a program; function-body sources arrive IIFE-wrapped from the dispatch boundary */, ctx);
         return Promise.resolve(codec.stringify({ ok: true, result, requestId: env.requestId }));
       } catch (e) {
         return Promise.resolve(codec.stringify({

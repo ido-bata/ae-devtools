@@ -196,12 +196,22 @@ export async function main() {
     // ---- 1. project identity BEFORE any mutation ----
     const id1 = await evalDispatch("identity.before", IDENTITY_SOURCE);
     const before = parseIdentity(id1.result);
+    // The disposable gate below is only as safe as this read: when the
+    // identity probe did not COMPLETE, before.* fields are null and the
+    // gate cannot prove the restored project is untouched — proceeding
+    // to project.new could destroy user state. Fail closed instead.
+    const identityReadOk = id1.outcome === "COMPLETED" && before.file !== null;
     step("identity.before", {
-      ok: id1.outcome === "COMPLETED" && before.file !== null,
+      ok: identityReadOk,
       outcome: id1.outcome,
       project: before,
     });
     evidence.projectBefore = before;
+    if (!identityReadOk) {
+      throw new Error(
+        `project identity read did not complete (outcome=${id1.outcome}); refusing to proceed toward mutation`,
+      );
+    }
 
     // ---- 2. disposable project gate ----
     // app.newProject() prompts to save when the current project was

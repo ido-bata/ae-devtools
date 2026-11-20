@@ -26,7 +26,7 @@ function makeHostTransport(app) {
       const ctx = vm.createContext(fakeHostContext(app));
       let result;
       try {
-        result = vm.runInContext("(function(){\n" + env.source + "\n})()", ctx, { filename: "adapter.jsx" });
+        result = vm.runInContext(env.source /* trustedEval contract: evaluated once as a program; function-body sources arrive IIFE-wrapped from the dispatch boundary */, ctx, { filename: "adapter.jsx" });
         return Promise.resolve(codec.stringify({ ok: true, result, requestId: env.requestId }));
       } catch (err) {
         return Promise.resolve(codec.stringify({
