@@ -420,7 +420,11 @@ export async function openAttachedSliceSession(options = {}) {
     let project = null;
     try {
       if (typeof ae.project === "function") {
-        const info = await ae.project().info();
+        // ae.project() is async and resolves to a Project handle;
+        // .info() is a second call on that handle — awaiting the
+        // outer promise alone reads nothing.
+        const handle = await ae.project();
+        const info = await handle.info();
         project = {
           file: typeof info?.file === "string" ? info.file : null,
           name: typeof info?.name === "string" ? info.name : null,
