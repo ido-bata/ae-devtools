@@ -2164,10 +2164,11 @@ static void EnumerateProjItems(
     const AEGP_ProjSuite6* projP,
     struct SPBasicSuite* basicP,
     AEGP_PluginID plugin_id,
-    const char* opRecordIdZ,
+    const AllowEntry* allow,
     JVal* args,
     ReqVerdict* v)
 {
+    (void)plugin_id;
     long projectIndex = (long)JGet(args, "projectIndex")->num;
     long offset = (long)JGet(args, "offset")->num;
     long limit = (long)JGet(args, "limit")->num;
@@ -2387,7 +2388,7 @@ static void EnumerateProjItems(
     {
         char eb[48];
         snprintf(eb, sizeof(eb), " value=%ld", total);
-        IntakeOpRecord(utilP, opRecordIdZ, A_Err_NONE, eb);
+        IntakeOpRecord(utilP, allow->opRecordId, A_Err_NONE, eb);
     }
     snprintf(v->outcome, sizeof(v->outcome), "completed");
     v->havePayload = 1;
@@ -3866,10 +3867,12 @@ static void ExecProjectGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
     struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
     ReqVerdict* v)
 {
+    (void)plugin_id;
     JVal* projArg = JGet(args, "project");
     JVal* ref = projArg ? JGet(projArg, "aeRef") : NULL;
     AEGP_ProjectH projectH = NULL;
@@ -4524,6 +4527,513 @@ static void EnumerateRQItems(
     v->mayHaveMutated = 0;
 }
 
+/* ---- Issue #328: scalar/zero-arg executors -------------------------
+   ProcessClaimed's dispatch chain is pure routing; every op body lives
+   in an executor below. Read-only executors keep mayHaveMutated=0;
+   the mutation executor (ExecSetItemComment) sets it only once the
+   AEGP call is attempted. */
+
+typedef void (*IntakeExecFn)(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v);
+
+static void ExecNumProjects(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)basicP; (void)plugin_id; (void)args;
+    A_long num = 0;
+    A_Err oerr = projP->AEGP_GetNumProjects
+        ? projP->AEGP_GetNumProjects(&num)
+        : A_Err_STRUCT;
+    char extra[48];
+    if (oerr == A_Err_NONE)
+        snprintf(extra, sizeof(extra), " value=%ld", (long)num);
+    else
+        extra[0] = '\0';
+    extra[sizeof(extra) - 1] = '\0';
+    IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                   oerr == A_Err_NONE ? extra : NULL);
+    if (oerr == A_Err_NONE)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        PayloadSet(v, "{\"numProjects\":%ld}", (long)num);
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail), "AEGP_GetNumProjects err=%ld", (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0; /* read-only getter: provably non-mutating */
+    }
+}
+
+static void ExecDriverImplVersion(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)projP; (void)basicP; (void)plugin_id; (void)args;
+    A_short maj = 0, min = 0;
+    A_Err oerr = utilP->AEGP_GetDriverImplementationVersion
+        ? utilP->AEGP_GetDriverImplementationVersion(&maj, &min)
+        : A_Err_STRUCT;
+    char extra[48];
+    if (oerr == A_Err_NONE)
+        snprintf(extra, sizeof(extra), " v=%d.%d", (int)maj, (int)min);
+    else
+        extra[0] = '\0';
+    extra[sizeof(extra) - 1] = '\0';
+    IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                   oerr == A_Err_NONE ? extra : NULL);
+    if (oerr == A_Err_NONE)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        PayloadSet(v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_GetDriverImplementationVersion err=%ld", (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0;
+    }
+}
+
+/* AEGP_ItemSuite9.AEGP_GetTypeName — {"itemType": int}. The suite is
+   acquired and released inside this request's evidence window; a
+   missing suite/entry is environment-proven non-dispatch (not-sent),
+   an AEGP error is failed with mayHaveMutated=false (read-only). */
+static void ExecGetTypeName(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)projP; (void)plugin_id;
+    AEGP_ItemType itype = (AEGP_ItemType)ArgsInt(allow, args, 0);
+    const void* suite = IntakeAcquireSuite(
+        utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
+    if (!suite)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP Item Suite unavailable for GetTypeName");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+    {
+        const AEGP_ItemSuite9* itemP = (const AEGP_ItemSuite9*)suite;
+        A_Err oerr = A_Err_STRUCT;
+        char extra[48];
+        A_char nameZ[AEGP_MAX_TYPE_NAME_SIZE + 1];
+        if (!itemP->AEGP_GetTypeName)
+        {
+            IntakeReleaseSuite(utilP, basicP,
+                               kAEGPItemSuite, kAEGPItemSuiteVersion9);
+            snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetTypeName entry unavailable");
+            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            return;
+        }
+        memset(nameZ, 0, sizeof(nameZ));
+        oerr = itemP->AEGP_GetTypeName(itype, nameZ);
+        snprintf(extra, sizeof(extra), " t=%d", (int)itype);
+        extra[sizeof(extra) - 1] = '\0';
+        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                       oerr == A_Err_NONE ? extra : NULL);
+        IntakeReleaseSuite(utilP, basicP,
+                           kAEGPItemSuite, kAEGPItemSuiteVersion9);
+        if (oerr == A_Err_NONE)
+        {
+            char esc[AEGP_MAX_TYPE_NAME_SIZE * 2 + 8];
+            JsonEscape(esc, sizeof(esc), nameZ);
+            snprintf(v->outcome, sizeof(v->outcome), "completed");
+            PayloadSet(v, "{\"typeName\":\"%s\"}", esc);
+            v->mayHaveMutated = 0;
+        }
+        else
+        {
+            snprintf(v->outcome, sizeof(v->outcome), "failed");
+            snprintf(v->detail, sizeof(v->detail),
+                     "AEGP_GetTypeName err=%ld", (long)oerr);
+            v->havePayload = 0;
+            v->mayHaveMutated = 0; /* read-only getter */
+        }
+    }
+}
+
+/* AEGP_ItemSuite9.AEGP_GetItemName / AEGP_GetItemID — shared aeRef
+   resolve (contract §7b). GetItemName resolves only what the
+   descriptor asserts; GetItemID additionally fetches project identity
+   for the issued descriptor payload (wantProjectIdentity=1). */
+static void ExecItemNameOrId(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    int isNameOp = strcmp(allow->operationId,
+                          "AEGP_ItemSuite9.AEGP_GetItemName") == 0;
+    JVal* itemArg = JGet(args, "item");
+    JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
+    long projIndex = ArgsInt(allow, args, 0);
+    ItemResolution res;
+
+    if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
+                          projIndex, ref, isNameOp ? 0 : 1,
+                          isNameOp ? " (resolve+result)" : " (resolve)",
+                          &res, v))
+        return;             /* v already carries the verdict */
+
+    if (isNameOp)
+    {
+        char esc[AEREF_NAME_MAX * 6 + 8];
+        JsonEscape(esc, sizeof(esc), res.name);
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        PayloadSet(v, "{\"name\":\"%s\"}", esc);
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        /* GetItemID = descriptor issuance: read the live id of the
+           resolved item, then emit the canonical identity-bearing
+           aeRef (project identity included). Emit BEFORE
+           ReleaseResolution — release zeroes res. */
+        A_long liveId = 0;
+        A_Err iderr = res.itemP->AEGP_GetItemID
+            ? res.itemP->AEGP_GetItemID(res.itemH, &liveId)
+            : A_Err_STRUCT;
+        IntakeOpRecord(utilP,
+            "AEGP_ItemSuite9.AEGP_GetItemID", (long)iderr,
+            iderr == A_Err_NONE ? " (result)" : NULL);
+        {
+            int emitOk = iderr == A_Err_NONE &&
+                EmitIssuedDescriptor(v, &res,
+                    (long)(unsigned int)liveId);
+            ReleaseResolution(utilP, basicP, &res);
+            if (iderr != A_Err_NONE)
+            {
+                snprintf(v->outcome, sizeof(v->outcome), "failed");
+                snprintf(v->detail, sizeof(v->detail),
+                         "AEGP_GetItemID err=%ld", (long)iderr);
+                v->havePayload = 0; v->mayHaveMutated = 0;
+            }
+            else if (!emitOk)
+            {
+                snprintf(v->outcome, sizeof(v->outcome), "failed");
+                snprintf(v->detail, sizeof(v->detail),
+                         "descriptor payload exceeds result bound");
+                v->havePayload = 0; v->mayHaveMutated = 0;
+            }
+            else
+            {
+                snprintf(v->outcome, sizeof(v->outcome), "completed");
+                v->havePayload = 1;
+                v->mayHaveMutated = 0;
+            }
+        }
+    }
+    if (isNameOp) ReleaseResolution(utilP, basicP, &res);
+}
+
+static void ExecDriverPluginInitVersion(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)projP; (void)basicP; (void)plugin_id; (void)args;
+    A_short maj = 0, min = 0;
+    A_Err oerr = utilP->AEGP_GetDriverPluginInitFuncVersion
+        ? utilP->AEGP_GetDriverPluginInitFuncVersion(&maj, &min)
+        : A_Err_STRUCT;
+    char extra[48];
+    if (oerr == A_Err_NONE)
+        snprintf(extra, sizeof(extra), " v=%d.%d", (int)maj, (int)min);
+    else
+        extra[0] = '\0';
+    extra[sizeof(extra) - 1] = '\0';
+    IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                   oerr == A_Err_NONE ? extra : NULL);
+    if (oerr == A_Err_NONE)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        PayloadSet(v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_GetDriverPluginInitFuncVersion err=%ld", (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0;
+    }
+}
+
+static void ExecSuppressUI(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)projP; (void)basicP; (void)plugin_id; (void)args;
+    A_Boolean suppressed = FALSE;
+    A_Err oerr = utilP->AEGP_GetSuppressInteractiveUI
+        ? utilP->AEGP_GetSuppressInteractiveUI(&suppressed)
+        : A_Err_STRUCT;
+    IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                   oerr == A_Err_NONE ? (suppressed ? " value=1" : " value=0") : NULL);
+    if (oerr == A_Err_NONE)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        PayloadSet(v, "{\"interactiveUiSuppressed\":%s}", suppressed ? "true" : "false");
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_GetSuppressInteractiveUI err=%ld", (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0;
+    }
+}
+
+static void ExecHostActivated(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)projP; (void)basicP; (void)plugin_id; (void)args;
+    A_Boolean activated = FALSE;
+    A_Err oerr = utilP->AEGP_HostIsActivated
+        ? utilP->AEGP_HostIsActivated(&activated)
+        : A_Err_STRUCT;
+    IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
+                   oerr == A_Err_NONE ? (activated ? " value=1" : " value=0") : NULL);
+    if (oerr == A_Err_NONE)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        PayloadSet(v, "{\"hostActivated\":%s}", activated ? "true" : "false");
+        v->mayHaveMutated = 0;
+    }
+    else
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        snprintf(v->detail, sizeof(v->detail),
+                 "AEGP_HostIsActivated err=%ld", (long)oerr);
+        v->havePayload = 0;
+        v->mayHaveMutated = 0;
+    }
+}
+
+/* Zero-arg render-queue getters: AEGP_RenderQueueSuite1.
+   AEGP_GetRenderQueueState and AEGP_RQItemSuite4.AEGP_GetNumRQItems
+   share the acquire-suite-inside-request pattern. */
+static void ExecRQZeroArg(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ProjSuite6* projP,
+    struct SPBasicSuite* basicP,
+    AEGP_PluginID plugin_id,
+    const AllowEntry* allow,
+    JVal* args,
+    ReqVerdict* v)
+{
+    (void)projP; (void)plugin_id; (void)args;
+    int isRQState = strcmp(allow->operationId,
+                           "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState") == 0;
+    const char* suiteName = isRQState ? kAEGPRenderQueueSuite : kAEGPRQItemSuite;
+    int suiteVer = isRQState ? kAEGPRenderQueueSuiteVersion1
+                             : kAEGPRQItemSuiteVersion4;
+    const void* suite = IntakeAcquireSuite(utilP, basicP, suiteName, suiteVer);
+    if (!suite)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "not-sent");
+        snprintf(v->detail, sizeof(v->detail), "render queue suite unavailable");
+        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        return;
+    }
+    {
+        A_Err oerr = A_Err_STRUCT;
+        char extra[48];
+        extra[0] = '\0';
+        if (isRQState)
+        {
+            const AEGP_RenderQueueSuite1* rqQueueP = (const AEGP_RenderQueueSuite1*)suite;
+            AEGP_RenderQueueState state = 0;
+            if (rqQueueP->AEGP_GetRenderQueueState)
+                oerr = rqQueueP->AEGP_GetRenderQueueState(&state);
+            else
+                oerr = A_Err_STRUCT;
+            if (oerr == A_Err_NONE)
+            {
+                snprintf(extra, sizeof(extra), " value=%lu",
+                         (unsigned long)state);
+                IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
+                snprintf(v->outcome, sizeof(v->outcome), "completed");
+                PayloadSet(v, "{\"state\":%lu}", (unsigned long)state);
+                v->mayHaveMutated = 0;
+            }
+            else
+            {
+                RecordAllowOp(utilP, allow, oerr);
+                snprintf(v->outcome, sizeof(v->outcome), "failed");
+                snprintf(v->detail, sizeof(v->detail),
+                         "AEGP_GetRenderQueueState err=%ld", (long)oerr);
+                v->havePayload = 0;
+                v->mayHaveMutated = 0;
+            }
+        }
+        else
+        {
+            const AEGP_RQItemSuite4* rqItemP = (const AEGP_RQItemSuite4*)suite;
+            A_long num = 0;
+            if (rqItemP->AEGP_GetNumRQItems)
+                oerr = rqItemP->AEGP_GetNumRQItems(&num);
+            else
+                oerr = A_Err_STRUCT;
+            if (oerr == A_Err_NONE)
+            {
+                snprintf(extra, sizeof(extra), " value=%ld", (long)num);
+                IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
+                snprintf(v->outcome, sizeof(v->outcome), "completed");
+                PayloadSet(v, "{\"numRQItems\":%ld}", (long)num);
+                v->mayHaveMutated = 0;
+            }
+            else
+            {
+                RecordAllowOp(utilP, allow, oerr);
+                snprintf(v->outcome, sizeof(v->outcome), "failed");
+                snprintf(v->detail, sizeof(v->detail),
+                         "AEGP_GetNumRQItems err=%ld", (long)oerr);
+                v->havePayload = 0;
+                v->mayHaveMutated = 0;
+            }
+        }
+        IntakeReleaseSuite(utilP, basicP, suiteName, suiteVer);
+    }
+}
+
+/* ---- Issue #328: dispatch routing table -----------------------------
+   The allowlist dispatch is data, not code: each row maps an
+   operationId (exact, prefix, or prefix-minus-exclusion) or a set
+   predicate to its executor. Order is significant — the first match
+   wins, preserving the historical if/else precedence exactly. Adding
+   an op = allowlist entry + arg spec + executor + one row here. */
+typedef enum {
+    RM_EXACT,        /* a == operationId */
+    RM_PREFIX,       /* operationId starts with a */
+    RM_PREFIX_EXCL,  /* starts with a AND != excl */
+    RM_CUSTOM        /* custom(operationId) predicate */
+} RouteMatchKind;
+
+typedef struct {
+    RouteMatchKind kind;
+    const char* a;
+    const char* excl;
+    int (*custom)(const char*);
+    IntakeExecFn exec;
+} RouteEntry;
+
+static const RouteEntry kRoutes[] = {
+    { RM_EXACT, "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, NULL,
+      ExecNumProjects },
+    { RM_EXACT,
+      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
+      NULL, NULL, ExecDriverImplVersion },
+    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetTypeName", NULL, NULL,
+      ExecGetTypeName },
+    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetItemName", NULL, NULL,
+      ExecItemNameOrId },
+    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetItemID", NULL, NULL,
+      ExecItemNameOrId },
+    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetFirstProjItem", NULL, NULL,
+      EnumerateProjItems },
+    { RM_PREFIX, "AEGP_CompSuite13.", NULL, NULL, ExecCompGetter },
+    { RM_EXACT, "AEGP_ItemSuite9.AEGP_SetItemComment", NULL, NULL,
+      ExecSetItemComment },
+    { RM_CUSTOM, NULL, NULL, IsItemGetterOpId, ExecItemGetter },
+    { RM_CUSTOM, NULL, NULL, IsLayerCompOpId, ExecLayerCompOp },
+    { RM_CUSTOM, NULL, NULL, IsLayerGetterOpId, ExecLayerGetter },
+    { RM_PREFIX_EXCL, "AEGP_ProjSuite6.",
+      "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, ExecProjectGetter },
+    { RM_EXACT, "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", NULL, NULL,
+      EnumerateRQItems },
+    { RM_PREFIX_EXCL, "AEGP_RQItemSuite4.",
+      "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, ExecRQItemGetter },
+    { RM_EXACT,
+      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
+      NULL, NULL, ExecDriverPluginInitVersion },
+    { RM_EXACT, "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
+      NULL, NULL, ExecSuppressUI },
+    { RM_EXACT, "AEGP_UtilitySuite6.AEGP_HostIsActivated",
+      NULL, NULL, ExecHostActivated },
+    { RM_EXACT,
+      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
+      NULL, NULL, ExecRQZeroArg },
+    { RM_EXACT, "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, NULL,
+      ExecRQZeroArg },
+};
+
+static int RouteMatches(const RouteEntry* r, const char* opId)
+{
+    switch (r->kind)
+    {
+        case RM_EXACT:
+            return strcmp(opId, r->a) == 0;
+        case RM_PREFIX:
+            return strncmp(opId, r->a, strlen(r->a)) == 0;
+        case RM_PREFIX_EXCL:
+            return strncmp(opId, r->a, strlen(r->a)) == 0 &&
+                   strcmp(opId, r->excl) != 0;
+        case RM_CUSTOM:
+        {
+            /* local copy keeps the call site free of an arrow-call —
+               the registry-reconcile scanner maps suite receivers by
+               name and must not see an unmapped indirect call. */
+            int (*fn)(const char*) = r->custom;
+            return fn(opId);
+        }
+    }
+    return 0;
+}
+
 static void ProcessClaimed(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -4768,450 +5278,27 @@ static void ProcessClaimed(
             }
         }
 
-        /* ---- execute the allowlisted op ---- */
-        if (strcmp(allow->operationId,
-                   "AEGP_ProjSuite6.AEGP_GetNumProjects") == 0)
+        /* ---- execute the allowlisted op: routing table (Issue #328)
+           First matching row wins; rows preserve the historical
+           if/else precedence. No match → OPERATION_NOT_DISPATCHABLE. */
         {
-            A_long num = 0;
-            A_Err oerr = projP->AEGP_GetNumProjects
-                ? projP->AEGP_GetNumProjects(&num)
-                : A_Err_STRUCT;
-            char extra[48];
-            if (oerr == A_Err_NONE)
-                snprintf(extra, sizeof(extra), " value=%ld", (long)num);
-            else
-                extra[0] = '\0';
-            extra[sizeof(extra) - 1] = '\0';
-            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
-                           oerr == A_Err_NONE ? extra : NULL);
-            if (oerr == A_Err_NONE)
+            size_t ri;
+            int routed = 0;
+            for (ri = 0; ri < sizeof(kRoutes) / sizeof(kRoutes[0]); ri++)
             {
-                snprintf(v.outcome, sizeof(v.outcome), "completed");
-                PayloadSet(&v, "{\"numProjects\":%ld}", (long)num);
-                v.mayHaveMutated = 0;
-            }
-            else
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "failed");
-                snprintf(v.detail, sizeof(v.detail), "AEGP_GetNumProjects err=%ld", (long)oerr);
-                v.havePayload = 0;
-                v.mayHaveMutated = 0; /* read-only getter: provably non-mutating */
-            }
-        }
-        else if (strcmp(allow->operationId,
-                        "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion") == 0)
-        {
-            A_short maj = 0, min = 0;
-            A_Err oerr = utilP->AEGP_GetDriverImplementationVersion
-                ? utilP->AEGP_GetDriverImplementationVersion(&maj, &min)
-                : A_Err_STRUCT;
-            char extra[48];
-            if (oerr == A_Err_NONE)
-                snprintf(extra, sizeof(extra), " v=%d.%d", (int)maj, (int)min);
-            else
-                extra[0] = '\0';
-            extra[sizeof(extra) - 1] = '\0';
-            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
-                           oerr == A_Err_NONE ? extra : NULL);
-            if (oerr == A_Err_NONE)
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "completed");
-                PayloadSet(&v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
-                v.mayHaveMutated = 0;
-            }
-            else
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "failed");
-                snprintf(v.detail, sizeof(v.detail),
-                         "AEGP_GetDriverImplementationVersion err=%ld", (long)oerr);
-                v.havePayload = 0;
-                v.mayHaveMutated = 0;
-            }
-        }
-        else if (strcmp(allow->operationId,
-                        "AEGP_ItemSuite9.AEGP_GetTypeName") == 0)
-        {
-            /* args validated above: {"itemType": <int in [1,4]>}.
-               The suite is acquired and released inside this request's
-               evidence window; a missing suite/entry is environment-
-               proven non-dispatch (not-sent), an AEGP error is failed
-               with mayHaveMutated=false (read-only getter). */
-            AEGP_ItemType itype = (AEGP_ItemType)ArgsInt(allow, args, 0);
-            const void* suite = IntakeAcquireSuite(
-                utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9);
-            if (!suite)
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "not-sent");
-                snprintf(v.detail, sizeof(v.detail),
-                         "AEGP Item Suite unavailable for GetTypeName");
-                v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                goto verdict;
-            }
-            {
-                const AEGP_ItemSuite9* itemP = (const AEGP_ItemSuite9*)suite;
-                A_Err oerr = A_Err_STRUCT;
-                char extra[48];
-                A_char nameZ[AEGP_MAX_TYPE_NAME_SIZE + 1];
-                if (!itemP->AEGP_GetTypeName)
+                if (RouteMatches(&kRoutes[ri], allow->operationId))
                 {
-                    IntakeReleaseSuite(utilP, basicP,
-                                       kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                    snprintf(v.outcome, sizeof(v.outcome), "not-sent");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "AEGP_GetTypeName entry unavailable");
-                    v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                    goto verdict;
-                }
-                memset(nameZ, 0, sizeof(nameZ));
-                oerr = itemP->AEGP_GetTypeName(itype, nameZ);
-                snprintf(extra, sizeof(extra), " t=%d", (int)itype);
-                extra[sizeof(extra) - 1] = '\0';
-                IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
-                               oerr == A_Err_NONE ? extra : NULL);
-                IntakeReleaseSuite(utilP, basicP,
-                                   kAEGPItemSuite, kAEGPItemSuiteVersion9);
-                if (oerr == A_Err_NONE)
-                {
-                    char esc[AEGP_MAX_TYPE_NAME_SIZE * 2 + 8];
-                    JsonEscape(esc, sizeof(esc), nameZ);
-                    snprintf(v.outcome, sizeof(v.outcome), "completed");
-                    PayloadSet(&v, "{\"typeName\":\"%s\"}", esc);
-                    v.mayHaveMutated = 0;
-                }
-                else
-                {
-                    snprintf(v.outcome, sizeof(v.outcome), "failed");
-                    snprintf(v.detail, sizeof(v.detail),
-                             "AEGP_GetTypeName err=%ld", (long)oerr);
-                    v.havePayload = 0;
-                    v.mayHaveMutated = 0; /* read-only getter */
+                    kRoutes[ri].exec(utilP, projP, basicP, plugin_id,
+                                     allow, args, &v);
+                    routed = 1;
+                    break;
                 }
             }
-        }
-        /* ---- Issue #270 identity slice: shared aeRef resolve ------
-           AEGP_ItemSuite9.AEGP_GetItemName / AEGP_GetItemID /
-           AEGP_GetFirstProjItem. The item handle is NEVER taken from
-           the wire: args carry {"projectIndex": int, "item": {"aeRef":
-           {...}}} and ResolveAeRefItem resolves it inside the
-           host-dispatched context (contract native-channel.md §7b):
-             projectIndex → GetNumProjects/GetProjectByIndex → projectH
-               (+ optional projectName/projectPath corroboration)
-             itemId present → scan top-level items for the live id
-             else          → legacy path[0] positional walk
-           then verifies type + exact UTF-8 name in BOTH modes. Any
-           resolution failure is refused STALE_REFERENCE — a
-           well-formed descriptor that no longer matches live state is
-           state drift, not a caller-shape bug (trusted-execution.md
-           §3/§4). AEGP errors are failed with mayHaveMutated=false
-           (read-only). Missing suites/entries are not-sent. */
-        else if (strcmp(allow->operationId,
-                        "AEGP_ItemSuite9.AEGP_GetItemName") == 0 ||
-                 strcmp(allow->operationId,
-                        "AEGP_ItemSuite9.AEGP_GetItemID") == 0)
-        {
-            int isNameOp = strcmp(allow->operationId,
-                                  "AEGP_ItemSuite9.AEGP_GetItemName") == 0;
-            JVal* itemArg = JGet(args, "item");
-            JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
-            long projIndex = ArgsInt(allow, args, 0);
-            ItemResolution res;
-
-            /* GetItemName resolves only what the descriptor asserts;
-               GetItemID additionally fetches project identity for the
-               issued descriptor payload (wantProjectIdentity=1). */
-            if (!ResolveAeRefItem(utilP, projP, basicP, plugin_id,
-                                  projIndex, ref, isNameOp ? 0 : 1,
-                                  isNameOp ? " (resolve+result)" : " (resolve)",
-                                  &res, &v))
-                goto verdict;   /* v already carries the verdict */
-
-            if (isNameOp)
+            if (!routed)
             {
-                char esc[AEREF_NAME_MAX * 6 + 8];
-                JsonEscape(esc, sizeof(esc), res.name);
-                snprintf(v.outcome, sizeof(v.outcome), "completed");
-                PayloadSet(&v, "{\"name\":\"%s\"}", esc);
-                v.mayHaveMutated = 0;
+                VerdictRefuse(&v, "OPERATION_NOT_DISPATCHABLE",
+                              "allowlist entry has no executor");
             }
-            else
-            {
-                /* GetItemID = descriptor issuance: read the live id of
-                   the resolved item, then emit the canonical
-                   identity-bearing aeRef (project identity included).
-                   Emit BEFORE ReleaseResolution — release zeroes res. */
-                A_long liveId = 0;
-                A_Err iderr = res.itemP->AEGP_GetItemID
-                    ? res.itemP->AEGP_GetItemID(res.itemH, &liveId)
-                    : A_Err_STRUCT;
-                IntakeOpRecord(utilP,
-                    "AEGP_ItemSuite9.AEGP_GetItemID", (long)iderr,
-                    iderr == A_Err_NONE ? " (result)" : NULL);
-                {
-                    int emitOk = iderr == A_Err_NONE &&
-                        EmitIssuedDescriptor(&v, &res,
-                            (long)(unsigned int)liveId);
-                    ReleaseResolution(utilP, basicP, &res);
-                    if (iderr != A_Err_NONE)
-                    {
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "AEGP_GetItemID err=%ld", (long)iderr);
-                        v.havePayload = 0; v.mayHaveMutated = 0;
-                    }
-                    else if (!emitOk)
-                    {
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "descriptor payload exceeds result bound");
-                        v.havePayload = 0; v.mayHaveMutated = 0;
-                    }
-                    else
-                    {
-                        snprintf(v.outcome, sizeof(v.outcome), "completed");
-                        v.havePayload = 1;
-                        v.mayHaveMutated = 0;
-                    }
-                }
-            }
-            if (isNameOp) ReleaseResolution(utilP, basicP, &res);
-        }
-        /* ---- Issue #270 identity slice: discovery/enumeration ------
-           AEGP_ItemSuite9.AEGP_GetFirstProjItem as a paged enumerator:
-           {projectIndex, offset, limit} → ready-to-use aeRef
-           descriptors. Read-only; every member call op-recorded. */
-        else if (strcmp(allow->operationId,
-                        "AEGP_ItemSuite9.AEGP_GetFirstProjItem") == 0)
-        {
-            EnumerateProjItems(utilP, projP, basicP, plugin_id,
-                               allow->opRecordId, args, &v);
-        }
-        /* ---- Issue #318 / #64: CompSuite13 read-only getters --------
-           {projectIndex, comp:<aeRefItem>} → shared resolver →
-           AEGP_GetCompFromItem → typed getter → typed JSON. The comp
-           handle exists only inside the request window. */
-        else if (strncmp(allow->operationId, "AEGP_CompSuite13.", 17) == 0)
-        {
-            ExecCompGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
-        }
-        /* ---- Issue #327: first mutating op ------------------------
-           requiresConsent=1 — the §7g MAC was verified above, before
-           any AEGP call. The executor owns mayHaveMutated=1 once the
-           mutation entry is invoked. */
-        else if (strcmp(allow->operationId,
-                        "AEGP_ItemSuite9.AEGP_SetItemComment") == 0)
-        {
-            ExecSetItemComment(utilP, projP, basicP, plugin_id,
-                               allow, args, &v);
-        }
-        /* ---- Issue #318 / #63: ItemSuite9 read-only detail getters --
-           {projectIndex, item:<aeRefItem>} → shared resolver → typed
-           getter on the resolved item handle. */
-        else if (IsItemGetterOpId(allow->operationId))
-        {
-            ExecItemGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
-        }
-        /* ---- Issue #318 / #64: AEGP_LayerSuite9 ---------------------
-           Comp-scoped ops take {projectIndex, comp:<aeRefItem>}
-           (+layerIndex for issuance); layer getters take
-           {projectIndex, layer:<aeRefLayer>} — the descriptor embeds
-           its parent comp's aeRef. Handles never cross the wire. */
-        else if (IsLayerCompOpId(allow->operationId))
-        {
-            ExecLayerCompOp(utilP, projP, basicP, plugin_id, allow, args, &v);
-        }
-        else if (IsLayerGetterOpId(allow->operationId))
-        {
-            ExecLayerGetter(utilP, projP, basicP, plugin_id, allow, args, &v);
-        }
-        /* ---- Issue #318 §7e: project-scoped getters -----------------
-           {project:<aeRefProject>} → index+name+path corroboration +
-           collision scan → borrowed projectH → typed getter. */
-        else if (strncmp(allow->operationId, "AEGP_ProjSuite6.", 16) == 0 &&
-                 strcmp(allow->operationId,
-                        "AEGP_ProjSuite6.AEGP_GetNumProjects") != 0)
-        {
-            ExecProjectGetter(utilP, projP, basicP, allow, args, &v);
-        }
-        /* ---- Issue #318 §7f: RQ-item identity ----------------------
-           GetRQItemByIndex is enumeration/issuance ({offset,limit});
-           the remaining RQItemSuite4 members resolve the aeRefRQItem
-           descriptor atomically (index + bound-comp itemId +
-           fingerprint) inside this dispatch. */
-        else if (strcmp(allow->operationId,
-                        "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex") == 0)
-        {
-            EnumerateRQItems(utilP, projP, basicP, plugin_id,
-                             allow, args, &v);
-        }
-        else if (strncmp(allow->operationId, "AEGP_RQItemSuite4.", 18) == 0 &&
-                 strcmp(allow->operationId,
-                        "AEGP_RQItemSuite4.AEGP_GetNumRQItems") != 0)
-        {
-            ExecRQItemGetter(utilP, projP, basicP, plugin_id,
-                             allow, args, &v);
-        }
-        /* ---- Issue #270 Stage 2: zero-arg read-only getters ---------- */
-        else if (strcmp(allow->operationId,
-                        "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion") == 0)
-        {
-            A_short maj = 0, min = 0;
-            A_Err oerr = utilP->AEGP_GetDriverPluginInitFuncVersion
-                ? utilP->AEGP_GetDriverPluginInitFuncVersion(&maj, &min)
-                : A_Err_STRUCT;
-            char extra[48];
-            if (oerr == A_Err_NONE)
-                snprintf(extra, sizeof(extra), " v=%d.%d", (int)maj, (int)min);
-            else
-                extra[0] = '\0';
-            extra[sizeof(extra) - 1] = '\0';
-            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
-                           oerr == A_Err_NONE ? extra : NULL);
-            if (oerr == A_Err_NONE)
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "completed");
-                PayloadSet(&v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
-                v.mayHaveMutated = 0;
-            }
-            else
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "failed");
-                snprintf(v.detail, sizeof(v.detail),
-                         "AEGP_GetDriverPluginInitFuncVersion err=%ld", (long)oerr);
-                v.havePayload = 0;
-                v.mayHaveMutated = 0;
-            }
-        }
-        else if (strcmp(allow->operationId,
-                        "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI") == 0)
-        {
-            A_Boolean suppressed = FALSE;
-            A_Err oerr = utilP->AEGP_GetSuppressInteractiveUI
-                ? utilP->AEGP_GetSuppressInteractiveUI(&suppressed)
-                : A_Err_STRUCT;
-            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
-                           oerr == A_Err_NONE ? (suppressed ? " value=1" : " value=0") : NULL);
-            if (oerr == A_Err_NONE)
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "completed");
-                PayloadSet(&v, "{\"interactiveUiSuppressed\":%s}", suppressed ? "true" : "false");
-                v.mayHaveMutated = 0;
-            }
-            else
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "failed");
-                snprintf(v.detail, sizeof(v.detail),
-                         "AEGP_GetSuppressInteractiveUI err=%ld", (long)oerr);
-                v.havePayload = 0;
-                v.mayHaveMutated = 0;
-            }
-        }
-        else if (strcmp(allow->operationId,
-                        "AEGP_UtilitySuite6.AEGP_HostIsActivated") == 0)
-        {
-            A_Boolean activated = FALSE;
-            A_Err oerr = utilP->AEGP_HostIsActivated
-                ? utilP->AEGP_HostIsActivated(&activated)
-                : A_Err_STRUCT;
-            IntakeOpRecord(utilP, allow->opRecordId, (long)oerr,
-                           oerr == A_Err_NONE ? (activated ? " value=1" : " value=0") : NULL);
-            if (oerr == A_Err_NONE)
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "completed");
-                PayloadSet(&v, "{\"hostActivated\":%s}", activated ? "true" : "false");
-                v.mayHaveMutated = 0;
-            }
-            else
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "failed");
-                snprintf(v.detail, sizeof(v.detail),
-                         "AEGP_HostIsActivated err=%ld", (long)oerr);
-                v.havePayload = 0;
-                v.mayHaveMutated = 0;
-            }
-        }
-        else if (strcmp(allow->operationId,
-                        "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState") == 0 ||
-                 strcmp(allow->operationId,
-                        "AEGP_RQItemSuite4.AEGP_GetNumRQItems") == 0)
-        {
-            /* zero-arg render-queue getters: acquire the needed suite
-               inside the request window (same pattern as GetTypeName) */
-            int isRQState = strcmp(allow->operationId,
-                                   "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState") == 0;
-            const char* suiteName = isRQState ? kAEGPRenderQueueSuite : kAEGPRQItemSuite;
-            int suiteVer = isRQState ? kAEGPRenderQueueSuiteVersion1
-                                     : kAEGPRQItemSuiteVersion4;
-            const void* suite = IntakeAcquireSuite(utilP, basicP, suiteName, suiteVer);
-            if (!suite)
-            {
-                snprintf(v.outcome, sizeof(v.outcome), "not-sent");
-                snprintf(v.detail, sizeof(v.detail), "render queue suite unavailable");
-                v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
-                goto verdict;
-            }
-            {
-                A_Err oerr = A_Err_STRUCT;
-                char extra[48];
-                extra[0] = '\0';
-                if (isRQState)
-                {
-                    const AEGP_RenderQueueSuite1* rqQueueP = (const AEGP_RenderQueueSuite1*)suite;
-                    AEGP_RenderQueueState state = 0;
-                    if (rqQueueP->AEGP_GetRenderQueueState)
-                        oerr = rqQueueP->AEGP_GetRenderQueueState(&state);
-                    else
-                        oerr = A_Err_STRUCT;
-                    if (oerr == A_Err_NONE)
-                    {
-                        snprintf(extra, sizeof(extra), " value=%lu",
-                                 (unsigned long)state);
-                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
-                        snprintf(v.outcome, sizeof(v.outcome), "completed");
-                        PayloadSet(&v, "{\"state\":%lu}", (unsigned long)state);
-                        v.mayHaveMutated = 0;
-                    }
-                    else
-                    {
-                        RecordAllowOp(utilP, allow, oerr);
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "AEGP_GetRenderQueueState err=%ld", (long)oerr);
-                        v.havePayload = 0;
-                        v.mayHaveMutated = 0;
-                    }
-                }
-                else
-                {
-                    const AEGP_RQItemSuite4* rqItemP = (const AEGP_RQItemSuite4*)suite;
-                    A_long num = 0;
-                    if (rqItemP->AEGP_GetNumRQItems)
-                        oerr = rqItemP->AEGP_GetNumRQItems(&num);
-                    else
-                        oerr = A_Err_STRUCT;
-                    if (oerr == A_Err_NONE)
-                    {
-                        snprintf(extra, sizeof(extra), " value=%ld", (long)num);
-                        IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
-                        snprintf(v.outcome, sizeof(v.outcome), "completed");
-                        PayloadSet(&v, "{\"numRQItems\":%ld}", (long)num);
-                        v.mayHaveMutated = 0;
-                    }
-                    else
-                    {
-                        RecordAllowOp(utilP, allow, oerr);
-                        snprintf(v.outcome, sizeof(v.outcome), "failed");
-                        snprintf(v.detail, sizeof(v.detail),
-                                 "AEGP_GetNumRQItems err=%ld", (long)oerr);
-                        v.havePayload = 0;
-                        v.mayHaveMutated = 0;
-                    }
-                }
-                IntakeReleaseSuite(utilP, basicP, suiteName, suiteVer);
-            }
-        }
-        else
-        {
-            VerdictRefuse(&v, "OPERATION_NOT_DISPATCHABLE", "allowlist entry has no executor");
         }
     verdict:
         ;
