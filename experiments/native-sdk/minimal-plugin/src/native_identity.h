@@ -148,7 +148,8 @@ void EnumerateProjItems(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void EnumerateRQItems(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -156,6 +157,7 @@ void EnumerateRQItems(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 
 #endif /* AE_PROBE_NATIVE_IDENTITY_H */

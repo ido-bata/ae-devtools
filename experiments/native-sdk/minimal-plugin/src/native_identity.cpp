@@ -210,13 +210,13 @@ int ResolveAeRefItem(
         ReleaseResolution(utilP, basicP, r); \
         snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
         snprintf(v->detail, sizeof(v->detail), "%s", msg); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define RESOLVE_FAILED(fmt, err) do { \
         ReleaseResolution(utilP, basicP, r); \
         snprintf(v->outcome, sizeof(v->outcome), "failed"); \
         snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define RESOLVE_STALE(why) do { \
         ReleaseResolution(utilP, basicP, r); \
@@ -469,8 +469,10 @@ void EnumerateProjItems(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)plugin_id;
     long projectIndex = (long)JGet(args, "projectIndex")->num;
     long offset = (long)JGet(args, "offset")->num;
@@ -556,14 +558,14 @@ void EnumerateProjItems(
         IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
         snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
         snprintf(v->detail, sizeof(v->detail), "%s", msg); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return; } while (0)
 #define ENUM_FAILED(fmt, err) do { \
         IntakeReleaseSuite(utilP, basicP, kAEGPItemSuite, kAEGPItemSuiteVersion9); \
         IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
         snprintf(v->outcome, sizeof(v->outcome), "failed"); \
         snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return; } while (0)
 
     if (!itemP->AEGP_GetFirstProjItem || !itemP->AEGP_GetNextProjItem ||
@@ -695,7 +697,6 @@ void EnumerateProjItems(
     }
     snprintf(v->outcome, sizeof(v->outcome), "completed");
     v->havePayload = 1;
-    v->mayHaveMutated = 0;
     v->publish = 1;
 
 #undef ENUM_NOT_SENT
@@ -813,13 +814,13 @@ int ResolveLayerRef(
         ReleaseLayerResolution(utilP, basicP, lr); \
         snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
         snprintf(v->detail, sizeof(v->detail), "%s", msg); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define LRES_FAILED(fmt, err) do { \
         ReleaseLayerResolution(utilP, basicP, lr); \
         snprintf(v->outcome, sizeof(v->outcome), "failed"); \
         snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define LRES_STALE(why) do { \
         ReleaseLayerResolution(utilP, basicP, lr); \
@@ -964,13 +965,13 @@ int ResolveProjectRef(
         IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
         snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
         snprintf(v->detail, sizeof(v->detail), "%s", msg); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define PROJRES_FAILED(fmt, err) do { \
         IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
         snprintf(v->outcome, sizeof(v->outcome), "failed"); \
         snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define PROJRES_STALE(why) do { \
         IntakeReleaseSuite(utilP, basicP, kAEGPMemorySuite, kAEGPMemorySuiteVersion1); \
@@ -1138,13 +1139,13 @@ int ResolveRQItemRef(
         ReleaseRQResolution(utilP, basicP, r); \
         snprintf(v->outcome, sizeof(v->outcome), "not-sent"); \
         snprintf(v->detail, sizeof(v->detail), "%s", msg); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define RQRES_FAILED(fmt, err) do { \
         ReleaseRQResolution(utilP, basicP, r); \
         snprintf(v->outcome, sizeof(v->outcome), "failed"); \
         snprintf(v->detail, sizeof(v->detail), fmt, (long)(err)); \
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1; \
+        v->havePayload = 0; v->publish = 1; \
         return 0; } while (0)
 #define RQRES_STALE(why) do { \
         ReleaseRQResolution(utilP, basicP, r); \
@@ -1291,8 +1292,10 @@ void EnumerateRQItems(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     long offset = ArgsInt(allow, args, 0);
     long limit = ArgsInt(allow, args, 1);
     const void* rqSuite = IntakeAcquireSuite(utilP, basicP,
@@ -1451,7 +1454,6 @@ void EnumerateRQItems(
     *b.cur = '\0';
     snprintf(v->outcome, sizeof(v->outcome), "completed");
     v->havePayload = 1;
-    v->mayHaveMutated = 0;
 }
 
 #else /* _WIN32 */

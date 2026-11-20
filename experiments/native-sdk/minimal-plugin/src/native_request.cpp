@@ -79,15 +79,13 @@ void VerdictRefuse(ReqVerdict* r, const char* codeZ, const char* detailZ)
     snprintf(r->refusal, sizeof(r->refusal), "%s", codeZ);
     snprintf(r->detail, sizeof(r->detail), "%s", detailZ ? detailZ : "");
     r->havePayload = 0;
-    r->mayHaveMutated = 0;
     r->publish = 1;
 }
 
-/* Terminal verdict for a dispatched read-only request: outcome +
-   bounded detail, and the fixed flag triple (no payload, never
-   mutated, always publish). Every intake op is read-only, so the
-   flags live here once instead of being re-typed at ~30 sites where
-   a typo could silently flip mayHaveMutated. */
+/* Terminal verdict helper: outcome + bounded detail, and the fixed
+   flag pair (no payload, always publish). mayHaveMutated is NOT a
+   verdict field — it lives in ProcessClaimed's frame and reaches the
+   wire only via EmitResult, so no executor can set it (Issue #328). */
 void VerdictSet(ReqVerdict* v, const char* outcomeZ,
                        const char* detailFmt, ...)
 {
@@ -98,7 +96,6 @@ void VerdictSet(ReqVerdict* v, const char* outcomeZ,
     va_end(ap);
     v->detail[sizeof(v->detail) - 1] = '\0';
     v->havePayload = 0;
-    v->mayHaveMutated = 0;
     v->publish = 1;
 }
 
@@ -128,7 +125,6 @@ void GetterTailReadOnly(
     if (oerr == A_Err_NONE && v->havePayload)
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
         v->publish = 1;
     }
     else if (detailOverride)

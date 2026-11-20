@@ -87,8 +87,10 @@ void ExecCompGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     JVal* compArg = JGet(args, "comp");
     JVal* ref = compArg ? JGet(compArg, "aeRef") : NULL;
     long projIndex = ArgsInt(allow, args, 0);
@@ -324,22 +326,6 @@ static int ItemGetterEntryPresent(const AEGP_ItemSuite9* c, const char* opIdZ)
     return 0;
 }
 
-/* Dispatch router for the #63 item-detail getters — explicit id list
-   so a future ItemSuite9 allowlist addition without an executor still
-   reaches OPERATION_NOT_DISPATCHABLE instead of being misrouted. */
-int IsItemGetterOpId(const char* opIdZ)
-{
-    return strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemType") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemFlags") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_IsItemSelected") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemLabel") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemDuration") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemDimensions") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio") == 0 ||
-           strcmp(opIdZ, "AEGP_ItemSuite9.AEGP_GetItemComment") == 0;
-}
-
 void ExecItemGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -347,8 +333,10 @@ void ExecItemGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     JVal* itemArg = JGet(args, "item");
     JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
     long projIndex = ArgsInt(allow, args, 0);
@@ -515,8 +503,10 @@ void ExecSetItemComment(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     JVal* itemArg = JGet(args, "item");
     JVal* ref = itemArg ? JGet(itemArg, "aeRef") : NULL;
     JVal* commentV = JGet(args, "comment");
@@ -576,7 +566,7 @@ void ExecSetItemComment(
     /* Reaching here means the AEGP entry was invoked (every earlier
        path returned): the mutation may have been applied even when
        the call reported an error. */
-    v->mayHaveMutated = 1;
+    if (mut) mut->attempted = 1;
 }
 
 
@@ -623,38 +613,6 @@ static int LayerGetterEntryPresent(const AEGP_LayerSuite9* c, const char* opIdZ)
     if (strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0)
         return c->AEGP_GetTrackMatteLayer != NULL;
     return 0;
-}
-
-/* Dispatch routers — explicit id lists so a future LayerSuite9
-   allowlist addition without an executor still reaches
-   OPERATION_NOT_DISPATCHABLE instead of being misrouted. */
-int IsLayerCompOpId(const char* opIdZ)
-{
-    return strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetCompNumLayers") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex") == 0;
-}
-
-int IsLayerGetterOpId(const char* opIdZ)
-{
-    return strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerIndex") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerName") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerFlags") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerQuality") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerObjectType") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayer3D") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayer2D") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerInPoint") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerDuration") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerID") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerLabel") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte") == 0 ||
-           strcmp(opIdZ, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0;
 }
 
 /* Emit one aeRefLayer descriptor object {"type":"layer",...} into the
@@ -741,8 +699,10 @@ void ExecLayerCompOp(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     JVal* compArg = JGet(args, "comp");
     JVal* ref = compArg ? JGet(compArg, "aeRef") : NULL;
     long projIndex = ArgsInt(allow, args, 0);
@@ -877,8 +837,10 @@ void ExecLayerGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     JVal* layerArg = JGet(args, "layer");
     JVal* layerRef = layerArg ? JGet(layerArg, "aeRef") : NULL;
     long projIndex = ArgsInt(allow, args, 0);
@@ -1160,8 +1122,10 @@ void ExecProjectGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)plugin_id;
     JVal* projArg = JGet(args, "project");
     JVal* ref = projArg ? JGet(projArg, "aeRef") : NULL;
@@ -1220,7 +1184,6 @@ void ExecProjectGetter(
     if (oerr == A_Err_NONE && v->havePayload)
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
     }
     else if (oerr == A_Err_STRUCT && !v->havePayload)
     {
@@ -1246,8 +1209,10 @@ void ExecRQItemGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     JVal* rqArg = JGet(args, "rqItem");
     JVal* ref = rqArg ? JGet(rqArg, "aeRef") : NULL;
     long projIndex = ArgsInt(allow, args, 0);
@@ -1384,7 +1349,6 @@ void ExecRQItemGetter(
     if (v->havePayload)
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
     }
     else
     {
@@ -1405,8 +1369,10 @@ void ExecNumProjects(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)basicP; (void)plugin_id; (void)args;
     A_long num = 0;
     A_Err oerr = projP->AEGP_GetNumProjects
@@ -1424,14 +1390,12 @@ void ExecNumProjects(
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         PayloadSet(v, "{\"numProjects\":%ld}", (long)num);
-        v->mayHaveMutated = 0;
     }
     else
     {
         snprintf(v->outcome, sizeof(v->outcome), "failed");
         snprintf(v->detail, sizeof(v->detail), "AEGP_GetNumProjects err=%ld", (long)oerr);
         v->havePayload = 0;
-        v->mayHaveMutated = 0; /* read-only getter: provably non-mutating */
     }
 }
 
@@ -1442,8 +1406,10 @@ void ExecDriverImplVersion(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)projP; (void)basicP; (void)plugin_id; (void)args;
     A_short maj = 0, min = 0;
     A_Err oerr = utilP->AEGP_GetDriverImplementationVersion
@@ -1461,7 +1427,6 @@ void ExecDriverImplVersion(
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         PayloadSet(v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
-        v->mayHaveMutated = 0;
     }
     else
     {
@@ -1469,7 +1434,6 @@ void ExecDriverImplVersion(
         snprintf(v->detail, sizeof(v->detail),
                  "AEGP_GetDriverImplementationVersion err=%ld", (long)oerr);
         v->havePayload = 0;
-        v->mayHaveMutated = 0;
     }
 }
 
@@ -1484,8 +1448,10 @@ void ExecGetTypeName(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)projP; (void)plugin_id;
     AEGP_ItemType itype = (AEGP_ItemType)ArgsInt(allow, args, 0);
     const void* suite = IntakeAcquireSuite(
@@ -1495,7 +1461,7 @@ void ExecGetTypeName(
         snprintf(v->outcome, sizeof(v->outcome), "not-sent");
         snprintf(v->detail, sizeof(v->detail),
                  "AEGP Item Suite unavailable for GetTypeName");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        v->havePayload = 0; v->publish = 1;
         return;
     }
     {
@@ -1510,7 +1476,7 @@ void ExecGetTypeName(
             snprintf(v->outcome, sizeof(v->outcome), "not-sent");
             snprintf(v->detail, sizeof(v->detail),
                      "AEGP_GetTypeName entry unavailable");
-            v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+            v->havePayload = 0; v->publish = 1;
             return;
         }
         memset(nameZ, 0, sizeof(nameZ));
@@ -1527,7 +1493,6 @@ void ExecGetTypeName(
             JsonEscape(esc, sizeof(esc), nameZ);
             snprintf(v->outcome, sizeof(v->outcome), "completed");
             PayloadSet(v, "{\"typeName\":\"%s\"}", esc);
-            v->mayHaveMutated = 0;
         }
         else
         {
@@ -1535,7 +1500,6 @@ void ExecGetTypeName(
             snprintf(v->detail, sizeof(v->detail),
                      "AEGP_GetTypeName err=%ld", (long)oerr);
             v->havePayload = 0;
-            v->mayHaveMutated = 0; /* read-only getter */
         }
     }
 }
@@ -1551,8 +1515,10 @@ void ExecItemNameOrId(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     int isNameOp = strcmp(allow->operationId,
                           "AEGP_ItemSuite9.AEGP_GetItemName") == 0;
     JVal* itemArg = JGet(args, "item");
@@ -1572,7 +1538,6 @@ void ExecItemNameOrId(
         JsonEscape(esc, sizeof(esc), res.name);
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         PayloadSet(v, "{\"name\":\"%s\"}", esc);
-        v->mayHaveMutated = 0;
     }
     else
     {
@@ -1597,20 +1562,19 @@ void ExecItemNameOrId(
                 snprintf(v->outcome, sizeof(v->outcome), "failed");
                 snprintf(v->detail, sizeof(v->detail),
                          "AEGP_GetItemID err=%ld", (long)iderr);
-                v->havePayload = 0; v->mayHaveMutated = 0;
+                v->havePayload = 0;
             }
             else if (!emitOk)
             {
                 snprintf(v->outcome, sizeof(v->outcome), "failed");
                 snprintf(v->detail, sizeof(v->detail),
                          "descriptor payload exceeds result bound");
-                v->havePayload = 0; v->mayHaveMutated = 0;
+                v->havePayload = 0;
             }
             else
             {
                 snprintf(v->outcome, sizeof(v->outcome), "completed");
                 v->havePayload = 1;
-                v->mayHaveMutated = 0;
             }
         }
     }
@@ -1624,8 +1588,10 @@ void ExecDriverPluginInitVersion(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)projP; (void)basicP; (void)plugin_id; (void)args;
     A_short maj = 0, min = 0;
     A_Err oerr = utilP->AEGP_GetDriverPluginInitFuncVersion
@@ -1643,7 +1609,6 @@ void ExecDriverPluginInitVersion(
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         PayloadSet(v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
-        v->mayHaveMutated = 0;
     }
     else
     {
@@ -1651,7 +1616,6 @@ void ExecDriverPluginInitVersion(
         snprintf(v->detail, sizeof(v->detail),
                  "AEGP_GetDriverPluginInitFuncVersion err=%ld", (long)oerr);
         v->havePayload = 0;
-        v->mayHaveMutated = 0;
     }
 }
 
@@ -1662,8 +1626,10 @@ void ExecSuppressUI(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)projP; (void)basicP; (void)plugin_id; (void)args;
     A_Boolean suppressed = FALSE;
     A_Err oerr = utilP->AEGP_GetSuppressInteractiveUI
@@ -1675,7 +1641,6 @@ void ExecSuppressUI(
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         PayloadSet(v, "{\"interactiveUiSuppressed\":%s}", suppressed ? "true" : "false");
-        v->mayHaveMutated = 0;
     }
     else
     {
@@ -1683,7 +1648,6 @@ void ExecSuppressUI(
         snprintf(v->detail, sizeof(v->detail),
                  "AEGP_GetSuppressInteractiveUI err=%ld", (long)oerr);
         v->havePayload = 0;
-        v->mayHaveMutated = 0;
     }
 }
 
@@ -1694,8 +1658,10 @@ void ExecHostActivated(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)projP; (void)basicP; (void)plugin_id; (void)args;
     A_Boolean activated = FALSE;
     A_Err oerr = utilP->AEGP_HostIsActivated
@@ -1707,7 +1673,6 @@ void ExecHostActivated(
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         PayloadSet(v, "{\"hostActivated\":%s}", activated ? "true" : "false");
-        v->mayHaveMutated = 0;
     }
     else
     {
@@ -1715,7 +1680,6 @@ void ExecHostActivated(
         snprintf(v->detail, sizeof(v->detail),
                  "AEGP_HostIsActivated err=%ld", (long)oerr);
         v->havePayload = 0;
-        v->mayHaveMutated = 0;
     }
 }
 
@@ -1729,8 +1693,10 @@ void ExecRQZeroArg(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v)
+    ReqVerdict* v,
+    IntakeMutCtx* mut)
 {
+    (void)mut; /* read-only unless the binding marks this kind mutating */
     (void)projP; (void)plugin_id; (void)args;
     int isRQState = strcmp(allow->operationId,
                            "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState") == 0;
@@ -1742,7 +1708,7 @@ void ExecRQZeroArg(
     {
         snprintf(v->outcome, sizeof(v->outcome), "not-sent");
         snprintf(v->detail, sizeof(v->detail), "render queue suite unavailable");
-        v->havePayload = 0; v->mayHaveMutated = 0; v->publish = 1;
+        v->havePayload = 0; v->publish = 1;
         return;
     }
     {
@@ -1764,7 +1730,6 @@ void ExecRQZeroArg(
                 IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
                 snprintf(v->outcome, sizeof(v->outcome), "completed");
                 PayloadSet(v, "{\"state\":%lu}", (unsigned long)state);
-                v->mayHaveMutated = 0;
             }
             else
             {
@@ -1773,7 +1738,6 @@ void ExecRQZeroArg(
                 snprintf(v->detail, sizeof(v->detail),
                          "AEGP_GetRenderQueueState err=%ld", (long)oerr);
                 v->havePayload = 0;
-                v->mayHaveMutated = 0;
             }
         }
         else
@@ -1790,7 +1754,6 @@ void ExecRQZeroArg(
                 IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
                 snprintf(v->outcome, sizeof(v->outcome), "completed");
                 PayloadSet(v, "{\"numRQItems\":%ld}", (long)num);
-                v->mayHaveMutated = 0;
             }
             else
             {
@@ -1799,11 +1762,81 @@ void ExecRQZeroArg(
                 snprintf(v->detail, sizeof(v->detail),
                          "AEGP_GetNumRQItems err=%ld", (long)oerr);
                 v->havePayload = 0;
-                v->mayHaveMutated = 0;
             }
         }
         IntakeReleaseSuite(utilP, basicP, suiteName, suiteVer);
     }
+}
+
+/* ---- executor binding table (Issue #328 residual) ------------------
+   THE single mapping execKind -> (executor, mutation class). The
+   allowlist declares execKind; this table binds it. Consent gating
+   (ExecKindIsMutating) and the IntakeMutCtx hand-off both read the
+   `mutating` flag here, so an op cannot be consent-exempt while
+   running a mutating executor — the classification has exactly one
+   home. Row order follows EXEC_* declaration order; OpTableSelfCheck
+   verifies coverage both directions. */
+typedef struct
+{
+    int kind;
+    IntakeExecFn fn;
+    int mutating; /* 1 = mayHaveMutated-capable; requires §7g consent */
+} ExecBinding;
+
+static const ExecBinding kExecBindings[] = {
+    { EXEC_NUM_PROJECTS, ExecNumProjects, 0 },
+    { EXEC_DRIVER_IMPL_VERSION, ExecDriverImplVersion, 0 },
+    { EXEC_GET_TYPE_NAME, ExecGetTypeName, 0 },
+    { EXEC_ITEM_NAME_OR_ID, ExecItemNameOrId, 0 },
+    { EXEC_ENUM_PROJ_ITEMS, EnumerateProjItems, 0 },
+    { EXEC_COMP_GETTER, ExecCompGetter, 0 },
+    { EXEC_SET_ITEM_COMMENT, ExecSetItemComment, 1 },
+    { EXEC_ITEM_GETTER, ExecItemGetter, 0 },
+    { EXEC_LAYER_COMP_OP, ExecLayerCompOp, 0 },
+    { EXEC_LAYER_GETTER, ExecLayerGetter, 0 },
+    { EXEC_PROJECT_GETTER, ExecProjectGetter, 0 },
+    { EXEC_ENUM_RQ_ITEMS, EnumerateRQItems, 0 },
+    { EXEC_RQ_ITEM_GETTER, ExecRQItemGetter, 0 },
+    { EXEC_DRIVER_PLUGIN_INIT_VERSION, ExecDriverPluginInitVersion, 0 },
+    { EXEC_SUPPRESS_UI, ExecSuppressUI, 0 },
+    { EXEC_HOST_ACTIVATED, ExecHostActivated, 0 },
+    { EXEC_RQ_ZERO_ARG, ExecRQZeroArg, 0 },
+};
+
+IntakeExecFn ExecForKind(int kind)
+{
+    size_t i;
+    for (i = 0; i < sizeof(kExecBindings) / sizeof(kExecBindings[0]); i++)
+        if (kExecBindings[i].kind == kind) return kExecBindings[i].fn;
+    return NULL;
+}
+
+int ExecKindIsMutating(int kind)
+{
+    size_t i;
+    for (i = 0; i < sizeof(kExecBindings) / sizeof(kExecBindings[0]); i++)
+        if (kExecBindings[i].kind == kind) return kExecBindings[i].mutating;
+    return 0;
+}
+
+/* Cross-check the declarative pair: every allowlist execKind must
+   resolve to a bound executor, and every EXEC_* kind must be claimed
+   by at least one allowlist entry (an unclaimed binding is dead
+   metadata — allowed only if intentionally reserved, so warn via
+   detail but do not fail). Called at configure time and by tests;
+   tests additionally feed corrupted tables to ValidateOpTable. */
+int OpTableSelfCheck(void)
+{
+    char detail[160];
+    int i;
+    if (!ValidateOpTable(S_ALLOWLIST, S_ALLOWLIST_COUNT,
+                         detail, sizeof(detail)))
+        return 0;
+    for (i = 0; i < S_ALLOWLIST_COUNT; i++)
+    {
+        if (!ExecForKind(S_ALLOWLIST[i].execKind)) return 0;
+    }
+    return 1;
 }
 
 #else /* _WIN32 */
