@@ -38,7 +38,7 @@ mkdir -p "$PLUGIN/Contents/MacOS" "$PLUGIN/Contents/Resources" "$WORK"
 
 echo "=== compiling $NAME (C++, arm64 host) ==="
 : > "$OUT/$NAME.compile.log"
-for src in probe native_intake native_json; do
+for src in probe native_intake native_json native_consent; do
   clang++ -std=c++17 -O2 -Wall -Wextra -Werror \
     -D__MACH__=1 \
     -I"$HEADERS" -I"$HEADERS/SP" \
@@ -49,7 +49,7 @@ done
 
 echo "=== linking $NAME.bundle ==="
 clang -bundle -arch arm64 \
-  -o "$PLUGIN/Contents/MacOS/$NAME" "$WORK/probe.o" "$WORK/native_intake.o" "$WORK/native_json.o" \
+  -o "$PLUGIN/Contents/MacOS/$NAME" "$WORK/probe.o" "$WORK/native_intake.o" "$WORK/native_json.o" "$WORK/native_consent.o" \
   > "$OUT/$NAME.link.log" 2>&1 \
   || { echo "link FAILED (see $OUT/$NAME.link.log)"; exit 1; }
 

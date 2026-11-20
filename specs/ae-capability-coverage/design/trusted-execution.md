@@ -222,15 +222,23 @@ channel already has instead of inventing parallel machinery.
   `UNKNOWN`, **never resent**, `mayHaveMutated:true` in trace.
   `not-sent` (unclaimed/expired/suite-unavailable) remains the only
   re-issuable outcome, and only as a new request after re-authorization.
-- Reconciliation is read-back, not retry: after `UNKNOWN` the client
-  re-issues the read-only descriptor getters (§7b–§7f) against the same
-  descriptors. If the descriptors still resolve and state reads match
-  the intended post-state, the mutation provably landed; if state is
-  unchanged, it provably did not (for ops whose effect is observable
-  through existing getters). Where an op's effect is **not**
-  observable through any allowlisted getter, the manifest must mark it
-  `idempotent:false` + `reconcilable:false`, and `UNKNOWN` stays
-  quarantined for manual reconciliation — never guessed.
+- Reconciliation is read-back, not retry — and read-back yields
+  **state consistency, never causal proof**. After `UNKNOWN` the
+  client re-issues the read-only descriptor getters (§7b–§7f) against
+  the same descriptors and classifies three distinct verdicts:
+  - `state-inconsistent` — observed state contradicts the intended
+    post-state → the mutation provably did **not** land (for ops whose
+    effect is fully observable through allowlisted getters).
+  - `state-consistent` — observed state matches the intended
+    post-state → consistent with landing, **but not proof this
+    request caused it**: the same state could arise from a concurrent
+    actor, a prior identical mutation, or coincidence. Recorded as
+    evidence, never upgraded to "landed".
+  - `unobservable` — no allowlisted getter exposes the op's effect →
+    outcome stays quarantined for manual reconciliation.
+  Where an op's effect is not observable, the manifest must mark it
+  `idempotent:false` + `reconcilable:false`; `UNKNOWN` is never
+  guessed into either landed or not-landed.
 - Timeout-after-possible-dispatch is always `UNKNOWN` (§4); the
   `STALE_REQUEST` pre-execution refusal stays `not-sent` because claim
   order proves non-dispatch.

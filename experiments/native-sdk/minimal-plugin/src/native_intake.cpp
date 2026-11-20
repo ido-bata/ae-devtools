@@ -31,6 +31,7 @@
 
 #include "native_intake.h"
 
+#include "native_consent.h"
 #include "native_json.h"
 
 #if !defined(_WIN32)
@@ -316,6 +317,7 @@ static int ChannelReady(
     char* outboxOut, size_t outboxCap,
     char* stateOut, size_t stateCap,
     char tokenOut[65],
+    char consentKeyOut[65],
     char pinOut[48], size_t pinCap)
 {
     char path[PATH_MAX_LOCAL];
@@ -370,8 +372,22 @@ static int ChannelReady(
                  tok && tok->kind == JK_STR && TokenOk(tok->str, tok->slen);
         if (ok)
         {
+            JVal* ckey = JGet(doc, "consentKey");
             memcpy(tokenOut, tok->str, 64);
             tokenOut[64] = '\0';
+            /* Issue #326: optional consent MAC key. A present-but-
+               malformed key is treated as absent — consent-requiring
+               ops then refuse CONSENT_REQUIRED (fail closed) while
+               read-only ops are unaffected. */
+            if (ckey && ckey->kind == JK_STR && TokenOk(ckey->str, ckey->slen))
+            {
+                memcpy(consentKeyOut, ckey->str, 64);
+                consentKeyOut[64] = '\0';
+            }
+            else
+            {
+                consentKeyOut[0] = '\0';
+            }
             pin = JGet(doc, "sessionAeVersion");
             if (pin && pin->kind == JK_STR && pin->slen > 0 && pin->slen < pinCap)
             {
@@ -500,6 +516,11 @@ typedef struct
     const char* opRecordId; /* identical string; kept explicit */
     const IntakeArgSpec* argsSpec;
     int nargs;
+    /* Issue #326: 1 = mutating op — the request must carry a valid
+       §7g consent MAC verified after session attestation and before
+       any AEGP call. Read-only entries are 0 and skip consent
+       entirely (a stray consent field is ignored, never an error). */
+    int requiresConsent;
 } AllowEntry;
 
 /* Record the dispatched op's own AEGP call under its allowlist id —
@@ -609,21 +630,21 @@ static const IntakeArgSpec S_RQENUM_ARGS[] = {
 
 static const AllowEntry S_ALLOWLIST[] = {
     { "AEGP_ProjSuite6.AEGP_GetNumProjects",
-      "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, 0 },
+      "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, 0, 0 },
     { "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
-      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion", NULL, 0 },
+      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion", NULL, 0, 0 },
     { "AEGP_ItemSuite9.AEGP_GetTypeName",
-      "AEGP_ItemSuite9.AEGP_GetTypeName", S_TYPENAME_ARGS, 1 },
+      "AEGP_ItemSuite9.AEGP_GetTypeName", S_TYPENAME_ARGS, 1, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemName",
-      "AEGP_ItemSuite9.AEGP_GetItemName", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemName", S_AEREF_ARGS, 2, 0 },
     /* Issue #270 identity slice: GetItemID is descriptor issuance
        (resolve → read live id + project identity → canonical aeRef);
        GetFirstProjItem is discovery/enumeration. Both reuse the same
        identity resolver — no per-kind resolver duplication. */
     { "AEGP_ItemSuite9.AEGP_GetItemID",
-      "AEGP_ItemSuite9.AEGP_GetItemID", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemID", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
-      "AEGP_ItemSuite9.AEGP_GetFirstProjItem", S_FIRSTITEM_ARGS, 3 },
+      "AEGP_ItemSuite9.AEGP_GetFirstProjItem", S_FIRSTITEM_ARGS, 3, 0 },
     /* Issue #318 / #64: CompSuite13 read-only getters. All share the
        {projectIndex, comp:<aeRefItem type=comp>} contract; the comp
        handle is derived host-side via AEGP_GetCompFromItem — never
@@ -631,31 +652,31 @@ static const AllowEntry S_ALLOWLIST[] = {
        takes an A_Time input argument (arg-bearing ops are a separate
        slice). */
     { "AEGP_CompSuite13.AEGP_GetCompFramerate",
-      "AEGP_CompSuite13.AEGP_GetCompFramerate", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompFramerate", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompFrameDuration",
-      "AEGP_CompSuite13.AEGP_GetCompFrameDuration", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompFrameDuration", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart",
-      "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",
-      "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",
-      "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
-      "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor",
-      "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",
-      "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetShowBlendModes",
-      "AEGP_CompSuite13.AEGP_GetShowBlendModes", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetShowBlendModes", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",
-      "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
-      "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompBGColor",
-      "AEGP_CompSuite13.AEGP_GetCompBGColor", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompBGColor", S_COMP_ARGS, 2, 0 },
     { "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
-      "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase", S_COMP_ARGS, 2 },
+      "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase", S_COMP_ARGS, 2, 0 },
     /* Issue #318 / #63: ItemSuite9 read-only detail getters that take
        AEGP_ItemH — same {projectIndex, item:<aeRefItem>} contract as
        GetItemName; the resolved handle is used directly (no derived
@@ -663,23 +684,23 @@ static const AllowEntry S_ALLOWLIST[] = {
        return host handles of other identity kinds (folder item /
        item-view) that need their own descriptor story first. */
     { "AEGP_ItemSuite9.AEGP_GetItemType",
-      "AEGP_ItemSuite9.AEGP_GetItemType", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemType", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemFlags",
-      "AEGP_ItemSuite9.AEGP_GetItemFlags", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemFlags", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_IsItemSelected",
-      "AEGP_ItemSuite9.AEGP_IsItemSelected", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_IsItemSelected", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemLabel",
-      "AEGP_ItemSuite9.AEGP_GetItemLabel", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemLabel", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemDuration",
-      "AEGP_ItemSuite9.AEGP_GetItemDuration", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemDuration", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemCurrentTime",
-      "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemDimensions",
-      "AEGP_ItemSuite9.AEGP_GetItemDimensions", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemDimensions", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
-      "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", S_AEREF_ARGS, 2, 0 },
     { "AEGP_ItemSuite9.AEGP_GetItemComment",
-      "AEGP_ItemSuite9.AEGP_GetItemComment", S_AEREF_ARGS, 2 },
+      "AEGP_ItemSuite9.AEGP_GetItemComment", S_AEREF_ARGS, 2, 0 },
     /* Issue #318 / #64 layer slice: AEGP_LayerSuite9. The layer handle
        is never taken from the wire — `layer` is an aeRefLayer descriptor
        embedding its parent comp's aeRef item descriptor; resolution is
@@ -693,72 +714,72 @@ static const AllowEntry S_ALLOWLIST[] = {
        handled by emitting an aeRefLayer instead), all mutating members,
        and members needing A_Time/A_FloatRect/stream arguments. */
     { "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
-      "AEGP_LayerSuite9.AEGP_GetCompNumLayers", S_COMP_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetCompNumLayers", S_COMP_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
-      "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex", S_COMP_INDEX_ARGS, 3 },
+      "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex", S_COMP_INDEX_ARGS, 3, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerIndex",
-      "AEGP_LayerSuite9.AEGP_GetLayerIndex", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerIndex", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerName",
-      "AEGP_LayerSuite9.AEGP_GetLayerName", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerName", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerFlags",
-      "AEGP_LayerSuite9.AEGP_GetLayerFlags", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerFlags", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerQuality",
-      "AEGP_LayerSuite9.AEGP_GetLayerQuality", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerQuality", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
-      "AEGP_LayerSuite9.AEGP_GetLayerObjectType", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerObjectType", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_IsLayer3D",
-      "AEGP_LayerSuite9.AEGP_IsLayer3D", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_IsLayer3D", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_IsLayer2D",
-      "AEGP_LayerSuite9.AEGP_IsLayer2D", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_IsLayer2D", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
-      "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime", S_LAYER_TIME_ARGS, 3 },
+      "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime", S_LAYER_TIME_ARGS, 3, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
-      "AEGP_LayerSuite9.AEGP_GetLayerInPoint", S_LAYER_TIME_ARGS, 3 },
+      "AEGP_LayerSuite9.AEGP_GetLayerInPoint", S_LAYER_TIME_ARGS, 3, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerDuration",
-      "AEGP_LayerSuite9.AEGP_GetLayerDuration", S_LAYER_TIME_ARGS, 3 },
+      "AEGP_LayerSuite9.AEGP_GetLayerDuration", S_LAYER_TIME_ARGS, 3, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerID",
-      "AEGP_LayerSuite9.AEGP_GetLayerID", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerID", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerLabel",
-      "AEGP_LayerSuite9.AEGP_GetLayerLabel", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerLabel", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
-      "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
-      "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
-      "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
-      "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
-      "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte", S_LAYER_ARGS, 2, 0 },
     { "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
-      "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte", S_LAYER_MATTE_ARGS, 3 },
+      "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte", S_LAYER_MATTE_ARGS, 3, 0 },
     { "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
-      "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer", S_LAYER_ARGS, 2 },
+      "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer", S_LAYER_ARGS, 2, 0 },
     /* Issue #270 Stage 2: zero-arg read-only getters needing no
        identity resolution. The three UtilitySuite members use the
        already-held utilP; the two render-queue members acquire their
        suite inside the request window like GetTypeName. */
     { "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
-      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion", NULL, 0 },
+      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion", NULL, 0, 0 },
     { "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
-      "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI", NULL, 0 },
+      "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI", NULL, 0, 0 },
     { "AEGP_UtilitySuite6.AEGP_HostIsActivated",
-      "AEGP_UtilitySuite6.AEGP_HostIsActivated", NULL, 0 },
+      "AEGP_UtilitySuite6.AEGP_HostIsActivated", NULL, 0, 0 },
     { "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
-      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState", NULL, 0 },
+      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState", NULL, 0, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
-      "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, 0, 0 },
     /* Issue #318 §7e: project-scoped read-only getters on the
        aeRefProject descriptor (§7e). GetProjectRootFolder stays out —
        the root folder is not a top-level item, so its itemId is outside
        the GetFirstProjItem scan and an emitted aeRef could never
        resolve. */
     { "AEGP_ProjSuite6.AEGP_ProjectIsDirty",
-      "AEGP_ProjSuite6.AEGP_ProjectIsDirty", S_PROJECT_ARGS, 1 },
+      "AEGP_ProjSuite6.AEGP_ProjectIsDirty", S_PROJECT_ARGS, 1, 0 },
     { "AEGP_ProjSuite6.AEGP_GetProjectBitDepth",
-      "AEGP_ProjSuite6.AEGP_GetProjectBitDepth", S_PROJECT_ARGS, 1 },
+      "AEGP_ProjSuite6.AEGP_GetProjectBitDepth", S_PROJECT_ARGS, 1, 0 },
     { "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay",
-      "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", S_PROJECT_ARGS, 1 },
+      "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", S_PROJECT_ARGS, 1, 0 },
     /* Issue #318 §7f: RQ-item read-only getters on the aeRefRQItem
        descriptor — index + bound-comp aeRef + (status,
        numOutputModules) fingerprint, all re-verified atomically inside
@@ -769,21 +790,21 @@ static const AllowEntry S_ALLOWLIST[] = {
        AddDefaultOutputModule, RemoveOutputModule, DeleteRQItem) are
        out of scope. */
     { "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
-      "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", S_RQENUM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", S_RQENUM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetRenderState",
-      "AEGP_RQItemSuite4.AEGP_GetRenderState", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetRenderState", S_RQITEM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetStartedTime",
-      "AEGP_RQItemSuite4.AEGP_GetStartedTime", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetStartedTime", S_RQITEM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetElapsedTime",
-      "AEGP_RQItemSuite4.AEGP_GetElapsedTime", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetElapsedTime", S_RQITEM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetLogType",
-      "AEGP_RQItemSuite4.AEGP_GetLogType", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetLogType", S_RQITEM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetComment",
-      "AEGP_RQItemSuite4.AEGP_GetComment", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetComment", S_RQITEM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
-      "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem", S_RQITEM_ARGS, 2, 0 },
     { "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
-      "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem", S_RQITEM_ARGS, 2 },
+      "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem", S_RQITEM_ARGS, 2, 0 },
 };
 static const int S_ALLOWLIST_COUNT =
     (int)(sizeof(S_ALLOWLIST) / sizeof(S_ALLOWLIST[0]));
@@ -4478,6 +4499,7 @@ static void ProcessClaimed(
     const char* stemZ,
     const char* outboxDirZ,
     const char* tokenZ,
+    const char* consentKeyZ,
     const char* pinZ,
     long long mtimeMs)
 {
@@ -4659,7 +4681,60 @@ static void ProcessClaimed(
             }
         }
 
-        /* ---- execute the allowlisted read-only op ---- */
+        /* ---- consent verification (Issue #326 / contract §7g) ----
+           Only requiresConsent allowlist entries verify; read-only ops
+           skip entirely and a stray consent field is ignored. Runs
+           after session attestation, before any AEGP mutation call —
+           a refusal here leaves opCalls with no mutation record. */
+        if (allow->requiresConsent)
+        {
+            JVal* consent = JGet(doc, "consent");
+            JVal* cv = consent ? JGet(consent, "v") : NULL;
+            JVal* cmac = consent ? JGet(consent, "mac") : NULL;
+            int shapeOk = consent && consent->kind == JK_OBJ &&
+                          cv && cv->kind == JK_NUM && cv->num == 1.0 &&
+                          cmac && cmac->kind == JK_STR && cmac->slen == 64 &&
+                          TokenOk(cmac->str, cmac->slen);
+            if (!shapeOk)
+            {
+                VerdictRefuse(&v, "CONSENT_REQUIRED",
+                              "consent object missing or malformed");
+                goto verdict;
+            }
+            if (!consentKeyZ[0])
+            {
+                VerdictRefuse(&v, "CONSENT_REQUIRED",
+                              "channel has no consentKey");
+                goto verdict;
+            }
+            {
+                /* canonicalConsentString over the PARSED request —
+                   the MAC binds operationId, requestId, session, args
+                   and target, so tampering any scope field breaks it. */
+                char* canon = (char*)malloc(IN_MAX_INPUT * 2 + 1024);
+                size_t canonLen = 0;
+                const char* tgtZ =
+                    (tgt && tgt->kind == JK_STR) ? tgt->str : NULL;
+                size_t tgtLen =
+                    (tgt && tgt->kind == JK_STR) ? tgt->slen : 0;
+                int built = canon &&
+                    ConsentBuildString(canon, IN_MAX_INPUT * 2 + 1024, &canonLen,
+                                       opid->str, opid->slen,
+                                       rid->str, rid->slen,
+                                       sess, args, tgtZ, tgtLen) &&
+                    ConsentVerifyMac(consentKeyZ, canon, canonLen,
+                                     cmac->str, cmac->slen);
+                free(canon);
+                if (!built)
+                {
+                    VerdictRefuse(&v, "CONSENT_INVALID",
+                                  "consent MAC does not match request scope");
+                    goto verdict;
+                }
+            }
+        }
+
+        /* ---- execute the allowlisted op ---- */
         if (strcmp(allow->operationId,
                    "AEGP_ProjSuite6.AEGP_GetNumProjects") == 0)
         {
@@ -5230,7 +5305,7 @@ void NativeIntakeTick(
     AEGP_PluginID plugin_id)
 {
     char inboxDir[PATH_MAX_LOCAL], outboxDir[PATH_MAX_LOCAL], statePath[PATH_MAX_LOCAL];
-    char token[65], pin[48];
+    char token[65], consentKey[65], pin[48];
     DIR* d;
     struct dirent* de;
     char names[64][320];
@@ -5241,7 +5316,8 @@ void NativeIntakeTick(
     s_ticks++;
 
     if (!ChannelReady(utilP, inboxDir, sizeof(inboxDir), outboxDir, sizeof(outboxDir),
-                      statePath, sizeof(statePath), token, pin, sizeof(pin)))
+                      statePath, sizeof(statePath), token, consentKey,
+                      pin, sizeof(pin)))
         return;
 
     if (s_ticks == 1 || s_ticks - s_last_state_tick >= STATE_EVERY_TICKS)
@@ -5337,7 +5413,7 @@ void NativeIntakeTick(
             }
 
             ProcessClaimed(utilP, projP, basicP, plugin_id, claimedPath, stem,
-                           outboxDir, token, pin,
+                           outboxDir, token, consentKey, pin,
                            FileMtimeMs(claimedPath));
             remove(claimedPath);
         }
