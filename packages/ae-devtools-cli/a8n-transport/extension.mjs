@@ -1,7 +1,9 @@
 /**
  * extension.mjs — HostExtension consumed by `ae-a8n extension build`.
  *
- * Declares exactly one method, `aeDevtools.trustedEval`, whose body evaluates
+ * Declares `aeDevtools.trustedEval` (the caller-facing method) plus the
+ * internal `aeDevtools.evalProgram` sibling it delegates eval to, whose
+ * body evaluates
  * caller-supplied ExtendScript source inside the AE host and returns a
  * structured result. The source is always evaluated ONCE as a program;
  * callers that need function-body semantics (adapter dispatches) wrap
@@ -61,8 +63,29 @@ const EVAL_METHOD_SOURCE = `function (params) {
   var value;
   var evalError = null;
   var didThrow = false;
+  // Scope separation: the program must not reach this method's
+  // bookkeeping (didThrow/evalError/value/requestId/...). A direct
+  // eval here shares THIS function's variable environment, and any
+  // function nested inside it still resolves names through this
+  // scope — so the eval is delegated to the sibling method
+  // aeDevtools.evalProgram, whose lexical scope chain never includes
+  // this method's locals. Exactly one evaluation, always as a
+  // program; there is no retry (see above).
+  var runner = null;
   try {
-    value = eval(source);
+    runner = __a8n.extensions["aeDevtools.evalProgram"];
+  } catch (lookupError) {
+    runner = null;
+  }
+  if (typeof runner !== "function") {
+    return {
+      requestId: requestId,
+      ok: false,
+      evalError: { name: "EvalError", message: "aeDevtools.evalProgram runner unavailable", line: null, file: null }
+    };
+  }
+  try {
+    value = runner({ source: source });
   } catch (firstError) {
     didThrow = true;
     evalError = firstError;
@@ -133,10 +156,21 @@ const EVAL_METHOD_SOURCE = `function (params) {
   };
 }`;
 
+// Internal sibling of aeDevtools.trustedEval: the ONLY place caller
+// source is eval'd. Its lexical scope is the extension-registration
+// function + globals — it cannot see trustedEval's bookkeeping vars,
+// so evaluated programs cannot forge the verdict or the echoed
+// requestId. Vars declared by a program land in this function's
+// per-call scope and are discarded on return.
+const EVAL_PROGRAM_SOURCE = `function (params) {
+  return eval(String(params.source));
+}`;
+
 export default {
   name: "aedevtools",
   version: "0.1.0",
   methods: [
     { name: "aeDevtools.trustedEval", source: EVAL_METHOD_SOURCE },
+    { name: "aeDevtools.evalProgram", source: EVAL_PROGRAM_SOURCE },
   ],
 };

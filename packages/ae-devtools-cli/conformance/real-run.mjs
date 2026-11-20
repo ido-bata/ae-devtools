@@ -183,14 +183,24 @@ export async function main() {
 
     const IDENTITY_SOURCE =
       "(function(){var f=app.project.file;var d=(typeof app.project.dirty===\"boolean\")?String(app.project.dirty):\"unsupported\";" +
-      "return \"V:\"+String(app.version)+\"|F:\"+(f?f.fsName:\"\")+\"|N:\"+String(app.project.numItems)+\"|D:\"+d;})()";
+      // The file path is percent-encoded: a raw fsName may itself
+      // contain "|" or look like a "V:/N:/D:" field, which would make
+      // the delimiter parse ambiguous. encodeURIComponent output can
+      // never contain the "|" separator.
+      "return \"V:\"+String(app.version)+\"|F:\"+(f?encodeURIComponent(f.fsName):\"\")+\"|N:\"+String(app.project.numItems)+\"|D:\"+d;})()";
     const parseIdentity = (result) => {
       const s = typeof result === "string" ? result : "";
       const get = (k) => {
         const m = s.match(new RegExp(`${k}:([^|]*)`));
         return m ? m[1] : null;
       };
-      return { version: get("V"), file: get("F"), items: get("N"), dirty: get("D"), raw: s };
+      const rawFile = get("F");
+      let file = null;
+      if (rawFile !== null) {
+        try { file = rawFile === "" ? "" : decodeURIComponent(rawFile); }
+        catch { file = null; } // undecodable path -> fail closed downstream
+      }
+      return { version: get("V"), file, items: get("N"), dirty: get("D"), raw: s };
     };
 
     // ---- 1. project identity BEFORE any mutation ----
@@ -230,6 +240,32 @@ export async function main() {
     evidence.disposableDecision = disposableDecision;
     if (!disposableDecision.proceed) {
       throw new Error(`disposable gate refused: ${disposableDecision.reason}`);
+    }
+
+    // The dirty/file/items read above and the app.newProject() mutation
+    // below are separate dispatches — project state could in principle
+    // change in between. True atomicity is impossible without a
+    // host-side precondition inside the op itself, so re-read identity
+    // immediately before mutating and require it UNCHANGED; any drift
+    // aborts fail-closed. (Owned session: no user input can intervene,
+    // this guards harness/AE-side state transitions only.)
+    const idRecheck = await evalDispatch("identity.recheck", IDENTITY_SOURCE);
+    const recheck = parseIdentity(idRecheck.result);
+    const unchanged =
+      idRecheck.outcome === "COMPLETED" &&
+      recheck.file === before.file &&
+      recheck.items === before.items &&
+      recheck.dirty === before.dirty;
+    step("identity.recheck", {
+      ok: unchanged,
+      outcome: idRecheck.outcome,
+      project: recheck,
+    });
+    evidence.projectRecheck = recheck;
+    if (!unchanged) {
+      throw new Error(
+        `project identity changed between gate and mutation (before file='${before.file}' items=${before.items} dirty=${before.dirty}; recheck file='${recheck.file}' items=${recheck.items} dirty=${recheck.dirty}); refusing to mutate`,
+      );
     }
 
     const rNew = await op("project.new", {}, { confirmDestructive: true });
@@ -499,12 +535,20 @@ export async function main() {
       }
       const after = await aeProcessSnapshot(processFragment);
       evidence.aeProcessesAfterClose = after;
-      const rows = Array.isArray(after) ? after : [];
-      const mainLeft = rows.filter((p) => MAIN_EXE.test(p.args ?? ""));
-      if (mainLeft.length > 0) {
+      // aeProcessSnapshot returns {error} when `ps` itself fails — that
+      // is NOT proof of shutdown. An unverifiable snapshot must fail
+      // the run closed, never silently pass the quarantine check.
+      if (!Array.isArray(after)) {
         evidence.sessionQuarantined = true;
-        evidence.quarantineReason = `main AE process(es) survived close(): ${mainLeft.map((p) => p.pid).join(", ")}`;
+        evidence.quarantineReason = `AE process snapshot failed (${after?.error ?? "unknown"}); cannot prove session shutdown`;
         evidence.ok = false;
+      } else {
+        const mainLeft = after.filter((p) => MAIN_EXE.test(p.args ?? ""));
+        if (mainLeft.length > 0) {
+          evidence.sessionQuarantined = true;
+          evidence.quarantineReason = `main AE process(es) survived close(): ${mainLeft.map((p) => p.pid).join(", ")}`;
+          evidence.ok = false;
+        }
       }
     }
     evidence.finishedAt = new Date().toISOString();
