@@ -1,0 +1,253 @@
+{
+  "schema": "ae-devtools.cli.doctor/v1",
+  "node": "v26.13.1",
+  "platform": "darwin/arm64",
+  "devloopSchema": "ae-devtools.dev-loop/v1",
+  "aeA8n": {
+    "resolvable": true,
+    "source": "npm:@ido-bata/ae-a8n",
+    "version": "0.2.0",
+    "contractOk": true,
+    "missing": [],
+    "checks": [
+      {
+        "id": "negotiation.compatible",
+        "ok": true
+      },
+      {
+        "id": "negotiation.client-older-minor",
+        "ok": true
+      },
+      {
+        "id": "negotiation.incompatible-major",
+        "ok": true
+      },
+      {
+        "id": "negotiation.unsupported-minor",
+        "ok": true
+      },
+      {
+        "id": "negotiation.malformed-schema",
+        "ok": true
+      },
+      {
+        "id": "negotiation.requested-capability-compatible",
+        "ok": true
+      },
+      {
+        "id": "negotiation.unknown-capability",
+        "ok": true
+      },
+      {
+        "id": "negotiation.capability-unassessed",
+        "ok": true
+      },
+      {
+        "id": "negotiation.missing-permission",
+        "ok": true
+      },
+      {
+        "id": "dispatch.pass-owned",
+        "ok": true
+      },
+      {
+        "id": "dispatch.pass-explicitly-attached",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unknown-ownership",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-contradictory-claim",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unverified",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-not-implemented",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-no-execution-path",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-missing-permission",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-no-permission-declared",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unknown-capability",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-unassessed",
+        "ok": true
+      },
+      {
+        "id": "dispatch.refuse-malformed",
+        "ok": true
+      }
+    ],
+    "required": "ae-a8n capability handshake (ae-a8n#102), which post-dates the ae-a8n#103 extension-prelude and ae-a8n#105 LaunchServices fixes"
+  },
+  "aeInstalls": [
+    "/Applications/Adobe After Effects 2026",
+    "/Applications/Adobe After Effects 2027"
+  ],
+  "a8nTransportPresent": true,
+  "runsDir": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/ae-devtools-cli-runs",
+  "runs": [
+    {
+      "runId": "run-2026-11-20T12-13-19-501Z-16437323",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T12-13-28-112Z-0c18551d",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T12-24-42-140Z-a7f95a54",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-05-42-702Z-0751884c",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-09-23-878Z-26656cd6",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-09-27-848Z-bd51d081",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-09-34-676Z-c35c8151",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-10-17-411Z-7978b47b",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-10-50-445Z-e549e3a8",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-12-08-740Z-5e49a39f",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T15-13-14-138Z-657e6ce0",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T16-37-11-846Z-0d05a36c",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T16-37-13-037Z-a30e1123",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T16-55-08-444Z-b8fd131f",
+      "status": "open",
+      "sessionKind": "a8n",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "NO_A8N_ATTESTATION",
+      "ownership": "owned"
+    },
+    {
+      "runId": "run-2026-11-20T17-23-01-561Z-8a0af1d7",
+      "status": "open-failed",
+      "sessionKind": "a8n-attached",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    },
+    {
+      "runId": "run-2026-11-20T18-40-53-034Z-60c06fe2",
+      "status": "open-failed",
+      "sessionKind": "a8n",
+      "runnerAlive": false,
+      "reapable": false,
+      "reapBlockReason": "OWNERSHIP_NOT_OWNED",
+      "ownership": null
+    }
+  ],
+  "evidenceLevel": "environment probe only — no AE was contacted"
+}
