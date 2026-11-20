@@ -4971,6 +4971,20 @@ int main(int argc, char** argv)
             h->rqItemMeta[2].status = AEGP_RenderItemStatus_UNQUEUED;
             h->rqItemMeta[2].numOutputModules = 1;
         }
+        /* "with-clip" (#341): the shared consent fixture's descriptor —
+           project Shot01 (/tmp/shot01.aep) with one COMP item "Clip"
+           itemId 7001 — so ae-a8n can execute native-consent-vectors.json
+           wireCases verbatim through the file channel. */
+        if (argc > 5 && strcmp(argv[5], "with-clip") == 0)
+        {
+            FakeProject& p = h->AddProject("Shot01");
+            p.path = "/tmp/shot01.aep";
+            p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+            SetupProjectItems(*h, 0, {
+                { "Clip", AEGP_ItemType_COMP, 7001 },
+            });
+            h->numProjects = 1;
+        }
         setenv("AE_DEVTOOLS_NATIVE_CHANNEL", argv[2], 1);
         if (CallEntry(*h) != A_Err_NONE)
             return 4;
