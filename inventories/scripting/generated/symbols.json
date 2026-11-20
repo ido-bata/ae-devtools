@@ -3,8 +3,8 @@
   "counts": {
     "members": 656,
     "classes": 48,
-    "enums": 49,
-    "enumValues": 322
+    "enums": 50,
+    "enumValues": 323
   },
   "classes": [
     {
@@ -14793,12 +14793,15 @@
       "versionRemoved": null,
       "versionRangeStated": false,
       "access": null,
-      "signature": [],
+      "signature": [
+        "indexOrName"
+      ],
       "markedUndocumented": false,
       "status": "documented",
       "hasVersionNote": false,
       "notes": [
-        "domain=property"
+        "domain=property",
+        "signature=manual-#329: property(index)|property(name) per dfad/UXP docs; scrape recorded []"
       ]
     },
     {
@@ -21388,6 +21391,26 @@
           "numericValue": null,
           "sourceLine": 89
         }
+      ]
+    },
+    {
+      "id": "provisional.ae.scripting.enum.CloseOptions",
+      "name": "CloseOptions",
+      "sourceKey": "dfad",
+      "url": "https://ae-scripting.docsforadobe.dev/general/project/",
+      "anchor": "projectclose",
+      "definition": "inline-qualified-values",
+      "values": [
+        {
+          "id": "provisional.ae.scripting.enum.CloseOptions.DO_NOT_SAVE_CHANGES",
+          "enumName": "CloseOptions",
+          "value": "DO_NOT_SAVE_CHANGES",
+          "numericValue": null,
+          "sourceLine": null
+        }
+      ],
+      "notes": [
+        "manual-#329: enum referenced by Project.close(closeOptions); absent from scrape"
       ]
     }
   ]
