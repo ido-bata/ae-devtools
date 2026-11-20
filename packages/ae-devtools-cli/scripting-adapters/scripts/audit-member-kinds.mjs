@@ -41,9 +41,9 @@
  *     so probe-generated arg values that embed text like
  *     "layer.reorder: ..." cannot parse as phantom member accesses.
  *   - KNOWN_GAPS: members documented in the AE scripting DOM but absent
- *     from the scraped symbols.json (e.g. Layer.property, source
- *     geometry) are suppressed explicitly and counted in
- *     stats.gapSuppressed — never silently.
+ *     from the scraped symbols.json are suppressed explicitly (when
+ *     verified real) and counted in stats.gapSuppressed — never
+ *     silently. Currently empty (Issue #329 resolved every entry).
  *
  * Scope of the per-op site set: the op tail plus the transitive
  * `__adp_*` helpers it actually calls (call-graph closure over every
@@ -82,11 +82,22 @@ const SYMBOLS_JSON = join(here, "..", "..", "..", "..", "inventories", "scriptin
 // kind -> ancestor kinds, nearest first. Only documented inheritance is
 // listed; anything not here is treated as unrelated (fail-closed for
 // claim satisfaction, which is the safe direction for a review audit).
-// Documented AE object-model inheritance (docsforadobe):
-//   Item -> AVItem -> {CompItem, FootageItem}; Item -> FolderItem
-//   PropertyBase -> {Property, PropertyGroup, Layer}
-//   Layer -> AVLayer -> {TextLayer, ShapeLayer, CameraLayer, LightLayer,
-//                        NullLayer, SolidLayer, ParametricMeshLayer}
+//
+// Reconciled with the class records in
+// inventories/scripting/generated/symbols.json (dfad class hierarchy):
+//   Layer -> PropertyGroup -> PropertyBase  (a layer IS the root of its
+//     own property tree — this is why `layer.property()`/`numProperties`
+//     are real API surface, not inventory gaps)
+//   AVLayer -> Layer;  {Text,Shape,ThreeDModel,ParametricMesh}Layer -> AVLayer
+//   {Camera,Light}Layer -> Layer directly (NOT AVLayer — they expose no
+//     .source/width/height; modeling them under AVLayer would mask
+//     missing-member findings)
+//   Property|PropertyGroup -> PropertyBase; MaskPropertyGroup -> PropertyGroup
+//   {File,Solid,Placeholder}Source -> FootageSource
+//   {Item,Layer,RQItem,OM}Collection -> Collection
+// The scrape's `baseClasses` omits AVItem->Item and FolderItem->Item
+// (baseOnly resolution gaps), but both links are documented on the
+// Item/AVItem/FolderItem pages, so they are kept here.
 // Only documented links are listed; anything absent is treated as
 // unrelated (fail-closed for claim satisfaction).
 const INHERITS = {
@@ -97,17 +108,26 @@ const INHERITS = {
   AVLayer: ["Layer"],
   TextLayer: ["AVLayer"],
   ShapeLayer: ["AVLayer"],
-  CameraLayer: ["AVLayer"],
-  LightLayer: ["AVLayer"],
+  ThreeDModelLayer: ["AVLayer"],
+  ParametricMeshLayer: ["AVLayer"],
+  CameraLayer: ["Layer"],
+  LightLayer: ["Layer"],
+  // Pseudo-kinds for LayerCollection.addNull/addSolid returns: the real
+  // DOM returns AVLayer; these aliases keep generated receivers typed
+  // through the AVLayer chain.
   NullLayer: ["AVLayer"],
   SolidLayer: ["AVLayer"],
-  ParametricMeshLayer: ["AVLayer"],
-  Layer: ["PropertyBase"],
+  Layer: ["PropertyGroup"],
   Property: ["PropertyBase"],
   PropertyGroup: ["PropertyBase"],
+  MaskPropertyGroup: ["PropertyGroup"],
   FileSource: ["FootageSource"],
   SolidSource: ["FootageSource"],
   PlaceholderSource: ["FootageSource"],
+  ItemCollection: ["Collection"],
+  LayerCollection: ["Collection"],
+  RQItemCollection: ["Collection"],
+  OMCollection: ["Collection"],
 };
 
 // True when a receiver of kind `kind` may legitimately expose members
@@ -143,6 +163,11 @@ function lookupMember(byOwnerMember, kind, member) {
 // ---------------------------------------------------------------------------
 // Receiver typing
 // ---------------------------------------------------------------------------
+
+// Enum object names from the inventory (AlphaMode, CloseOptions, ...).
+// Populated per audit run; member reads on them (`CloseOptions.X`)
+// yield plain values, so they type as "js" — resolved, non-host.
+const ENUM_OBJECTS = new Set();
 
 // Globals and JS builtins — never host objects.
 const JS_KINDS = new Set([
@@ -180,6 +205,7 @@ const HELPERS = {
   __adp_vectorTree: { params: { group: "PropertyGroup" }, returns: "js" },
   __adp_proxySnapshot: { params: { it: "js" }, returns: "js" }, // `it` typed by call-site inference (AVItem/FootageItem)
   __adp_json: { params: { v: "js" }, returns: "js" },
+  __adp_keyframeEases: { params: { spec: "js" }, returns: "js" },
   // Per-op helpers emitted into individual op tails (registry.mjs).
   __adp_brief: { params: { it: "Item" }, returns: "js" },
   __adp_tree: { params: { folder: "FolderItem" }, returns: "js" },
@@ -248,12 +274,16 @@ const MEMBER_RETURN = {
   "RenderQueue.items": "RQItemCollection",
   "RenderQueue.item": "RenderQueueItem",
   "Project.item": "Item",
+  "Project.importFile": "AVItem",
   "Project.selection": "AVItemArray",
   "RQItemCollection.add": "RenderQueueItem",
   "RenderQueueItem.comp": "CompItem",
   "RenderQueueItem.outputModules": "OMCollection",
   "RenderQueueItem.outputModule": "OutputModule",
   "RenderQueueItem.duplicate": "same",
+  "OutputModule.file": "File",
+  "ImportOptions.file": "File",
+  "AVLayer.trackMatteLayer": "AVLayer",
   "CompItem.markerProperty": "Property",
   "Layer.marker": "Property",
   "AVLayer.marker": "Property",
@@ -331,16 +361,24 @@ const COLLECTION_PROTOCOL = new Set(["length"]);
 //     them on PropertyGroup.
 //   - Still/placeholder source geometry (name/width/height/...): read by
 //     generated code but not claimed; absent from the scrape.
-const KNOWN_GAPS = new Set([
-  "Layer.property", "AVLayer.property", "PropertyBase.property",
-  "Layer.numProperties", "AVLayer.numProperties", "PropertyBase.numProperties",
-  "FileSource.name", "FileSource.width", "FileSource.height",
-  "FileSource.pixelAspect", "FileSource.frameRate", "FileSource.duration",
-  "SolidSource.name", "SolidSource.width", "SolidSource.height",
-  "SolidSource.pixelAspect", "SolidSource.frameRate", "SolidSource.duration",
-  "PlaceholderSource.name", "PlaceholderSource.width", "PlaceholderSource.height",
-  "PlaceholderSource.pixelAspect", "PlaceholderSource.frameRate", "PlaceholderSource.duration",
-]);
+//
+// Issue #329 dispositions — the set is now EMPTY:
+//   - Layer/AVLayer/PropertyBase .property()/.numProperties: NOT gaps.
+//     The inventory class records declare `Layer baseClass=PropertyGroup`
+//     (a layer is the root of its own property tree), so these resolve
+//     through the corrected INHERITS chain to the documented
+//     PropertyGroup.property/numProperties symbols. The earlier gap
+//     entries masked an INHERITS modeling error, not missing symbols.
+//   - FileSource/SolidSource/PlaceholderSource name/width/height/
+//     pixelAspect/frameRate/duration: NOT documented on ANY FootageSource
+//     in either doc tier (dfad community pages, the legacy official
+//     scripting reference, and the UXP 27.0 API all list only the
+//     FootageSource attribute set + SolidSource.color). The generated
+//     __adp_proxySnapshot reads were wrong and were removed from
+//     registry.mjs rather than suppressed.
+// The mechanism stays for future verified gaps; tests inject entries
+// via the `knownGaps` option.
+const KNOWN_GAPS = new Set();
 
 // ---------------------------------------------------------------------------
 // Source model: functions + member sites
@@ -640,6 +678,7 @@ function exprKind(expr, env) {
   if (/^[A-Za-z_$][\w$]*$/.test(expr)) {
     if (expr in GLOBAL_KINDS) return GLOBAL_KINDS[expr];
     if (JS_KINDS.has(expr)) return "js";
+    if (ENUM_OBJECTS.has(expr)) return "js";
     return env[expr] || null;
   }
   // dotted/call chain `a.b("x").c[i].d` -> segment-wise evaluation
@@ -800,12 +839,18 @@ function memberReturnKind(kindsStr, member, argText, objExpr) {
   const kinds = kindList(kindsStr);
   const results = [];
   for (const k of kinds) {
-    // app.* pseudo-members
+    // Plain-JS receivers stay JS through arbitrary member/call chains
+    // (`v.charCodeAt(0).toString(16)`, `parts.push(x)`): the inventory
+    // has no JS members, but the receiver type IS resolved — counting
+    // these as untyped would overstate the unchecked surface.
+    if (k === "js") { results.push("js"); continue; }
+    // app.* pseudo-members. Only the three hardcoded returns skip the
+    // generic MEMBER_RETURN lookup — everything else (app.effects,
+    // app.newProject, app.open, ...) resolves through "app.<member>".
     if (k === "app") {
-      if (member === "project") results.push("Project");
-      if (member === "preferences") results.push("Preferences");
-      if (member === "fonts") results.push("FontsObject");
-      continue;
+      if (member === "project") { results.push("Project"); continue; }
+      if (member === "preferences") { results.push("Preferences"); continue; }
+      if (member === "fonts") { results.push("FontsObject"); continue; }
     }
     const key = MEMBER_RETURN_KEY(k, member);
     if (key !== null) {
@@ -860,8 +905,21 @@ function inferEnv(body, paramKinds = {}) {
   // iterate var/assignment decls to a fixpoint (max 4 passes — chains
   // like comp -> layer -> prop -> prop resolve in order anyway)
   const assignRe = /(?:var\s+)?([A-Za-z_$][\w$]*)\s*=\s*([^;\n]+);/g;
+  // Multi-line literals: `var detail = {` / `var e = [` open a literal
+  // that the single-line assignRe cannot capture (no `;` on the line).
+  // Object/array literals are always plain JS values.
+  const literalRe = /(?:var\s+)?([A-Za-z_$][\w$]*)\s*=\s*[[{]\s*$/gm;
   for (let pass = 0; pass < 4; pass++) {
     let changed = false;
+    let lm;
+    literalRe.lastIndex = 0;
+    while ((lm = literalRe.exec(body)) !== null) {
+      const cur = env[lm[1]];
+      if (cur === undefined) { env[lm[1]] = "js"; changed = true; }
+      else if (cur !== "js" && !cur.split("|").includes("js")) {
+        env[lm[1]] = unionKind(cur, "js"); changed = true;
+      }
+    }
     assignRe.lastIndex = 0;
     let m;
     while ((m = assignRe.exec(body)) !== null) {
@@ -870,7 +928,7 @@ function inferEnv(body, paramKinds = {}) {
       if (/^[=!<>]/.test(rhs) || /^(==|===|!=|!==|<=|>=|&&|\|\|)/.test(rhs)) continue;
       if (/\b(for|if|while|return|switch)\b/.test(m[0].slice(0, m[0].indexOf("=")))) continue;
       const k = exprKind(rhs, env);
-      if (!k || k === "js") continue;
+      if (!k) continue;
       if (env[name] !== k) {
         // widen: keep union of observed kinds
         env[name] = env[name] ? unionKind(env[name], k) : k;
@@ -936,7 +994,12 @@ function argProbes(op, argName, sampleVal) {
   const strings = [...new Set([...lits.strings, ...valLits.strings])];
   const numbers = [...new Set([...lits.numbers, ...valLits.numbers])];
   if (typeof sampleVal === "string") {
-    for (const s of strings) if (typeof s === "string") push(s);
+    for (const s of strings) {
+      // Skip template-substitution tokens (@COMP@, @PATH@, ...) — they
+      // are placeholders in the source function's own text, not real
+      // discriminating values; probing them emits malformed sources.
+      if (typeof s === "string" && !/^@[A-Z_]+@$/.test(s)) push(s);
+    }
   } else if (typeof sampleVal === "number") {
     for (const n of numbers) if (typeof n === "number") push(n);
   } else if (typeof sampleVal === "boolean") {
@@ -984,18 +1047,26 @@ export function auditMemberKinds(opts = {}) {
   const operations = opts.operations || OPERATIONS;
   const sampleFn = opts.sampleArgsFn || sampleArgs;
   const buildFn = opts.buildSourceFn || ((id, args) => buildSource(id, args));
+  // Injectable for counterexample tests; defaults to the (currently
+  // empty) KNOWN_GAPS set.
+  const knownGaps = opts.knownGaps ? new Set(opts.knownGaps) : KNOWN_GAPS;
   const findings = [];
   const stats = {
     ops: 0, claims: 0, methods: 0, attributes: 0,
     sources: 0, functions: 0,
     callSites: 0, writeSites: 0, readSites: 0,
-    typedSites: 0, untypedSites: 0,
-    arityChecked: 0, sigClaims: 0,
+    typedSites: 0, nonHostSites: 0, untypedSites: 0,
+    arityChecked: 0, aritySites: 0, sigClaims: 0,
+    unsigClaims: 0,
     argsProbed: 0, discriminatingArgs: 0,
     helpersReached: 0, gapSuppressed: 0,
   };
+  const unsigMembers = new Set();
   if (!existsSync(symbolsPath)) return { stats, findings, skipped: true };
-  const symbols = JSON.parse(readFileSync(symbolsPath, "utf8")).symbols;
+  const symbolsDoc = JSON.parse(readFileSync(symbolsPath, "utf8"));
+  const symbols = symbolsDoc.symbols;
+  ENUM_OBJECTS.clear();
+  for (const e of symbolsDoc.enums || []) if (e && e.name) ENUM_OBJECTS.add(e.name);
   const byId = new Map(symbols.map((s) => [s.id, s]));
   const owners = new Set(symbols.map((s) => s.owner));
   const byOwnerMember = new Map();
@@ -1104,7 +1175,14 @@ export function auditMemberKinds(opts = {}) {
         if (s.kind === "call") stats.callSites++;
         else if (s.kind === "write") stats.writeSites++;
         else stats.readSites++;
-        if (typed) stats.typedSites++; else stats.untypedSites++;
+        // Three-way coverage split: typed = receiver resolved to at least
+        // one inventory-checkable host kind; nonHost = receiver resolved
+        // ("js", File, enum objects, ...) but nothing inventory-checkable;
+        // untyped = receiver kind could not be inferred at all. Only
+        // untyped is genuinely unchecked surface.
+        if (typed) stats.typedSites++;
+        else if (kinds.length > 0) stats.nonHostSites++;
+        else stats.untypedSites++;
         sites.push({ ...s, unit: u.name, kinds: kindList(hostKinds.join("|")), typed });
       }
     }
@@ -1160,14 +1238,26 @@ export function auditMemberKinds(opts = {}) {
         }
       }
 
+      // ---- signature coverage: method claims without a recorded
+      // signature cannot be arity-checked — count them explicitly so
+      // the unchecked surface is visible, not implied.
+      if (sym.kind === "method") {
+        if (Array.isArray(sym.signature) && sym.signature.length > 0) {
+          stats.arityChecked++;
+          stats.sigClaims++;
+        } else {
+          stats.unsigClaims++;
+          unsigMembers.add(`${owner}.${name}`);
+        }
+      }
+
       // ---- site-level checks for this member across all sources ----
       if (sym.kind === "method" && Array.isArray(sym.signature) && sym.signature.length > 0) {
-        stats.arityChecked++;
-        stats.sigClaims++;
         const { min, max, sig } = signatureArity(sym.signature);
         for (const s of sites) {
           if (s.name !== name || s.kind !== "call" || !s.typed) continue;
           if (!s.kinds.some((k) => kindIsA(k, owner))) continue;
+          stats.aritySites++;
           const n = callArgCount(s.argsText);
           if (n < min || n > max) {
             findings.push({
@@ -1202,7 +1292,7 @@ export function auditMemberKinds(opts = {}) {
         // Inventory-gap suppression: every checkable kind's chain must
         // hit a KNOWN_GAPS entry, and the gap must be recorded.
         const gapHit = checkable.some((k) =>
-          kindChain(k).some((c) => KNOWN_GAPS.has(`${c}.${s.name}`)));
+          kindChain(k).some((c) => knownGaps.has(`${c}.${s.name}`)));
         if (gapHit) { stats.gapSuppressed++; continue; }
         findings.push({
           op: op.id, member: siteLabel, kind: s.kind,
@@ -1235,6 +1325,9 @@ export function auditMemberKinds(opts = {}) {
     }
     stats.ops++;
   }
+  // Signature-coverage surface: distinct Owner.member pairs whose
+  // method claims carry no recorded signature (arity-unchecked).
+  stats.unsigMembers = [...unsigMembers].sort();
   // Same site text recurs across generated variants — dedup findings.
   const seenFinding = new Set();
   const deduped = findings.filter((f) => {
@@ -1312,8 +1405,8 @@ if (isMain) {
     process.exit(0);
   }
   console.log(`audit-member-kinds: ${stats.ops} ops, ${stats.sources} sources, ${stats.claims} claims (${stats.methods} methods, ${stats.attributes} attributes)`);
-  console.log(`  sites: ${stats.callSites} calls, ${stats.writeSites} writes, ${stats.readSites} reads — typed ${stats.typedSites}, untyped ${stats.untypedSites}`);
-  console.log(`  args: ${stats.argsProbed} probes, ${stats.discriminatingArgs} discriminating args; arity-checked ${stats.arityChecked} signatured method claims; ${stats.gapSuppressed} known-inventory-gap site(s) suppressed`);
+  console.log(`  sites: ${stats.callSites} calls, ${stats.writeSites} writes, ${stats.readSites} reads — typed ${stats.typedSites}, resolved-non-host ${stats.nonHostSites}, untyped ${stats.untypedSites}`);
+  console.log(`  args: ${stats.argsProbed} probes, ${stats.discriminatingArgs} discriminating args; signature coverage: ${stats.sigClaims}/${stats.methods} method claims signatured (${stats.unsigClaims} unsigned, ${stats.unsigMembers.length} distinct members), ${stats.aritySites} typed call sites arity-checked; ${stats.gapSuppressed} known-inventory-gap site(s) suppressed`);
   if (findings.length === 0) {
     console.log("audit-member-kinds: no findings");
     process.exit(0);
