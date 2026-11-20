@@ -104,9 +104,18 @@ try {
   recordToolResult("ae_discover", await withTimeout(call("ae_discover", {}), 60000, "discover"));
 
   // Pre-state read-back: whatever project AE restored is observed,
-  // never mutated — project.new replaces it only if it is clean.
+  // never mutated — project.new replaces it only if it is clean. When
+  // this read does not COMPLETE, the pre-mutation project identity is
+  // unknown and mutation must not proceed (same fail-closed rule as
+  // real-run.mjs's identity gate).
   rec({ step: "ae_verify.pre-state" });
   recordToolResult("ae_verify.pre", await withTimeout(call("ae_verify", { consent: "grant" }), 300000, "verify-pre"));
+  const preRead = results["ae_verify.pre"];
+  if (!preRead || preRead.isError || preRead.outcome !== "COMPLETED") {
+    throw new Error(
+      `pre-mutation identity read-back did not complete (isError=${preRead?.isError === true}, outcome=${preRead?.outcome ?? "missing"}); refusing to mutate`,
+    );
+  }
 
   rec({ step: "ae_execute.project.new (launches owned AE)" });
   recordToolResult("project.new", await withTimeout(
@@ -165,10 +174,61 @@ try {
 } finally {
   // SIGTERM runs the server's shutdown path: session.close()
   // (unsavedChanges:"refuse") — a clean disposable project quits; a
-  // refusal is recorded on stderr, never hidden.
+  // refusal is recorded on stderr, never hidden. Success requires a
+  // CONFIRMED exit — a still-running child after SIGKILL is a failed
+  // run, not a pass.
   child.kill("SIGTERM");
   await new Promise((r) => setTimeout(r, 15000));
-  try { child.kill("SIGKILL"); } catch {}
-  rec({ step: "server.stopped", fixturePath, results });
+  let shutdownConfirmed = child.exitCode !== null || child.signalCode !== null;
+  if (!shutdownConfirmed) {
+    try { child.kill("SIGKILL"); } catch {}
+    await new Promise((r) => setTimeout(r, 3000));
+    shutdownConfirmed = child.exitCode !== null || child.signalCode !== null;
+  }
+  rec({ step: "server.stopped", fixturePath, shutdownConfirmed, results });
+  if (!shutdownConfirmed) {
+    fatal = true;
+    rec({ fatal: "MCP server child did not exit after SIGTERM+SIGKILL" });
+  }
+
+  // Verdict: a recorded isError or a non-COMPLETED outcome is a failed
+  // conformance run — never a pass. Read-back lanes must also show the
+  // expected disposable-project state (comp present after addComp,
+  // absent after item.remove), not just a COMPLETED write outcome.
+  const failures = [];
+  const expectCompleted = [
+    "ae_verify.pre", "project.new", "project.save", "item.addComp",
+    "ae_verify.readback", "item.remove", "ae_verify.final",
+    "project.save.resave",
+  ];
+  for (const tag of expectCompleted) {
+    const r = results[tag];
+    if (!r) { failures.push(`${tag}: missing result`); continue; }
+    if (r.isError) failures.push(`${tag}: isError=true`);
+    if (r.outcome !== "COMPLETED") failures.push(`${tag}: outcome=${r.outcome ?? "null"}`);
+  }
+  const discover = results.ae_discover;
+  if (!discover || discover.isError) failures.push("ae_discover: missing or isError");
+  const itemsOf = (tag) => {
+    const r = results[tag];
+    const payload = r?.result?.result ?? r?.result ?? null;
+    return Array.isArray(payload?.items) ? payload.items : null;
+  };
+  const readbackItems = itemsOf("ae_verify.readback");
+  if (readbackItems === null ||
+      !readbackItems.some((i) => i && i.name === COMP_NAME)) {
+    failures.push("ae_verify.readback: comp not observed in project items");
+  }
+  const finalItems = itemsOf("ae_verify.final");
+  if (finalItems === null ||
+      finalItems.some((i) => i && i.name === COMP_NAME)) {
+    failures.push("ae_verify.final: comp still present (or items unreadable) after item.remove");
+  }
+  if (failures.length > 0) {
+    fatal = true;
+    rec({ verdict: "fail", failures });
+  } else {
+    rec({ verdict: "pass" });
+  }
   process.exit(fatal ? 1 : 0);
 }
