@@ -36,12 +36,14 @@
  * Attach pre-flight (Issue #366): launching AE only to discover there
  * is no usable target costs a full cold start plus a forced quit.
  * Before launch the opener censuses running AE processes for the
- * resolved install: a definitive "none" refuses early
- * (ATTACHED_TARGET_NOT_RUNNING) and two or more instances of the same
- * install refuse as ambiguous (ATTACHED_TARGET_AMBIGUOUS). An
- * inconclusive scan falls through — AfterEffects.launch and the
- * ownership check remain the authority, so a wrong guess here can
- * never widen what attach is allowed to do.
+ * resolved install: no processes, or only processes fully attributed
+ * to other installs, refuse as ATTACHED_TARGET_NOT_RUNNING; two or
+ * more instances of the same install refuse as ambiguous
+ * (ATTACHED_TARGET_AMBIGUOUS); AE processes whose image path the OS
+ * would not disclose refuse as ATTACHED_TARGET_UNVERIFIED — falling
+ * through could cold-start a duplicate AE. Exactly one attributed
+ * match falls through to AfterEffects.launch, where ae-a8n's own
+ * census + ownership check remain the authority.
  *
  * Project pin: `options.projectFile` names the project file the
  * caller expects the attached AE to have open. After attach the open
@@ -291,10 +293,11 @@ export async function openAttachedSliceSession(options = {}) {
     return e;
   };
 
-  // Attach pre-flight: refuse BEFORE any AE side effect when the
-  // census proves there is no usable target. Only a fully attributed,
-  // definitive answer acts; anything else falls through to launch,
-  // where ae-a8n's own census + ownership check decide.
+  // Attach pre-flight: refuse BEFORE any AE side effect unless the
+  // census finds exactly one process attributable to the target
+  // install. Anything else — none, foreign-only, ambiguous, or
+  // unattributable — refuses here; only a single match falls through
+  // to launch, where ae-a8n's own census + ownership check decide.
   if (
     installInfo !== null &&
     typeof installInfo.executable === "string" &&
@@ -323,7 +326,7 @@ export async function openAttachedSliceSession(options = {}) {
             `for a disposable owned session. No AE process was launched.`,
         );
       }
-      if (!unattributed && exact.length >= 2) {
+      if (exact.length >= 2) {
         throw preflightError(
           "ATTACHED_TARGET_AMBIGUOUS",
           `${exact.length} After Effects processes match install ` +
@@ -331,10 +334,35 @@ export async function openAttachedSliceSession(options = {}) {
             `Close extra instances or pin a single target.`,
         );
       }
-      // exact === 0 with other-version/unattributed rows, or exactly
-      // one match: inconclusive enough that launch + ownership stays
-      // the authority (a `-r` launcher can also transiently share the
-      // install path on Windows).
+      if (exact.length === 0) {
+        if (unattributed) {
+          // AE processes exist but none could be attributed to this
+          // install (e.g. another user session / elevation hides the
+          // image path). We cannot prove there is no usable target, and
+          // falling through would cold-start a duplicate AE — refuse.
+          throw preflightError(
+            "ATTACHED_TARGET_UNVERIFIED",
+            `After Effects processes are running but none could be ` +
+              `attributed to install ${installInfo.executable} (process ` +
+              `image path undisclosed). Refusing to launch a duplicate; ` +
+              `run from the same user session as After Effects or close ` +
+              `the other instances.`,
+          );
+        }
+        // Every running AE process is fully attributed to a DIFFERENT
+        // install — this install has no running target.
+        throw preflightError(
+          "ATTACHED_TARGET_NOT_RUNNING",
+          `a8n-attached found After Effects processes but none match ` +
+            `install ${installInfo.executable}; start that AE first or ` +
+            `use --session a8n for a disposable owned session. No AE ` +
+            `process was launched.`,
+        );
+      }
+      // exact === 1: the target install has exactly one running
+      // process — fall through to launch, where ae-a8n attaches to it
+      // (a `-r` launcher can also transiently share the install path on
+      // Windows, so ownership stays the final authority).
     }
   }
 

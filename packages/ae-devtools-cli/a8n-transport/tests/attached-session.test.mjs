@@ -245,25 +245,40 @@ test("preflight: two instances of the same install refuse as ambiguous", async (
   }
 });
 
-test("preflight: unattributed or foreign-version rows stay inconclusive", async () => {
+test("preflight: unattributed rows refuse UNVERIFIED, foreign-only rows NOT_RUNNING", async () => {
   const root = launchFixtureRoot();
   const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
   try {
     await withEnvVars(FAKE_EXE_ENV, async () => {
-      // A path the OS would not disclose, and a DIFFERENT install's AE:
-      // neither proves "no target", so launch + ownership decide.
-      for (const rows of [
-        [{ pid: 1, path: null }],
-        [{ pid: 2, path: "/other/Adobe After Effects 2026.app/Contents/MacOS/After Effects" }],
-        null, // probe failure
-      ]) {
-        const s = await openAttachedSliceSession({
-          aeA8nRoot: root, workdir, hostProcessProbe: async () => rows,
-        });
-        await s.close();
-      }
+      // An AE process whose image path the OS would not disclose can
+      // never be proven "not the target" — launching would risk a
+      // duplicate instance, so attach refuses before any side effect.
+      await assert.rejects(
+        openAttachedSliceSession({
+          aeA8nRoot: root, workdir,
+          hostProcessProbe: async () => [{ pid: 1, path: null }],
+        }),
+        (e) => e.code === "ATTACHED_TARGET_UNVERIFIED",
+      );
+      // Fully attributed rows for a DIFFERENT install prove this
+      // install has no running target.
+      await assert.rejects(
+        openAttachedSliceSession({
+          aeA8nRoot: root, workdir,
+          hostProcessProbe: async () => [
+            { pid: 2, path: "/other/Adobe After Effects 2026.app/Contents/MacOS/After Effects" },
+          ],
+        }),
+        (e) => e.code === "ATTACHED_TARGET_NOT_RUNNING",
+      );
+      // Only a failed/absent probe stays inconclusive and reaches
+      // launch(), where ae-a8n's own census + ownership decide.
+      const s = await openAttachedSliceSession({
+        aeA8nRoot: root, workdir, hostProcessProbe: async () => null,
+      });
+      await s.close();
       const { launchArgs } = await importFixture(root);
-      assert.equal(launchArgs.length, 3, "inconclusive scans must still reach launch()");
+      assert.equal(launchArgs.length, 1, "only an inconclusive probe reaches launch()");
     });
   } finally {
     rmSync(root, { recursive: true, force: true });
