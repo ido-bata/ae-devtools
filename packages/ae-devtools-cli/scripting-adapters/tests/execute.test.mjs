@@ -1354,3 +1354,71 @@ test("issue #299 batch: render/output-module templates — apply/save/list, mult
   assert.equal(dq.outcome, "COMPLETED");
   assert.notEqual((await go("render.listOutputModules", { compName: "C" })).outcome, "COMPLETED");
 });
+
+// ---- Issue #385: host-side project identity guard ----
+
+const COMP_ARGS = { name: "Guarded", width: 100, height: 100, pixelAspect: 1, duration: 5, frameRate: 30 };
+
+test("host project guard: matching fsName completes and binds the guard into consent source", async () => {
+  const app = createAdapterFakeApp();
+  app.project.file = { fsName: "/tmp/pinned.aep" };
+  const t = baseInput(app, { hostProjectGuard: "/tmp/pinned.aep" });
+  const consentCalls = [];
+  const provider = approvingProvider(consentCalls);
+  const r = await runOperation({
+    opId: "item.addComp", args: COMP_ARGS,
+    consentProvider: provider, confirmDestructive: true, ...t,
+  });
+  assert.equal(r.outcome, "COMPLETED", JSON.stringify(r));
+  assert.equal(app.project.items.length, 1);
+  // The consent-approved source IS the guarded program — the pin is
+  // inside the same evaluation the host runs.
+  assert.match(consentCalls[0].source, /__adp_guardFile/);
+  assert.match(consentCalls[0].source, /\/tmp\/pinned\.aep/);
+});
+
+test("host project guard: project switched after consent fails before any write", async () => {
+  const app = createAdapterFakeApp();
+  // The host's ACTIVE project differs from the attested guard value —
+  // the TOCTOU window the guard exists to close.
+  app.project.file = { fsName: "/tmp/other.aep" };
+  const t = baseInput(app, { hostProjectGuard: "/tmp/pinned.aep" });
+  const r = await runOperation({
+    opId: "item.addComp", args: COMP_ARGS,
+    consentProvider: approvingProvider(), confirmDestructive: true, ...t,
+  });
+  assert.equal(r.outcome, "FAILED");
+  assert.equal(r.adapterError?.code, "PROJECT_IDENTITY_MISMATCH");
+  // No write ran: the comp was never added.
+  assert.equal(app.project.items.length, 0);
+});
+
+test("hostProjectGuardRequired refuses mutating ops without an attested file; reads unaffected", async () => {
+  const app = createAdapterFakeApp();
+  const t = baseInput(app, { hostProjectGuard: null, hostProjectGuardRequired: true });
+  const consentCalls = [];
+  const provider = approvingProvider(consentCalls);
+  const r = await runOperation({
+    opId: "item.addComp", args: COMP_ARGS,
+    consentProvider: provider, confirmDestructive: true, ...t,
+  });
+  assert.equal(r.status, "refused");
+  assert.equal(r.reason, "PROJECT_GUARD_UNAVAILABLE");
+  assert.equal(t.transport.calls.length, 0, "refusal must precede dispatch");
+  assert.equal(consentCalls.length, 0, "refusal must precede consent");
+  // Read ops on the same session still work — the requirement is
+  // mutation-scoped.
+  const v = await runOperation({ opId: "read.projectSummary", consentProvider: provider, ...t });
+  assert.equal(v.outcome, "COMPLETED");
+});
+
+test("hostProjectGuardRequired + attested guard lets mutations through", async () => {
+  const app = createAdapterFakeApp();
+  app.project.file = { fsName: "/tmp/pinned.aep" };
+  const t = baseInput(app, { hostProjectGuard: "/tmp/pinned.aep", hostProjectGuardRequired: true });
+  const r = await runOperation({
+    opId: "item.addComp", args: COMP_ARGS,
+    consentProvider: approvingProvider(), confirmDestructive: true, ...t,
+  });
+  assert.equal(r.outcome, "COMPLETED", JSON.stringify(r));
+});

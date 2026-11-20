@@ -433,7 +433,16 @@ async function main() {
         const shared = {
           runner: state.session.runner,
           pin: state.session.pin,
-          projectIdentity: "cli-devtools",
+          // The consent scope names the REAL project when the session can
+          // attest it (attached lane, Issue #385); static labels remain
+          // for sessions without a project-file identity.
+          projectIdentity: state.session.hostProjectGuard ?? "cli-devtools",
+          // Host-side project guard (Issue #385): injected into the
+          // consent-bound source so the host re-verifies
+          // app.project.file.fsName inside the same evaluation as the
+          // op — closes the targetGuard→eval TOCTOU window.
+          hostProjectGuard: state.session.hostProjectGuard ?? null,
+          hostProjectGuardRequired: state.session.hostProjectGuardRequired === true,
           consentProvider: consentProviderFor(flags),
           consentAudit,
           trustedScriptOptIn: true,
