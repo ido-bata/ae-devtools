@@ -463,7 +463,7 @@ Both implementations (C++ plug-in, TS adapter/ae-a8n) MUST produce byte-identica
 
 - `null`, `true`, `false` → literals.
 - **Numbers: integers only.** A number is canonical iff `Number.isInteger(v)` and `|v| ≤ 9007199254740991`; it serializes as its decimal integer (`String(v)` / `%lld`). Any non-integer or out-of-range number makes canonicalization **fail** — the consent is then unverifiable and the request refuses `CONSENT_INVALID` (mutation arg schemas are integer-bounded anyway; floats are not consent-encodable in v1).
-- Strings → JSON string escaping identical to `JSON.stringify`: `"`→`\"`, `\`→`\\`, `\b \f \n \r \t` short escapes, other C0 controls → `\u00xx` (lowercase hex), all other characters emitted as raw UTF-8. Object keys follow the same rule.
+- Strings → JSON string escaping identical to `JSON.stringify`: `"`→`\"`, `\`→`\\`, `\b \f \n \r \t` short escapes, other C0 controls → `\u00xx` (lowercase hex), all other characters emitted as raw UTF-8. Object keys follow the same rule. Strings containing **lone UTF-16 surrogates are not consent-encodable**: the plug-in's JSON parser maps them to U+FFFD while `JSON.stringify` re-emits `\uDXXX` escapes, so no shared canonical form exists — issuance MUST reject them and verification fails closed (`CONSENT_INVALID`).
 - Arrays → `[e0,e1,…]`; objects → `{"k0":v0,"k1":v1,…}` with **no whitespace**, keys sorted ascending by **UTF-8 byte order** (equivalently code-point order for the ASCII keys all current schemas use).
 - No other value kinds exist (the dispatch arg set is ES3-serializable already).
 
@@ -477,9 +477,13 @@ Both implementations (C++ plug-in, TS adapter/ae-a8n) MUST produce byte-identica
 - `consent` on a read-only request is ignored — never an error, never logged.
 - `consentKey`/`mac` are secrets-adjacent: never written to result files, `state.json`, or the debug log (same rule as `token`).
 
-### Shared test vectors
+### Shared test vectors and wire fixtures
 
-Canonical-encoder + HMAC correctness is pinned by vectors committed in `packages/native-adapter/tests/` and mirrored in the C++ intake tests — both sides must produce identical MACs for identical inputs, and any divergence is a contract bug, not an implementation detail.
+The canonical cross-repo fixture is [`packages/native-adapter/tests/fixtures/native-consent-vectors.json`](../../../packages/native-adapter/tests/fixtures/native-consent-vectors.json) (Issue #337):
+
+- `canonicalVectors` — scope inputs (`operationId`/`requestId`/`sessionJson`/`argsJson`/`target`) → expected `canonicalString` bytes and expected `mac` under the fixture `consentKey`. Both `native_consent.cpp` (`test_main.cpp` `TestConsentVectors`, path passed via `-DCONSENT_VECTORS_PATH` in `run_tests.sh`) and `consent.ts` (`tests/consent.test.ts`) verify against the same entries — any divergence is a contract bug, not an implementation detail.
+- `wireCases` — the §7g/§7h wire contract executed **in array order** by the fake-host suite (`TestConsentWireCases`): envelope `consent` shape (`{"v":1,"mac":"<64hex>"}`), `CONSENT_REQUIRED`/`CONSENT_INVALID` refusals, scope-mismatch tamper cases, stale descriptor, failed mutation → `failed`+`mayHaveMutated:true`, missing suite entry → `not-sent`, and requestId replay → `DUPLICATE_REQUEST`. `expect.mayHaveMutated`/`expect.opCallsInclude`/`expect.opCallsExclude` pin the result-document semantics; `consent.expectedMac` pins the MAC ae-a8n must present.
+- **ae-a8n consumption** (ae-a8n#245): mint `consentKey` into `channel.json`, compute `mac = issueConsentMac(consentKey, {operationId, requestId, session, args, target})` over the *parsed* request scope, and publish `"consent":{"v":1,"mac":<hex>}` at envelope level. The fixture's `canonicalVectors`/`wireCases` are the acceptance vectors for that issuance path.
 
 ## 7h. Mutating operations — `AEGP_ItemSuite9.AEGP_SetItemComment` (Issue #327)
 

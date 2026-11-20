@@ -36,9 +36,21 @@ if [ "${SANITIZE:-0}" = "1" ]; then
   mkdir -p "$OUT"
 fi
 
+# Shared consent contract fixture (Issue #337): the same JSON file is
+# consumed by packages/native-adapter/tests/consent.test.ts and by
+# ae-a8n's consent issuance — test_main.cpp verifies the C++ side
+# against it via -DCONSENT_VECTORS_PATH.
+REPO_ROOT=$(CDPATH= cd -- "$HERE/../../../.." && pwd)
+CONSENT_VECTORS="$REPO_ROOT/packages/native-adapter/tests/fixtures/native-consent-vectors.json"
+if [ ! -f "$CONSENT_VECTORS" ]; then
+  echo "error: consent fixture missing: $CONSENT_VECTORS" >&2
+  exit 2
+fi
+
 clang++ -std=c++17 -O1 -g -Wall -Wextra -Werror \
   $SAN_FLAGS \
   -D__MACH__=1 \
+  -DCONSENT_VECTORS_PATH="\"$CONSENT_VECTORS\"" \
   -I"$HEADERS" -I"$HEADERS/SP" -I"$HERE" \
   "$HERE/../src/probe.cpp" "$HERE/../src/native_intake.cpp" "$HERE/../src/native_support.cpp" "$HERE/../src/native_state.cpp" "$HERE/../src/native_suites.cpp" "$HERE/../src/native_request.cpp" "$HERE/../src/native_registry.cpp" "$HERE/../src/native_identity.cpp" "$HERE/../src/native_ops.cpp" "$HERE/../src/native_json.cpp" "$HERE/../src/native_consent.cpp" "$HERE/fake_host.cpp" "$HERE/test_main.cpp" \
   -o "$OUT/probe_test"

@@ -23,6 +23,30 @@ export class ConsentCanonicalError extends Error {
 
 const MAX_SAFE = 9007199254740991;
 
+/* Lone UTF-16 surrogates have no UTF-8 form: the C++ plug-in's JSON
+   parser (native_json.cpp JParseString) maps them to U+FFFD while
+   JSON.stringify re-emits them as \uDXXX escapes — the two sides could
+   never produce the same canonical bytes, so the value is not
+   consent-encodable (contract §7g: canonicalization fails → the
+   request refuses CONSENT_INVALID). Rejecting at issuance is the
+   fail-closed mirror of that outcome. */
+function assertNoLoneSurrogate(s: string): void {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const d = s.charCodeAt(i + 1);
+      if (d >= 0xdc00 && d <= 0xdfff) {
+        i++;
+        continue;
+      }
+      throw new ConsentCanonicalError("lone surrogate in string");
+    }
+    if (c >= 0xdc00 && c <= 0xdfff) {
+      throw new ConsentCanonicalError("lone surrogate in string");
+    }
+  }
+}
+
 /**
  * canonicalJson — restricted JSON canonical form (contract §7g):
  * no whitespace; object keys sorted by UTF-8 byte order; strings
@@ -37,7 +61,10 @@ export function canonicalJson(v: unknown): string {
     }
     return String(v);
   }
-  if (typeof v === "string") return JSON.stringify(v);
+  if (typeof v === "string") {
+    assertNoLoneSurrogate(v);
+    return JSON.stringify(v);
+  }
   if (Array.isArray(v)) {
     return `[${v.map((e) => canonicalJson(e)).join(",")}]`;
   }
@@ -51,6 +78,7 @@ export function canonicalJson(v: unknown): string {
            form treats them as absent — same semantics. */
         return null;
       }
+      assertNoLoneSurrogate(k);
       return `${JSON.stringify(k)}:${canonicalJson(val)}`;
     }).filter((p): p is string => p !== null);
     return `{${parts.join(",")}}`;
