@@ -129,3 +129,31 @@ unit-tested only; each CLI invocation opens a fresh session so a
 mid-session drift cannot be produced through the CLI), the
 `AfterEffects.attach` primary path (pending ae-a8n), Windows re-run of
 this loop, MCP/VSCode surfaces on the attached session.
+
+## 2026-11-21 — attach-only API + VSCode attempt (branch 366)
+
+- `devtools-cli/evidence/run-366-attached-a8n-attach-api-2026.json` —
+  read-only `verify --session a8n-attached` against the USER's running
+  AE 2026 (26.5.3x9, pid 34792, uid/asid evidence) using a local
+  ae-a8n build of PR #270 (`AfterEffects.attach` present). Result:
+  `session.target.attachApi: "AfterEffects.attach"`, ownership
+  `attached`, `read.projectSummary` COMPLETED, `cleanup.quit: null`.
+  **verified on real host** for the attach-only seam on macOS.
+  Transitional `AfterEffects.launch` fallback remains until ae-a8n
+  PR #270 lands in a pinned dependency.
+- `jsx-toolchain/evidence/run-real-2027-366.json` — owned-session
+  AE 2027 vertical slice (issue #38 chain): broken JSX build →
+  runtime-error dispatch → sourcemap to-source → mystery detect/
+  diagnose → fix → rerun → verify → regression, all 11 steps ok,
+  bound to source SHA 2660089.
+- VSCode real-host attempt (issue #172): packaged VSIX installed in
+  an isolated `--extensions-dir`/`--user-data-dir` instance,
+  `ae-devtools.session: "a8n"`, qa-driver `mode=verify`. The
+  extension activated via the real `onCommand:ae-devtools.verify`
+  event and reached the modal consent gate — then settlement was
+  BLOCKED because the macOS screen locked (loginwindow frontmost,
+  window not on-screen, AX sees 0 windows). No dispatch completed,
+  no Problems-panel diagnostics were produced. Evidence:
+  `vscode-extension/evidence/vscode-iso-a8n-366/`. Status:
+  **BLOCKED (environmental)** — needs an unlocked GUI session to
+  settle consent, then Problems-panel verification.
