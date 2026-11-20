@@ -225,3 +225,120 @@ test("devloop.verify: read op unaffected by session policy", async () => {
   });
   assert.notEqual(result?.reason, "READ_ONLY_SESSION");
 });
+
+/* ------------------------------------------------------------------ */
+/* dev-loop mutation scope (Issue #366)                                */
+/* ------------------------------------------------------------------ */
+
+const scopedPolicy = {
+  readOnly: false,
+  mode: "attached",
+  mutation: { allowedOps: ["project.new"] },
+};
+
+test("devloop.execute: scoped session refuses mutating ops outside allowedOps", async () => {
+  let consentCalls = 0;
+  const result = await devloopExecute({
+    opId: "project.save",
+    args: {},
+    runner: stubRunner,
+    pin: { sessionId: "s", aeVersion: "26.5", dispatchId: "d" },
+    projectIdentity: "test",
+    consentProvider: async () => { consentCalls += 1; return { approved: true }; },
+    trustedScriptOptIn: true,
+    scriptProvenance: "test",
+    sessionPolicy: scopedPolicy,
+  });
+  assert.equal(result.status, "refused");
+  assert.equal(result.stage, "session-policy");
+  assert.equal(result.reason, "ATTACHED_MUTATION_NOT_GRANTED");
+  assert.equal(consentCalls, 0, "consent must not even be consulted for a scope refusal");
+});
+
+test("devloop.execute: scoped session lets an allowed mutating op reach the canonical path", async () => {
+  // project.new is in allowedOps, so the session policy must NOT refuse;
+  // whatever runOperation decides downstream (stub runner may still
+  // refuse) is not a session-policy refusal.
+  const result = await devloopExecute({
+    opId: "project.new",
+    args: {},
+    runner: stubRunner,
+    pin: { sessionId: "s", aeVersion: "26.5", dispatchId: "d" },
+    projectIdentity: "test",
+    consentProvider: approvedConsent,
+    trustedScriptOptIn: true,
+    scriptProvenance: "test",
+    sessionPolicy: scopedPolicy,
+  });
+  assert.notEqual(result?.reason, "ATTACHED_MUTATION_NOT_GRANTED");
+  assert.notEqual(result?.reason, "READ_ONLY_SESSION");
+});
+
+test("devloop.execute: attached policy without allowedOps fails closed", async () => {
+  const result = await devloopExecute({
+    opId: "project.new",
+    args: {},
+    runner: stubRunner,
+    pin: { sessionId: "s", aeVersion: "26.5", dispatchId: "d" },
+    projectIdentity: "test",
+    consentProvider: approvedConsent,
+    trustedScriptOptIn: true,
+    scriptProvenance: "test",
+    sessionPolicy: { readOnly: false, mode: "attached" },
+  });
+  assert.equal(result.status, "refused");
+  assert.equal(result.reason, "ATTACHED_MUTATION_NOT_GRANTED");
+});
+
+/* ------------------------------------------------------------------ */
+/* open-time mutation scope validation (Issue #366)                    */
+/* ------------------------------------------------------------------ */
+
+test("openAttachedSliceSession: mutatingOps produces a scoped policy", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withBehavior("attached-ok", async () => {
+      const s = await openAttachedSliceSession({
+        aeA8nRoot: root, workdir, mutatingOps: ["project.new", "project.new"],
+      });
+      try {
+        assert.deepEqual(s.policy, {
+          readOnly: false,
+          mode: "attached",
+          mutation: { allowedOps: ["project.new"] },
+        });
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("openAttachedSliceSession: unknown/read-only/forbidden mutatingOps refuse BEFORE launch", async () => {
+  const cases = [
+    { ops: ["no.such.op"], code: "ATTACHED_MUTATION_SCOPE" },
+    { ops: ["read.projectSummary"], code: "ATTACHED_MUTATION_SCOPE" },
+    { ops: ["project.close"], code: "ATTACHED_MUTATION_FORBIDDEN" },
+    { ops: "project.new", code: "ATTACHED_MUTATION_SCOPE" },
+  ];
+  for (const { ops, code } of cases) {
+    const root = launchFixtureRoot();
+    const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+    try {
+      await assert.rejects(
+        openAttachedSliceSession({ aeA8nRoot: root, workdir, mutatingOps: ops }),
+        (e) => e.code === code,
+        `mutatingOps ${JSON.stringify(ops)} must refuse with ${code}`,
+      );
+      const { launchArgs } = await importFixture(root);
+      assert.equal(launchArgs.length, 0, "a bad mutation scope must never reach AfterEffects.launch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(workdir, { recursive: true, force: true });
+    }
+  }
+});

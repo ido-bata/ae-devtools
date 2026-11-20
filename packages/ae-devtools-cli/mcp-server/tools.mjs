@@ -175,11 +175,14 @@ function consentRefusal(opLabel, consent) {
 
 function sessionBlock(session) {
   // meta first: session-supplied fields must not override the honest
-  // top-level kind/evidenceLevel (Issue #226).
+  // top-level kind/evidenceLevel (Issue #226). `policy` is the
+  // session-imposed dispatch scope (Issue #366) — attached sessions
+  // record exactly which mutating ops were granted at open time.
   return {
     ...(session.meta ?? {}),
     kind: session.kind,
     evidenceLevel: session.evidenceLevel,
+    policy: session.policy ?? null,
   };
 }
 

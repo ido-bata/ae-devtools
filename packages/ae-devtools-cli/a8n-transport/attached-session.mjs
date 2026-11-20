@@ -17,9 +17,13 @@
  *     naming ONLY `aeDevtools.trustedEval` — the narrowest scope that
  *     lets the trusted-execution runner reach the host. `hostEnvironment`
  *     and `menuCommands` are never granted on an attached session;
- *   - the returned session carries `policy.readOnly === true`: every
- *     dev-loop surface refuses mutating ops before consent. Writes to a
- *     user's live project are a separate, later slice;
+ *   - the returned session carries `policy.readOnly === true` unless the
+ *     caller explicitly scoped mutating ops at open time
+ *     (`options.mutatingOps`): then `policy.mutation.allowedOps` names
+ *     exactly those ops and dev-loop surfaces refuse every other
+ *     mutating op before consent. Ops that can destroy unsaved user
+ *     work (ATTACHED_FORBIDDEN_OPS) are never grantable on an attached
+ *     session, no matter what the caller asks for;
  *   - close() releases the connection only. ae-a8n never quits a host
  *     the session does not own, and this module adds no quit path.
  *
@@ -38,6 +42,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
+import { getOperation } from "../scripting-adapters/registry.mjs";
 import { createDispatchStore, defaultDispatchStoreDir } from "../trusted-execution/dispatch-store.mjs";
 import { createA8nTransport, EVAL_METHOD } from "./transport.mjs";
 import { resolveAeA8n } from "./ae-a8n-resolve.mjs";
@@ -54,6 +59,64 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const EXTENSION_MODULE = join(HERE, "extension.mjs");
 
 /**
+ * Ops an attached session must NEVER dispatch, even when the caller
+ * explicitly lists them in mutatingOps. `project.close` runs
+ * CloseOptions.DO_NOT_SAVE_CHANGES — on a user's live AE that silently
+ * discards unsaved work, which no consent flag can make safe. The list
+ * is enforced at session open AND recorded in the policy so evidence
+ * shows the scope that was actually granted.
+ */
+export const ATTACHED_FORBIDDEN_OPS = Object.freeze(["project.close"]);
+
+/**
+ * Normalize and validate the caller's mutation scope BEFORE any AE
+ * process is touched. Every entry must name a registered MUTATING op;
+ * reads need no grant and unknown/typo'd ids fail fast here instead of
+ * silently widening or narrowing the session's authority.
+ *
+ * @returns {string[]} deduplicated op ids
+ */
+function normalizeMutatingOps(raw) {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) {
+    const e = new Error("mutatingOps must be an array of operation ids");
+    e.code = "ATTACHED_MUTATION_SCOPE";
+    throw e;
+  }
+  const seen = new Set();
+  for (const opId of raw) {
+    if (typeof opId !== "string" || opId.length === 0) {
+      const e = new Error(`mutatingOps entries must be non-empty strings, got ${JSON.stringify(opId)}`);
+      e.code = "ATTACHED_MUTATION_SCOPE";
+      throw e;
+    }
+    if (seen.has(opId)) continue;
+    seen.add(opId);
+    if (ATTACHED_FORBIDDEN_OPS.includes(opId)) {
+      const e = new Error(
+        `'${opId}' can never be granted on an attached session: it discards ` +
+        `unsaved work or quits the host (DO_NOT_SAVE_CHANGES).`,
+      );
+      e.code = "ATTACHED_MUTATION_FORBIDDEN";
+      throw e;
+    }
+    let op = null;
+    try { op = getOperation(opId); } catch { op = null; }
+    if (op === null) {
+      const e = new Error(`mutatingOps names unknown operation '${opId}'`);
+      e.code = "ATTACHED_MUTATION_SCOPE";
+      throw e;
+    }
+    if (op.mutating !== true) {
+      const e = new Error(`mutatingOps names '${opId}' which is not a mutating op — reads need no grant`);
+      e.code = "ATTACHED_MUTATION_SCOPE";
+      throw e;
+    }
+  }
+  return [...seen];
+}
+
+/**
  * @param {object} options
  *   installDir     — pin the AE install to attach to (forwarded to launch)
  *   aeVersion      — optional expected AE version; a live version that
@@ -62,8 +125,14 @@ const EXTENSION_MODULE = join(HERE, "extension.mjs");
  *   callTimeoutMs  — per-dispatch ae.call budget (default 9500)
  *   deadlineMs     — runner deadline (default 10000; keep > callTimeoutMs)
  *   aeA8nRoot      — local ae-a8n checkout root with a built dist/
+ *   mutatingOps    — explicit op-level mutation scope (Issue #366):
+ *                    array of registered mutating opIds the caller
+ *                    consents to dispatch on the attached host. Empty/
+ *                    absent keeps the session read-only. Validated
+ *                    before launch — a bad scope never opens AE.
  */
 export async function openAttachedSliceSession(options = {}) {
+  const mutatingOps = normalizeMutatingOps(options.mutatingOps);
   const { AfterEffects, mod: aeA8nMod, cliPath, source: aeA8nSource, head: aeA8nHead } =
     await resolveAeA8n({ aeA8nRoot: options.aeA8nRoot });
   const missing = missingContractExports(aeA8nMod);
@@ -232,9 +301,18 @@ export async function openAttachedSliceSession(options = {}) {
       aeA8nSource, aeA8nHead, tracePath: ae.tracePath, sessionRoot,
       installDir, appPath, target,
       attached: true,
-      // Read-only policy: dev-loop surfaces refuse mutating ops before
-      // consent when this is set (dev-loop/devloop.mjs).
-      policy: { readOnly: true, mode: "attached" },
+      // Dispatch policy: read-only unless the caller scoped mutating ops
+      // at open time. dev-loop surfaces refuse anything outside
+      // mutation.allowedOps before consent (dev-loop/devloop.mjs); the
+      // scope is part of the returned session so every surface's
+      // evidence records exactly what was granted.
+      policy: mutatingOps.length === 0
+        ? { readOnly: true, mode: "attached" }
+        : {
+            readOnly: false,
+            mode: "attached",
+            mutation: { allowedOps: mutatingOps },
+          },
       negotiateCapabilities: aeA8nMod.negotiateCapabilities,
       assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
     };

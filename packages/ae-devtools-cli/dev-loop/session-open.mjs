@@ -34,6 +34,8 @@ const EXP = join(HERE, "..");
  *   real-run drivers pin the generated host-script directory
  *   (conformance keeps it inside its evidence workdir so close() does
  *   not delete it). `aeVersion` is an a8n-attached-only target pin.
+ *   `mutatingOps` is an a8n-attached-only op-level mutation scope
+ *   (Issue #366); it is forwarded to no other session kind.
  * @returns {Promise<object>} session shaped
  *   { kind, evidenceLevel, runner, pin, close, meta, slice, policy } —
  *   `slice` is the raw slice-session result (a8n kinds) or null (fake);
@@ -60,6 +62,9 @@ export async function openSession(kind = "fake", options = {}) {
       installDir: typeof options.installDir === "string" ? options.installDir : undefined,
       aeVersion: typeof options.aeVersion === "string" ? options.aeVersion : undefined,
       workdir: typeof options.workdir === "string" ? options.workdir : undefined,
+      mutatingOps: Array.isArray(options.mutatingOps)
+        ? options.mutatingOps.filter((v) => typeof v === "string")
+        : undefined,
     });
     return {
       kind: "a8n-attached",
