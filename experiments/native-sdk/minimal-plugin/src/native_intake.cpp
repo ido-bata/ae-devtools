@@ -1607,6 +1607,46 @@ static void VerdictSet(ReqVerdict* v, const char* outcomeZ,
     v->publish = 1;
 }
 
+/* Typed result payload with guaranteed NUL termination and the
+   havePayload flag — replaces the snprintf + manual-NUL + flag
+   triple repeated per getter (Issue #328). */
+static void PayloadSet(ReqVerdict* v, const char* fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(v->payload, sizeof(v->payload), fmt, ap);
+    va_end(ap);
+    v->payload[sizeof(v->payload) - 1] = '\0';
+    v->havePayload = 1;
+}
+
+/* Uniform read-only getter tail (Issue #328): completed iff the AEGP
+   call succeeded AND a payload was emitted; otherwise failed with the
+   op's error detail. `detailOverride` (may be NULL) replaces the
+   default "<opId> err=<n>" detail for codec-level failures. */
+static void GetterTailReadOnly(
+    const AllowEntry* allow,
+    ReqVerdict* v,
+    A_Err oerr,
+    const char* detailOverride)
+{
+    if (oerr == A_Err_NONE && v->havePayload)
+    {
+        snprintf(v->outcome, sizeof(v->outcome), "completed");
+        v->mayHaveMutated = 0;
+        v->publish = 1;
+    }
+    else if (detailOverride)
+    {
+        VerdictSet(v, "failed", "%s", detailOverride);
+    }
+    else
+    {
+        VerdictSet(v, "failed", "%s err=%ld",
+                   allow->operationId, (long)oerr);
+    }
+}
+
 /* ---- identity resolution + payload emit (Issue #270 identity slice)
    Contract: native-channel.md §7b. One shared resolver serves every
    identity-bearing intake op — project/comp/layer/RQ-item descriptor
@@ -2464,9 +2504,7 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload), "{\"fps\":%.12g}", fps);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"fps\":%.12g}", fps);
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompFrameDuration") == 0)
@@ -2476,11 +2514,8 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"frameDuration\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"frameDuration\":{\"value\":%ld,\"scale\":%lu}}",
                      (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart") == 0)
@@ -2490,11 +2525,8 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"workAreaStart\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"workAreaStart\":{\"value\":%ld,\"scale\":%lu}}",
                      (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration") == 0)
@@ -2504,11 +2536,8 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"workAreaDuration\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"workAreaDuration\":{\"value\":%ld,\"scale\":%lu}}",
                      (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime") == 0)
@@ -2518,11 +2547,8 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"displayStartTime\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"displayStartTime\":{\"value\":%ld,\"scale\":%lu}}",
                      (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame") == 0)
@@ -2532,10 +2558,7 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"displayDropFrame\":%s}", dropB ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"displayDropFrame\":%s}", dropB ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor") == 0)
@@ -2546,11 +2569,8 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"downsampleFactor\":{\"x\":%d,\"y\":%d}}",
+            PayloadSet(v, "{\"downsampleFactor\":{\"x\":%d,\"y\":%d}}",
                      (int)dsf.xS, (int)dsf.yS);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName") == 0)
@@ -2560,11 +2580,8 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"showLayerNameOrSourceName\":%s}",
+            PayloadSet(v, "{\"showLayerNameOrSourceName\":%s}",
                      shownB ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetShowBlendModes") == 0)
@@ -2574,10 +2591,7 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"showBlendModes\":%s}", shownB ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"showBlendModes\":%s}", shownB ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples") == 0)
@@ -2587,10 +2601,7 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"suggestedMotionBlurSamples\":%ld}", (long)samplesL);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"suggestedMotionBlurSamples\":%ld}", (long)samplesL);
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit") == 0)
@@ -2600,10 +2611,7 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"motionBlurAdaptiveSampleLimit\":%ld}", (long)samplesL);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"motionBlurAdaptiveSampleLimit\":%ld}", (long)samplesL);
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompBGColor") == 0)
@@ -2614,12 +2622,9 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"bgColor\":{\"alpha\":%.12g,\"red\":%.12g,"
+            PayloadSet(v, "{\"bgColor\":{\"alpha\":%.12g,\"red\":%.12g,"
                      "\"green\":%.12g,\"blue\":%.12g}}",
                      bg.alphaF, bg.redF, bg.greenF, bg.blueF);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase") == 0)
@@ -2629,13 +2634,10 @@ static void ExecCompGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"shutterAngle\":{\"num\":%ld,\"den\":%lu},"
+            PayloadSet(v, "{\"shutterAngle\":{\"num\":%ld,\"den\":%lu},"
                      "\"shutterPhase\":{\"num\":%ld,\"den\":%lu}}",
                      (long)angle.num, (unsigned long)angle.den,
                      (long)phase.num, (unsigned long)phase.den);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else
@@ -2649,21 +2651,7 @@ static void ExecCompGetter(
                        kAEGPCompSuite, kAEGPCompSuiteVersion13);
     ReleaseResolution(utilP, basicP, &res);
 
-    if (oerr == A_Err_NONE && v->havePayload)
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
-        v->publish = 1;
-    }
-    else
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "%s err=%ld", opId, (long)oerr);
-        v->havePayload = 0;
-        v->mayHaveMutated = 0; /* read-only getter */
-        v->publish = 1;
-    }
+    GetterTailReadOnly(allow, v, oerr, NULL);
 }
 
 /* ---- ItemSuite9 read-only detail getters (Issue #318 / #63) ---------
@@ -2748,10 +2736,7 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"itemType\":%d}", (int)t);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"itemType\":%d}", (int)t);
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemFlags") == 0)
@@ -2761,10 +2746,7 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"flags\":%ld}", (long)flags);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"flags\":%ld}", (long)flags);
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_IsItemSelected") == 0)
@@ -2774,10 +2756,7 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"selected\":%s}", selB ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"selected\":%s}", selB ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemLabel") == 0)
@@ -2787,10 +2766,7 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"label\":%d}", (int)label);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"label\":%d}", (int)label);
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemDuration") == 0)
@@ -2800,11 +2776,8 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"duration\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"duration\":{\"value\":%ld,\"scale\":%lu}}",
                      (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime") == 0)
@@ -2814,11 +2787,8 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"currentTime\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"currentTime\":{\"value\":%ld,\"scale\":%lu}}",
                      (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemDimensions") == 0)
@@ -2828,10 +2798,7 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"width\":%ld,\"height\":%ld}", (long)w, (long)hgt);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"width\":%ld,\"height\":%ld}", (long)w, (long)hgt);
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio") == 0)
@@ -2841,11 +2808,8 @@ static void ExecItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"pixelAspectRatio\":{\"num\":%ld,\"den\":%lu}}",
+            PayloadSet(v, "{\"pixelAspectRatio\":{\"num\":%ld,\"den\":%lu}}",
                      (long)par.num, (unsigned long)par.den);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_ItemSuite9.AEGP_GetItemComment") == 0)
@@ -2863,10 +2827,7 @@ static void ExecItemGetter(
             if (ms == IMH_OK)
             {
                 JsonEscape(esc, sizeof(esc), comment);
-                snprintf(v->payload, sizeof(v->payload),
-                         "{\"comment\":\"%s\"}", esc);
-                v->payload[sizeof(v->payload) - 1] = '\0';
-                v->havePayload = 1;
+                PayloadSet(v, "{\"comment\":\"%s\"}", esc);
             }
             else if (ms == IMH_TRUNCATED)
             {
@@ -2885,24 +2846,16 @@ static void ExecItemGetter(
 
     ReleaseResolution(utilP, basicP, &res);
 
-    if (oerr == A_Err_NONE && v->havePayload)
     {
-        snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
-        v->publish = 1;
-    }
-    else
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
+        char cdetail[96];
+        const char* ov = NULL;
         if (commentStatus == (int)IMH_TRUNCATED)
-            snprintf(v->detail, sizeof(v->detail),
+        {
+            snprintf(cdetail, sizeof(cdetail),
                      "comment exceeds %d-byte bound", ITEM_COMMENT_MAX);
-        else
-            snprintf(v->detail, sizeof(v->detail),
-                     "%s err=%ld", opId, (long)oerr);
-        v->havePayload = 0;
-        v->mayHaveMutated = 0; /* read-only getter */
-        v->publish = 1;
+            ov = cdetail;
+        }
+        GetterTailReadOnly(allow, v, oerr, ov);
     }
 }
 
@@ -2971,9 +2924,7 @@ static void ExecSetItemComment(
     if (oerr == A_Err_NONE)
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
-        snprintf(v->payload, sizeof(v->payload), "{\"commentSet\":true}");
-        v->payload[sizeof(v->payload) - 1] = '\0';
-        v->havePayload = 1;
+        PayloadSet(v, "{\"commentSet\":true}");
     }
     else
     {
@@ -3448,10 +3399,7 @@ static void ExecLayerCompOp(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"numLayers\":%ld}", (long)n);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"numLayers\":%ld}", (long)n);
         }
     }
     else
@@ -3491,21 +3439,7 @@ static void ExecLayerCompOp(
                        kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
     ReleaseResolution(utilP, basicP, &res);
 
-    if (oerr == A_Err_NONE && v->havePayload)
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
-        v->publish = 1;
-    }
-    else
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "%s err=%ld", opId, (long)oerr);
-        v->havePayload = 0;
-        v->mayHaveMutated = 0;
-        v->publish = 1;
-    }
+    GetterTailReadOnly(allow, v, oerr, NULL);
 }
 
 /* Layer-handle getters: {projectIndex, layer:<aeRefLayer>} → shared
@@ -3554,10 +3488,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"index\":%ld}", (long)idx);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"index\":%ld}", (long)idx);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerName") == 0)
@@ -3582,11 +3513,8 @@ static void ExecLayerGetter(
                 char e2[LAYER_NAME_MAX * 6 + 16];
                 JsonEscape(e1, sizeof(e1), lname);
                 JsonEscape(e2, sizeof(e2), sname);
-                snprintf(v->payload, sizeof(v->payload),
-                         "{\"name\":\"%s\",\"sourceName\":\"%s\"}",
+                PayloadSet(v, "{\"name\":\"%s\",\"sourceName\":\"%s\"}",
                          e1, e2);
-                v->payload[sizeof(v->payload) - 1] = '\0';
-                v->havePayload = 1;
             }
             else
             {
@@ -3601,10 +3529,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"flags\":%ld}", (long)flags);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"flags\":%ld}", (long)flags);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerQuality") == 0)
@@ -3614,10 +3539,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"quality\":%d}", (int)q);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"quality\":%d}", (int)q);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerObjectType") == 0)
@@ -3627,10 +3549,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"objectType\":%ld}", (long)ot);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"objectType\":%ld}", (long)ot);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayer3D") == 0)
@@ -3640,10 +3559,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"is3D\":%s}", b ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"is3D\":%s}", b ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayer2D") == 0)
@@ -3653,10 +3569,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"is2D\":%s}", b ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"is2D\":%s}", b ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime") == 0 ||
@@ -3680,11 +3593,8 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"%s\":{\"value\":%ld,\"scale\":%lu}}",
+            PayloadSet(v, "{\"%s\":{\"value\":%ld,\"scale\":%lu}}",
                      key, (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerID") == 0)
@@ -3694,10 +3604,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"layerId\":%ld}", (long)lid);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"layerId\":%ld}", (long)lid);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerLabel") == 0)
@@ -3707,10 +3614,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"label\":%d}", (int)label);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"label\":%d}", (int)label);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality") == 0)
@@ -3720,10 +3624,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"samplingQuality\":%d}", (int)q);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"samplingQuality\":%d}", (int)q);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID") == 0)
@@ -3733,10 +3634,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"sourceItemId\":%ld}", (long)sid);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"sourceItemId\":%ld}", (long)sid);
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn") == 0)
@@ -3746,10 +3644,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"videoOn\":%s}", b ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"videoOn\":%s}", b ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn") == 0)
@@ -3759,10 +3654,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"audioOn\":%s}", b ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"audioOn\":%s}", b ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte") == 0)
@@ -3772,10 +3664,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"hasTrackMatte\":%s}", b ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"hasTrackMatte\":%s}", b ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte") == 0)
@@ -3786,10 +3675,7 @@ static void ExecLayerGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"isTrackMatte\":%s}", b ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
+            PayloadSet(v, "{\"isTrackMatte\":%s}", b ? "true" : "false");
         }
     }
     else if (strcmp(opId, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer") == 0)
@@ -3831,21 +3717,7 @@ static void ExecLayerGetter(
 
     ReleaseLayerResolution(utilP, basicP, &lr);
 
-    if (oerr == A_Err_NONE && v->havePayload)
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "completed");
-        v->mayHaveMutated = 0;
-        v->publish = 1;
-    }
-    else
-    {
-        snprintf(v->outcome, sizeof(v->outcome), "failed");
-        snprintf(v->detail, sizeof(v->detail),
-                 "%s err=%ld", opId, (long)oerr);
-        v->havePayload = 0;
-        v->mayHaveMutated = 0; /* read-only getter */
-        v->publish = 1;
-    }
+    GetterTailReadOnly(allow, v, oerr, NULL);
 }
 
 /* Execute one claimed request file. Always publishes a result when
@@ -4016,10 +3888,8 @@ static void ExecProjectGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload), "{\"dirty\":%s}",
+            PayloadSet(v, "{\"dirty\":%s}",
                      dirty ? "true" : "false");
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_ProjSuite6.AEGP_GetProjectBitDepth") == 0)
@@ -4030,10 +3900,8 @@ static void ExecProjectGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload), "{\"bitDepth\":%d}",
+            PayloadSet(v, "{\"bitDepth\":%d}",
                      (int)depth);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
     else /* AEGP_GetProjectTimeDisplay */
@@ -4045,8 +3913,7 @@ static void ExecProjectGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                "{\"timeDisplay\":{\"displayMode\":%d,\"footageDisplayMode\":%d,"
+            PayloadSet(v, "{\"timeDisplay\":{\"displayMode\":%d,\"footageDisplayMode\":%d,"
                 "\"displayDropFrame\":%s,\"useFeetFrames\":%s,\"timebase\":%d,"
                 "\"framesPerFoot\":%d,\"framesDisplayMode\":%d}}",
                 (int)td.display_mode, (int)td.footage_display_mode,
@@ -4054,8 +3921,6 @@ static void ExecProjectGetter(
                 td.use_feet_framesB ? "true" : "false",
                 (int)td.timebaseC, (int)td.frames_per_footC,
                 (int)td.frames_display_mode);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            v->havePayload = 1;
         }
     }
 
@@ -4283,7 +4148,6 @@ static void ExecRQItemGetter(
     RQResolution r;
     const char* opId = allow->operationId;
     A_Err oerr = A_Err_STRUCT;
-    int havePayload = 0;
 
     if (!ResolveRQItemRef(utilP, projP, basicP, plugin_id,
                           projIndex, ref, &r, v))
@@ -4296,10 +4160,8 @@ static void ExecRQItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload), "{\"status\":%ld}",
+            PayloadSet(v, "{\"status\":%ld}",
                      (long)st);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetStartedTime") == 0 ||
@@ -4315,15 +4177,11 @@ static void ExecRQItemGetter(
         {
             /* {0,1} sentinel = never started/rendered → null */
             if (t.value == 0 && t.scale == 1)
-                snprintf(v->payload, sizeof(v->payload),
-                         "{\"%s\":null}", isStarted ? "startedTime" : "elapsedTime");
+                PayloadSet(v, "{\"%s\":null}", isStarted ? "startedTime" : "elapsedTime");
             else
-                snprintf(v->payload, sizeof(v->payload),
-                         "{\"%s\":{\"value\":%ld,\"scale\":%lu}}",
+                PayloadSet(v, "{\"%s\":{\"value\":%ld,\"scale\":%lu}}",
                          isStarted ? "startedTime" : "elapsedTime",
                          (long)t.value, (unsigned long)t.scale);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetLogType") == 0)
@@ -4333,10 +4191,8 @@ static void ExecRQItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload), "{\"logType\":%ld}",
+            PayloadSet(v, "{\"logType\":%ld}",
                      (long)lt);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            havePayload = 1;
         }
     }
     else if (strcmp(opId, "AEGP_RQItemSuite4.AEGP_GetComment") == 0)
@@ -4353,10 +4209,7 @@ static void ExecRQItemGetter(
             {
                 char esc[6600];
                 JsonEscape(esc, sizeof(esc), cm);
-                snprintf(v->payload, sizeof(v->payload),
-                         "{\"comment\":\"%s\"}", esc);
-                v->payload[sizeof(v->payload) - 1] = '\0';
-                havePayload = 1;
+                PayloadSet(v, "{\"comment\":\"%s\"}", esc);
             }
             else oerr = A_Err_STRUCT;
         }
@@ -4369,10 +4222,7 @@ static void ExecRQItemGetter(
         RecordAllowOp(utilP, allow, oerr);
         if (oerr == A_Err_NONE)
         {
-            snprintf(v->payload, sizeof(v->payload),
-                     "{\"numOutputModules\":%ld}", (long)nom);
-            v->payload[sizeof(v->payload) - 1] = '\0';
-            havePayload = 1;
+            PayloadSet(v, "{\"numOutputModules\":%ld}", (long)nom);
         }
     }
     else /* AEGP_GetCompFromRQItem — emit comp descriptor, never handle */
@@ -4414,7 +4264,7 @@ static void ExecRQItemGetter(
                     if (!b.of)
                     {
                         *b.cur = '\0';
-                        havePayload = 1;
+                        v->havePayload = 1;
                     }
                     else oerr = A_Err_STRUCT;
                 }
@@ -4425,8 +4275,7 @@ static void ExecRQItemGetter(
     }
 
     ReleaseRQResolution(utilP, basicP, &r);
-    v->havePayload = havePayload;
-    if (havePayload)
+    if (v->havePayload)
     {
         snprintf(v->outcome, sizeof(v->outcome), "completed");
         v->mayHaveMutated = 0;
@@ -4938,8 +4787,7 @@ static void ProcessClaimed(
             if (oerr == A_Err_NONE)
             {
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
-                snprintf(v.payload, sizeof(v.payload), "{\"numProjects\":%ld}", (long)num);
-                v.havePayload = 1;
+                PayloadSet(&v, "{\"numProjects\":%ld}", (long)num);
                 v.mayHaveMutated = 0;
             }
             else
@@ -4968,8 +4816,7 @@ static void ProcessClaimed(
             if (oerr == A_Err_NONE)
             {
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
-                snprintf(v.payload, sizeof(v.payload), "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
-                v.havePayload = 1;
+                PayloadSet(&v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
                 v.mayHaveMutated = 0;
             }
             else
@@ -5028,10 +4875,7 @@ static void ProcessClaimed(
                     char esc[AEGP_MAX_TYPE_NAME_SIZE * 2 + 8];
                     JsonEscape(esc, sizeof(esc), nameZ);
                     snprintf(v.outcome, sizeof(v.outcome), "completed");
-                    snprintf(v.payload, sizeof(v.payload),
-                             "{\"typeName\":\"%s\"}", esc);
-                    v.payload[sizeof(v.payload) - 1] = '\0';
-                    v.havePayload = 1;
+                    PayloadSet(&v, "{\"typeName\":\"%s\"}", esc);
                     v.mayHaveMutated = 0;
                 }
                 else
@@ -5086,9 +4930,7 @@ static void ProcessClaimed(
                 char esc[AEREF_NAME_MAX * 6 + 8];
                 JsonEscape(esc, sizeof(esc), res.name);
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
-                snprintf(v.payload, sizeof(v.payload), "{\"name\":\"%s\"}", esc);
-                v.payload[sizeof(v.payload) - 1] = '\0';
-                v.havePayload = 1;
+                PayloadSet(&v, "{\"name\":\"%s\"}", esc);
                 v.mayHaveMutated = 0;
             }
             else
@@ -5227,10 +5069,7 @@ static void ProcessClaimed(
             if (oerr == A_Err_NONE)
             {
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
-                snprintf(v.payload, sizeof(v.payload),
-                         "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
-                v.payload[sizeof(v.payload) - 1] = '\0';
-                v.havePayload = 1;
+                PayloadSet(&v, "{\"major\":%d,\"minor\":%d}", (int)maj, (int)min);
                 v.mayHaveMutated = 0;
             }
             else
@@ -5254,9 +5093,7 @@ static void ProcessClaimed(
             if (oerr == A_Err_NONE)
             {
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
-                snprintf(v.payload, sizeof(v.payload),
-                         "{\"interactiveUiSuppressed\":%s}", suppressed ? "true" : "false");
-                v.havePayload = 1;
+                PayloadSet(&v, "{\"interactiveUiSuppressed\":%s}", suppressed ? "true" : "false");
                 v.mayHaveMutated = 0;
             }
             else
@@ -5280,9 +5117,7 @@ static void ProcessClaimed(
             if (oerr == A_Err_NONE)
             {
                 snprintf(v.outcome, sizeof(v.outcome), "completed");
-                snprintf(v.payload, sizeof(v.payload),
-                         "{\"hostActivated\":%s}", activated ? "true" : "false");
-                v.havePayload = 1;
+                PayloadSet(&v, "{\"hostActivated\":%s}", activated ? "true" : "false");
                 v.mayHaveMutated = 0;
             }
             else
@@ -5332,10 +5167,7 @@ static void ProcessClaimed(
                                  (unsigned long)state);
                         IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
                         snprintf(v.outcome, sizeof(v.outcome), "completed");
-                        snprintf(v.payload, sizeof(v.payload),
-                                 "{\"state\":%lu}", (unsigned long)state);
-                        v.payload[sizeof(v.payload) - 1] = '\0';
-                        v.havePayload = 1;
+                        PayloadSet(&v, "{\"state\":%lu}", (unsigned long)state);
                         v.mayHaveMutated = 0;
                     }
                     else
@@ -5361,10 +5193,7 @@ static void ProcessClaimed(
                         snprintf(extra, sizeof(extra), " value=%ld", (long)num);
                         IntakeOpRecord(utilP, allow->opRecordId, (long)oerr, extra);
                         snprintf(v.outcome, sizeof(v.outcome), "completed");
-                        snprintf(v.payload, sizeof(v.payload),
-                                 "{\"numRQItems\":%ld}", (long)num);
-                        v.payload[sizeof(v.payload) - 1] = '\0';
-                        v.havePayload = 1;
+                        PayloadSet(&v, "{\"numRQItems\":%ld}", (long)num);
                         v.mayHaveMutated = 0;
                     }
                     else
