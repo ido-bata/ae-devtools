@@ -139,7 +139,7 @@ CAP047 is left **unchecked**: the decomposition exists and is tracked, but the c
 
 Dependencies: #11–#15. Status: **open — dev-loop core + MCP tools merged** (`dev-loop/`, `mcp-server/`; automated test + fake/mock, packaged in `@ido-bata/ae-devtools-cli`). VSCode extension scaffold + diagnostics surface + debugger-attach commands merged (`vscode-extension/`; PRs #159–#161, fake level; `vsce package` produces an installable VSIX), plus the `vscode-debugger/` attach-config generator and preflight checks (fake level). Real-editor acceptance and a8n-session acceptance remain release-candidate items.
 
-- [ ] **CAP049** Expose shared discovery/session/API metadata. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
+- [x] **CAP049** Expose shared discovery/session/API metadata. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20)) — `ae_discover`/`ae_inspect`/`ae_session`(sessionStatus) shared by CLI/MCP/VSCode; sessionStatus now reports `api.devLoop` contract version + opener-attested `host` metadata (aeVersion/ownership/attached/target pid+projectFile+attachApi) for open sessions only — fake-level verified; real-host session metadata evidenced via #366 attached runs
 - [x] **CAP050** Implement VSCode run/inspect/diagnostic vertical slice. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20)) — fake-level verified; real-editor acceptance pending
 - [x] **CAP051** Define minimal MCP inspect/execute/verify interface. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
 - [x] **CAP052** Audit explicit consent and privileged SDK/script operations. ([Issue #20](https://github.com/ido-bata/ae-devtools/issues/20))
