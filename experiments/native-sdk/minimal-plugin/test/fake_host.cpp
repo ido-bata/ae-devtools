@@ -840,6 +840,34 @@ static const FakeItemMeta& MetaFor(FakeProject* p, int ii)
     return p->itemMeta[ii];
 }
 
+/* Mutable variant for the Issue #327 mutating getter: grows
+   itemMeta with defaults when the fixture did not pre-populate the
+   slot, so a set on an unconfigured item still round-trips through
+   FakeGetItemComment. */
+static FakeItemMeta& MetaForMut(FakeProject* p, int ii)
+{
+    static FakeItemMeta kSink;
+    if (!p || ii < 0) return kSink;
+    if (ii >= (int)p->itemMeta.size())
+        p->itemMeta.resize((size_t)ii + 1);
+    return p->itemMeta[ii];
+}
+
+static A_Err FakeSetItemComment(AEGP_ItemH itemH, const A_UTF16Char* commentZ)
+{
+    FakeProject* p;
+    FakeItemMeta* m;
+    if (g_host->setCommentErr != A_Err_NONE)
+        return (A_Err)g_host->setCommentErr;
+    p = ProjectOfItem(itemH);
+    m = &MetaForMut(p, ItemIndexOf(itemH));
+    m->comment.units.clear();
+    if (commentZ)
+        for (const A_UTF16Char* s = commentZ; *s; s++)
+            m->comment.units.push_back(*s);
+    return A_Err_NONE;
+}
+
 static A_Err FakeGetProjectTimeDisplay(AEGP_ProjectH projH, AEGP_TimeDisplay3* tdP)
 {
     FakeProject* p = ProjectForHandle(projH);
@@ -1601,6 +1629,7 @@ void FakeHost::PopulateSuites()
     itemSuite.AEGP_GetItemDimensions = FakeGetItemDimensions;
     itemSuite.AEGP_GetItemPixelAspectRatio = FakeGetItemPixelAspectRatio;
     if (nullItemEntry != 2) itemSuite.AEGP_GetItemComment = FakeGetItemComment;
+    if (nullItemEntry != 5) itemSuite.AEGP_SetItemComment = FakeSetItemComment;
     itemSuite.AEGP_GetItemLabel = FakeGetItemLabel;
     if (nullItemEntry != 1) itemSuite.AEGP_GetItemMRUView = FakeGetItemMRUView;
 

@@ -104,6 +104,11 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_ItemSuite9.AEGP_GetItemDimensions",
   "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
   "AEGP_ItemSuite9.AEGP_GetItemComment",
+  /* Issue #327: first mutating op — AEGP_ItemSuite9.AEGP_SetItemComment
+     (UNDOABLE). requiresConsent: the request must carry a valid §7g
+     envelope-level consent MAC; the host verifies it after session
+     attestation and before the AEGP call. */
+  "AEGP_ItemSuite9.AEGP_SetItemComment",
   /* Issue #318 / #64 layer slice: AEGP_LayerSuite9. The layer handle is
      never taken from the wire — `layer` is an aeRefLayer descriptor
      {type:"layer", name, layerId, comp:{aeRef:<comp item descriptor>}};
@@ -158,6 +163,15 @@ export const NATIVE_INTAKE_OPERATIONS = [
 ] as const;
 export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
 
+/** Issue #327 / contract §7g: allowlist members that require an
+    envelope-level consent MAC (`requiresConsent` in the C++
+    AllowEntry). Shape validation does not cover consent — the plug-in
+    verifies the MAC host-side after session attestation; this set
+    only documents which ops need one so callers know to attach it. */
+export const NATIVE_INTAKE_CONSENT_OPS: ReadonlySet<string> = new Set([
+  "AEGP_ItemSuite9.AEGP_SetItemComment",
+]);
+
 // ---------------------------------------------------------------------------
 // Per-operation intake argument schema (Issue #270 Stage 1)
 // ---------------------------------------------------------------------------
@@ -196,6 +210,13 @@ export type NativeIntakeArgConstraint =
       /** Inclusive bounds on the integer value. */
       min: number;
       max: number;
+    }
+  | {
+      /* Issue #327 (contract §7g): bounded UTF-8 string argument.
+         `maxBytes` bounds the UTF-8 byte length; empty string is
+         permitted. The C++ side stores it as JK_STR with slen <= max. */
+      kind: "string";
+      maxBytes: number;
     }
   | {
       /* Issue #270 identity slice (contract native-channel.md §7b): a
@@ -380,6 +401,14 @@ export const NATIVE_INTAKE_ARG_SCHEMAS: Readonly<
   "AEGP_ItemSuite9.AEGP_GetItemComment": {
     projectIndex: { kind: "integer", min: 0, max: 1000000 },
     item: { kind: "aeRefItem" },
+  },
+  /* Issue #327: {projectIndex, item:<aeRefItem>, comment:<bounded
+     UTF-8>} — same aeRef resolution as the getters; comment bound
+     matches the C++ ARGK_STR spec (2048 UTF-8 bytes, ITEM_COMMENT_MAX). */
+  "AEGP_ItemSuite9.AEGP_SetItemComment": {
+    projectIndex: { kind: "integer", min: 0, max: 1000000 },
+    item: { kind: "aeRefItem" },
+    comment: { kind: "string", maxBytes: 2048 },
   },
   /* LayerSuite9 (Issue #318 layer slice): `comp` is the §7b aeRef item
      descriptor for comp-scoped ops; `layer` is the §7d aeRefLayer
@@ -578,6 +607,12 @@ export function validateNativeIntakeArgs(
         errors.push(`argument "${k}" must be an integer`);
       } else if (v < spec.min || v > spec.max) {
         errors.push(`argument "${k}" must be in [${spec.min}, ${spec.max}]`);
+      }
+    } else if (spec.kind === "string") {
+      if (typeof v !== "string") {
+        errors.push(`argument "${k}" must be a string`);
+      } else if (utf8.encode(v).length > spec.maxBytes) {
+        errors.push(`argument "${k}" exceeds ${spec.maxBytes} UTF-8 bytes`);
       }
     } else if (spec.kind === "aeRefItem") {
       errors.push(...validateAeRefItemArg(k, v));

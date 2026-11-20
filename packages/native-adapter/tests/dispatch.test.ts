@@ -15,6 +15,7 @@ import { describe, expect, test } from "bun:test";
 import {
   DISPATCH_ARG_MAX_DEPTH,
   NATIVE_INTAKE_ARG_SCHEMAS,
+  NATIVE_INTAKE_CONSENT_OPS,
   NATIVE_INTAKE_OPERATIONS,
   DISPATCH_OUTCOMES,
   DISPATCH_SCHEMA,
@@ -225,10 +226,10 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
       if (!res.ok) expect(res.refusal).toBe("operation-not-dispatchable");
     }
   });
-  test("intake allowlist contains only implemented read-only getters", () => {
-    /* explicit expected set — every entry is a read-only query the
-       NativeProbe already calls; mutation candidates stay out until
-       the FR-07/US3 permission model exists (#270) */
+  test("intake allowlist contains only implemented ops; mutations are consent-gated", () => {
+    /* explicit expected set — read-only getters plus the Issue #327
+       consent-gated mutation. Every mutating member MUST appear in
+       NATIVE_INTAKE_CONSENT_OPS (contract §7g). */
     expect([...NATIVE_INTAKE_OPERATIONS].sort()).toEqual([
       "AEGP_CompSuite13.AEGP_GetCompBGColor",
       "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
@@ -256,6 +257,7 @@ describe("NATIVE_INTAKE_OPERATIONS — verification lane is not the dispatchable
       "AEGP_ItemSuite9.AEGP_GetItemType",
       "AEGP_ItemSuite9.AEGP_GetTypeName",
       "AEGP_ItemSuite9.AEGP_IsItemSelected",
+      "AEGP_ItemSuite9.AEGP_SetItemComment",
       "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
       "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
       "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
@@ -663,5 +665,35 @@ describe("project:<aeRefProject> / rqItem:<aeRefRQItem> args — Issue #318 Stag
     ]) {
       expect(validateNativeIntakeArgs(RQENUM, bad)).not.toEqual([]);
     }
+  });
+  test("SetItemComment: {projectIndex, item:aeRefItem, comment:bounded string}", () => {
+    const SC = "AEGP_ItemSuite9.AEGP_SetItemComment";
+    const good = {
+      projectIndex: 0,
+      item: { aeRef: { type: "comp", name: "Clip", path: [0], itemId: 7001 } },
+      comment: "caf\u00e9 \ud83d\ude00",
+    };
+    expect(validateNativeIntakeArgs(SC, good)).toEqual([]);
+    expect(validateNativeIntakeArgs(SC, { ...good, comment: "" })).toEqual([]);
+    for (const bad of [
+      { projectIndex: 0, item: good.item },                          // missing comment
+      { ...good, comment: 42 },                                     // not a string
+      { ...good, comment: "x".repeat(2049) },                       // over byte bound
+      { ...good, comment: "é".repeat(1025) },                       // multibyte over bound
+      { ...good, extra: 1 },                                        // unexpected arg
+      { projectIndex: 0, comment: "x" },                            // missing item
+    ]) {
+      expect(validateNativeIntakeArgs(SC, bad)).not.toEqual([]);
+    }
+    /* exactly at the bound passes */
+    expect(validateNativeIntakeArgs(SC, { ...good, comment: "x".repeat(2048) })).toEqual([]);
+  });
+  test("every consent-gated op is allowlisted; SetItemComment is the only one", () => {
+    for (const id of NATIVE_INTAKE_CONSENT_OPS) {
+      expect((NATIVE_INTAKE_OPERATIONS as readonly string[]).includes(id)).toBe(true);
+    }
+    expect([...NATIVE_INTAKE_CONSENT_OPS]).toEqual([
+      "AEGP_ItemSuite9.AEGP_SetItemComment",
+    ]);
   });
 });

@@ -4060,6 +4060,274 @@ static void TestIntakeProjectCollision()
     CheckResultDoc(c, "pc2", "completed", NULL);
 }
 
+/* ================= Issue #327: first mutating op ==================
+   AEGP_ItemSuite9.AEGP_SetItemComment behind the §7g consent proof.
+   The test computes real HMACs through the same native_consent module
+   the plug-in verifies with (crypto itself is pinned by
+   TestConsentVectors against the TS mirror). */
+
+static const char* kConsentKey =
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+/* channel.json with a consentKey — the default TmpChan writes token
+   only, which is the no-key configuration. */
+static void AddConsentKey(TmpChan& c)
+{
+    char p[400];
+    snprintf(p, sizeof(p), "%s/channel.json", c.root);
+    FILE* f = fopen(p, "wb");
+    CHECK(f != NULL);
+    fprintf(f, "{\"v\":1,\"token\":\"%s\",\"consentKey\":\"%s\"}",
+            kTok, kConsentKey);
+    fclose(f);
+    chmod(p, 0600);
+}
+
+/* Compute the §7g MAC for a request exactly as the plug-in will:
+   canonicalConsentString over the PARSED session/args, HMAC-SHA256
+   under the hex consentKey. Session matches ReqJsonMut's literal. */
+static std::string ConsentMacFor(const char* op, const char* id,
+                                 const char* argsJson)
+{
+    const char* sessJson = "{\"sessionId\":\"sess-1\",\"aeVersion\":\"26.5\"}";
+    JVal* sess = JParseDoc(sessJson, strlen(sessJson));
+    JVal* args = argsJson ? JParseDoc(argsJson, strlen(argsJson)) : NULL;
+    char canon[8192];
+    size_t clen = 0;
+    unsigned char key[32], mac[32];
+    char hex[65];
+    int i;
+    CHECK(sess != NULL);
+    CHECK(argsJson == NULL || args != NULL);
+    if (!sess || (argsJson && !args)) { JFree(sess); JFree(args); return ""; }
+    CHECK(ConsentBuildString(canon, sizeof(canon), &clen,
+                             op, strlen(op), id, strlen(id),
+                             sess, args, NULL, 0));
+    CHECK(ConsentHexKeyDecode(kConsentKey, key));
+    ConsentHmacSha256(key, sizeof(key),
+                      (const unsigned char*)canon, clen, mac);
+    for (i = 0; i < 32; i++) snprintf(hex + i * 2, 3, "%02x", mac[i]);
+    hex[64] = '\0';
+    JFree(sess); JFree(args);
+    return std::string(hex);
+}
+
+/* Envelope variant of ReqJsonArgs carrying an optional envelope-level
+   consent {v:1,mac} (contract §7g — outside the inner request). */
+static std::string ReqJsonMut(const char* id, const char* tok,
+                              const char* mac, const char* op,
+                              const char* aeVer, const char* argsJson)
+{
+    char b[4096];
+    char consent[300];
+    if (mac)
+        snprintf(consent, sizeof(consent),
+                 "\"consent\":{\"v\":1,\"mac\":\"%s\"},", mac);
+    else
+        consent[0] = '\0';
+    snprintf(b, sizeof(b),
+        "{\"v\":1,\"token\":\"%s\",\"timeoutMs\":30000,%s\"request\":{"
+        "\"schema\":\"ae-devtools/native-dispatch/v1\",\"requestId\":\"%s\","
+        "\"session\":{\"sessionId\":\"sess-1\",\"aeVersion\":\"%s\"},"
+        "\"operationId\":\"%s\",\"args\":%s,\"authorizationRef\":\"opaque\"}}",
+        tok, consent, id, aeVer, op, argsJson ? argsJson : "null");
+    return std::string(b);
+}
+
+static const char* kSetCommentOp = "AEGP_ItemSuite9.AEGP_SetItemComment";
+
+static void TestIntakeSetItemComment()
+{
+    auto h = MakeFakeHost();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Clip", AEGP_ItemType_COMP, 7001 },
+    });
+    p.itemMeta[0].comment = h->MakeNameSpec(FakeHost::U16("old note"));
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+
+    const char* refJson =
+        "\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Clip\","
+        "\"path\":[0],\"itemId\":7001,\"projectName\":\"Shot01\","
+        "\"projectPath\":\"/tmp/shot01.aep\"}}";
+    char argsBuf[1024];
+
+    /* (a) requiresConsent op without a consent object → CONSENT_REQUIRED,
+       and no mutation AEGP call is recorded. */
+    snprintf(argsBuf, sizeof(argsBuf),
+             "{\"projectIndex\":0,%s,\"comment\":\"x\"}", refJson);
+    WriteReq0600(c.Path("inbox/sc.request.json"),
+                 ReqJsonMut("sc", kTok, NULL, kSetCommentOp, "26.5", argsBuf));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "sc", "refused", "CONSENT_REQUIRED");
+    {
+        std::string r = Slurp(ResultPath(c, "sc"));
+        CHECK(r.find("AEGP_SetItemComment") == std::string::npos);
+    }
+
+    /* (b) well-formed MAC but channel.json has no consentKey →
+       CONSENT_REQUIRED (fail closed). */
+    std::string macNoKey = ConsentMacFor(kSetCommentOp, "sk", argsBuf);
+    WriteReq0600(c.Path("inbox/sk.request.json"),
+                 ReqJsonMut("sk", kTok, macNoKey.c_str(), kSetCommentOp,
+                            "26.5", argsBuf));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "sk", "refused", "CONSENT_REQUIRED");
+
+    /* channel gains a consentKey — remaining cases verify real MACs. */
+    AddConsentKey(c);
+
+    /* (c) wrong MAC → CONSENT_INVALID, no mutation call. */
+    WriteReq0600(c.Path("inbox/bw.request.json"),
+                 ReqJsonMut("bw", kTok,
+                            "1111111111111111111111111111111111111111111111111111111111111111",
+                            kSetCommentOp, "26.5", argsBuf));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "bw", "refused", "CONSENT_INVALID");
+    {
+        std::string r = Slurp(ResultPath(c, "bw"));
+        CHECK(r.find("AEGP_SetItemComment") == std::string::npos);
+    }
+
+    /* (d) MAC computed for comment "Alpha" but args carry "Beta" →
+       scope tampering breaks the MAC → CONSENT_INVALID. */
+    {
+        char alphaArgs[1024];
+        snprintf(alphaArgs, sizeof(alphaArgs),
+                 "{\"projectIndex\":0,%s,\"comment\":\"Alpha\"}", refJson);
+        std::string macAlpha = ConsentMacFor(kSetCommentOp, "tp", alphaArgs);
+        WriteReq0600(c.Path("inbox/tp.request.json"),
+                     ReqJsonMut("tp", kTok, macAlpha.c_str(), kSetCommentOp,
+                                "26.5", argsBuf)); /* argsBuf has "x" ≠ Alpha */
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "tp", "refused", "CONSENT_INVALID");
+    }
+
+    /* (e) valid MAC → completed; mayHaveMutated:true; comment applied;
+       read-back through the read-only getter proves the effect. */
+    {
+        char okArgs[1024];
+        snprintf(okArgs, sizeof(okArgs),
+                 "{\"projectIndex\":0,%s,\"comment\":\"caf\\u00e9 \\ud83d\\ude00\"}",
+                 refJson);
+        std::string macOk = ConsentMacFor(kSetCommentOp, "ok", okArgs);
+        WriteReq0600(c.Path("inbox/ok.request.json"),
+                     ReqJsonMut("ok", kTok, macOk.c_str(), kSetCommentOp,
+                                "26.5", okArgs));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "ok", "completed", NULL);
+        {
+            std::string r = Slurp(ResultPath(c, "ok"));
+            CHECK(r.find("\"mayHaveMutated\":true") != std::string::npos);
+            CHECK(r.find("AEGP_SetItemComment") != std::string::npos);
+        }
+        /* read-back via the existing read-only getter (no consent) */
+        {
+            char getArgs[1024];
+            snprintf(getArgs, sizeof(getArgs),
+                     "{\"projectIndex\":0,%s}", refJson);
+            WriteReq0600(c.Path("inbox/rb.request.json"),
+                         ReqJsonArgs("rb", kTok, 30000,
+                                     "AEGP_ItemSuite9.AEGP_GetItemComment",
+                                     "26.5", getArgs));
+            CHECK(CallIdle(*h) == A_Err_NONE);
+            JVal* doc = NULL;
+            JVal* pay = ResultPayload(c, "rb", &doc);
+            CHECK(pay != NULL);
+            if (pay)
+            {
+                JVal* cm = JGet(pay, "comment");
+                CHECK(cm && cm->kind == JK_STR && cm->slen == 10 &&
+                      memcmp(cm->str, "caf\xC3\xA9 \xF0\x9F\x98\x80", 10) == 0);
+            }
+            JFree(doc);
+        }
+    }
+
+    /* (f) stale identity + valid MAC → STALE_REFERENCE before any
+       mutation call; consent does not bypass identity checks. */
+    {
+        char staleArgs[1024];
+        snprintf(staleArgs, sizeof(staleArgs),
+                 "{\"projectIndex\":0,"
+                 "\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Clip\","
+                 "\"path\":[0],\"itemId\":9999,\"projectName\":\"Shot01\","
+                 "\"projectPath\":\"/tmp/shot01.aep\"}},"
+                 "\"comment\":\"stale\"}");
+        std::string macStale = ConsentMacFor(kSetCommentOp, "st", staleArgs);
+        WriteReq0600(c.Path("inbox/st.request.json"),
+                     ReqJsonMut("st", kTok, macStale.c_str(), kSetCommentOp,
+                                "26.5", staleArgs));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "st", "refused", "STALE_REFERENCE");
+        {
+            std::string r = Slurp(ResultPath(c, "st"));
+            CHECK(r.find("AEGP_SetItemComment") == std::string::npos);
+        }
+    }
+
+    /* (g) AEGP call attempted but fails → failed + mayHaveMutated:true
+       (the host may have applied the change before erroring). */
+    {
+        char errArgs[1024];
+        snprintf(errArgs, sizeof(errArgs),
+                 "{\"projectIndex\":0,%s,\"comment\":\"boom\"}", refJson);
+        std::string macErr = ConsentMacFor(kSetCommentOp, "er", errArgs);
+        h->setCommentErr = A_Err_GENERIC;
+        WriteReq0600(c.Path("inbox/er.request.json"),
+                     ReqJsonMut("er", kTok, macErr.c_str(), kSetCommentOp,
+                                "26.5", errArgs));
+        CHECK(CallIdle(*h) == A_Err_NONE);
+        CheckResultDoc(c, "er", "failed", NULL);
+        {
+            std::string r = Slurp(ResultPath(c, "er"));
+            CHECK(r.find("\"mayHaveMutated\":true") != std::string::npos);
+        }
+        h->setCommentErr = A_Err_NONE;
+    }
+}
+
+static void TestIntakeSetItemCommentNoEntry()
+{
+    /* nullItemEntry=5 → AEGP_SetItemComment entry NULL → not-sent with
+       valid consent; mayHaveMutated stays false (never attempted). */
+    auto h = MakeFakeHost();
+    h->nullItemEntry = 5;
+    h->PopulateSuites();
+    FakeProject& p = h->AddProject("Shot01");
+    p.path = "/tmp/shot01.aep";
+    p.rootName = h->MakeNameSpec(FakeHost::U16("Root"));
+    SetupProjectItems(*h, 0, {
+        { "Clip", AEGP_ItemType_COMP, 7001 },
+    });
+    h->numProjects = 1;
+    TmpChan c;
+    IntakeEntry(*h, c);
+    AddConsentKey(c);
+
+    const char* argsJson =
+        "{\"projectIndex\":0,"
+        "\"item\":{\"aeRef\":{\"type\":\"comp\",\"name\":\"Clip\","
+        "\"path\":[0],\"itemId\":7001,\"projectName\":\"Shot01\","
+        "\"projectPath\":\"/tmp/shot01.aep\"}},"
+        "\"comment\":\"x\"}";
+    std::string mac = ConsentMacFor(kSetCommentOp, "ne", argsJson);
+    WriteReq0600(c.Path("inbox/ne.request.json"),
+                 ReqJsonMut("ne", kTok, mac.c_str(), kSetCommentOp,
+                            "26.5", argsJson));
+    CHECK(CallIdle(*h) == A_Err_NONE);
+    CheckResultDoc(c, "ne", "not-sent", NULL);
+    {
+        std::string r = Slurp(ResultPath(c, "ne"));
+        CHECK(r.find("mayHaveMutated") == std::string::npos ||
+              r.find("\"mayHaveMutated\":true") == std::string::npos);
+    }
+}
+
 /* Consent canonicalization + HMAC shared vectors (Issue #326).
    These byte strings are generated by the TypeScript mirror
    (packages/native-adapter/src/consent.ts) — divergence on either
@@ -4292,6 +4560,8 @@ int main(int argc, char** argv)
     TestIntakeProjectGetters();
     TestIntakeProjectCollision();
     TestIntakeRQItemGetters();
+    TestIntakeSetItemComment();
+    TestIntakeSetItemCommentNoEntry();
     TestConsentVectors();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();

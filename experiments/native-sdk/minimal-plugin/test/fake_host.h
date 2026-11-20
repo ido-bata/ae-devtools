@@ -220,7 +220,8 @@ struct FakeHost
     bool nullWriteToDebugLog = false;
     int nullProjEntry = 0; /* 1 = GetNumProjects NULL, 2 = GetProjectByIndex NULL, 3 = GetProjectPath NULL, 4 = GetProjectTimeDisplay NULL */
     int nullMemEntry = 0;  /* 1 = FreeMemHandle NULL, 2 = GetMemHandleSize NULL */
-    int nullItemEntry = 0; /* 1 = GetItemMRUView NULL, 2 = GetItemComment NULL, 3 = GetActiveItem NULL, 4 = GetTypeName NULL */
+    int nullItemEntry = 0; /* 1 = GetItemMRUView NULL, 2 = GetItemComment NULL, 3 = GetActiveItem NULL, 4 = GetTypeName NULL, 5 = SetItemComment NULL */
+    int setCommentErr = A_Err_NONE; /* Issue #327: AEGP_SetItemComment fails with this */
     int nullItemViewEntry = 0; /* 1..4 = the four ItemViewSuite2 getters NULL */
     int nullCompEntry = 0; /* 1..18 = the CompSuite13 entries the probe calls NULL */
     int nullLayerEntry = 0; /* 1..22 = the LayerSuite9 entries the probe calls NULL */
