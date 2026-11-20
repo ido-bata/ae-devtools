@@ -20,7 +20,7 @@
  */
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { openFakeSession } from "../devtools-cli/fake-session.mjs";
 
@@ -56,7 +56,9 @@ export async function openSession(kind = "fake", options = {}) {
       e.code = "A8N_TRANSPORT_MISSING";
       throw e;
     }
-    const { openAttachedSliceSession } = await import(tdir);
+    // pathToFileURL: a bare "C:\…" path is not a valid ESM specifier on
+    // Windows (ERR_UNSUPPORTED_ESM_URL_SCHEME).
+    const { openAttachedSliceSession } = await import(pathToFileURL(tdir).href);
     const s = await openAttachedSliceSession({
       aeA8nRoot: typeof options.aeA8nRoot === "string" ? options.aeA8nRoot : undefined,
       installDir: typeof options.installDir === "string" ? options.installDir : undefined,
@@ -92,7 +94,7 @@ export async function openSession(kind = "fake", options = {}) {
       e.code = "A8N_TRANSPORT_MISSING";
       throw e;
     }
-    const { openSliceSession } = await import(tdir);
+    const { openSliceSession } = await import(pathToFileURL(tdir).href);
     const s = await openSliceSession({
       aeA8nRoot: typeof options.aeA8nRoot === "string" ? options.aeA8nRoot : undefined,
       installDir: typeof options.installDir === "string" ? options.installDir : undefined,
