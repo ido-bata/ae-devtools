@@ -87,7 +87,11 @@ function rpcError(id, code, message, data) {
  *                    never awaited forever (Issue #196)
  *   runsDir        — run-guard marker dir for a8n sessions (default:
  *                    devtools-cli RUNS_DIR; Issue #198 residue markers)
- * @returns {{close: () => Promise<void>}}
+ * @returns {{close: () => Promise<boolean>, getSession: () => unknown}}
+ *   close() resolves true when the owned session closed cleanly (or
+ *   there was nothing to close) and false when close failed/timed out —
+ *   callers use it to keep a failed close off the clean-exit path
+ *   (Issue #391).
  */
 export function createServer(opts = {}) {
   const input = opts.input ?? process.stdin;
@@ -157,7 +161,7 @@ export function createServer(opts = {}) {
   });
 
   async function close() {
-    if (!sessionPromise) return;
+    if (!sessionPromise) return true;
     let closeFailed = false;
     try {
       const s = await sessionPromise;
@@ -172,12 +176,16 @@ export function createServer(opts = {}) {
         }
       }
     } catch (e) {
+      // A thrown close is a failed close — the residue marker must say
+      // so, and the caller must not see this as a clean shutdown.
+      closeFailed = true;
       process.stderr.write(`mcp-server: session close failed: ${e?.message ?? e}\n`);
     } finally {
       // "closed" removes the marker; "close-failed" keeps it as
       // residue — the same contract the CLI cleanup path uses.
       guard.end(closeFailed ? "close-failed" : "closed");
     }
+    return !closeFailed;
   }
 
   function write(msg) {
@@ -321,8 +329,12 @@ if (isMain) {
   const shutdown = async (code) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    await server.close();
-    process.exit(code);
+    const closed = await server.close();
+    // A failed session close must not exit through the clean signal
+    // path: conformance treats exit 130/143 + no signal as proof the
+    // owned AE session closed, so a close failure exits 1 instead
+    // (Issue #391).
+    process.exit(closed === false ? 1 : code);
   };
   process.on("SIGINT", () => shutdown(130));
   process.on("SIGTERM", () => shutdown(143));
