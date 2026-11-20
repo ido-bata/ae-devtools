@@ -1,0 +1,76 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T15-09-02-849Z-1f2c8b2d",
+  "command": "verify",
+  "sourceSha": "9386890e37a2519c47f44917d5300c10421954d5",
+  "sourceDirty": false,
+  "opId": null,
+  "requestId": "req-run-2026-11-20T15-09-02-849Z-1f2c8b2d-verify",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "attached",
+    "aeA8nHead": "50e712b6149fd1fed8fb55965ec4f3eed1102250",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "already running before launch: pid 22873",
+      "aeVersion": "27.0x78",
+      "installDir": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027",
+      "appPath": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+      "project": null,
+      "projectFile": null
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": true,
+      "mode": "attached"
+    }
+  },
+  "at": "2026-11-20T15:09:05.603Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T15-09-02-849Z-1f2c8b2d-verify",
+    "operationId": "read.compLayers",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "comp": "Comp1",
+      "count": 1,
+      "layers": [
+        {
+          "name": "Null 1",
+          "index": 1,
+          "enabled": true,
+          "inPoint": 0,
+          "outPoint": 5,
+          "locked": false,
+          "adjustmentLayer": false,
+          "preserveTransparency": false,
+          "frameBlending": false,
+          "collapseTransformation": false,
+          "hasTrackMatte": false,
+          "trackMatteType": 5012,
+          "trackMatteLayer": null,
+          "isTrackMatte": false,
+          "timeRemapEnabled": false,
+          "parent": null
+        }
+      ]
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.compLayers",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "/tmp/att-layers.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

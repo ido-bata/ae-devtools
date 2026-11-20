@@ -1,0 +1,60 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T15-10-08-172Z-0a17a5df",
+  "command": "execute",
+  "sourceSha": "9386890e37a2519c47f44917d5300c10421954d5",
+  "sourceDirty": false,
+  "opId": "project.open",
+  "requestId": "req-run-2026-11-20T15-10-08-172Z-0a17a5df-project.open",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "attached",
+    "aeA8nHead": "50e712b6149fd1fed8fb55965ec4f3eed1102250",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "already running before launch: pid 22873",
+      "aeVersion": "27.0x78",
+      "installDir": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027",
+      "appPath": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+      "project": null,
+      "projectFile": null
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": false,
+      "mode": "attached",
+      "mutation": {
+        "allowedOps": [
+          "project.open"
+        ]
+      }
+    }
+  },
+  "at": "2026-11-20T15:10:09.178Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T15-10-08-172Z-0a17a5df-project.open",
+    "operationId": "project.open",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "project": "/tmp/ae-att-test.aep"
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "project.open",
+    "mutating": true,
+    "destructive": true
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "/tmp/att-open.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}
