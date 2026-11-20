@@ -184,6 +184,34 @@ export async function runOperation(input = {}) {
       { opId });
   }
 
+  // Attached-session target re-validation (Issue #366): for a mutating
+  // op on a session that supplied `targetGuard`, re-prove the target
+  // identity AFTER consent approval and IMMEDIATELY before dispatch —
+  // consent can sit with a human for minutes, so an earlier check
+  // would be stale. The guard resolves {ok:true} or
+  // {ok:false, code, detail}; anything else (throw, malformed result)
+  // refuses — fail-closed, nothing is sent. Read ops never invoke it.
+  if (op.mutating === true && typeof input.targetGuard === "function") {
+    let guard = null;
+    try {
+      guard = await input.targetGuard();
+    } catch (err) {
+      guard = {
+        ok: false,
+        code: "TARGET_GUARD_ERROR",
+        detail: err instanceof Error ? err.message : String(err),
+      };
+    }
+    if (guard === null || typeof guard !== "object" || guard.ok !== true) {
+      return refused(
+        "ATTACHED_TARGET_GUARD",
+        `target re-validation refused the mutating dispatch: ` +
+          `${guard?.detail ?? "guard returned no verdict"}`,
+        { opId, guardCode: typeof guard?.code === "string" ? guard.code : null },
+      );
+    }
+  }
+
   const outcome = await runner.runScript({
     source,
     pin,

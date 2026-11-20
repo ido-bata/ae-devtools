@@ -430,6 +430,9 @@ async function main() {
           scriptProvenance: "devtools-cli",
           requestId,
           sessionPolicy: state.session.policy ?? null,
+          // Attached-session target re-validation (Issue #366): runOperation
+          // invokes this immediately before each mutating dispatch.
+          targetGuard: state.session.targetGuard ?? null,
         };
         const result = cmd === "execute"
           ? await execute({

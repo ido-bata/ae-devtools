@@ -48,7 +48,7 @@ const EXP = join(HERE, "..");
 export async function openSession(kind = "fake", options = {}) {
   if (kind === "fake") {
     const s = openFakeSession();
-    return { ...s, meta: s.meta ?? null, slice: null, policy: null };
+    return { ...s, meta: s.meta ?? null, slice: null, policy: null, targetGuard: null };
   }
   if (kind === "a8n-attached") {
     const tdir = join(EXP, "a8n-transport", "attached-session.mjs");
@@ -89,6 +89,10 @@ export async function openSession(kind = "fake", options = {}) {
       },
       slice: s,
       policy: s.policy ?? null,
+      // Attached-session target re-validation (Issue #366): invoked by
+      // runOperation immediately before each mutating dispatch. Null
+      // for sessions without an attested target identity.
+      targetGuard: typeof s.revalidateTarget === "function" ? s.revalidateTarget : null,
     };
   }
   if (kind === "a8n") {
@@ -119,6 +123,7 @@ export async function openSession(kind = "fake", options = {}) {
       },
       slice: s,
       policy: null,
+      targetGuard: null,
     };
   }
   const e = new Error(`unknown session kind '${kind}' (fake|a8n|a8n-attached)`);
