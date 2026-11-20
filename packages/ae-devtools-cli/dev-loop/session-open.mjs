@@ -28,19 +28,55 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
 
 /**
- * @param {"fake"|"a8n"} kind
- * @param {object} options — { aeA8nRoot, installDir, workdir } forwarded
- *   to the a8n opener only; ignored for fake. `workdir` lets real-run
- *   drivers pin the generated host-script directory (conformance keeps
- *   it inside its evidence workdir so close() does not delete it).
+ * @param {"fake"|"a8n"|"a8n-attached"} kind
+ * @param {object} options — { aeA8nRoot, installDir, workdir, aeVersion }
+ *   forwarded to the a8n openers only; ignored for fake. `workdir` lets
+ *   real-run drivers pin the generated host-script directory
+ *   (conformance keeps it inside its evidence workdir so close() does
+ *   not delete it). `aeVersion` is an a8n-attached-only target pin.
  * @returns {Promise<object>} session shaped
- *   { kind, evidenceLevel, runner, pin, close, meta, slice } — `slice`
- *   is the raw openSliceSession result (a8n) or null (fake).
+ *   { kind, evidenceLevel, runner, pin, close, meta, slice, policy } —
+ *   `slice` is the raw slice-session result (a8n kinds) or null (fake);
+ *   `policy` carries session-imposed dispatch limits (attached sessions
+ *   are read-only, Issue #366).
  */
 export async function openSession(kind = "fake", options = {}) {
   if (kind === "fake") {
     const s = openFakeSession();
-    return { ...s, meta: s.meta ?? null, slice: null };
+    return { ...s, meta: s.meta ?? null, slice: null, policy: null };
+  }
+  if (kind === "a8n-attached") {
+    const tdir = join(EXP, "a8n-transport", "attached-session.mjs");
+    if (!existsSync(tdir)) {
+      const e = new Error(
+        "a8n-attached session requires packages/ae-devtools-cli/a8n-transport/attached-session.mjs (Issue #366)",
+      );
+      e.code = "A8N_TRANSPORT_MISSING";
+      throw e;
+    }
+    const { openAttachedSliceSession } = await import(tdir);
+    const s = await openAttachedSliceSession({
+      aeA8nRoot: typeof options.aeA8nRoot === "string" ? options.aeA8nRoot : undefined,
+      installDir: typeof options.installDir === "string" ? options.installDir : undefined,
+      aeVersion: typeof options.aeVersion === "string" ? options.aeVersion : undefined,
+      workdir: typeof options.workdir === "string" ? options.workdir : undefined,
+    });
+    return {
+      kind: "a8n-attached",
+      evidenceLevel: "verified on real host (attach to a running AE)",
+      runner: s.runner,
+      pin: s.pin,
+      close: () => s.close(),
+      meta: {
+        aeVersion: s.info?.version ?? null,
+        ownership: s.ownership?.kind ?? null,
+        aeA8nHead: s.aeA8nHead ?? null,
+        attached: true,
+        target: s.target ?? null,
+      },
+      slice: s,
+      policy: s.policy ?? null,
+    };
   }
   if (kind === "a8n") {
     const tdir = join(EXP, "a8n-transport", "session.mjs");
@@ -69,9 +105,10 @@ export async function openSession(kind = "fake", options = {}) {
         aeA8nHead: s.aeA8nHead ?? null,
       },
       slice: s,
+      policy: null,
     };
   }
-  const e = new Error(`unknown session kind '${kind}' (fake|a8n)`);
+  const e = new Error(`unknown session kind '${kind}' (fake|a8n|a8n-attached)`);
   e.code = "USAGE";
   throw e;
 }

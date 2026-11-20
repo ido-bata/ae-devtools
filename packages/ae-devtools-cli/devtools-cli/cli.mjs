@@ -11,8 +11,9 @@
  *   node cli.mjs discover [--domain <d>]
  *   node cli.mjs inspect <opId>
  *   node cli.mjs execute <opId> [--args '<json>'] [--confirm-destructive]
- *                 [--confirm-render] --session fake|a8n
+ *                 [--confirm-render] --session fake|a8n|a8n-attached
  *                 [--ae-a8n-root <dir>] [--install-dir <dir>]
+ *                 [--ae-version <v>]
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
  *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
@@ -35,6 +36,10 @@
  *          experiment present and an ae-a8n satisfying the contract gate
  *          (a8n-transport/compat.mjs, Issue #138) — ae-a8n <=0.1.0-alpha.2
  *          does NOT, use --ae-a8n-root
+ *   a8n-attached — explicit attach to an ALREADY-RUNNING AE (Issue #366).
+ *          Read-only: mutating ops are refused before consent, the host
+ *          is never quit, and the open refuses unless ae-a8n reports
+ *          ownership "attached".
  *
  * Consent: --consent grant is REQUIRED for any dispatch; default is deny.
  * This is a local policy flag, not authenticated authorization
@@ -108,6 +113,7 @@ async function openSession(flags) {
   const base = await openSharedSession(kind, {
     aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
     installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+    aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
   });
   if (kind !== "a8n") {
     const { slice: _slice, ...session } = base;
@@ -321,8 +327,8 @@ async function main() {
       // marker that reap can never resolve (OWNERSHIP_NOT_OWNED,
       // session:null) — noise, not residue (Issue #219).
       const sessionKind = flags.session ?? "fake";
-      if (sessionKind !== "fake" && sessionKind !== "a8n") {
-        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `unknown --session '${flags.session}' (fake|a8n)` });
+      if (sessionKind !== "fake" && sessionKind !== "a8n" && sessionKind !== "a8n-attached") {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `unknown --session '${flags.session}' (fake|a8n|a8n-attached)` });
         return 2;
       }
 
@@ -389,6 +395,7 @@ async function main() {
           trustedScriptOptIn: true,
           scriptProvenance: "devtools-cli",
           requestId,
+          sessionPolicy: state.session.policy ?? null,
         };
         const result = cmd === "execute"
           ? await execute({

@@ -269,8 +269,8 @@ const isMain = isMainEntry(import.meta.url);
 if (isMain) {
   const { flags } = parseArgs(process.argv.slice(2));
   const sessionKind = flags.session ?? "fake";
-  if (!["fake", "a8n"].includes(sessionKind)) {
-    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");
+  if (!["fake", "a8n", "a8n-attached"].includes(sessionKind)) {
+    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>]\n");
     process.exit(2);
   }
   const server = createServer({
@@ -278,6 +278,7 @@ if (isMain) {
     sessionOptions: {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+      aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
     },
     closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });

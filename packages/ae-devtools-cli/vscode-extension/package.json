@@ -64,9 +64,9 @@
       "properties": {
         "ae-devtools.session": {
           "type": "string",
-          "enum": ["fake", "a8n"],
+          "enum": ["fake", "a8n", "a8n-attached"],
           "default": "fake",
-          "description": "Session backend for dev-loop commands. 'fake' is codec-faithful mock evidence only; 'a8n' opens an owned AE session via ae-a8n (requires ae-devtools.aeA8nRoot)."
+          "description": "Session backend for dev-loop commands. 'fake' is codec-faithful mock evidence only; 'a8n' opens an owned AE session via ae-a8n (requires ae-devtools.aeA8nRoot); 'a8n-attached' attaches read-only to an already-running AE and never quits it (Issue #366)."
         },
         "ae-devtools.aeA8nRoot": {
           "type": "string",
@@ -77,6 +77,11 @@
           "type": "string",
           "default": "",
           "description": "AE install directory forwarded to the a8n session opener (a8n session only)."
+        },
+        "ae-devtools.aeVersion": {
+          "type": "string",
+          "default": "",
+          "description": "Expected AE version pin for the a8n-attached session (Issue #366); the open refuses when the live version differs."
         },
         "ae-devtools.debug.hostAppSpecifier": {
           "type": "string",

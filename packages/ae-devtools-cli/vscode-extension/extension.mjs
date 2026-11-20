@@ -154,6 +154,7 @@ export async function activate(context) {
     session: config.get("session", "fake"),
     aeA8nRoot: config.get("aeA8nRoot"),
     installDir: config.get("installDir"),
+    aeVersion: config.get("aeVersion"),
     ui: realUi(),
   });
 

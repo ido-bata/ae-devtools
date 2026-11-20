@@ -252,6 +252,7 @@ export async function callTool(name, args = {}, ctx = {}) {
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
         requestId,
+        sessionPolicy: session.policy ?? null,
         confirmDestructive: args.confirmDestructive === true,
         confirmRender: args.confirmRender === true,
       });

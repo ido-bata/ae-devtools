@@ -96,8 +96,28 @@ export function inspect(opId) {
 }
 
 /** Execute via the canonical path. All safety inputs are forwarded
- *  untouched — this function adds NO approval of its own. */
+ *  untouched — this function adds NO approval of its own.
+ *
+ *  Session-imposed policy (Issue #366): `input.sessionPolicy.readOnly`
+ *  refuses mutating ops BEFORE consent — an attached session to a user's
+ *  running AE must never dispatch a write the session itself forbids.
+ *  This is a restriction layered on the canonical path, not a new
+ *  permission path: it can only refuse, never approve. */
 export async function execute(input = {}) {
+  const { opId, sessionPolicy } = input ?? {};
+  if (sessionPolicy?.readOnly === true && typeof opId === "string") {
+    let op = null;
+    try { op = getOperation(opId); } catch { /* unknown op → runOperation reports it */ }
+    if (op !== null && op.mutating === true) {
+      return {
+        status: "refused",
+        stage: "session-policy",
+        reason: "READ_ONLY_SESSION",
+        detail: `'${opId}' mutates project/AE state; this session is attached read-only (Issue #366)`,
+        opId,
+      };
+    }
+  }
   // `?? {}` covers null — runOperation's destructuring would throw a
   // TypeError on null instead of producing its structured refusal.
   return runOperation(input ?? {});

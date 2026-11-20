@@ -73,6 +73,7 @@ export function createController(options = {}) {
     session: sessionKind = "fake",
     aeA8nRoot,
     installDir,
+    aeVersion,
     ui = DENY_ALL_UI,
     sessionFactory = openSession,
     closeTimeoutMs,
@@ -107,7 +108,11 @@ export function createController(options = {}) {
       // an attributable residue record.
       await guard.begin();
       try {
-        const s = await sessionFactory(sessionKind, { aeA8nRoot, installDir });
+        const s = await sessionFactory(sessionKind, {
+          aeA8nRoot,
+          installDir,
+          aeVersion: typeof aeVersion === "string" && aeVersion.length > 0 ? aeVersion : undefined,
+        });
         guard.mark(s);
         resolvedSession = s;
         return s;
