@@ -1,0 +1,74 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T16-33-25-713Z-8c3b2c64",
+  "command": "execute",
+  "sourceSha": "ad32a1d09dcca608179a01370d00277596ad36c1",
+  "sourceDirty": true,
+  "opId": "item.remove",
+  "requestId": "req-run-2026-11-20T16-33-25-713Z-8c3b2c64-item.remove",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "attached",
+    "aeA8nHead": "716dada4c9c7ceaf8f6e32e02b40875f32af7070",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "already running before launch: pid 56305",
+      "aeVersion": "27.0x78",
+      "installDir": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027",
+      "appPath": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+      "project": {
+        "file": null,
+        "name": null
+      },
+      "projectFile": null,
+      "identity": {
+        "pid": 56305,
+        "processStart": "Sat Nov 21 01:30:06 2026",
+        "executable": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects",
+        "aeVersion": "27.0x78",
+        "projectFile": null,
+        "projectName": null,
+        "ownershipEvidence": "already running before launch: pid 56305",
+        "attestedAt": "2026-11-20T16:33:30.495Z"
+      },
+      "attachApi": "AfterEffects.launch(transitional)"
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": false,
+      "mode": "attached",
+      "mutation": {
+        "allowedOps": [
+          "item.remove"
+        ]
+      }
+    }
+  },
+  "at": "2026-11-20T16:33:30.620Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T16-33-25-713Z-8c3b2c64-item.remove",
+    "operationId": "item.remove",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "removed": "平面"
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "item.remove",
+    "mutating": true,
+    "destructive": true
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "devtools-cli/evidence/run-366-attached-revalidate-cleanup-folder-2027.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

@@ -79,3 +79,53 @@ open user project). Runs from `C:\Users\rebui\src\ae-devtools` @
 Not yet covered: a Windows attached comp/layer mutation loop (needs a
 responsive, preferably disposable, AE target), MCP/VSCode surfaces on
 Windows, `ae-a8n` attach reliability against a busy host.
+
+## Issue #366 follow-up — attach-only boundary + target re-validation (macOS, AE 2027 `27.0x78`)
+
+Branch `366` @ `ad32a1d`. Target: AE pid 56305 launched via `open -a`
+(user-session instance, `ownership: "attached"`,
+`ownershipEvidence: "already running before launch: pid 56305"`).
+`--ae-a8n-root` = local ae-a8n `release-0-5-0` @ `716dada`; every
+session reports `target.attachApi:
+"AfterEffects.launch(transitional)"` — the ae-a8n attach-only API has
+not shipped yet, so the transitional launch fallback ran under the
+pre-flight census + ownership check (see `a8n-transport/attach-target.mjs`).
+
+New in this round: `target.identity` records pid `56305`, process start
+`Sat Nov 21 01:30:06 2026`, executable path, AE version `27.0x78`, and
+open-project file/name; every mutating dispatch re-validates that
+identity via `targetGuard` → `revalidateTarget()` after consent
+approval and immediately before send (fail-closed on pid/start-stamp
+drift, multiple instances, unreadable census, version drift, project
+switch — unit-tested in `a8n-transport/tests/attached-session.test.mjs`).
+
+- `run-366-attached-revalidate-verify-2027.json` — read-only attach
+  verify; identity block present, `read.projectSummary` COMPLETED,
+  `cleanup.quit: null`.
+- Comp/layer loop with per-op mutation scope + targetGuard live:
+  `run-366-attached-revalidate-addcomp-2027.json` (`item.addComp`
+  "DevToolsProbeComp" 320x240@30 → COMPLETED) →
+  `run-366-attached-revalidate-addnull-2027.json` (`comp.addNullLayer`
+  "ProbeNull" → COMPLETED) →
+  `run-366-attached-revalidate-move-2027.json` (`layer.setTransformPosition`
+  x=100 y=200 → COMPLETED) →
+  `run-366-attached-revalidate-readlayers-2027.json` (`read.compLayers`
+  shows ProbeNull index 1) →
+  `run-366-attached-revalidate-readdetail-2027.json` (`read.layerDetail`
+  read-back `position: [100,200,0]`).
+- Recovery (no app-level Undo — on a user's live AE, `app.undo` could
+  revert the user's own last edit; targeted removal of objects this
+  session created is the honest recovery): `item.remove` of
+  DevToolsProbeComp (`run-366-attached-revalidate-remove-2027.json`),
+  then AE's auto-created null footage `ヌル 1` and its `平面` folder
+  (`run-366-attached-revalidate-cleanup-footage-2027.json`,
+  `run-366-attached-revalidate-cleanup-folder-2027.json`).
+- `run-366-attached-revalidate-final2-2027.json` — `read.projectSummary`
+  back to `numItems: 0`; pid 56305 still running afterwards; every
+  `cleanup.quit` is `null` (connection release only, never a quit).
+
+Not yet covered: a REAL drift refusal (pid/project switch mid-session —
+unit-tested only; each CLI invocation opens a fresh session so a
+mid-session drift cannot be produced through the CLI), the
+`AfterEffects.attach` primary path (pending ae-a8n), Windows re-run of
+this loop, MCP/VSCode surfaces on the attached session.

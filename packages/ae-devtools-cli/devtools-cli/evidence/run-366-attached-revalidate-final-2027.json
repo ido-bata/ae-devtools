@@ -1,0 +1,88 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T16-32-48-690Z-3fc997fb",
+  "command": "verify",
+  "sourceSha": "ad32a1d09dcca608179a01370d00277596ad36c1",
+  "sourceDirty": true,
+  "opId": null,
+  "requestId": "req-run-2026-11-20T16-32-48-690Z-3fc997fb-verify",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "attached",
+    "aeA8nHead": "716dada4c9c7ceaf8f6e32e02b40875f32af7070",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "already running before launch: pid 56305",
+      "aeVersion": "27.0x78",
+      "installDir": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027",
+      "appPath": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+      "project": {
+        "file": null,
+        "name": null
+      },
+      "projectFile": null,
+      "identity": {
+        "pid": 56305,
+        "processStart": "Sat Nov 21 01:30:06 2026",
+        "executable": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects",
+        "aeVersion": "27.0x78",
+        "projectFile": null,
+        "projectName": null,
+        "ownershipEvidence": "already running before launch: pid 56305",
+        "attestedAt": "2026-11-20T16:32:56.434Z"
+      },
+      "attachApi": "AfterEffects.launch(transitional)"
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": true,
+      "mode": "attached"
+    }
+  },
+  "at": "2026-11-20T16:32:56.536Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T16-32-48-690Z-3fc997fb-verify",
+    "operationId": "read.projectSummary",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "count": 2,
+      "numItems": 2,
+      "items": [
+        {
+          "name": "平面",
+          "typeName": "フォルダー",
+          "id": 13,
+          "selected": false,
+          "parent": null
+        },
+        {
+          "name": "ヌル 1",
+          "typeName": "フッテージ",
+          "id": 14,
+          "selected": false,
+          "parent": "平面"
+        }
+      ],
+      "activeItem": null,
+      "selection": []
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.projectSummary",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "devtools-cli/evidence/run-366-attached-revalidate-final-2027.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}
