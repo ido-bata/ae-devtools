@@ -72,13 +72,18 @@ const openImpl = async (options, sink) => {
         kind: b === "owned" ? "owned" : "attached",
         evidence: "fixture-evidence",
       }),
-      project: () => ({
-        info: async () => ({
-          file: process.env.AE_FIXTURE_PROJECT_FILE ?? "/tmp/user-project.aep",
-          name: process.env.AE_FIXTURE_PROJECT_NAME ?? "user-project",
-          itemCount: 3,
-        }),
-      }),
+      project: () => {
+        if (process.env.AE_FIXTURE_PROJECT_FAIL === "1") {
+          throw new Error("fixture: project unreadable");
+        }
+        return {
+          info: async () => ({
+            file: process.env.AE_FIXTURE_PROJECT_FILE ?? "/tmp/user-project.aep",
+            name: process.env.AE_FIXTURE_PROJECT_NAME ?? "user-project",
+            itemCount: 3,
+          }),
+        };
+      },
       call: async () => { throw new Error("call not used in fixture tests"); },
       close: async () => { entry.closed += 1; },
       tracePath: "/tmp/fake-a8n-trace.jsonl",
@@ -738,4 +743,142 @@ test("runOperation targetGuard: mutating op refused before send when guard fails
     targetGuard: async () => { guardCalls += 1; return { ok: false, code: "X", detail: "no" }; },
   });
   assert.equal(guardCalls, 0, "read ops must not pay the re-validation cost");
+});
+
+test("revalidateTarget: missing baseline process start stamp refuses mutation (Issue #382)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      // Census rows without startedAt → identity.processStart stays
+      // null; pid reuse can then never be ruled out, so the guard must
+      // refuse mutation instead of skipping the stamp comparison.
+      const s = await openWithProbe(root, workdir, async () => [{ pid: 7, path: FAKE_EXE }]);
+      try {
+        assert.equal(s.target.identity.processStart, null);
+        const g = await s.revalidateTarget();
+        assert.equal(g.ok, false);
+        assert.equal(g.code, "ATTACHED_TARGET_UNVERIFIED");
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("revalidateTarget: project unreadable at re-validation refuses mutation (Issue #382)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      const s = await openWithProbe(root, workdir, async () => STABLE_ROWS);
+      try {
+        assert.equal((await s.revalidateTarget()).ok, true);
+        // Project becomes unreadable AFTER open — a switch can no
+        // longer be ruled out, so writes must refuse even though the
+        // baseline had a readable project. withEnvVars restores the
+        // flag afterwards — a leaked "1" would poison later tests.
+        await withEnvVars({ AE_FIXTURE_PROJECT_FAIL: "1" }, async () => {
+          const g = await s.revalidateTarget();
+          assert.equal(g.ok, false);
+          assert.equal(g.code, "ATTACHED_TARGET_UNVERIFIED");
+        });
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("revalidateTarget: second instance appearing during project RPCs is caught (Issue #382)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      // Probe call order: 1 = open pre-flight, 2 = first census inside
+      // revalidateTarget, 3 = post-RPC census. The second instance
+      // appears only for the post-RPC read — approval must refuse.
+      let calls = 0;
+      const lateJoiner = async () => {
+        calls += 1;
+        if (calls <= 2) return STABLE_ROWS;
+        return [
+          { pid: 7, path: FAKE_EXE, startedAt: "start-1" },
+          { pid: 8, path: FAKE_EXE, startedAt: "start-0" },
+        ];
+      };
+      const s = await openWithProbe(root, workdir, lateJoiner);
+      try {
+        const g = await s.revalidateTarget();
+        assert.equal(g.ok, false);
+        assert.equal(g.code, "ATTACHED_TARGET_AMBIGUOUS");
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("projectFile pin: case-variant spelling of the same file still matches (Issue #382)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  const projDir = mkdtempSync(join(tmpdir(), "a8n-att-proj-"));
+  try {
+    // A real file so stat identity (dev+ino) decides equality: a
+    // case-variant spelling of the SAME file is an alias, not a
+    // different project.
+    const realPath = join(projDir, "CaseProbe.aep");
+    writeFileSync(realPath, "fixture");
+    const caseVariant = join(projDir, "caseprobe.aep");
+    // On a case-insensitive volume the variant stats to the same inode
+    // → alias, pin matches. On a case-sensitive volume it is a
+    // different (nonexistent) path → the pin must refuse, never fold.
+    let sameFile = false;
+    try {
+      const { statSync } = await import("node:fs");
+      const a = statSync(realPath), b = statSync(caseVariant);
+      sameFile = a.dev === b.dev && a.ino === b.ino;
+    } catch { sameFile = false; }
+    await withEnvVars(
+      { ...FAKE_EXE_ENV, AE_FIXTURE_PROJECT_FILE: realPath },
+      async () => {
+        if (sameFile) {
+          const s = await openAttachedSliceSession({
+            aeA8nRoot: root,
+            workdir,
+            projectFile: caseVariant,
+            hostProcessProbe: async () => [{ pid: 7, path: FAKE_EXE }],
+          });
+          try {
+            assert.equal(s.target.projectFile, caseVariant);
+          } finally {
+            await s.close();
+          }
+        } else {
+          await assert.rejects(
+            openAttachedSliceSession({
+              aeA8nRoot: root,
+              workdir,
+              projectFile: caseVariant,
+              hostProcessProbe: async () => [{ pid: 7, path: FAKE_EXE }],
+            }),
+            (e) => e.code === "ATTACHED_TARGET_MISMATCH",
+          );
+        }
+      },
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+    rmSync(projDir, { recursive: true, force: true });
+  }
 });
