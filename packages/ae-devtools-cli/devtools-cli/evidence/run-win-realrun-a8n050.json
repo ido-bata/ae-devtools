@@ -1,0 +1,37 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/v1",
+  "issue": 49,
+  "startedAt": "2026-11-20T18:09:55.601Z",
+  "sourceSha": "fdb7fdeba331191be131cc6929f0e6c6984a898e",
+  "sourceDirty": true,
+  "platform": "win32/x64",
+  "node": "v26.13.1",
+  "installDir": null,
+  "aeProcessesBeforeLaunch": {
+    "error": "spawn ps ENOENT"
+  },
+  "steps": [],
+  "close": {
+    "attempted": false,
+    "note": "session open failed; this script never owned a session to close — see trace for ae-a8n's internal close behaviour"
+  },
+  "handshake": null,
+  "contractViolations": [],
+  "launchError": {
+    "name": "AfterEffectsError",
+    "message": "After Effects was started (pid 55216, D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\AfterFX.exe) but did not answer the readiness probe: After Effects did not answer app.info within 178294ms; whether the After Effects process is still running could not be determined. It was not found when the process list was last read, so whether it survived is unknown; check before running again.",
+    "code": "A8N-AE-005",
+    "causeChain": [
+      "HostLeftRunningError",
+      "TimeoutError"
+    ]
+  },
+  "failureStage": "openSliceSession",
+  "sessionRoot": "C:\\Users\\rebui\\AppData\\Local\\Temp\\a8n-transport-enyjfo\\a8n-session",
+  "workdir": "C:\\Users\\rebui\\AppData\\Local\\Temp\\a8n-transport-enyjfo",
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-20T18:12:59.446Z\",\"op\":\"session.probe\",\"status\":\"timeout\",\"durationMs\":179053,\"args\":{\"method\":\"app.info\",\"timeoutMs\":178294},\"result\":{\"hostCondition\":\"unknown\"},\"error\":{\"name\":\"TimeoutError\",\"message\":\"After Effects did not answer app.info within 178294ms; whether the After Effects process is still running could not be determined\"}}\n{\"seq\":1,\"ts\":\"2026-11-20T18:12:59.907Z\",\"op\":\"session.launch\",\"status\":\"error\",\"durationMs\":181223,\"args\":{\"transport\":\"script-invocation\"},\"result\":{\"pendingLaunch\":{\"pid\":55216,\"startedAt\":null,\"executable\":\"D:\\\\4_apps\\\\adobe\\\\Adobe After Effects 2027\\\\Support Files\\\\AfterFX.exe\",\"presentAtLastLookup\":false,\"sessionUid\":null,\"sessionUser\":null,\"sessionAsid\":null},\"ownership\":{\"kind\":\"unknown\",\"evidence\":\"not launched\"}},\"error\":{\"name\":\"TimeoutError\",\"message\":\"After Effects did not answer app.info within 178294ms; whether the After Effects process is still running could not be determined\"}}\n",
+  "aeProcessesAfterLaunchFailure": {
+    "error": "spawn ps ENOENT"
+  },
+  "finishedAt": "2026-11-20T18:12:59.932Z"
+}

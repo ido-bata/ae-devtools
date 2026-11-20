@@ -1,0 +1,44 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T17-57-05-249Z-3b6275f8",
+  "command": "execute",
+  "sourceSha": "fdb7fdeba331191be131cc6929f0e6c6984a898e",
+  "sourceDirty": true,
+  "opId": "item.addComp",
+  "requestId": "req-run-2026-11-20T17-57-05-249Z-3b6275f8-item.addComp",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "owned",
+    "aeA8nHead": "0.5.0",
+    "kind": "a8n",
+    "evidenceLevel": "verified on real host (macOS)",
+    "policy": null
+  },
+  "at": "2026-11-20T17:57:24.643Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T17-57-05-249Z-3b6275f8-item.addComp",
+    "operationId": "item.addComp",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "id": 1,
+      "name": "WinProbeComp",
+      "parent": null
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "item.addComp",
+    "mutating": true,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "devtools-cli/evidence/run-win-addcomp.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": false,
+    "error": "EPERM, Permission denied: 'C:\\Users\\rebui\\AppData\\Local\\Temp\\a8n-transport-jgB09i'",
+    "quit": null
+  }
+}

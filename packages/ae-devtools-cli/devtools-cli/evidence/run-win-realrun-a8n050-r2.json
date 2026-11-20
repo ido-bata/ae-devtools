@@ -1,0 +1,67 @@
+{
+  "schema": "ae-devtools.a8n-transport.real-run/v1",
+  "issue": 49,
+  "startedAt": "2026-11-20T18:22:22.437Z",
+  "sourceSha": "fdb7fdeba331191be131cc6929f0e6c6984a898e",
+  "sourceDirty": true,
+  "platform": "win32/x64",
+  "node": "v26.13.1",
+  "installDir": null,
+  "aeProcessesBeforeLaunch": [
+    {
+      "pid": null,
+      "args": "ls \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" && \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" -r \\\"C:/Users/rebui/Desktop/restro-pv/.tmp/probe-dash.jsx\\\" &"
+    },
+    {
+      "pid": null,
+      "args": "ls \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" && \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" -r \\\"C:/Users/rebui/Desktop/restro-pv/.tmp/probe-dash.jsx\\\" &"
+    },
+    {
+      "pid": 56204,
+      "args": "\"D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\AfterFX.exe\" -r"
+    },
+    {
+      "pid": 35644,
+      "args": "\"D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\crashpad_handler.exe\" --no-rate-limit \"--database=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\" \"--metrics-dir=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\" --url=https://o307710.ingest.sentry.io:443/api/5227323/minidump/?sentry_client=sentry.native/0.13.7&sentry_key=b757a395cf2c47dfbaa4bcf6186b45bb \"--attachment=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\37642157-fd06-4d39-cf47-2e9d8d0f28b3.run\\__sentry-event\" \"--attachment=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\37642157-fd06-4d39-cf47-2e9d8d0f28b3.run\\__sentry-breadcrumb1\" \"--attachment=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\37642157-fd06-4d39-cf47-2e9d8d0f28b3.run\\__sentry-breadcrumb2\" \"--crash-reporter=D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\AdobeCrashReport.exe\" \"--crash-envelope=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\external\\fdd751b9-01ba-4864-a766-9d80a29fb897.envelope\" --report-id=fdd751b9-01ba-4864-a766-9d80a29fb897 --initial-client-data=0xf44,0xf48,0xf4c,0xf20,0xf50,0x7ffeb7ffc5d0,0x7ffeb7ffc5e8,0x7ffeb7ffc600"
+    }
+  ],
+  "steps": [],
+  "close": {
+    "attempted": false,
+    "note": "session open failed; this script never owned a session to close — see trace for ae-a8n's internal close behaviour"
+  },
+  "handshake": null,
+  "contractViolations": [],
+  "launchError": {
+    "name": "AfterEffectsError",
+    "message": "After Effects was started (pid 58620, D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\AfterFX.exe) but did not answer the readiness probe: After Effects did not become ready to run scripts within 180000ms (a dialog may be open in it, such as crash recovery); no script was sent. It was not found when the process list was last read, so whether it survived is unknown; check before running again.",
+    "code": "A8N-AE-005",
+    "causeChain": [
+      "HostLeftRunningError",
+      "HostUnavailableError"
+    ]
+  },
+  "failureStage": "openSliceSession",
+  "sessionRoot": "C:\\Users\\rebui\\AppData\\Local\\Temp\\a8n-transport-EBzQnN\\a8n-session",
+  "workdir": "C:\\Users\\rebui\\AppData\\Local\\Temp\\a8n-transport-EBzQnN",
+  "trace": "{\"seq\":0,\"ts\":\"2026-11-20T18:25:24.878Z\",\"op\":\"session.launch\",\"status\":\"error\",\"durationMs\":181014,\"args\":{\"transport\":\"script-invocation\"},\"result\":{\"pendingLaunch\":{\"pid\":58620,\"startedAt\":null,\"executable\":\"D:\\\\4_apps\\\\adobe\\\\Adobe After Effects 2027\\\\Support Files\\\\AfterFX.exe\",\"presentAtLastLookup\":false,\"sessionUid\":null,\"sessionUser\":null,\"sessionAsid\":null},\"ownership\":{\"kind\":\"unknown\",\"evidence\":\"not launched\"}},\"error\":{\"name\":\"HostUnavailableError\",\"message\":\"After Effects did not become ready to run scripts within 180000ms (a dialog may be open in it, such as crash recovery); no script was sent\"}}\n",
+  "aeProcessesAfterLaunchFailure": [
+    {
+      "pid": null,
+      "args": "ls \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" && \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" -r \\\"C:/Users/rebui/Desktop/restro-pv/.tmp/probe-dash.jsx\\\" &"
+    },
+    {
+      "pid": null,
+      "args": "ls \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" && \\\"D:/4_apps/adobe/Adobe After Effects 2027/Support Files/AfterFX.exe\\\" -r \\\"C:/Users/rebui/Desktop/restro-pv/.tmp/probe-dash.jsx\\\" &"
+    },
+    {
+      "pid": 56204,
+      "args": "\"D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\AfterFX.exe\" -r"
+    },
+    {
+      "pid": 35644,
+      "args": "\"D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\crashpad_handler.exe\" --no-rate-limit \"--database=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\" \"--metrics-dir=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\" --url=https://o307710.ingest.sentry.io:443/api/5227323/minidump/?sentry_client=sentry.native/0.13.7&sentry_key=b757a395cf2c47dfbaa4bcf6186b45bb \"--attachment=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\37642157-fd06-4d39-cf47-2e9d8d0f28b3.run\\__sentry-event\" \"--attachment=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\37642157-fd06-4d39-cf47-2e9d8d0f28b3.run\\__sentry-breadcrumb1\" \"--attachment=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\37642157-fd06-4d39-cf47-2e9d8d0f28b3.run\\__sentry-breadcrumb2\" \"--crash-reporter=D:\\4_apps\\adobe\\Adobe After Effects 2027\\Support Files\\AdobeCrashReport.exe\" \"--crash-envelope=C:\\Users\\rebui\\AppData\\Local\\Temp\\Adobe\\After Effects\\27.0\\SentryIO-db\\external\\fdd751b9-01ba-4864-a766-9d80a29fb897.envelope\" --report-id=fdd751b9-01ba-4864-a766-9d80a29fb897 --initial-client-data=0xf44,0xf48,0xf4c,0xf20,0xf50,0x7ffeb7ffc5d0,0x7ffeb7ffc5e8,0x7ffeb7ffc600"
+    }
+  ],
+  "finishedAt": "2026-11-20T18:25:25.306Z"
+}
