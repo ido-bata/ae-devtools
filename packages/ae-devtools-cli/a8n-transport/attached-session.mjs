@@ -183,11 +183,14 @@ function hostPathsEqual(a, b) {
   const nb = normalizeHostPath(b);
   if (na === nb) return true;
   try {
-    const sa = statSync(na);
-    const sb = statSync(nb);
-    // ino 0 means "no useful file index" on some filesystems — never
+    // bigint stats: dev/ino can exceed Number.MAX_SAFE_INTEGER on some
+    // filesystems — a rounded comparison could equate distinct files
+    // and accept the wrong project pin (CodeRabbit, Issue #390).
+    const sa = statSync(na, { bigint: true });
+    const sb = statSync(nb, { bigint: true });
+    // ino 0n means "no useful file index" on some filesystems — never
     // treat two zero-inode stats as the same file.
-    return sa.dev === sb.dev && sa.ino !== 0 && sa.ino === sb.ino;
+    return sa.dev === sb.dev && sa.ino !== 0n && sa.ino === sb.ino;
   } catch {
     return false;
   }
@@ -624,11 +627,14 @@ export async function openAttachedSliceSession(options = {}) {
             "session identity was not fully attested at open (no pid/exe); mutating dispatch refused",
           );
         }
-        // Census verification, run TWICE: once before the project RPCs
-        // and once after them. A second instance of the same install
-        // can start while ae.project()/handle.info() is pending; only
-        // a census taken AFTER those reads prove the target set did
-        // not change underneath the project comparison.
+        // Census verification, run TWICE around the version RPC and
+        // BEFORE the project read: a second instance of the same
+        // install can start while ae.info()/ae.project() is pending.
+        // The project attestation is deliberately the LAST observation
+        // (Issue #390): the census cannot see a project switch during
+        // its own await, and the residual project-read → dispatch
+        // window is covered in-eval by the host-side project guard
+        // (Issue #385).
         const censusVerdict = async () => {
           let rows = null;
           try {
@@ -707,6 +713,15 @@ export async function openAttachedSliceSession(options = {}) {
             `After Effects version drifted ${JSON.stringify(identity.aeVersion)} -> ${JSON.stringify(liveVersion)}`,
           );
         }
+        // Post-RPC census BEFORE the project read: the census checks
+        // process identity only, so it cannot detect a project switch
+        // made during its own await. Running it first makes the
+        // project attestation below the LAST observation before the
+        // ok verdict — the residual window (project read → dispatch)
+        // is covered inside the mutation itself by the host-side
+        // project guard (Issue #385 / withHostProjectGuard).
+        const secondCensus = await censusVerdict();
+        if (secondCensus.ok !== true) return secondCensus;
         // Project identity: writes require a SUCCESSFUL project
         // attestation at re-validation — when the project cannot be
         // read now, a project switch cannot be ruled out, so the
@@ -744,12 +759,6 @@ export async function openAttachedSliceSession(options = {}) {
               `mutating dispatch refused`,
           );
         }
-        // Post-RPC census: the project reads above are async — a second
-        // instance of the same install may have appeared while they
-        // were pending. Re-verify the census AFTER them so approval
-        // covers the state the write will actually hit.
-        const secondCensus = await censusVerdict();
-        if (secondCensus.ok !== true) return secondCensus;
         return { ok: true };
       } catch (error) {
         return refuseGuard(

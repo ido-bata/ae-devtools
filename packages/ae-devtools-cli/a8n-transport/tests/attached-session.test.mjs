@@ -16,7 +16,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -45,6 +45,11 @@ function launchFixtureRoot() {
   );
   const okUrl = JSON.stringify(OK_FIXTURE_URL);
   writeFileSync(join(root, "dist", "index.js"), `
+import { appendFileSync } from "node:fs";
+const callLog = () => {
+  const f = process.env.AE_FIXTURE_CALL_LOG;
+  if (typeof f === "string" && f.length > 0) appendFileSync(f, "project\\n");
+};
 export * from ${okUrl};
 export const launchArgs = [];
 export const launchLog = [];
@@ -77,11 +82,14 @@ const openImpl = async (options, sink) => {
           throw new Error("fixture: project unreadable");
         }
         return {
-          info: async () => ({
-            file: process.env.AE_FIXTURE_PROJECT_FILE ?? "/tmp/user-project.aep",
-            name: process.env.AE_FIXTURE_PROJECT_NAME ?? "user-project",
-            itemCount: 3,
-          }),
+          info: async () => {
+            callLog();
+            return {
+              file: process.env.AE_FIXTURE_PROJECT_FILE ?? "/tmp/user-project.aep",
+              name: process.env.AE_FIXTURE_PROJECT_NAME ?? "user-project",
+              itemCount: 3,
+            };
+          },
         };
       },
       call: async () => { throw new Error("call not used in fixture tests"); },
@@ -880,5 +888,39 @@ test("projectFile pin: case-variant spelling of the same file still matches (Iss
     rmSync(root, { recursive: true, force: true });
     rmSync(workdir, { recursive: true, force: true });
     rmSync(projDir, { recursive: true, force: true });
+  }
+});
+
+test("revalidateTarget: project attestation is the LAST observation (Issue #390)", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  const logFile = join(workdir, "call-order.log");
+  try {
+    await withEnvVars(
+      { ...FAKE_EXE_ENV, AE_FIXTURE_CALL_LOG: logFile },
+      async () => {
+        // Probe calls append "probe"; the fixture's project.info()
+        // appends "project". Order must be census, census, project —
+        // the census cannot see a project switch during its own await,
+        // so the project read must come after the final census.
+        const probe = async () => {
+          appendFileSync(logFile, "probe\n");
+          return STABLE_ROWS;
+        };
+        const s = await openWithProbe(root, workdir, probe);
+        try {
+          writeFileSync(logFile, ""); // drop open-phase events
+          const g = await s.revalidateTarget();
+          assert.equal(g.ok, true);
+          const events = readFileSync(logFile, "utf8").trim().split("\n").filter(Boolean);
+          assert.deepEqual(events, ["probe", "probe", "project"]);
+        } finally {
+          await s.close();
+        }
+      },
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
   }
 });
