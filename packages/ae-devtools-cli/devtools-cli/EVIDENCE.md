@@ -79,3 +79,81 @@ open user project). Runs from `C:\Users\rebui\src\ae-devtools` @
 Not yet covered: a Windows attached comp/layer mutation loop (needs a
 responsive, preferably disposable, AE target), MCP/VSCode surfaces on
 Windows, `ae-a8n` attach reliability against a busy host.
+
+## Issue #366 follow-up — attach-only boundary + target re-validation (macOS, AE 2027 `27.0x78`)
+
+Branch `366` @ `ad32a1d`. Target: AE pid 56305 launched via `open -a`
+(user-session instance, `ownership: "attached"`,
+`ownershipEvidence: "already running before launch: pid 56305"`).
+`--ae-a8n-root` = local ae-a8n `release-0-5-0` @ `716dada`; every
+session reports `target.attachApi:
+"AfterEffects.launch(transitional)"` — the ae-a8n attach-only API has
+not shipped yet, so the transitional launch fallback ran under the
+pre-flight census + ownership check (see `a8n-transport/attach-target.mjs`).
+
+New in this round: `target.identity` records pid `56305`, process start
+`Sat Nov 21 01:30:06 2026`, executable path, AE version `27.0x78`, and
+open-project file/name; every mutating dispatch re-validates that
+identity via `targetGuard` → `revalidateTarget()` after consent
+approval and immediately before send (fail-closed on pid/start-stamp
+drift, multiple instances, unreadable census, version drift, project
+switch — unit-tested in `a8n-transport/tests/attached-session.test.mjs`).
+
+- `run-366-attached-revalidate-verify-2027.json` — read-only attach
+  verify; identity block present, `read.projectSummary` COMPLETED,
+  `cleanup.quit: null`.
+- Comp/layer loop with per-op mutation scope + targetGuard live:
+  `run-366-attached-revalidate-addcomp-2027.json` (`item.addComp`
+  "DevToolsProbeComp" 320x240@30 → COMPLETED) →
+  `run-366-attached-revalidate-addnull-2027.json` (`comp.addNullLayer`
+  "ProbeNull" → COMPLETED) →
+  `run-366-attached-revalidate-move-2027.json` (`layer.setTransformPosition`
+  x=100 y=200 → COMPLETED) →
+  `run-366-attached-revalidate-readlayers-2027.json` (`read.compLayers`
+  shows ProbeNull index 1) →
+  `run-366-attached-revalidate-readdetail-2027.json` (`read.layerDetail`
+  read-back `position: [100,200,0]`).
+- Recovery (no app-level Undo — on a user's live AE, `app.undo` could
+  revert the user's own last edit; targeted removal of objects this
+  session created is the honest recovery): `item.remove` of
+  DevToolsProbeComp (`run-366-attached-revalidate-remove-2027.json`),
+  then AE's auto-created null footage `ヌル 1` and its `平面` folder
+  (`run-366-attached-revalidate-cleanup-footage-2027.json`,
+  `run-366-attached-revalidate-cleanup-folder-2027.json`).
+- `run-366-attached-revalidate-final2-2027.json` — `read.projectSummary`
+  back to `numItems: 0`; pid 56305 still running afterwards; every
+  `cleanup.quit` is `null` (connection release only, never a quit).
+
+Not yet covered: a REAL drift refusal (pid/project switch mid-session —
+unit-tested only; each CLI invocation opens a fresh session so a
+mid-session drift cannot be produced through the CLI), the
+`AfterEffects.attach` primary path (pending ae-a8n), Windows re-run of
+this loop, MCP/VSCode surfaces on the attached session.
+
+## 2026-11-21 — attach-only API + VSCode attempt (branch 366)
+
+- `devtools-cli/evidence/run-366-attached-a8n-attach-api-2026.json` —
+  read-only `verify --session a8n-attached` against the USER's running
+  AE 2026 (26.5.3x9, pid 34792, uid/asid evidence) using a local
+  ae-a8n build of PR #270 (`AfterEffects.attach` present). Result:
+  `session.target.attachApi: "AfterEffects.attach"`, ownership
+  `attached`, `read.projectSummary` COMPLETED, `cleanup.quit: null`.
+  **verified on real host** for the attach-only seam on macOS.
+  Transitional `AfterEffects.launch` fallback remains until ae-a8n
+  PR #270 lands in a pinned dependency.
+- `jsx-toolchain/evidence/run-real-2027-366.json` — owned-session
+  AE 2027 vertical slice (issue #38 chain): broken JSX build →
+  runtime-error dispatch → sourcemap to-source → mystery detect/
+  diagnose → fix → rerun → verify → regression, all 11 steps ok,
+  bound to source SHA 2660089.
+- VSCode real-host attempt (issue #172): packaged VSIX installed in
+  an isolated `--extensions-dir`/`--user-data-dir` instance,
+  `ae-devtools.session: "a8n"`, qa-driver `mode=verify`. The
+  extension activated via the real `onCommand:ae-devtools.verify`
+  event and reached the modal consent gate — then settlement was
+  BLOCKED because the macOS screen locked (loginwindow frontmost,
+  window not on-screen, AX sees 0 windows). No dispatch completed,
+  no Problems-panel diagnostics were produced. Evidence:
+  `vscode-extension/evidence/vscode-iso-a8n-366/`. Status:
+  **BLOCKED (environmental)** — needs an unlocked GUI session to
+  settle consent, then Problems-panel verification.

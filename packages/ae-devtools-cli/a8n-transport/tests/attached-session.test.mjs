@@ -48,6 +48,7 @@ function launchFixtureRoot() {
 export * from ${okUrl};
 export const launchArgs = [];
 export const launchLog = [];
+export const attachArgs = [];
 // Read at launch() time, not import time — one fixture root serves
 // several behavior selections within a single test.
 const behavior = () => process.env.AE_FIXTURE_BEHAVIOR ?? "attached-ok";
@@ -59,11 +60,10 @@ export const resolveInstall = async () =>
   process.env.AE_FIXTURE_INSTALL_EXE
     ? { executable: process.env.AE_FIXTURE_INSTALL_EXE, installDir: "/fake/install" }
     : null;
-export const AfterEffects = Object.assign(function AfterEffects() {}, {
-  launch: async (options) => {
-    launchArgs.push(options ?? {});
+const openImpl = async (options, sink) => {
+    (sink?.args ?? launchArgs).push(options ?? {});
     const entry = { closed: 0 };
-    launchLog.push(entry);
+    (sink?.log ?? launchLog).push(entry);
     const b = behavior();
     const version = b === "version-mismatch" ? "99.9-fake" : "26.5-fake";
     return {
@@ -75,7 +75,7 @@ export const AfterEffects = Object.assign(function AfterEffects() {}, {
       project: () => ({
         info: async () => ({
           file: process.env.AE_FIXTURE_PROJECT_FILE ?? "/tmp/user-project.aep",
-          name: "user-project",
+          name: process.env.AE_FIXTURE_PROJECT_NAME ?? "user-project",
           itemCount: 3,
         }),
       }),
@@ -83,7 +83,16 @@ export const AfterEffects = Object.assign(function AfterEffects() {}, {
       close: async () => { entry.closed += 1; },
       tracePath: "/tmp/fake-a8n-trace.jsonl",
     };
-  },
+  };
+export const AfterEffects = Object.assign(function AfterEffects() {}, {
+  launch: (options) => openImpl(options, { args: launchArgs, log: launchLog }),
+  // Attach-only API (ae-a8n attach contract): present only when the
+  // fixture opts in, so tests cover BOTH the preferred path and the
+  // transitional launch fallback. Records into attachArgs so tests can
+  // prove which opener ran.
+  ...(process.env.AE_FIXTURE_ATTACH === "1"
+    ? { attach: (options) => { attachArgs.push(options ?? {}); return openImpl(options, { args: launchArgs, log: launchLog }); } }
+    : {}),
 });
 `);
   writeFileSync(join(root, "dist", "cli.js"), `
@@ -495,4 +504,239 @@ test("openAttachedSliceSession: unknown/read-only/forbidden mutatingOps refuse B
       rmSync(workdir, { recursive: true, force: true });
     }
   }
+});
+
+/* ------------------------------------------------------------------ */
+/* attach-only opener + target re-validation (Issue #366)              */
+/* ------------------------------------------------------------------ */
+
+test("attach boundary: AfterEffects.attach is preferred when exported", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars({ ...FAKE_EXE_ENV, AE_FIXTURE_ATTACH: "1" }, async () => {
+      const s = await openAttachedSliceSession({
+        aeA8nRoot: root,
+        workdir,
+        hostProcessProbe: async () => [{ pid: 7, path: FAKE_EXE, startedAt: "start-1" }],
+      });
+      try {
+        const { attachArgs } = await importFixture(root);
+        assert.equal(attachArgs.length, 1, "attach-only API must be used when present");
+        assert.equal(s.target.attachApi, "AfterEffects.attach");
+        assert.equal(s.target.identity.pid, 7);
+        assert.equal(s.target.identity.processStart, "start-1");
+        assert.equal(s.target.identity.executable, FAKE_EXE);
+        // The census-identified pid is forwarded as the attach target pin.
+        assert.deepEqual(attachArgs[0].target, { pid: 7 });
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("attach boundary: launch fallback is marked transitional", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withBehavior("attached-ok", async () => {
+      const s = await openAttachedSliceSession({ aeA8nRoot: root, workdir });
+      try {
+        assert.equal(s.target.attachApi, "AfterEffects.launch(transitional)");
+        // No census ran (resolveInstall null) → identity unattested.
+        assert.equal(s.target.identity.pid, null);
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+const STABLE_ROWS = [{ pid: 7, path: FAKE_EXE, startedAt: "start-1" }];
+
+async function openWithProbe(root, workdir, probe, extra = {}) {
+  return openAttachedSliceSession({
+    aeA8nRoot: root,
+    workdir,
+    hostProcessProbe: probe,
+    ...extra,
+  });
+}
+
+test("revalidateTarget: stable census + project passes", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      const s = await openWithProbe(root, workdir, async () => STABLE_ROWS);
+      try {
+        const g = await s.revalidateTarget();
+        assert.equal(g.ok, true);
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("revalidateTarget: pid change / second instance / unreadable census / project switch all refuse", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  const cases = [
+    {
+      name: "pid changed",
+      probe: async () => [{ pid: 99, path: FAKE_EXE, startedAt: "start-1" }],
+      code: "ATTACHED_TARGET_CHANGED",
+    },
+    {
+      name: "pid reused (start stamp differs)",
+      probe: async () => [{ pid: 7, path: FAKE_EXE, startedAt: "start-2" }],
+      code: "ATTACHED_TARGET_CHANGED",
+    },
+    {
+      name: "second instance of same install",
+      probe: async () => [
+        { pid: 7, path: FAKE_EXE, startedAt: "start-1" },
+        { pid: 8, path: FAKE_EXE, startedAt: "start-0" },
+      ],
+      code: "ATTACHED_TARGET_AMBIGUOUS",
+    },
+    {
+      name: "target gone",
+      probe: async () => [{ pid: 8, path: "/other/AE.app/x", startedAt: "s" }],
+      code: "ATTACHED_TARGET_NOT_RUNNING",
+    },
+    {
+      name: "unreadable census",
+      probe: async () => null,
+      code: "ATTACHED_TARGET_UNVERIFIED",
+    },
+    {
+      name: "unattributed row",
+      probe: async () => [{ pid: 7, path: null, startedAt: null }],
+      code: "ATTACHED_TARGET_UNVERIFIED",
+    },
+  ];
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      for (const c of cases) {
+        // Probe is per-open; revalidation re-invokes the SAME probe, so
+        // make it stateful: first call (pre-flight) stable, later calls
+        // return the drifted census.
+        let calls = 0;
+        const stateful = async () => (++calls === 1 ? STABLE_ROWS : c.probe());
+        const s = await openWithProbe(root, workdir, stateful);
+        try {
+          const g = await s.revalidateTarget();
+          assert.equal(g.ok, false, `${c.name} must refuse`);
+          assert.equal(g.code, c.code, `${c.name}: expected ${c.code}, got ${g.code}`);
+        } finally {
+          await s.close();
+        }
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("revalidateTarget: project switch refuses; unattested identity refuses mutating guard", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(
+      { ...FAKE_EXE_ENV, AE_FIXTURE_PROJECT_FILE: "/tmp/project-a.aep", AE_FIXTURE_PROJECT_NAME: "proj-a" },
+      async () => {
+        const s = await openWithProbe(root, workdir, async () => STABLE_ROWS);
+        try {
+          assert.equal((await s.revalidateTarget()).ok, true);
+          // Switch the project the fixture reports → next revalidation refuses.
+          process.env.AE_FIXTURE_PROJECT_FILE = "/tmp/project-b.aep";
+          process.env.AE_FIXTURE_PROJECT_NAME = "proj-b";
+          const g = await s.revalidateTarget();
+          assert.equal(g.ok, false);
+          assert.equal(g.code, "ATTACHED_TARGET_CHANGED");
+        } finally {
+          await s.close();
+        }
+      },
+    );
+    // No install exe → no census → unattested identity.
+    await withBehavior("attached-ok", async () => {
+      const s = await openAttachedSliceSession({ aeA8nRoot: root, workdir });
+      try {
+        const g = await s.revalidateTarget();
+        assert.equal(g.ok, false);
+        assert.equal(g.code, "ATTACHED_TARGET_UNVERIFIED");
+      } finally {
+        await s.close();
+      }
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("runOperation targetGuard: mutating op refused before send when guard fails; reads unaffected", async () => {
+  let sends = 0;
+  const countingRunner = { runScript: async () => { sends += 1; return { outcome: "COMPLETED" }; } };
+  const base = {
+    runner: countingRunner,
+    pin: { sessionId: "s", aeVersion: "26.5", dispatchId: "d" },
+    projectIdentity: "test",
+    consentProvider: approvedConsent,
+    trustedScriptOptIn: true,
+    scriptProvenance: "test",
+    confirmDestructive: true,
+  };
+  const failingGuard = async () => ({ ok: false, code: "ATTACHED_TARGET_CHANGED", detail: "pid drifted" });
+  const r1 = await devloopExecute({
+    opId: "project.new", args: {}, ...base,
+    sessionPolicy: { readOnly: false, mode: "attached", mutation: { allowedOps: ["project.new"] } },
+    targetGuard: failingGuard,
+  });
+  assert.equal(r1.status, "refused");
+  assert.equal(r1.reason, "ATTACHED_TARGET_GUARD");
+  assert.equal(r1.guardCode, "ATTACHED_TARGET_CHANGED");
+  assert.equal(sends, 0, "a refused guard must never reach the transport");
+
+  // Throwing guard fails closed the same way.
+  const r2 = await devloopExecute({
+    opId: "project.new", args: {}, ...base,
+    sessionPolicy: { readOnly: false, mode: "attached", mutation: { allowedOps: ["project.new"] } },
+    targetGuard: async () => { throw new Error("census exploded"); },
+  });
+  assert.equal(r2.status, "refused");
+  assert.equal(r2.reason, "ATTACHED_TARGET_GUARD");
+  assert.equal(sends, 0);
+
+  // Passing guard lets the dispatch through.
+  const r3 = await devloopExecute({
+    opId: "project.new", args: {}, ...base,
+    sessionPolicy: { readOnly: false, mode: "attached", mutation: { allowedOps: ["project.new"] } },
+    targetGuard: async () => ({ ok: true }),
+  });
+  assert.equal(sends, 1);
+  assert.notEqual(r3?.reason, "ATTACHED_TARGET_GUARD");
+
+  // Read ops never invoke the guard.
+  let guardCalls = 0;
+  await devloopExecute({
+    opId: "read.projectSummary", args: {}, ...base,
+    sessionPolicy: readOnlyPolicy,
+    targetGuard: async () => { guardCalls += 1; return { ok: false, code: "X", detail: "no" }; },
+  });
+  assert.equal(guardCalls, 0, "read ops must not pay the re-validation cost");
 });

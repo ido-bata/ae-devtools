@@ -1,0 +1,104 @@
+{
+  "schema": "ae-devtools.jsx-toolchain.real-run/v1",
+  "issue": 52,
+  "startedAt": "2026-11-20T16:44:50.378Z",
+  "sourceSha": "2660089cc2d36a79dfc5c6b4c261414a60a19293",
+  "sourceDirty": false,
+  "steps": [
+    {
+      "name": "session.launch",
+      "at": "2026-11-20T16:45:07.665Z",
+      "ok": true,
+      "aeVersion": "27.0x78",
+      "ownership": "owned",
+      "aeA8nSource": "local:/Users/rebui/work/ae-a8n",
+      "aeA8nHead": "716dada4c9c7ceaf8f6e32e02b40875f32af7070"
+    },
+    {
+      "name": "build.ok",
+      "at": "2026-11-20T16:45:07.947Z",
+      "ok": true,
+      "status": "ok",
+      "jsxBytes": 185
+    },
+    {
+      "name": "dispatch.ok",
+      "at": "2026-11-20T16:45:10.656Z",
+      "ok": true,
+      "outcome": "COMPLETED",
+      "detail": null
+    },
+    {
+      "name": "verify.global-write",
+      "at": "2026-11-20T16:45:12.972Z",
+      "ok": true,
+      "observed": "hello ae 27.0x78",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "build.runtime-error",
+      "at": "2026-11-20T16:45:12.987Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "dispatch.runtime-error",
+      "at": "2026-11-20T16:45:15.594Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostError": "__toolchainUndeclaredIdentifierは未定義です。",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3
+    },
+    {
+      "name": "sourcemap.to-source",
+      "at": "2026-11-20T16:45:15.594Z",
+      "ok": true,
+      "mapped": {
+        "source": "runtime-error.ts",
+        "line": 3,
+        "column": 48,
+        "name": null,
+        "content": "// Deliberate runtime fault for real-host sourcemap verification.\nfunction boom(): void {\n  var missing = __toolchainUndeclaredIdentifier;\n  $.global.__toolchainBoom = missing;\n}\nboom();\n"
+      }
+    },
+    {
+      "name": "mystery.build",
+      "at": "2026-11-20T16:45:15.601Z",
+      "ok": true,
+      "status": "ok"
+    },
+    {
+      "name": "mystery.detect+diagnose",
+      "at": "2026-11-20T16:45:17.272Z",
+      "ok": true,
+      "outcome": "FAILED",
+      "hostErrorName": "ReferenceError",
+      "hostLine": 3,
+      "mapped": {
+        "source": "mystery.ts",
+        "line": 3
+      }
+    },
+    {
+      "name": "mystery.fix+rerun",
+      "at": "2026-11-20T16:45:19.141Z",
+      "ok": true,
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "mystery.verify",
+      "at": "2026-11-20T16:45:20.530Z",
+      "ok": true,
+      "observed": "fixed",
+      "outcome": "COMPLETED"
+    },
+    {
+      "name": "session.close",
+      "at": "2026-11-20T16:45:22.788Z",
+      "ok": true
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-11-20T16:45:22.789Z"
+}

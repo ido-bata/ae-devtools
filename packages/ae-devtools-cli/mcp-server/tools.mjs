@@ -256,6 +256,8 @@ export async function callTool(name, args = {}, ctx = {}) {
         scriptProvenance: "mcp-server",
         requestId,
         sessionPolicy: session.policy ?? null,
+        // Attached-session target re-validation (Issue #366).
+        targetGuard: session.targetGuard ?? null,
         confirmDestructive: args.confirmDestructive === true,
         confirmRender: args.confirmRender === true,
       });
