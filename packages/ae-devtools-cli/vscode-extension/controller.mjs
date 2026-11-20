@@ -54,9 +54,12 @@ function uiDeclined(detail) {
 
 /**
  * @param {object} options
- * @param {"fake"|"a8n"} [options.session="fake"]
+ * @param {"fake"|"a8n"|"a8n-attached"} [options.session="fake"]
  * @param {string} [options.aeA8nRoot]
  * @param {string} [options.installDir]
+ * @param {string[]} [options.mutatingOps] — a8n-attached only: the
+ *   explicit op-level mutation scope granted at session open (Issue
+ *   #366); forwarded to the shared session opener, ignored elsewhere
  * @param {{confirm:Function, info?:Function, error?:Function}} [options.ui]
  * @param {Function} [options.sessionFactory] — (kind, opts) => session;
  *   defaults to mcp-server/session.mjs openSession. Injected by tests.
@@ -73,6 +76,8 @@ export function createController(options = {}) {
     session: sessionKind = "fake",
     aeA8nRoot,
     installDir,
+    aeVersion,
+    mutatingOps,
     ui = DENY_ALL_UI,
     sessionFactory = openSession,
     closeTimeoutMs,
@@ -107,7 +112,12 @@ export function createController(options = {}) {
       // an attributable residue record.
       await guard.begin();
       try {
-        const s = await sessionFactory(sessionKind, { aeA8nRoot, installDir });
+        const s = await sessionFactory(sessionKind, {
+          aeA8nRoot,
+          installDir,
+          aeVersion: typeof aeVersion === "string" && aeVersion.length > 0 ? aeVersion : undefined,
+          mutatingOps: Array.isArray(mutatingOps) ? mutatingOps : undefined,
+        });
         guard.mark(s);
         resolvedSession = s;
         return s;

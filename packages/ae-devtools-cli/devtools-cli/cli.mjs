@@ -11,8 +11,9 @@
  *   node cli.mjs discover [--domain <d>]
  *   node cli.mjs inspect <opId>
  *   node cli.mjs execute <opId> [--args '<json>'] [--confirm-destructive]
- *                 [--confirm-render] --session fake|a8n
+ *                 [--confirm-render] --session fake|a8n|a8n-attached
  *                 [--ae-a8n-root <dir>] [--install-dir <dir>]
+ *                 [--ae-version <v>] [--allow-mutation <opId>]...
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
  *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
@@ -35,6 +36,13 @@
  *          experiment present and an ae-a8n satisfying the contract gate
  *          (a8n-transport/compat.mjs, Issue #138) — ae-a8n <=0.1.0-alpha.2
  *          does NOT, use --ae-a8n-root
+ *   a8n-attached — explicit attach to an ALREADY-RUNNING AE (Issue #366).
+ *          Read-only by default: mutating ops are refused before consent,
+ *          the host is never quit, and the open refuses unless ae-a8n
+ *          reports ownership "attached". `--allow-mutation <opId>`
+ *          (repeatable, a8n-attached only) grants exactly the named
+ *          mutating ops for this session — ops that discard unsaved
+ *          work (e.g. project.close) are never grantable.
  *
  * Consent: --consent grant is REQUIRED for any dispatch; default is deny.
  * This is a local policy flag, not authenticated authorization
@@ -98,7 +106,7 @@ function findAeInstalls() {
   return found;
 }
 
-async function openSession(flags) {
+async function openSession(flags, mutatingOps = []) {
   const kind = flags.session ?? "fake";
   // Session-kind dispatch is shared with MCP/VSCode via
   // dev-loop/session-open.mjs (Issue #183) — one implementation of the
@@ -108,6 +116,8 @@ async function openSession(flags) {
   const base = await openSharedSession(kind, {
     aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
     installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+    aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
+    mutatingOps,
   });
   if (kind !== "a8n") {
     const { slice: _slice, ...session } = base;
@@ -191,7 +201,8 @@ function makeCleanup(state, flags) {
   };
 }
 
-const { pos, flags } = parseArgs(process.argv.slice(2));
+const { pos, flags, multi } = parseArgs(process.argv.slice(2), { multi: ["allow-mutation"] });
+const allowMutationOps = (multi?.["allow-mutation"] ?? []).filter((v) => typeof v === "string" && v.length > 0);
 const [cmd, ...rest] = pos;
 
 const state = {
@@ -321,8 +332,15 @@ async function main() {
       // marker that reap can never resolve (OWNERSHIP_NOT_OWNED,
       // session:null) — noise, not residue (Issue #219).
       const sessionKind = flags.session ?? "fake";
-      if (sessionKind !== "fake" && sessionKind !== "a8n") {
-        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `unknown --session '${flags.session}' (fake|a8n)` });
+      if (sessionKind !== "fake" && sessionKind !== "a8n" && sessionKind !== "a8n-attached") {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `unknown --session '${flags.session}' (fake|a8n|a8n-attached)` });
+        return 2;
+      }
+      // --allow-mutation scopes writes on a USER'S running AE only; on
+      // fake/a8n sessions it would be silently meaningless, so refuse
+      // rather than let a flag imply authority that was never granted.
+      if (allowMutationOps.length > 0 && sessionKind !== "a8n-attached") {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: "--allow-mutation is only valid with --session a8n-attached" });
         return 2;
       }
 
@@ -337,7 +355,7 @@ async function main() {
       let code = 2;
       let payload;
       try {
-        state.session = await openSession(flags);
+        state.session = await openSession(flags, allowMutationOps);
         markSession(RUNS_DIR, guard.runId, state.session);
         // Record attested process evidence when the opener could prove it.
         // Absent evidence is recorded as absent — recovery authorization
@@ -363,6 +381,11 @@ async function main() {
             kind: state.session.kind,
             evidenceLevel: state.session.evidenceLevel,
             ownership: state.session.ownership?.kind ?? state.session.meta?.ownership ?? null,
+            // Session-imposed dispatch policy (Issue #366): the mutation
+            // scope an attached session was opened with is part of the
+            // audit record — evidence must show what was granted, not
+            // just what ran.
+            policy: state.session.policy ?? null,
           },
           at: new Date().toISOString(),
         };
@@ -389,6 +412,7 @@ async function main() {
           trustedScriptOptIn: true,
           scriptProvenance: "devtools-cli",
           requestId,
+          sessionPolicy: state.session.policy ?? null,
         };
         const result = cmd === "execute"
           ? await execute({

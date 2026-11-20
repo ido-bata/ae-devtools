@@ -13,8 +13,9 @@
  * Nothing but protocol frames is ever written to stdout; diagnostics go
  * to stderr.
  *
- *   node server.mjs [--session fake|a8n] [--ae-a8n-root <dir>]
- *                   [--install-dir <dir>]
+ *   node server.mjs [--session fake|a8n|a8n-attached]
+ *                   [--ae-a8n-root <dir>] [--install-dir <dir>]
+ *                   [--ae-version <v>] [--allow-mutation <opId>]...
  *
  * Session is opened LAZILY on the first ae_execute/ae_verify that passes
  * the consent pre-gate — discover/inspect/denied calls never touch a
@@ -267,10 +268,15 @@ import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
 const isMain = isMainEntry(import.meta.url);
 
 if (isMain) {
-  const { flags } = parseArgs(process.argv.slice(2));
+  const { flags, multi } = parseArgs(process.argv.slice(2), { multi: ["allow-mutation"] });
   const sessionKind = flags.session ?? "fake";
-  if (!["fake", "a8n"].includes(sessionKind)) {
-    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");
+  const allowMutationOps = (multi?.["allow-mutation"] ?? []).filter((v) => typeof v === "string" && v.length > 0);
+  if (!["fake", "a8n", "a8n-attached"].includes(sessionKind)) {
+    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>] [--allow-mutation <opId>]...\n");
+    process.exit(2);
+  }
+  if (allowMutationOps.length > 0 && sessionKind !== "a8n-attached") {
+    process.stderr.write("ae-devtools-mcp: --allow-mutation is only valid with --session a8n-attached\n");
     process.exit(2);
   }
   const server = createServer({
@@ -278,6 +284,8 @@ if (isMain) {
     sessionOptions: {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+      aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
+      mutatingOps: allowMutationOps,
     },
     closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });
