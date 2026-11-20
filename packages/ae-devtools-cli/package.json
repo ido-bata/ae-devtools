@@ -1,6 +1,6 @@
 {
   "name": "@ido-bata/ae-devtools-cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Developer CLI, JSX/TypeScript toolchain, MCP server and extension devkits for After Effects scripting/extension/native development",
   "type": "module",
   "engines": {
