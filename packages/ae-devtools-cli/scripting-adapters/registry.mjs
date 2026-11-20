@@ -223,8 +223,13 @@ function __adp_vectorTree(group) {
 // Proxy source snapshot (Issue #298): proxySource is a FootageSource
 // subclass — discriminate with instanceof on the concrete classes,
 // never localized typeName. mainSource stays independent; only
-// proxySource is serialized here. Fields not modeled by the fake
-// (e.g. SolidSource.width) are read but not claimed.
+// proxySource is serialized here.
+// Only documented members are read (Issue #329 audit): FileSource
+// exposes file/missingFootagePath, SolidSource adds color, and every
+// FootageSource exposes isStill. name/width/height/pixelAspect/
+// frameRate/duration are AVItem attributes, NOT FootageSource members
+// in either documentation tier — reading them here produced undefined
+// on a real host, so they are intentionally absent from the snapshot.
 function __adp_proxySnapshot(it) {
   var ps = it.proxySource;
   if (ps === null || ps === undefined) return null;
@@ -237,17 +242,10 @@ function __adp_proxySnapshot(it) {
   } else if (ps instanceof SolidSource) {
     out.kind = "solid";
     out.color = ps.color === undefined ? null : ps.color;
-    out.name = String(ps.name || "");
-    out.width = ps.width;
-    out.height = ps.height;
-    out.pixelAspect = ps.pixelAspect;
+    out.isStill = ps.isStill === true;
   } else if (ps instanceof PlaceholderSource) {
     out.kind = "placeholder";
-    out.name = String(ps.name || "");
-    out.width = ps.width;
-    out.height = ps.height;
-    out.frameRate = ps.frameRate;
-    out.duration = ps.duration;
+    out.isStill = ps.isStill === true;
   } else {
     out.kind = "unknown";
   }
@@ -1959,7 +1957,10 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index, text: doc.t
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = comp.layers.addCamera(${js(a.name)}, ${jsLit(a.centerPoint)});
-return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
+// CameraLayer is a Layer subclass, not AVLayer — threeDLayer is an
+// AVLayer-only attribute and is not readable here. Cameras are 3D
+// layers by definition, so report the constant instead of reading it.
+return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: true });
 `,
   },
   {
@@ -1983,7 +1984,10 @@ return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer
     source: (a) => `${PRELUDE}
 var comp = __adp_findItem(${js(a.compName)}, CompItem);
 var layer = comp.layers.addLight(${js(a.name)}, ${jsLit(a.centerPoint)});
-return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: layer.threeDLayer === true });
+// LightLayer is a Layer subclass, not AVLayer — threeDLayer is an
+// AVLayer-only attribute and is not readable here. Lights are 3D
+// layers by definition, so report the constant instead of reading it.
+return __adp_json({ ok: true, layer: layer.name, index: layer.index, threeDLayer: true });
 `,
   },
   {

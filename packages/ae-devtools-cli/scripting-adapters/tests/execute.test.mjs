@@ -1198,7 +1198,10 @@ test("issue #298 batch: AVItem proxy surface — file/solid/placeholder, main-vs
   assert.equal(solid.outcome, "COMPLETED");
   assert.equal(solid.result.proxy.kind, "solid");
   assert.deepEqual(solid.result.proxy.color, [1, 0, 0]);
-  assert.equal(solid.result.proxy.name, "Red Proxy");
+  // name/width/height/pixelAspect are not documented FootageSource
+  // members (Issue #329) — the snapshot reports only documented fields.
+  assert.equal(solid.result.proxy.name, undefined);
+  assert.equal(solid.result.proxy.isStill, true);
   assert.equal(solid.result.useProxy, true);
 
   // Placeholder proxy.
@@ -1208,8 +1211,9 @@ test("issue #298 batch: AVItem proxy surface — file/solid/placeholder, main-vs
   });
   assert.equal(ph.outcome, "COMPLETED");
   assert.equal(ph.result.proxy.kind, "placeholder");
-  assert.equal(ph.result.proxy.name, "Offline");
-  assert.equal(ph.result.proxy.frameRate, 24);
+  assert.equal(ph.result.proxy.name, undefined);
+  assert.equal(ph.result.proxy.frameRate, undefined);
+  assert.equal(ph.result.proxy.isStill, false);
 
   // Sequence proxy is still a FileSource.
   const seq = await go("item.setProxyWithSequence", { name: "clip.mov", path: "/tmp/seq.####.exr", forceAlphabetical: true });
