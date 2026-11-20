@@ -60,6 +60,14 @@ export function hasAttachApi(AfterEffects) {
  *         ae-a8n does not export `AfterEffects.attach` — the attached
  *         lane has no spawn-capable fallback by contract (Issue #374).
  *         Whatever ae-a8n's attach throws propagates unchanged.
+ *
+ * Platform boundary: ae-a8n's attach on Windows refuses the default
+ * script transport (every script delivery there spawns `AfterFX.exe
+ * -r`); attach requires the `in-ae-dispatcher` transport or another
+ * attach-capable selection, which this opener does not supply. On
+ * win32 `AfterEffects.attach` therefore surfaces ae-a8n's typed
+ * refusal — fail-closed, nothing is launched (Issue #382). Windows
+ * attach remains UNVERIFIED on this path (#224).
  */
 export async function openAttachTarget({ AfterEffects, installDir, hostScriptPath, sessionRoot, authorization, targetPid }) {
   if (!hasAttachApi(AfterEffects)) {

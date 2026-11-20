@@ -73,7 +73,7 @@
  */
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -156,16 +156,40 @@ function normalizeMutatingOps(raw) {
 }
 
 /**
- * Normalize an executable/project path for comparison: slash-folded,
- * trailing slashes stripped, and case-folded on the filesystems AE
- * runs on (APFS default and NTFS are case-insensitive).
+ * Normalize a host path for comparison: slash-folded, trailing slashes
+ * stripped. Case is NOT folded — case-sensitive volumes (case-sensitive
+ * APFS, case-sensitive NTFS mounts) can hold distinct projects whose
+ * paths differ only by case, and folding would equate them. Alias
+ * validity (symlinks, `..`, case-variant spellings on case-insensitive
+ * volumes) is handled by hostPathsEqual via realpath/stat identity,
+ * not by string folding.
  */
 function normalizeHostPath(p) {
-  let s = String(p).replace(/\\/g, "/").replace(/\/+$/, "");
-  if (process.platform === "darwin" || process.platform === "win32") {
-    s = s.toLowerCase();
+  return String(p).replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+/**
+ * Path equality for target identity. Exact normalized-string match
+ * first; otherwise compare filesystem identity (dev+ino after stat,
+ * which follows symlinks) so aliases of the SAME file still match
+ * regardless of spelling — while `Cut/Main.aep` vs `cut/Main.aep` on a
+ * case-sensitive volume remain distinct (different inodes or ENOENT).
+ * When either side cannot be stat'ed the answer is false: an
+ * unverifiable path equality must fail closed, never equate.
+ */
+function hostPathsEqual(a, b) {
+  const na = normalizeHostPath(a);
+  const nb = normalizeHostPath(b);
+  if (na === nb) return true;
+  try {
+    const sa = statSync(na);
+    const sb = statSync(nb);
+    // ino 0 means "no useful file index" on some filesystems — never
+    // treat two zero-inode stats as the same file.
+    return sa.dev === sb.dev && sa.ino !== 0 && sa.ino === sb.ino;
+  } catch {
+    return false;
   }
-  return s;
 }
 
 /** Normalize a project-file path the same way, resolving relative
@@ -367,9 +391,8 @@ export async function openAttachedSliceSession(options = {}) {
       rows = null;
     }
     if (Array.isArray(rows)) {
-      const exe = normalizeHostPath(installInfo.executable);
       const exact = rows.filter(
-        (r) => typeof r?.path === "string" && r.path.length > 0 && normalizeHostPath(r.path) === exe,
+        (r) => typeof r?.path === "string" && r.path.length > 0 && hostPathsEqual(r.path, installInfo.executable),
       );
       const unattributed = rows.some((r) => typeof r?.path !== "string" || r.path.length === 0);
       if (rows.length === 0) {
@@ -538,7 +561,7 @@ export async function openAttachedSliceSession(options = {}) {
           : null;
       const matched =
         actualFile !== null &&
-        normalizeProjectFilePath(actualFile) === normalizeProjectFilePath(expectedProjectFile);
+        hostPathsEqual(normalizeProjectFilePath(actualFile), normalizeProjectFilePath(expectedProjectFile));
       if (!matched) {
         refuse(
           "ATTACHED_TARGET_MISMATCH",
@@ -589,54 +612,74 @@ export async function openAttachedSliceSession(options = {}) {
             "session identity was not fully attested at open (no pid/exe); mutating dispatch refused",
           );
         }
-        let rows = null;
-        try {
-          rows = await processProbe(installInfo);
-        } catch {
-          rows = null;
-        }
-        if (!Array.isArray(rows)) {
-          return refuseGuard(
-            "ATTACHED_TARGET_UNVERIFIED",
-            "host process census unreadable at re-validation; mutating dispatch refused",
+        // Census verification, run TWICE: once before the project RPCs
+        // and once after them. A second instance of the same install
+        // can start while ae.project()/handle.info() is pending; only
+        // a census taken AFTER those reads prove the target set did
+        // not change underneath the project comparison.
+        const censusVerdict = async () => {
+          let rows = null;
+          try {
+            rows = await processProbe(installInfo);
+          } catch {
+            rows = null;
+          }
+          if (!Array.isArray(rows)) {
+            return refuseGuard(
+              "ATTACHED_TARGET_UNVERIFIED",
+              "host process census unreadable at re-validation; mutating dispatch refused",
+            );
+          }
+          if (rows.some((r) => typeof r?.path !== "string" || r.path.length === 0)) {
+            return refuseGuard(
+              "ATTACHED_TARGET_UNVERIFIED",
+              "an After Effects process image is undisclosed; target identity unprovable",
+            );
+          }
+          const matches = rows.filter(
+            (r) => typeof r?.path === "string" && r.path.length > 0 && hostPathsEqual(r.path, identity.executable),
           );
-        }
-        const exe = normalizeHostPath(identity.executable);
-        if (rows.some((r) => typeof r?.path !== "string" || r.path.length === 0)) {
-          return refuseGuard(
-            "ATTACHED_TARGET_UNVERIFIED",
-            "an After Effects process image is undisclosed; target identity unprovable",
-          );
-        }
-        const matches = rows.filter(
-          (r) => typeof r?.path === "string" && r.path.length > 0 && normalizeHostPath(r.path) === exe,
-        );
-        if (matches.length === 0) {
-          return refuseGuard(
-            "ATTACHED_TARGET_NOT_RUNNING",
-            "the attached After Effects process is gone; mutating dispatch refused",
-          );
-        }
-        if (matches.length > 1) {
-          return refuseGuard(
-            "ATTACHED_TARGET_AMBIGUOUS",
-            `${matches.length} After Effects processes match the install; the target is ambiguous`,
-          );
-        }
-        const row = matches[0];
-        if (row.pid !== identity.pid) {
-          return refuseGuard(
-            "ATTACHED_TARGET_CHANGED",
-            `After Effects pid changed ${identity.pid} -> ${row.pid}; the original target is gone`,
-          );
-        }
-        if (identity.processStart !== null && row.startedAt !== identity.processStart) {
-          const readable = typeof row.startedAt === "string" && row.startedAt.length > 0;
-          return refuseGuard(
-            readable ? "ATTACHED_TARGET_CHANGED" : "ATTACHED_TARGET_UNVERIFIED",
-            "After Effects process start stamp differs or is unreadable — possible pid reuse",
-          );
-        }
+          if (matches.length === 0) {
+            return refuseGuard(
+              "ATTACHED_TARGET_NOT_RUNNING",
+              "the attached After Effects process is gone; mutating dispatch refused",
+            );
+          }
+          if (matches.length > 1) {
+            return refuseGuard(
+              "ATTACHED_TARGET_AMBIGUOUS",
+              `${matches.length} After Effects processes match the install; the target is ambiguous`,
+            );
+          }
+          const row = matches[0];
+          if (row.pid !== identity.pid) {
+            return refuseGuard(
+              "ATTACHED_TARGET_CHANGED",
+              `After Effects pid changed ${identity.pid} -> ${row.pid}; the original target is gone`,
+            );
+          }
+          // A missing baseline start stamp means pid reuse can never be
+          // ruled out for the life of this session — refuse mutation
+          // rather than skipping the check (reads stay available).
+          if (identity.processStart === null) {
+            return refuseGuard(
+              "ATTACHED_TARGET_UNVERIFIED",
+              "the attached process start stamp was not attested at open; mutating dispatch refused",
+            );
+          }
+          if (row.startedAt !== identity.processStart) {
+            const readable = typeof row.startedAt === "string" && row.startedAt.length > 0;
+            return refuseGuard(
+              readable ? "ATTACHED_TARGET_CHANGED" : "ATTACHED_TARGET_UNVERIFIED",
+              "After Effects process start stamp differs or is unreadable — possible pid reuse",
+            );
+          }
+          return { ok: true, row };
+        };
+
+        const firstCensus = await censusVerdict();
+        if (firstCensus.ok !== true) return firstCensus;
+
         let liveVersion = null;
         try {
           const i = typeof ae.info === "function" ? ae.info() : null;
@@ -652,11 +695,11 @@ export async function openAttachedSliceSession(options = {}) {
             `After Effects version drifted ${JSON.stringify(identity.aeVersion)} -> ${JSON.stringify(liveVersion)}`,
           );
         }
-        // Project identity: when the open project was readable at
-        // attach, it must still be the same file/name; when it was
-        // unreadable then, a now-readable DIFFERENT project is a
-        // change, and a still-unreadable project keeps the weaker
-        // pid+version attestation only.
+        // Project identity: writes require a SUCCESSFUL project
+        // attestation at re-validation — when the project cannot be
+        // read now, a project switch cannot be ruled out, so the
+        // weaker pid+version attestation is not enough for mutation.
+        // (Reads are unaffected: they never reach this guard.)
         let liveProject = null;
         try {
           if (typeof ae.project === "function") {
@@ -673,15 +716,15 @@ export async function openAttachedSliceSession(options = {}) {
           liveProject = null;
         }
         if (liveProject === null) {
-          if (identity.projectFile !== null || identity.projectName !== null) {
-            return refuseGuard(
-              "ATTACHED_TARGET_UNVERIFIED",
-              "the open project became unreadable at re-validation; mutating dispatch refused",
-            );
-          }
-          return { ok: true };
+          return refuseGuard(
+            "ATTACHED_TARGET_UNVERIFIED",
+            "the open project could not be attested at re-validation; mutating dispatch refused",
+          );
         }
-        if (liveProject.file !== identity.projectFile || liveProject.name !== identity.projectName) {
+        const fileSame = liveProject.file !== null && identity.projectFile !== null
+          ? hostPathsEqual(liveProject.file, identity.projectFile)
+          : liveProject.file === identity.projectFile;
+        if (!fileSame || liveProject.name !== identity.projectName) {
           return refuseGuard(
             "ATTACHED_TARGET_CHANGED",
             `the open project changed since attach ` +
@@ -689,6 +732,12 @@ export async function openAttachedSliceSession(options = {}) {
               `mutating dispatch refused`,
           );
         }
+        // Post-RPC census: the project reads above are async — a second
+        // instance of the same install may have appeared while they
+        // were pending. Re-verify the census AFTER them so approval
+        // covers the state the write will actually hit.
+        const secondCensus = await censusVerdict();
+        if (secondCensus.ok !== true) return secondCensus;
         return { ok: true };
       } catch (error) {
         return refuseGuard(
