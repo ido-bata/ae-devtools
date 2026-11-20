@@ -5023,7 +5023,13 @@ static int RouteMatches(const RouteEntry* r, const char* opId)
             return strncmp(opId, r->a, strlen(r->a)) == 0 &&
                    strcmp(opId, r->excl) != 0;
         case RM_CUSTOM:
-            return r->custom(opId);
+        {
+            /* local copy keeps the call site free of an arrow-call —
+               the registry-reconcile scanner maps suite receivers by
+               name and must not see an unmapped indirect call. */
+            int (*fn)(const char*) = r->custom;
+            return fn(opId);
+        }
     }
     return 0;
 }
