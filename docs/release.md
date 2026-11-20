@@ -57,6 +57,7 @@ ae-devtools では `.github/workflows/ci.yml`（`pull_request` 対象、package 
 - migration rehearsal（schema / dependency major upgrade 時）
 - signing / notarization（`.zxp` / InstallKit 等を採用する場合）
 - deployment / IaC plan
+- provisioned-host inventory verify: `inventories/scripting` の `bun run verify` + `bun run drift`、および `inventories/tools` の `.reference/` clone provision 後の `bun run verify`。いずれも git-ignore された payload / clone が必要で CI では明示 skip されるため、release PR 前に provisioned host で実行し結果を記録する（`inventories/scripting/README.md` §9.1–9.5）
 
 release gate 実施途中で中断した場合、途中までの green を full pass とみなさない。check result は code snapshot に bind し、stale success を再利用しない。
 
