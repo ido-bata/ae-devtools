@@ -45,3 +45,37 @@ always `null` (the host is never quit).
 Not yet covered here: Windows comp/layer loop, MCP/VSCode surfaces on a
 real attached session, multi-instance ambiguity on a real host (unit
 tested only).
+
+## Issue #366 follow-up — Windows attach pre-flight findings (Windows 11, AE 2027 `27.0x78`)
+
+Branch `366` @ `77dcdcd`. Target: user-launched AE pid 12912
+(`D:\4_apps\adobe\Adobe After Effects 2027\Support Files\AfterFX.exe`,
+open user project). Runs from `C:\Users\rebui\src\ae-devtools` @
+`C:\Users\rebui\src\att-verify-win*.json`.
+
+- `att-verify-win3.json` — attach + session open COMPLETED earlier the
+  same evening (ownership `attached`); `read.projectSummary` dispatch
+  returned UNKNOWN (`NO_REPLY_BEFORE_DEADLINE`) against the busy
+  2514-item project — honest non-green, no false pass.
+- `att-verify-win4.json` / `att-verify-win5.json` — later the same
+  night, `AfterEffects.launch` inside ae-a8n spawned NEW AfterFX pids
+  (15316, then 58416) instead of attaching to 12912; both died before
+  answering `app.info` (`A8N-AE-005` after ~178 s). No orphan process
+  remained (`Get-CimInstance` afterwards lists only 12912); the user's
+  AE was never terminated or mutated.
+- Census diagnosis: `Get-CimInstance Win32_Process` DOES disclose
+  `ExecutablePath` for 12912 from this session, so the pre-flight
+  correctly counts it as exactly one attributed match and defers to
+  ae-a8n. The duplicate-spawn behavior is inside ae-a8n's
+  `AfterEffects.launch` attach path when the running instance is busy
+  (tracked under ae-a8n #74/#99) — ae-devtools cannot fix it from the
+  opener side.
+- Policy tightened at `77dcdcd`: unattributable AE rows now refuse
+  `ATTACHED_TARGET_UNVERIFIED` and foreign-only rows refuse
+  `ATTACHED_TARGET_NOT_RUNNING` instead of falling through to a
+  possible duplicate cold start (unit-tested; the unattributed-row
+  case is what an elevated/other-session AE looks like).
+
+Not yet covered: a Windows attached comp/layer mutation loop (needs a
+responsive, preferably disposable, AE target), MCP/VSCode surfaces on
+Windows, `ae-a8n` attach reliability against a busy host.
