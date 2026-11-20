@@ -1,0 +1,73 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T17-23-06-719Z-5956c7d2",
+  "command": "verify",
+  "sourceSha": "a4af498d664f972c89f3a1f7af684cb7b6e5c6aa",
+  "sourceDirty": true,
+  "opId": null,
+  "requestId": "req-run-2026-11-20T17-23-06-719Z-5956c7d2-verify",
+  "session": {
+    "aeVersion": "26.5.3x9",
+    "ownership": "attached",
+    "aeA8nHead": "c104e39b627f16e32f96c5c8fe4fd107c33b4a64",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "attached to pid 34792 (the process running since 2026-11-20T16:36:38.000Z); it was already running and is not this session's to quit in the session of rebui (uid 501, asid 100022)",
+      "aeVersion": "26.5.3x9",
+      "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+      "appPath": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+      "project": {
+        "file": null,
+        "name": null
+      },
+      "projectFile": null,
+      "identity": {
+        "pid": 34792,
+        "processStart": "Sat Nov 21 01:36:38 2026",
+        "executable": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/After Effects",
+        "aeVersion": "26.5.3x9",
+        "projectFile": null,
+        "projectName": null,
+        "ownershipEvidence": "attached to pid 34792 (the process running since 2026-11-20T16:36:38.000Z); it was already running and is not this session's to quit in the session of rebui (uid 501, asid 100022)",
+        "attestedAt": "2026-11-20T17:23:13.080Z"
+      },
+      "attachApi": "AfterEffects.attach"
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": true,
+      "mode": "attached"
+    }
+  },
+  "at": "2026-11-20T17:23:13.250Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T17-23-06-719Z-5956c7d2-verify",
+    "operationId": "read.projectSummary",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "count": 0,
+      "numItems": 0,
+      "items": [],
+      "activeItem": null,
+      "selection": []
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.projectSummary",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "devtools-cli/evidence/run-374-attached-no-fallback-2026.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}
