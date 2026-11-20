@@ -43,6 +43,17 @@ const a8nRoot = arg("--ae-a8n-root") ?? process.env.A8N_ROOT;
 if (a8nRoot) serverArgs.push("--ae-a8n-root", a8nRoot);
 const installDir = arg("--install-dir") ?? process.env.AE_INSTALL_DIR;
 if (installDir) serverArgs.push("--install-dir", installDir);
+// a8n-attached target pins + mutation scope pass straight through to
+// server.mjs (Issue #366): --project-file, --ae-version, and repeated
+// --allow-mutation <opId>.
+const projectFile = arg("--project-file");
+if (projectFile) serverArgs.push("--project-file", projectFile);
+const aeVersion = arg("--ae-version");
+if (aeVersion) serverArgs.push("--ae-version", aeVersion);
+const allowMutation = process.argv
+  .map((a, i) => (a === "--allow-mutation" ? process.argv[i + 1] : null))
+  .filter((v) => typeof v === "string" && v.length > 0);
+for (const opId of allowMutation) serverArgs.push("--allow-mutation", opId);
 
 const log = [];
 let fatal = false;

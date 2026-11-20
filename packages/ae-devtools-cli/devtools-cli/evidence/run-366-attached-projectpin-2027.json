@@ -1,0 +1,84 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T15-11-56-974Z-4ad47081",
+  "command": "verify",
+  "sourceSha": "9386890e37a2519c47f44917d5300c10421954d5",
+  "sourceDirty": true,
+  "opId": null,
+  "requestId": "req-run-2026-11-20T15-11-56-974Z-4ad47081-verify",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "attached",
+    "aeA8nHead": "50e712b6149fd1fed8fb55965ec4f3eed1102250",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "already running before launch: pid 22873",
+      "aeVersion": "27.0x78",
+      "installDir": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027",
+      "appPath": "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+      "project": {
+        "file": "/tmp/ae-att-test.aep",
+        "name": "ae-att-test.aep"
+      },
+      "projectFile": "/tmp/ae-att-test.aep"
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": true,
+      "mode": "attached"
+    }
+  },
+  "at": "2026-11-20T15:12:02.358Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T15-11-56-974Z-4ad47081-verify",
+    "operationId": "read.projectSummary",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "count": 3,
+      "numItems": 3,
+      "items": [
+        {
+          "name": "Comp1",
+          "typeName": "コンポジション",
+          "id": 1,
+          "selected": false,
+          "parent": null
+        },
+        {
+          "name": "平面",
+          "typeName": "フォルダー",
+          "id": 13,
+          "selected": false,
+          "parent": null
+        },
+        {
+          "name": "ヌル 1",
+          "typeName": "フッテージ",
+          "id": 14,
+          "selected": false,
+          "parent": "平面"
+        }
+      ],
+      "activeItem": null,
+      "selection": []
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.projectSummary",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "/tmp/att-pin4.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

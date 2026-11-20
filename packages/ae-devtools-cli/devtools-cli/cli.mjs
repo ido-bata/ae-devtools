@@ -14,6 +14,8 @@
  *                 [--confirm-render] --session fake|a8n|a8n-attached
  *                 [--ae-a8n-root <dir>] [--install-dir <dir>]
  *                 [--ae-version <v>] [--allow-mutation <opId>]...
+ *                 [--project-file <path>]
+ *                 [--call-timeout-ms <n>] [--deadline-ms <n>]
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
  *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
@@ -43,6 +45,9 @@
  *          (repeatable, a8n-attached only) grants exactly the named
  *          mutating ops for this session — ops that discard unsaved
  *          work (e.g. project.close) are never grantable.
+ *          `--project-file <path>` (a8n-attached only) pins the open
+ *          project identity: the session refuses unless the attached
+ *          AE has that project file open.
  *
  * Consent: --consent grant is REQUIRED for any dispatch; default is deny.
  * This is a local policy flag, not authenticated authorization
@@ -106,6 +111,11 @@ function findAeInstalls() {
   return found;
 }
 
+function positiveMsFlag(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 async function openSession(flags, mutatingOps = []) {
   const kind = flags.session ?? "fake";
   // Session-kind dispatch is shared with MCP/VSCode via
@@ -118,6 +128,9 @@ async function openSession(flags, mutatingOps = []) {
     installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
     mutatingOps,
+    projectFile: typeof flags["project-file"] === "string" ? flags["project-file"] : undefined,
+    callTimeoutMs: positiveMsFlag(flags["call-timeout-ms"]),
+    deadlineMs: positiveMsFlag(flags["deadline-ms"]),
   });
   if (kind !== "a8n") {
     const { slice: _slice, ...session } = base;
@@ -341,6 +354,10 @@ async function main() {
       // rather than let a flag imply authority that was never granted.
       if (allowMutationOps.length > 0 && sessionKind !== "a8n-attached") {
         emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: "--allow-mutation is only valid with --session a8n-attached" });
+        return 2;
+      }
+      if (typeof flags["project-file"] === "string" && sessionKind !== "a8n-attached") {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: "--project-file is only valid with --session a8n-attached" });
         return 2;
       }
 

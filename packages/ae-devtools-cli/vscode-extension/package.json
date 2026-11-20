@@ -89,6 +89,11 @@
           "default": [],
           "description": "a8n-attached session only (Issue #366): the exact mutating operation ids this session may dispatch on the user's running AE (e.g. [\"project.new\",\"project.save\"]). Empty = read-only. Ops that discard unsaved work (project.close) are never grantable; each dispatch still requires consent and the destructive/render confirm gates."
         },
+        "ae-devtools.attachedProjectFile": {
+          "type": "string",
+          "default": "",
+          "description": "a8n-attached session only (Issue #366): expected open-project file path. The session refuses unless the attached AE has exactly this project file open — guards against attaching to the wrong project."
+        },
         "ae-devtools.debug.hostAppSpecifier": {
           "type": "string",
           "default": "",

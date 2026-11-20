@@ -158,6 +158,7 @@ export async function activate(context) {
     mutatingOps: Array.isArray(config.get("attachedMutatingOps"))
       ? config.get("attachedMutatingOps").filter((v) => typeof v === "string")
       : undefined,
+    projectFile: config.get("attachedProjectFile"),
     ui: realUi(),
   });
 

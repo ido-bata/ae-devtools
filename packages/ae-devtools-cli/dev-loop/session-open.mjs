@@ -36,6 +36,9 @@ const EXP = join(HERE, "..");
  *   not delete it). `aeVersion` is an a8n-attached-only target pin.
  *   `mutatingOps` is an a8n-attached-only op-level mutation scope
  *   (Issue #366); it is forwarded to no other session kind.
+ *   `projectFile` is an a8n-attached-only open-project identity pin —
+ *   the session refuses when the attached AE has a different (or no)
+ *   project file open.
  * @returns {Promise<object>} session shaped
  *   { kind, evidenceLevel, runner, pin, close, meta, slice, policy } —
  *   `slice` is the raw slice-session result (a8n kinds) or null (fake);
@@ -67,6 +70,9 @@ export async function openSession(kind = "fake", options = {}) {
       mutatingOps: Array.isArray(options.mutatingOps)
         ? options.mutatingOps.filter((v) => typeof v === "string")
         : undefined,
+      projectFile: typeof options.projectFile === "string" ? options.projectFile : undefined,
+      callTimeoutMs: Number.isFinite(options.callTimeoutMs) ? options.callTimeoutMs : undefined,
+      deadlineMs: Number.isFinite(options.deadlineMs) ? options.deadlineMs : undefined,
     });
     return {
       kind: "a8n-attached",

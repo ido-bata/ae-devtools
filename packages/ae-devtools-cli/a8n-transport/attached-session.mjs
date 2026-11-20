@@ -32,12 +32,30 @@
  * version, resolved install dir, ownership evidence, and the open
  * project's file path when readable. It is evidence for the caller,
  * never authority.
+ *
+ * Attach pre-flight (Issue #366): launching AE only to discover there
+ * is no usable target costs a full cold start plus a forced quit.
+ * Before launch the opener censuses running AE processes for the
+ * resolved install: no processes, or only processes fully attributed
+ * to other installs, refuse as ATTACHED_TARGET_NOT_RUNNING; two or
+ * more instances of the same install refuse as ambiguous
+ * (ATTACHED_TARGET_AMBIGUOUS); AE processes whose image path the OS
+ * would not disclose refuse as ATTACHED_TARGET_UNVERIFIED — falling
+ * through could cold-start a duplicate AE. Exactly one attributed
+ * match falls through to AfterEffects.launch, where ae-a8n's own
+ * census + ownership check remain the authority.
+ *
+ * Project pin: `options.projectFile` names the project file the
+ * caller expects the attached AE to have open. After attach the open
+ * project's file is compared (normalized, case-folded on
+ * case-insensitive filesystems); a missing or different file refuses
+ * with ATTACHED_TARGET_MISMATCH before any dispatch.
  */
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -117,6 +135,85 @@ function normalizeMutatingOps(raw) {
 }
 
 /**
+ * Normalize an executable/project path for comparison: slash-folded,
+ * trailing slashes stripped, and case-folded on the filesystems AE
+ * runs on (APFS default and NTFS are case-insensitive).
+ */
+function normalizeHostPath(p) {
+  let s = String(p).replace(/\\/g, "/").replace(/\/+$/, "");
+  if (process.platform === "darwin" || process.platform === "win32") {
+    s = s.toLowerCase();
+  }
+  return s;
+}
+
+/** Normalize a project-file path the same way, resolving relative
+ * paths and symlinks where the filesystem allows. */
+function normalizeProjectFilePath(p) {
+  let s = String(p).trim();
+  if (s.startsWith("file://")) {
+    try { s = fileURLToPath(s); } catch { /* keep raw */ }
+  }
+  s = resolve(s);
+  try { s = realpathSync.native(s); } catch { /* keep resolved form */ }
+  return normalizeHostPath(s);
+}
+
+/**
+ * Census running After Effects processes for the attach pre-flight.
+ *
+ * Contract: resolves to an array of { pid, path } rows — one per
+ * process whose image name is an After Effects executable (ANY
+ * install/version; `path` is its executable path, or null when the OS
+ * would not disclose it), or null when the platform has no probe or
+ * the probe failed. Callers must treat null AND any row with a null
+ * path as inconclusive.
+ */
+async function defaultHostProcessProbe() {
+  if (process.platform === "darwin") {
+    const { stdout } = await execFileAsync("ps", ["-axo", "pid=,comm="], {
+      timeout: 5_000, maxBuffer: 4 * 1024 * 1024,
+    });
+    const rows = [];
+    for (const line of stdout.split("\n")) {
+      const m = line.match(/^\s*(\d+)\s+(.+)$/);
+      if (m === null) continue;
+      const path = m[2].trim();
+      const base = path.split("/").pop();
+      // "After Effects" is the .app executable name on every macOS
+      // version; "AfterFX" covers helper naming drift. Path-less comm
+      // values still match by basename and stay unattributed.
+      if (base === "After Effects" || base === "AfterFX") {
+        rows.push({ pid: Number(m[1]), path: path.includes("/") ? path : null });
+      }
+    }
+    return rows;
+  }
+  if (process.platform === "win32") {
+    const { stdout } = await execFileAsync(
+      "powershell.exe",
+      [
+        "-NoProfile", "-NonInteractive", "-Command",
+        "Get-CimInstance Win32_Process -Filter \"Name='AfterFX.exe'\" | " +
+          "ForEach-Object { \"$($_.ProcessId)`t$($_.ExecutablePath)\" }",
+      ],
+      { timeout: 8_000, maxBuffer: 1024 * 1024 },
+    );
+    const rows = [];
+    for (const line of stdout.split(/\r?\n/)) {
+      const t = line.indexOf("\t");
+      if (t === -1) continue;
+      const pid = Number(line.slice(0, t).trim());
+      if (!Number.isInteger(pid) || pid <= 0) continue;
+      const path = line.slice(t + 1).trim();
+      rows.push({ pid, path: path.length > 0 ? path : null });
+    }
+    return rows;
+  }
+  return null;
+}
+
+/**
  * @param {object} options
  *   installDir     — pin the AE install to attach to (forwarded to launch)
  *   aeVersion      — optional expected AE version; a live version that
@@ -130,6 +227,12 @@ function normalizeMutatingOps(raw) {
  *                    consents to dispatch on the attached host. Empty/
  *                    absent keeps the session read-only. Validated
  *                    before launch — a bad scope never opens AE.
+ *   projectFile    — expected open-project file path; after attach the
+ *                    live project's file must match (normalized) or the
+ *                    session refuses with ATTACHED_TARGET_MISMATCH.
+ *   hostProcessProbe — test seam for the attach pre-flight census;
+ *                    defaults to the platform process scan. Injected
+ *                    probes return the same {pid,path} row contract.
  */
 export async function openAttachedSliceSession(options = {}) {
   const mutatingOps = normalizeMutatingOps(options.mutatingOps);
@@ -159,8 +262,110 @@ export async function openAttachedSliceSession(options = {}) {
     typeof options.aeVersion === "string" && options.aeVersion.length > 0
       ? options.aeVersion
       : null;
+  const expectedProjectFile =
+    typeof options.projectFile === "string" && options.projectFile.length > 0
+      ? options.projectFile
+      : null;
   const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-attached-"));
   const sessionRoot = join(workdir, "a8n-session");
+
+  // Resolve the install identity BEFORE launch: the attach pre-flight
+  // needs the executable path to census running hosts, and the same
+  // resolution feeds target evidence after attach. A resolution
+  // failure is not fatal here — launch surfaces the real error.
+  let installInfo = null;
+  try {
+    if (typeof aeA8nMod.resolveInstall === "function") {
+      installInfo = await aeA8nMod.resolveInstall(
+        process.platform,
+        optInstallDir !== null ? { installDir: optInstallDir } : {},
+      );
+    }
+  } catch {
+    installInfo = null;
+  }
+
+  const preflightError = (code, message) => {
+    const e = new Error(message);
+    e.code = code;
+    e.sliceWorkdir = workdir;
+    e.sliceSessionRoot = sessionRoot;
+    return e;
+  };
+
+  // Attach pre-flight: refuse BEFORE any AE side effect unless the
+  // census finds exactly one process attributable to the target
+  // install. Anything else — none, foreign-only, ambiguous, or
+  // unattributable — refuses here; only a single match falls through
+  // to launch, where ae-a8n's own census + ownership check decide.
+  if (
+    installInfo !== null &&
+    typeof installInfo.executable === "string" &&
+    installInfo.executable.length > 0
+  ) {
+    const probe = typeof options.hostProcessProbe === "function"
+      ? options.hostProcessProbe
+      : defaultHostProcessProbe;
+    let rows = null;
+    try {
+      rows = await probe(installInfo);
+    } catch {
+      rows = null;
+    }
+    if (Array.isArray(rows)) {
+      const exe = normalizeHostPath(installInfo.executable);
+      const exact = rows.filter(
+        (r) => typeof r?.path === "string" && r.path.length > 0 && normalizeHostPath(r.path) === exe,
+      );
+      const unattributed = rows.some((r) => typeof r?.path !== "string" || r.path.length === 0);
+      if (rows.length === 0) {
+        throw preflightError(
+          "ATTACHED_TARGET_NOT_RUNNING",
+          `a8n-attached found no running After Effects process for install ` +
+            `${installInfo.executable}; start AE first or use --session a8n ` +
+            `for a disposable owned session. No AE process was launched.`,
+        );
+      }
+      if (exact.length >= 2) {
+        throw preflightError(
+          "ATTACHED_TARGET_AMBIGUOUS",
+          `${exact.length} After Effects processes match install ` +
+            `${installInfo.executable}; the attach target is ambiguous. ` +
+            `Close extra instances or pin a single target.`,
+        );
+      }
+      if (exact.length === 0) {
+        if (unattributed) {
+          // AE processes exist but none could be attributed to this
+          // install (e.g. another user session / elevation hides the
+          // image path). We cannot prove there is no usable target, and
+          // falling through would cold-start a duplicate AE — refuse.
+          throw preflightError(
+            "ATTACHED_TARGET_UNVERIFIED",
+            `After Effects processes are running but none could be ` +
+              `attributed to install ${installInfo.executable} (process ` +
+              `image path undisclosed). Refusing to launch a duplicate; ` +
+              `run from the same user session as After Effects or close ` +
+              `the other instances.`,
+          );
+        }
+        // Every running AE process is fully attributed to a DIFFERENT
+        // install — this install has no running target.
+        throw preflightError(
+          "ATTACHED_TARGET_NOT_RUNNING",
+          `a8n-attached found After Effects processes but none match ` +
+            `install ${installInfo.executable}; start that AE first or ` +
+            `use --session a8n for a disposable owned session. No AE ` +
+            `process was launched.`,
+        );
+      }
+      // exact === 1: the target install has exactly one running
+      // process — fall through to launch, where ae-a8n attaches to it
+      // (a `-r` launcher can also transiently share the install path on
+      // Windows, so ownership stays the final authority).
+    }
+  }
+
   const hostScriptPath = join(workdir, "a8n-host-ext.js");
   await execFileAsync(process.execPath, [
     cliPath, "extension", "build",
@@ -193,23 +398,18 @@ export async function openAttachedSliceSession(options = {}) {
     const liveVersion = typeof info.version === "string" ? info.version : null;
 
     // Resolve the concrete install identity for evidence (same
-    // best-effort mechanics as session.mjs).
+    // best-effort mechanics as session.mjs). installInfo was already
+    // resolved before launch for the pre-flight census.
     let installDir = optInstallDir;
     let appPath = null;
     try {
-      if (typeof aeA8nMod.resolveInstall === "function") {
-        const install = await aeA8nMod.resolveInstall(
-          process.platform,
-          installDir !== null ? { installDir } : {},
-        );
-        const exe = typeof install?.executable === "string" ? install.executable : null;
-        if (exe !== null && exe.length > 0) {
-          if (process.platform === "darwin") {
-            appPath = dirname(dirname(dirname(exe)));
-            installDir = installDir ?? appPath.replace(/\.app$/, "");
-          } else {
-            installDir = installDir ?? dirname(exe);
-          }
+      const exe = typeof installInfo?.executable === "string" ? installInfo.executable : null;
+      if (exe !== null && exe.length > 0) {
+        if (process.platform === "darwin") {
+          appPath = dirname(dirname(dirname(exe)));
+          installDir = installDir ?? appPath.replace(/\.app$/, "");
+        } else {
+          installDir = installDir ?? dirname(exe);
         }
       }
     } catch {
@@ -248,7 +448,11 @@ export async function openAttachedSliceSession(options = {}) {
     let project = null;
     try {
       if (typeof ae.project === "function") {
-        const info = await ae.project().info();
+        // ae.project() is async and resolves to a Project handle;
+        // .info() is a second call on that handle — awaiting the
+        // outer promise alone reads nothing.
+        const handle = await ae.project();
+        const info = await handle.info();
         project = {
           file: typeof info?.file === "string" ? info.file : null,
           name: typeof info?.name === "string" ? info.name : null,
@@ -256,6 +460,28 @@ export async function openAttachedSliceSession(options = {}) {
       }
     } catch {
       project = null;
+    }
+
+    // Project pin: when the caller named the project file they expect
+    // open, the attached host must actually have THAT project open —
+    // "some AE answered" is not proof the target is the intended one.
+    // A null/unreadable project file can never satisfy a pin.
+    if (expectedProjectFile !== null) {
+      const actualFile =
+        project !== null && typeof project.file === "string" && project.file.length > 0
+          ? project.file
+          : null;
+      const matched =
+        actualFile !== null &&
+        normalizeProjectFilePath(actualFile) === normalizeProjectFilePath(expectedProjectFile);
+      if (!matched) {
+        refuse(
+          "ATTACHED_TARGET_MISMATCH",
+          `attached project's file ${JSON.stringify(actualFile)} does not match ` +
+            `requested project ${JSON.stringify(expectedProjectFile)}; ` +
+            `nothing was dispatched`,
+        );
+      }
     }
 
     const pin = {
@@ -282,6 +508,7 @@ export async function openAttachedSliceSession(options = {}) {
       installDir,
       appPath,
       project,
+      projectFile: expectedProjectFile,
     };
 
     async function close() {
