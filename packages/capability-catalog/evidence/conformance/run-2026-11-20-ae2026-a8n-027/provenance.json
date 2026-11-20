@@ -1,0 +1,47 @@
+{
+ "schema": "ae-devtools.conformance-provenance/v1",
+ "recordedAt": "2026-11-20T09:04:56.911885Z",
+ "git": {
+  "head": "ed3a54ab89f0e0b4e999fb385393daf320b775d2",
+  "dirty": false,
+  "note": "run executed at ed3a54ab89f0e0b4e999fb385393daf320b775d2 on release-0-5-0 (v0.5.0 release candidate after #360/#361 CodeRabbit follow-up fixes); evidence-scope diff to evidence-commit contains only this evidence tree"
+ },
+ "aeA8n": {
+  "name": "@ido-bata/ae-a8n",
+  "version": "0.2.0",
+  "distTag": "next",
+  "tarball": "https://registry.npmjs.org/@ido-bata/ae-a8n/-/ae-a8n-0.2.0.tgz",
+  "fileCount": 164
+ },
+ "aeDevtools": {
+  "package": "ae-devtools-cli",
+  "sourceSha": "ed3a54ab89f0e0b4e999fb385393daf320b775d2",
+  "invocation": "node conformance/real-run.mjs + node conformance/mcp-real-run.mjs + node devtools-cli/cli.mjs (execute project.open/doctor)"
+ },
+ "host": {
+  "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+  "aeVersion": "26.5.3x9",
+  "aeBuild": "9",
+  "os": "macOS 27.2.1",
+  "arch": "arm64",
+  "node": "v26.13.1"
+ },
+ "fixtures": {
+  "primary": "Conformance-Disposable.aep",
+  "mcp": "Conformance-MCP-Disposable.aep",
+  "note": "both created fresh inside owned sessions via project.new + project.save"
+ },
+ "artifactHashes": {
+  "Conformance-Disposable.aep": "e459d7b22f2e4104e7e7b889366a3da4d076e6e02fb0d8237602e57d8ce3c479",
+  "Conformance-MCP-Disposable.aep": "babb0b3f4e5631907c44c027f452af8952d2b387bea43327ae4b74b7d0cf1b18",
+  "a8n-host-ext.js": "825a5e63ebd6afb08ff7dd83a6fd6aa732fcef59e522355760815954c3bdd401",
+  "ae-a8n-0.2.0.tgz": "3c63588bb618106f4ee89716f840787b9da601977f01cca92547ba5700bda372",
+  "cli-doctor.json": "67dbc09a707fecbba887f9bbe025c386a15f3136959f6d41d7573fc40d01fbce",
+  "cli-project-open.json": "c19254f9797c519afaa1f8da92fca2f6981fac7a39edf5c1f8bf25e8a982b117",
+  "harness-mcp-real-run.mjs": "f4a048a048aaf481b6c464d15881ce46c6c042f8c3887c2170ec4570d8f37a3e",
+  "harness-real-run.mjs": "6046ae540b99847c68bf535726433c0af1d40e4add0effebc4cfe27965e0b8ea",
+  "mcp-stdio.jsonl": "27dd253c98330041a25487524734b62e47f32f384aef266030c1722bcf9bb7a2",
+  "session-a8n-jsx.json": "2130f209655e1581b2a8a66e9ad0638423cf08169cf018d3f534a1cb0ef534d4",
+  "trace.jsonl": "3ec97872b3dc058a23058e873255d6b1de42d0b0c5324acf35e937501f63e724"
+ }
+}

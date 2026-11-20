@@ -1,9 +1,14 @@
 /**
  * extension.mjs — HostExtension consumed by `ae-a8n extension build`.
  *
- * Declares exactly one method, `aeDevtools.trustedEval`, whose body evaluates
+ * Declares `aeDevtools.trustedEval` (the caller-facing method) plus the
+ * internal `aeDevtools.evalProgram` sibling it delegates eval to, whose
+ * body evaluates
  * caller-supplied ExtendScript source inside the AE host and returns a
- * structured result. This is the experiment seam that lets the
+ * structured result. The source is always evaluated ONCE as a program;
+ * callers that need function-body semantics (adapter dispatches) wrap
+ * their body in an IIFE before dispatch so the consent-bound source IS
+ * the executed source. This is the experiment seam that lets the
  * trusted-execution runner (packages/ae-devtools-cli/trusted-execution) reach a REAL AE
  * session through ae-a8n's owned-session `ae.call` path.
  *
@@ -48,40 +53,59 @@ const EVAL_METHOD_SOURCE = `function (params) {
     codec = null;
   }
 
+  // Exactly one evaluation, always as a program. A previous revision
+  // retried SyntaxError failures wrapped as a function body — but a
+  // SyntaxError can also be thrown at RUNTIME by the evaluated code
+  // itself (inner eval/new Function/RegExp), after partial side effects,
+  // so the retry could execute the source twice. There is no retry:
+  // parse failure and runtime failure are both reported, and callers
+  // that need function-body semantics wrap the source themselves.
   var value;
   var evalError = null;
+  var didThrow = false;
+  // Scope separation: the program must not reach this method's
+  // bookkeeping (didThrow/evalError/value/requestId/...). A direct
+  // eval here shares THIS function's variable environment, and any
+  // function nested inside it still resolves names through this
+  // scope — so the eval is delegated to the sibling method
+  // aeDevtools.evalProgram, whose lexical scope chain never includes
+  // this method's locals. Exactly one evaluation, always as a
+  // program; there is no retry (see above).
+  var runner = null;
   try {
-    value = eval(source);
-  } catch (firstError) {
-    // Contract: source is normally a PROGRAM whose completion value is
-    // the result. Adapter-generated dispatches (scripting-adapters
-    // buildSource) are FUNCTION BODIES - they end in a top-level
-    // return, which is a parse-time SyntaxError in program position.
-    // Only a SyntaxError is retried, and only as a function body: a
-    // SyntaxError means nothing executed, so the retry cannot double
-    // side effects. Runtime errors (ReferenceError etc.) already ran
-    // partially and are reported, never retried.
-    var isSyntax = false;
-    try { isSyntax = firstError.name === "SyntaxError"; } catch (e0) {}
-    if (isSyntax) {
-      try {
-        value = eval("(function(){" + source + "\\n})()");
-      } catch (secondError) {
-        evalError = secondError;
-      }
-    } else {
-      evalError = firstError;
-    }
+    runner = __a8n.extensions["aeDevtools.evalProgram"];
+  } catch (lookupError) {
+    runner = null;
   }
-  if (evalError !== null) {
+  if (typeof runner !== "function") {
+    return {
+      requestId: requestId,
+      ok: false,
+      evalError: { name: "EvalError", message: "aeDevtools.evalProgram runner unavailable", line: null, file: null }
+    };
+  }
+  try {
+    value = runner({ source: source });
+  } catch (firstError) {
+    didThrow = true;
+    evalError = firstError;
+  }
+  // didThrow (not evalError !== null) is the failure signal: a source
+  // that throws null or undefined leaves evalError nullish and must
+  // still classify as a failed evaluation, never as success.
+  if (didThrow) {
     var name = "EvalError";
-    var message = "unknown eval failure";
+    var message = evalError === null ? "thrown null"
+      : evalError === undefined ? "thrown undefined"
+      : "unknown eval failure";
     var line = null;
     var file = null;
-    try { if (evalError.name !== undefined) name = String(evalError.name); } catch (e1) {}
-    try { if (evalError.message !== undefined) message = String(evalError.message); } catch (e2) {}
-    try { if (evalError.line !== undefined) line = evalError.line; } catch (e3) {}
-    try { if (evalError.file !== undefined) file = String(evalError.file); } catch (e4) {}
+    if (evalError !== null && evalError !== undefined) {
+      try { if (evalError.name !== undefined) name = String(evalError.name); } catch (e1) {}
+      try { if (evalError.message !== undefined) message = String(evalError.message); } catch (e2) {}
+      try { if (evalError.line !== undefined) line = evalError.line; } catch (e3) {}
+      try { if (evalError.file !== undefined) file = String(evalError.file); } catch (e4) {}
+    }
     return {
       requestId: requestId,
       ok: false,
@@ -132,10 +156,21 @@ const EVAL_METHOD_SOURCE = `function (params) {
   };
 }`;
 
+// Internal sibling of aeDevtools.trustedEval: the ONLY place caller
+// source is eval'd. Its lexical scope is the extension-registration
+// function + globals — it cannot see trustedEval's bookkeeping vars,
+// so evaluated programs cannot forge the verdict or the echoed
+// requestId. Vars declared by a program land in this function's
+// per-call scope and are discarded on return.
+const EVAL_PROGRAM_SOURCE = `function (params) {
+  return eval(String(params.source));
+}`;
+
 export default {
   name: "aedevtools",
   version: "0.1.0",
   methods: [
     { name: "aeDevtools.trustedEval", source: EVAL_METHOD_SOURCE },
+    { name: "aeDevtools.evalProgram", source: EVAL_PROGRAM_SOURCE },
   ],
 };

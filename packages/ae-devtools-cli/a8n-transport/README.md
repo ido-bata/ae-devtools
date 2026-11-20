@@ -20,9 +20,14 @@ runner.runScript(source)
 ## Files
 
 - `extension.mjs` — `HostExtension` for `ae-a8n extension build`; declares
-  the single ES3 method `aeDevtools.trustedEval`. Its body evals
-  `params.source` and returns `{requestId, ok, resultJson|valueText}` or a
-  structured `evalError` with host-reported name/message/line/file.
+  the caller-facing ES3 method `aeDevtools.trustedEval` plus the internal
+  `aeDevtools.evalProgram` sibling it delegates eval to. trustedEval's
+  bookkeeping lives in a scope the evaluated program cannot reach (the
+  eval runs inside evalProgram's separate function scope). The source is
+  eval'd exactly once as a program (no function-body retry —
+  callers wrap function bodies in an IIFE themselves) and returns
+  `{requestId, ok, resultJson|valueText}` or a structured `evalError`
+  with host-reported name/message/line/file.
 - `transport.mjs` — `createA8nTransport({ae})`: the runner's injected
   `send(requestText)`. Maps ae-a8n outcomes onto codec replies:
   `TimeoutError` → `null` (UNKNOWN), proved-not-sent errors

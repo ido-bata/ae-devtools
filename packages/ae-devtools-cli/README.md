@@ -12,10 +12,30 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 
 ```sh
 npm install @ido-bata/ae-devtools-cli          # registry latest
-npm install @ido-bata/ae-devtools-cli@0.4.0    # this release, once published
+npm install @ido-bata/ae-devtools-cli@0.5.0    # this release, once published
 # tarball / local checkout からも可:
-npm install ./ae-devtools-cli-0.4.0.tgz
+npm install ./ae-devtools-cli-0.5.0.tgz
 ```
+
+### Migrating to 0.5.0
+
+- Scripting adapter coverage was extended across comp settings /
+  relink / render-queue, FolderItem hierarchy, AVItem proxy sources,
+  TextDocument attributes, ShapeLayer contents, and MarkerValue
+  (#289–#309). `ae-api.d.ts` and the capability catalog were regenerated
+  from the pinned Adobe sources; 4 signature claims remain `unknown`
+  because the pinned source evidence is internally contradictory
+  (documented in `inventories/scripting`).
+- VSCode extension: Problems-panel diagnostics publish/clear is now
+  authoritative across multi-URI and multi-run sessions (#302, #312).
+- trusted-execution gained a consent audit trail and dispatch store
+  hardening (#318 series).
+- The native-sdk experiment (`experiments/native-sdk`,
+  `packages/native-adapter`) added the intake args codec, aeRef identity
+  descriptors, a per-request HMAC consent boundary, and the first
+  mutating operation (`AEGP_SetItemComment`) — all verified at fake
+  level only. These are **not** part of the shipped CLI contract;
+  real-host LOAD-PROOF remains UNVERIFIED (Issue #223).
 
 ### Migrating to 0.4.0
 

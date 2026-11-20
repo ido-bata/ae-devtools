@@ -1,0 +1,3273 @@
+[
+  {
+    "t": "2026-11-20T09:03:41.176Z",
+    "step": "initialize",
+    "argv": [
+      "mcp-server/server.mjs",
+      "--session",
+      "a8n",
+      "--install-dir",
+      "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app"
+    ],
+    "fixturePath": "/tmp/ae-conf-027/mcp/Conformance-MCP-Disposable.aep"
+  },
+  {
+    "t": "2026-11-20T09:03:41.327Z",
+    "stderr": "mcp-server: ae-devtools-mcp@0.5.0 schema=ae-devtools.mcp/v1 session=a8n (stdio NDJSON; fake session = fake/mock evidence only)\n"
+  },
+  {
+    "t": "2026-11-20T09:03:41.327Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "serverInfo": {
+          "name": "ae-devtools-mcp",
+          "version": "0.5.0"
+        },
+        "instructions": "ae-devtools dev-loop tools. ae_execute/ae_verify require arguments.consent:\"grant\"; destructive ops need confirmDestructive:true, render ops confirmRender:true. Default session is the codec-faithful fake host — results are fake/mock evidence, not real AE."
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:41.328Z",
+    "step": "initialized",
+    "serverInfo": {
+      "name": "ae-devtools-mcp",
+      "version": "0.5.0"
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:41.328Z",
+    "step": "ae_discover"
+  },
+  {
+    "t": "2026-11-20T09:03:41.340Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.dev-loop/v1\",\n  \"evidenceLevel\": \"registry metadata — no dispatch\",\n  \"operationCount\": 97,\n  \"evidence\": {\n    \"implemented\": 97,\n    \"automatedTest\": 97,\n    \"fakeMockVerified\": 97,\n    \"realHostVerified\": 0,\n    \"level\": \"fake/mock only\"\n  },\n  \"operations\": [\n    {\n      \"id\": \"project.new\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.open\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.save\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"project.close\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.addComp\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"width\",\n        \"height\",\n        \"pixelAspect\",\n        \"duration\",\n        \"frameRate\",\n        \"parentFolder\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"item.addFolder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"parentFolder\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"item.remove\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"item.setParentFolder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\",\n        \"parentFolder\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"item.setSelected\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\",\n        \"selected\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"comp.addNullLayer\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.setTransformPosition\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"x\",\n        \"y\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.reorder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"to\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.setParent\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"parentName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.duplicate\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"read.projectSummary\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 10\n    },\n    {\n      \"id\": \"read.projectTree\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 10\n    },\n    {\n      \"id\": \"read.itemById\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"id\"\n      ],\n      \"memberCount\": 6\n    },\n    {\n      \"id\": \"anim.setValue\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setKeyframe\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"keyIndex\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setValueAtTime\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"time\",\n        \"value\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"anim.setExpression\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"expression\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"effect.add\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"effectMatchName\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.queueComp\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.renderQueued\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": \"render\",\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"read.compLayers\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 15\n    },\n    {\n      \"id\": \"read.layerDetail\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 12\n    },\n    {\n      \"id\": \"read.propertyValue\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"read.keyframes\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"read.renderQueueStatus\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 11\n    },\n    {\n      \"id\": \"read.itemDetail\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 10\n    },\n    {\n      \"id\": \"item.import\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"path\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"comp.duplicate\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"item.setLabel\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\",\n        \"label\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.setTiming\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"startTime\",\n        \"stretch\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.setState\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"solo\",\n        \"shy\",\n        \"locked\",\n        \"label\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"anim.removeKeyframe\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"keyIndex\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"read.valueAtTime\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"time\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"render.setTimeSpan\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"timeSpanStart\",\n        \"timeSpanDuration\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"render.removeFromQueue\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"layer.setAvState\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"audioEnabled\",\n        \"threeDLayer\",\n        \"motionBlur\",\n        \"guideLayer\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"read.propertyDetail\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\"\n      ],\n      \"memberCount\": 12\n    },\n    {\n      \"id\": \"anim.setExpressionEnabled\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"enabled\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"render.getOutputSettings\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 6\n    },\n    {\n      \"id\": \"render.setOutputSetting\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"setting\",\n        \"value\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"render.listTemplates\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"render.applyTemplate\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"templateName\"\n      ],\n      \"memberCount\": 9\n    },\n    {\n      \"id\": \"render.saveTemplate\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"templateName\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"render.listOutputModules\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 10\n    },\n    {\n      \"id\": \"render.addOutputModule\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 7\n    },\n    {\n      \"id\": \"render.applyOutputModuleTemplate\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"moduleIndex\",\n        \"templateName\"\n      ],\n      \"memberCount\": 7\n    },\n    {\n      \"id\": \"render.saveOutputModuleTemplate\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"moduleIndex\",\n        \"templateName\"\n      ],\n      \"memberCount\": 7\n    },\n    {\n      \"id\": \"render.setOutputModuleOptions\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"moduleIndex\",\n        \"file\",\n        \"includeSourceXMP\",\n        \"postRenderAction\"\n      ],\n      \"memberCount\": 7\n    },\n    {\n      \"id\": \"item.setComment\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"type\",\n        \"comment\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"comp.setResolutionFactor\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"resolutionFactor\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.addSolid\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"name\",\n        \"width\",\n        \"height\",\n        \"pixelAspect\",\n        \"color\",\n        \"duration\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.addText\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"name\",\n        \"text\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"layer.addCamera\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"name\",\n        \"centerPoint\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"layer.addLight\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"name\",\n        \"centerPoint\"\n      ],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"text.setText\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"text\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"text.setStyle\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"font\",\n        \"fontSize\",\n        \"justification\",\n        \"fillColor\",\n        \"tracking\",\n        \"leading\"\n      ],\n      \"memberCount\": 8\n    },\n    {\n      \"id\": \"text.readStyle\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 9\n    },\n    {\n      \"id\": \"layer.addBoxText\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"name\",\n        \"width\",\n        \"height\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"text.setPaint\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"applyFill\",\n        \"applyStroke\",\n        \"strokeColor\",\n        \"strokeWidth\",\n        \"strokeOverFill\",\n        \"autoLeading\"\n      ],\n      \"memberCount\": 7\n    },\n    {\n      \"id\": \"text.setBoxMetrics\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"boxTextSize\",\n        \"boxTextPos\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"text.setCharAttributes\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"baselineShift\",\n        \"horizontalScale\",\n        \"verticalScale\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"text.readDocument\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 31\n    },\n    {\n      \"id\": \"layer.setLayerFlags\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"adjustmentLayer\",\n        \"preserveTransparency\",\n        \"collapseTransformation\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"layer.setInOutPoint\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"inPoint\",\n        \"outPoint\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"read.footageDetail\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 15\n    },\n    {\n      \"id\": \"item.setProxy\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"path\"\n      ],\n      \"memberCount\": 6\n    },\n    {\n      \"id\": \"item.setProxyWithSequence\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"path\",\n        \"forceAlphabetical\"\n      ],\n      \"memberCount\": 6\n    },\n    {\n      \"id\": \"item.setProxyWithSolid\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"color\",\n        \"solidName\",\n        \"width\",\n        \"height\",\n        \"pixelAspect\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"item.setProxyWithPlaceholder\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"placeholderName\",\n        \"width\",\n        \"height\",\n        \"frameRate\",\n        \"duration\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"item.setProxyToNone\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"item.setUseProxy\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"useProxy\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"read.itemProxy\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 7\n    },\n    {\n      \"id\": \"read.projectSettings\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 6\n    },\n    {\n      \"id\": \"pref.get\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"section\",\n        \"key\",\n        \"type\",\n        \"default\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"pref.set\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"section\",\n        \"key\",\n        \"type\",\n        \"value\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"pref.delete\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": true,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"section\",\n        \"key\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"pref.saveToDisk\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 1\n    },\n    {\n      \"id\": \"read.appInfo\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [],\n      \"memberCount\": 6\n    },\n    {\n      \"id\": \"anim.setInterpolation\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"keyIndex\",\n        \"inType\",\n        \"outType\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"anim.setTemporalEase\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"propertyPath\",\n        \"keyIndex\",\n        \"inEase\",\n        \"outEase\"\n      ],\n      \"memberCount\": 4\n    },\n    {\n      \"id\": \"layer.setTrackMatte\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"matteLayerName\",\n        \"matteType\"\n      ],\n      \"memberCount\": 5\n    },\n    {\n      \"id\": \"layer.setTimeRemap\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"enabled\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"comp.setSettings\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\",\n        \"bgColor\",\n        \"displayStartTime\",\n        \"displayStartFrame\",\n        \"shutterAngle\",\n        \"shutterPhase\",\n        \"motionBlur\",\n        \"frameBlending\",\n        \"draft3d\",\n        \"hideShyLayers\",\n        \"preserveNestedFrameRate\",\n        \"dropFrame\"\n      ],\n      \"memberCount\": 11\n    },\n    {\n      \"id\": \"read.compSettings\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"name\"\n      ],\n      \"memberCount\": 12\n    },\n    {\n      \"id\": \"layer.replaceSource\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"footageName\",\n        \"fixExpressions\"\n      ],\n      \"memberCount\": 2\n    },\n    {\n      \"id\": \"render.duplicateQueueItem\",\n      \"domain\": \"animation-effects-render\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"marker.setLayerMarker\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"time\",\n        \"comment\",\n        \"chapter\",\n        \"url\",\n        \"frameTarget\",\n        \"cuePointName\",\n        \"duration\",\n        \"eventCuePoint\",\n        \"params\"\n      ],\n      \"memberCount\": 15\n    },\n    {\n      \"id\": \"marker.setCompMarker\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"time\",\n        \"comment\",\n        \"chapter\",\n        \"url\",\n        \"frameTarget\",\n        \"cuePointName\",\n        \"duration\",\n        \"eventCuePoint\",\n        \"params\"\n      ],\n      \"memberCount\": 15\n    },\n    {\n      \"id\": \"marker.readLayerMarkers\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 12\n    },\n    {\n      \"id\": \"marker.readCompMarkers\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\"\n      ],\n      \"memberCount\": 12\n    },\n    {\n      \"id\": \"layer.addShape\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"name\"\n      ],\n      \"memberCount\": 3\n    },\n    {\n      \"id\": \"shape.readContents\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": false,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\"\n      ],\n      \"memberCount\": 8\n    },\n    {\n      \"id\": \"shape.addPath\",\n      \"domain\": \"project-items-comps-layers\",\n      \"mutating\": true,\n      \"destructive\": false,\n      \"requiresConfirm\": null,\n      \"args\": [\n        \"compName\",\n        \"layerName\",\n        \"vertices\",\n        \"inTangents\",\n        \"outTangents\",\n        \"closed\"\n      ],\n      \"memberCount\": 13\n    }\n  ]\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:41.342Z",
+    "stepResult": "ae_discover",
+    "isError": false,
+    "outcome": null,
+    "session": null,
+    "result": {
+      "schema": "ae-devtools.dev-loop/v1",
+      "evidenceLevel": "registry metadata — no dispatch",
+      "operationCount": 97,
+      "evidence": {
+        "implemented": 97,
+        "automatedTest": 97,
+        "fakeMockVerified": 97,
+        "realHostVerified": 0,
+        "level": "fake/mock only"
+      },
+      "operations": [
+        {
+          "id": "project.new",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 1
+        },
+        {
+          "id": "project.open",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [
+            "path"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "project.save",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "path"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "project.close",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 1
+        },
+        {
+          "id": "item.addComp",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "width",
+            "height",
+            "pixelAspect",
+            "duration",
+            "frameRate",
+            "parentFolder"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "item.addFolder",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "parentFolder"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "item.remove",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "type"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "item.setParentFolder",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "type",
+            "parentFolder"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "item.setSelected",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "type",
+            "selected"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "comp.addNullLayer",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "layer.setTransformPosition",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "x",
+            "y"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.reorder",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "to"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.setParent",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "parentName"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "layer.duplicate",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "read.projectSummary",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 10
+        },
+        {
+          "id": "read.projectTree",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 10
+        },
+        {
+          "id": "read.itemById",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "id"
+          ],
+          "memberCount": 6
+        },
+        {
+          "id": "anim.setValue",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "value"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "anim.setKeyframe",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "keyIndex",
+            "value"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "anim.setValueAtTime",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "time",
+            "value"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "anim.setExpression",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "expression"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "effect.add",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "effectMatchName"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "render.queueComp",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "render.renderQueued",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": "render",
+          "args": [],
+          "memberCount": 1
+        },
+        {
+          "id": "read.compLayers",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 15
+        },
+        {
+          "id": "read.layerDetail",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 12
+        },
+        {
+          "id": "read.propertyValue",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "read.keyframes",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "read.renderQueueStatus",
+          "domain": "animation-effects-render",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 11
+        },
+        {
+          "id": "read.itemDetail",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 10
+        },
+        {
+          "id": "item.import",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "path"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "comp.duplicate",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "item.setLabel",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "type",
+            "label"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.setTiming",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "startTime",
+            "stretch"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.setState",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "solo",
+            "shy",
+            "locked",
+            "label"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "anim.removeKeyframe",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "keyIndex"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "read.valueAtTime",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "time"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "render.setTimeSpan",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "timeSpanStart",
+            "timeSpanDuration"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "render.removeFromQueue",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "layer.setAvState",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "audioEnabled",
+            "threeDLayer",
+            "motionBlur",
+            "guideLayer"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "read.propertyDetail",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath"
+          ],
+          "memberCount": 12
+        },
+        {
+          "id": "anim.setExpressionEnabled",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "enabled"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "render.getOutputSettings",
+          "domain": "animation-effects-render",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 6
+        },
+        {
+          "id": "render.setOutputSetting",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "setting",
+            "value"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "render.listTemplates",
+          "domain": "animation-effects-render",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "render.applyTemplate",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "templateName"
+          ],
+          "memberCount": 9
+        },
+        {
+          "id": "render.saveTemplate",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "templateName"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "render.listOutputModules",
+          "domain": "animation-effects-render",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 10
+        },
+        {
+          "id": "render.addOutputModule",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 7
+        },
+        {
+          "id": "render.applyOutputModuleTemplate",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "moduleIndex",
+            "templateName"
+          ],
+          "memberCount": 7
+        },
+        {
+          "id": "render.saveOutputModuleTemplate",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "moduleIndex",
+            "templateName"
+          ],
+          "memberCount": 7
+        },
+        {
+          "id": "render.setOutputModuleOptions",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "moduleIndex",
+            "file",
+            "includeSourceXMP",
+            "postRenderAction"
+          ],
+          "memberCount": 7
+        },
+        {
+          "id": "item.setComment",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "type",
+            "comment"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "comp.setResolutionFactor",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "resolutionFactor"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.addSolid",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "name",
+            "width",
+            "height",
+            "pixelAspect",
+            "color",
+            "duration"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "layer.addText",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "name",
+            "text"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "layer.addCamera",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "name",
+            "centerPoint"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "layer.addLight",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "name",
+            "centerPoint"
+          ],
+          "memberCount": 1
+        },
+        {
+          "id": "text.setText",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "text"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "text.setStyle",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "font",
+            "fontSize",
+            "justification",
+            "fillColor",
+            "tracking",
+            "leading"
+          ],
+          "memberCount": 8
+        },
+        {
+          "id": "text.readStyle",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 9
+        },
+        {
+          "id": "layer.addBoxText",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "name",
+            "width",
+            "height"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "text.setPaint",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "applyFill",
+            "applyStroke",
+            "strokeColor",
+            "strokeWidth",
+            "strokeOverFill",
+            "autoLeading"
+          ],
+          "memberCount": 7
+        },
+        {
+          "id": "text.setBoxMetrics",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "boxTextSize",
+            "boxTextPos"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "text.setCharAttributes",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "baselineShift",
+            "horizontalScale",
+            "verticalScale"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "text.readDocument",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 31
+        },
+        {
+          "id": "layer.setLayerFlags",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "adjustmentLayer",
+            "preserveTransparency",
+            "collapseTransformation"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "layer.setInOutPoint",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "inPoint",
+            "outPoint"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "read.footageDetail",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 15
+        },
+        {
+          "id": "item.setProxy",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "path"
+          ],
+          "memberCount": 6
+        },
+        {
+          "id": "item.setProxyWithSequence",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "path",
+            "forceAlphabetical"
+          ],
+          "memberCount": 6
+        },
+        {
+          "id": "item.setProxyWithSolid",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "color",
+            "solidName",
+            "width",
+            "height",
+            "pixelAspect"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "item.setProxyWithPlaceholder",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "placeholderName",
+            "width",
+            "height",
+            "frameRate",
+            "duration"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "item.setProxyToNone",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "item.setUseProxy",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "useProxy"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "read.itemProxy",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 7
+        },
+        {
+          "id": "read.projectSettings",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 6
+        },
+        {
+          "id": "pref.get",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "section",
+            "key",
+            "type",
+            "default"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "pref.set",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "section",
+            "key",
+            "type",
+            "value"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "pref.delete",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": true,
+          "requiresConfirm": null,
+          "args": [
+            "section",
+            "key"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "pref.saveToDisk",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 1
+        },
+        {
+          "id": "read.appInfo",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [],
+          "memberCount": 6
+        },
+        {
+          "id": "anim.setInterpolation",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "keyIndex",
+            "inType",
+            "outType"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "anim.setTemporalEase",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "propertyPath",
+            "keyIndex",
+            "inEase",
+            "outEase"
+          ],
+          "memberCount": 4
+        },
+        {
+          "id": "layer.setTrackMatte",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "matteLayerName",
+            "matteType"
+          ],
+          "memberCount": 5
+        },
+        {
+          "id": "layer.setTimeRemap",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "enabled"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "comp.setSettings",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name",
+            "bgColor",
+            "displayStartTime",
+            "displayStartFrame",
+            "shutterAngle",
+            "shutterPhase",
+            "motionBlur",
+            "frameBlending",
+            "draft3d",
+            "hideShyLayers",
+            "preserveNestedFrameRate",
+            "dropFrame"
+          ],
+          "memberCount": 11
+        },
+        {
+          "id": "read.compSettings",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "name"
+          ],
+          "memberCount": 12
+        },
+        {
+          "id": "layer.replaceSource",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "footageName",
+            "fixExpressions"
+          ],
+          "memberCount": 2
+        },
+        {
+          "id": "render.duplicateQueueItem",
+          "domain": "animation-effects-render",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "marker.setLayerMarker",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "time",
+            "comment",
+            "chapter",
+            "url",
+            "frameTarget",
+            "cuePointName",
+            "duration",
+            "eventCuePoint",
+            "params"
+          ],
+          "memberCount": 15
+        },
+        {
+          "id": "marker.setCompMarker",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "time",
+            "comment",
+            "chapter",
+            "url",
+            "frameTarget",
+            "cuePointName",
+            "duration",
+            "eventCuePoint",
+            "params"
+          ],
+          "memberCount": 15
+        },
+        {
+          "id": "marker.readLayerMarkers",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 12
+        },
+        {
+          "id": "marker.readCompMarkers",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName"
+          ],
+          "memberCount": 12
+        },
+        {
+          "id": "layer.addShape",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "name"
+          ],
+          "memberCount": 3
+        },
+        {
+          "id": "shape.readContents",
+          "domain": "project-items-comps-layers",
+          "mutating": false,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName"
+          ],
+          "memberCount": 8
+        },
+        {
+          "id": "shape.addPath",
+          "domain": "project-items-comps-layers",
+          "mutating": true,
+          "destructive": false,
+          "requiresConfirm": null,
+          "args": [
+            "compName",
+            "layerName",
+            "vertices",
+            "inTangents",
+            "outTangents",
+            "closed"
+          ],
+          "memberCount": 13
+        }
+      ]
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:41.342Z",
+    "step": "ae_verify.pre-state"
+  },
+  {
+    "t": "2026-11-20T09:03:52.258Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-1\",\n    \"operationId\": \"read.projectSummary\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"count\": 0,\n      \"numItems\": 0,\n      \"items\": [],\n      \"activeItem\": null,\n      \"selection\": []\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"read.projectSummary\",\n    \"mutating\": false,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:52.264Z",
+    "stepResult": "ae_verify.pre",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-1",
+      "operationId": "read.projectSummary",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "count": 0,
+        "numItems": 0,
+        "items": [],
+        "activeItem": null,
+        "selection": []
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "read.projectSummary",
+      "mutating": false,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:52.265Z",
+    "step": "ae_execute.project.new (launches owned AE)"
+  },
+  {
+    "t": "2026-11-20T09:03:54.242Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-2\",\n    \"operationId\": \"project.new\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"project.new\",\n    \"mutating\": true,\n    \"destructive\": true\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:54.245Z",
+    "stepResult": "project.new",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-2",
+      "operationId": "project.new",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "project.new",
+      "mutating": true,
+      "destructive": true
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:54.247Z",
+    "step": "ae_execute.project.save"
+  },
+  {
+    "t": "2026-11-20T09:03:55.724Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 5,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-3\",\n    \"operationId\": \"project.save\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"project.save\",\n    \"mutating\": true,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:55.727Z",
+    "stepResult": "project.save",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-3",
+      "operationId": "project.save",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "project.save",
+      "mutating": true,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:55.728Z",
+    "step": "ae_execute.item.addComp"
+  },
+  {
+    "t": "2026-11-20T09:03:57.522Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 6,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-4\",\n    \"operationId\": \"item.addComp\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"id\": 1,\n      \"name\": \"MCP Conformance Comp\",\n      \"parent\": null\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"item.addComp\",\n    \"mutating\": true,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:57.526Z",
+    "stepResult": "item.addComp",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-4",
+      "operationId": "item.addComp",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "id": 1,
+        "name": "MCP Conformance Comp",
+        "parent": null
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "item.addComp",
+      "mutating": true,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:57.528Z",
+    "step": "ae_verify.readback"
+  },
+  {
+    "t": "2026-11-20T09:03:58.980Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 7,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-5\",\n    \"operationId\": \"read.projectSummary\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"count\": 1,\n      \"numItems\": 1,\n      \"items\": [\n        {\n          \"name\": \"MCP Conformance Comp\",\n          \"typeName\": \"コンポジション\",\n          \"id\": 1,\n          \"selected\": false,\n          \"parent\": null\n        }\n      ],\n      \"activeItem\": null,\n      \"selection\": []\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"read.projectSummary\",\n    \"mutating\": false,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:58.984Z",
+    "stepResult": "ae_verify.readback",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-5",
+      "operationId": "read.projectSummary",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "count": 1,
+        "numItems": 1,
+        "items": [
+          {
+            "name": "MCP Conformance Comp",
+            "typeName": "コンポジション",
+            "id": 1,
+            "selected": false,
+            "parent": null
+          }
+        ],
+        "activeItem": null,
+        "selection": []
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "read.projectSummary",
+      "mutating": false,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-20T09:03:58.985Z",
+    "step": "ae_execute.item.remove"
+  },
+  {
+    "t": "2026-11-20T09:04:00.119Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 8,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-6\",\n    \"operationId\": \"item.remove\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"removed\": \"MCP Conformance Comp\"\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"item.remove\",\n    \"mutating\": true,\n    \"destructive\": true\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:00.120Z",
+    "stepResult": "item.remove",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-6",
+      "operationId": "item.remove",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "removed": "MCP Conformance Comp"
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "item.remove",
+      "mutating": true,
+      "destructive": true
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:00.121Z",
+    "step": "ae_verify.final"
+  },
+  {
+    "t": "2026-11-20T09:04:01.550Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 9,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-7\",\n    \"operationId\": \"read.projectSummary\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true,\n      \"count\": 0,\n      \"numItems\": 0,\n      \"items\": [],\n      \"activeItem\": null,\n      \"selection\": []\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"read.projectSummary\",\n    \"mutating\": false,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:01.551Z",
+    "stepResult": "ae_verify.final",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-7",
+      "operationId": "read.projectSummary",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true,
+        "count": 0,
+        "numItems": 0,
+        "items": [],
+        "activeItem": null,
+        "selection": []
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "read.projectSummary",
+      "mutating": false,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:01.552Z",
+    "step": "ae_execute.project.save.resave"
+  },
+  {
+    "t": "2026-11-20T09:04:03.047Z",
+    "rx": {
+      "jsonrpc": "2.0",
+      "id": 10,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"schema\": \"ae-devtools.mcp/v1\",\n  \"session\": {\n    \"aeVersion\": \"26.5.3x9\",\n    \"ownership\": \"owned\",\n    \"aeA8nHead\": \"0.2.0\",\n    \"kind\": \"a8n\",\n    \"evidenceLevel\": \"verified on real host (macOS)\"\n  },\n  \"outcome\": \"COMPLETED\",\n  \"result\": {\n    \"requestId\": \"req-mcp-8\",\n    \"operationId\": \"project.save\",\n    \"outcome\": \"COMPLETED\",\n    \"requestState\": \"ACKED\",\n    \"mayHaveMutated\": true,\n    \"result\": {\n      \"ok\": true\n    },\n    \"contractOutcome\": \"completed\",\n    \"retry\": \"quarantine\",\n    \"opId\": \"project.save\",\n    \"mutating\": true,\n    \"destructive\": false\n  }\n}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:03.050Z",
+    "stepResult": "project.save.resave",
+    "isError": false,
+    "outcome": "COMPLETED",
+    "session": {
+      "aeVersion": "26.5.3x9",
+      "ownership": "owned",
+      "aeA8nHead": "0.2.0",
+      "kind": "a8n",
+      "evidenceLevel": "verified on real host (macOS)"
+    },
+    "result": {
+      "requestId": "req-mcp-8",
+      "operationId": "project.save",
+      "outcome": "COMPLETED",
+      "requestState": "ACKED",
+      "mayHaveMutated": true,
+      "result": {
+        "ok": true
+      },
+      "contractOutcome": "completed",
+      "retry": "quarantine",
+      "opId": "project.save",
+      "mutating": true,
+      "destructive": false
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:18.056Z",
+    "step": "server.stopped",
+    "fixturePath": "/tmp/ae-conf-027/mcp/Conformance-MCP-Disposable.aep",
+    "shutdownConfirmed": true,
+    "cleanShutdown": true,
+    "forcedKill": false,
+    "results": {
+      "ae_discover": {
+        "isError": false,
+        "outcome": null,
+        "session": null,
+        "result": {
+          "schema": "ae-devtools.dev-loop/v1",
+          "evidenceLevel": "registry metadata — no dispatch",
+          "operationCount": 97,
+          "evidence": {
+            "implemented": 97,
+            "automatedTest": 97,
+            "fakeMockVerified": 97,
+            "realHostVerified": 0,
+            "level": "fake/mock only"
+          },
+          "operations": [
+            {
+              "id": "project.new",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 1
+            },
+            {
+              "id": "project.open",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [
+                "path"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "project.save",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "path"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "project.close",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 1
+            },
+            {
+              "id": "item.addComp",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "width",
+                "height",
+                "pixelAspect",
+                "duration",
+                "frameRate",
+                "parentFolder"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "item.addFolder",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "parentFolder"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "item.remove",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "type"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "item.setParentFolder",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "type",
+                "parentFolder"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "item.setSelected",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "type",
+                "selected"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "comp.addNullLayer",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "layer.setTransformPosition",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "x",
+                "y"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.reorder",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "to"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.setParent",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "parentName"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "layer.duplicate",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "read.projectSummary",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 10
+            },
+            {
+              "id": "read.projectTree",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 10
+            },
+            {
+              "id": "read.itemById",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "id"
+              ],
+              "memberCount": 6
+            },
+            {
+              "id": "anim.setValue",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "value"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "anim.setKeyframe",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "keyIndex",
+                "value"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "anim.setValueAtTime",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "time",
+                "value"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "anim.setExpression",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "expression"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "effect.add",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "effectMatchName"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "render.queueComp",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "render.renderQueued",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": "render",
+              "args": [],
+              "memberCount": 1
+            },
+            {
+              "id": "read.compLayers",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 15
+            },
+            {
+              "id": "read.layerDetail",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 12
+            },
+            {
+              "id": "read.propertyValue",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "read.keyframes",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "read.renderQueueStatus",
+              "domain": "animation-effects-render",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 11
+            },
+            {
+              "id": "read.itemDetail",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 10
+            },
+            {
+              "id": "item.import",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "path"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "comp.duplicate",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "item.setLabel",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "type",
+                "label"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.setTiming",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "startTime",
+                "stretch"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.setState",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "solo",
+                "shy",
+                "locked",
+                "label"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "anim.removeKeyframe",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "keyIndex"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "read.valueAtTime",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "time"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "render.setTimeSpan",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "timeSpanStart",
+                "timeSpanDuration"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "render.removeFromQueue",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "layer.setAvState",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "audioEnabled",
+                "threeDLayer",
+                "motionBlur",
+                "guideLayer"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "read.propertyDetail",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath"
+              ],
+              "memberCount": 12
+            },
+            {
+              "id": "anim.setExpressionEnabled",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "enabled"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "render.getOutputSettings",
+              "domain": "animation-effects-render",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 6
+            },
+            {
+              "id": "render.setOutputSetting",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "setting",
+                "value"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "render.listTemplates",
+              "domain": "animation-effects-render",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "render.applyTemplate",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "templateName"
+              ],
+              "memberCount": 9
+            },
+            {
+              "id": "render.saveTemplate",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "templateName"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "render.listOutputModules",
+              "domain": "animation-effects-render",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 10
+            },
+            {
+              "id": "render.addOutputModule",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 7
+            },
+            {
+              "id": "render.applyOutputModuleTemplate",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "moduleIndex",
+                "templateName"
+              ],
+              "memberCount": 7
+            },
+            {
+              "id": "render.saveOutputModuleTemplate",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "moduleIndex",
+                "templateName"
+              ],
+              "memberCount": 7
+            },
+            {
+              "id": "render.setOutputModuleOptions",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "moduleIndex",
+                "file",
+                "includeSourceXMP",
+                "postRenderAction"
+              ],
+              "memberCount": 7
+            },
+            {
+              "id": "item.setComment",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "type",
+                "comment"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "comp.setResolutionFactor",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "resolutionFactor"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.addSolid",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "name",
+                "width",
+                "height",
+                "pixelAspect",
+                "color",
+                "duration"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "layer.addText",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "name",
+                "text"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "layer.addCamera",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "name",
+                "centerPoint"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "layer.addLight",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "name",
+                "centerPoint"
+              ],
+              "memberCount": 1
+            },
+            {
+              "id": "text.setText",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "text"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "text.setStyle",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "font",
+                "fontSize",
+                "justification",
+                "fillColor",
+                "tracking",
+                "leading"
+              ],
+              "memberCount": 8
+            },
+            {
+              "id": "text.readStyle",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 9
+            },
+            {
+              "id": "layer.addBoxText",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "name",
+                "width",
+                "height"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "text.setPaint",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "applyFill",
+                "applyStroke",
+                "strokeColor",
+                "strokeWidth",
+                "strokeOverFill",
+                "autoLeading"
+              ],
+              "memberCount": 7
+            },
+            {
+              "id": "text.setBoxMetrics",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "boxTextSize",
+                "boxTextPos"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "text.setCharAttributes",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "baselineShift",
+                "horizontalScale",
+                "verticalScale"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "text.readDocument",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 31
+            },
+            {
+              "id": "layer.setLayerFlags",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "adjustmentLayer",
+                "preserveTransparency",
+                "collapseTransformation"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "layer.setInOutPoint",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "inPoint",
+                "outPoint"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "read.footageDetail",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 15
+            },
+            {
+              "id": "item.setProxy",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "path"
+              ],
+              "memberCount": 6
+            },
+            {
+              "id": "item.setProxyWithSequence",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "path",
+                "forceAlphabetical"
+              ],
+              "memberCount": 6
+            },
+            {
+              "id": "item.setProxyWithSolid",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "color",
+                "solidName",
+                "width",
+                "height",
+                "pixelAspect"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "item.setProxyWithPlaceholder",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "placeholderName",
+                "width",
+                "height",
+                "frameRate",
+                "duration"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "item.setProxyToNone",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "item.setUseProxy",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "useProxy"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "read.itemProxy",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 7
+            },
+            {
+              "id": "read.projectSettings",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 6
+            },
+            {
+              "id": "pref.get",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "section",
+                "key",
+                "type",
+                "default"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "pref.set",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "section",
+                "key",
+                "type",
+                "value"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "pref.delete",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": true,
+              "requiresConfirm": null,
+              "args": [
+                "section",
+                "key"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "pref.saveToDisk",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 1
+            },
+            {
+              "id": "read.appInfo",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [],
+              "memberCount": 6
+            },
+            {
+              "id": "anim.setInterpolation",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "keyIndex",
+                "inType",
+                "outType"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "anim.setTemporalEase",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "propertyPath",
+                "keyIndex",
+                "inEase",
+                "outEase"
+              ],
+              "memberCount": 4
+            },
+            {
+              "id": "layer.setTrackMatte",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "matteLayerName",
+                "matteType"
+              ],
+              "memberCount": 5
+            },
+            {
+              "id": "layer.setTimeRemap",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "enabled"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "comp.setSettings",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name",
+                "bgColor",
+                "displayStartTime",
+                "displayStartFrame",
+                "shutterAngle",
+                "shutterPhase",
+                "motionBlur",
+                "frameBlending",
+                "draft3d",
+                "hideShyLayers",
+                "preserveNestedFrameRate",
+                "dropFrame"
+              ],
+              "memberCount": 11
+            },
+            {
+              "id": "read.compSettings",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "name"
+              ],
+              "memberCount": 12
+            },
+            {
+              "id": "layer.replaceSource",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "footageName",
+                "fixExpressions"
+              ],
+              "memberCount": 2
+            },
+            {
+              "id": "render.duplicateQueueItem",
+              "domain": "animation-effects-render",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "marker.setLayerMarker",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "time",
+                "comment",
+                "chapter",
+                "url",
+                "frameTarget",
+                "cuePointName",
+                "duration",
+                "eventCuePoint",
+                "params"
+              ],
+              "memberCount": 15
+            },
+            {
+              "id": "marker.setCompMarker",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "time",
+                "comment",
+                "chapter",
+                "url",
+                "frameTarget",
+                "cuePointName",
+                "duration",
+                "eventCuePoint",
+                "params"
+              ],
+              "memberCount": 15
+            },
+            {
+              "id": "marker.readLayerMarkers",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 12
+            },
+            {
+              "id": "marker.readCompMarkers",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName"
+              ],
+              "memberCount": 12
+            },
+            {
+              "id": "layer.addShape",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "name"
+              ],
+              "memberCount": 3
+            },
+            {
+              "id": "shape.readContents",
+              "domain": "project-items-comps-layers",
+              "mutating": false,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName"
+              ],
+              "memberCount": 8
+            },
+            {
+              "id": "shape.addPath",
+              "domain": "project-items-comps-layers",
+              "mutating": true,
+              "destructive": false,
+              "requiresConfirm": null,
+              "args": [
+                "compName",
+                "layerName",
+                "vertices",
+                "inTangents",
+                "outTangents",
+                "closed"
+              ],
+              "memberCount": 13
+            }
+          ]
+        }
+      },
+      "ae_verify.pre": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-1",
+          "operationId": "read.projectSummary",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "count": 0,
+            "numItems": 0,
+            "items": [],
+            "activeItem": null,
+            "selection": []
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "read.projectSummary",
+          "mutating": false,
+          "destructive": false
+        }
+      },
+      "project.new": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-2",
+          "operationId": "project.new",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "project.new",
+          "mutating": true,
+          "destructive": true
+        }
+      },
+      "project.save": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-3",
+          "operationId": "project.save",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "project.save",
+          "mutating": true,
+          "destructive": false
+        }
+      },
+      "item.addComp": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-4",
+          "operationId": "item.addComp",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "id": 1,
+            "name": "MCP Conformance Comp",
+            "parent": null
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "item.addComp",
+          "mutating": true,
+          "destructive": false
+        }
+      },
+      "ae_verify.readback": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-5",
+          "operationId": "read.projectSummary",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "count": 1,
+            "numItems": 1,
+            "items": [
+              {
+                "name": "MCP Conformance Comp",
+                "typeName": "コンポジション",
+                "id": 1,
+                "selected": false,
+                "parent": null
+              }
+            ],
+            "activeItem": null,
+            "selection": []
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "read.projectSummary",
+          "mutating": false,
+          "destructive": false
+        }
+      },
+      "item.remove": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-6",
+          "operationId": "item.remove",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "removed": "MCP Conformance Comp"
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "item.remove",
+          "mutating": true,
+          "destructive": true
+        }
+      },
+      "ae_verify.final": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-7",
+          "operationId": "read.projectSummary",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true,
+            "count": 0,
+            "numItems": 0,
+            "items": [],
+            "activeItem": null,
+            "selection": []
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "read.projectSummary",
+          "mutating": false,
+          "destructive": false
+        }
+      },
+      "project.save.resave": {
+        "isError": false,
+        "outcome": "COMPLETED",
+        "session": {
+          "aeVersion": "26.5.3x9",
+          "ownership": "owned",
+          "aeA8nHead": "0.2.0",
+          "kind": "a8n",
+          "evidenceLevel": "verified on real host (macOS)"
+        },
+        "result": {
+          "requestId": "req-mcp-8",
+          "operationId": "project.save",
+          "outcome": "COMPLETED",
+          "requestState": "ACKED",
+          "mayHaveMutated": true,
+          "result": {
+            "ok": true
+          },
+          "contractOutcome": "completed",
+          "retry": "quarantine",
+          "opId": "project.save",
+          "mutating": true,
+          "destructive": false
+        }
+      }
+    }
+  },
+  {
+    "t": "2026-11-20T09:04:18.062Z",
+    "verdict": "pass"
+  }
+]

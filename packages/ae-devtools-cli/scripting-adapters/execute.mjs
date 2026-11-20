@@ -41,6 +41,17 @@ function refused(reason, detail, extra = {}) {
 }
 
 /**
+ * buildSource emits a FUNCTION BODY (top-level `return`). trustedEval
+ * evaluates exactly once as a program, so the dispatch boundary wraps
+ * the body in an IIFE — the consent-bound source IS the executed text.
+ * Exported so audit/correlation code hashes the same string the host
+ * runs (single owner for the body→program conversion).
+ */
+export function toProgramSource(body) {
+  return `(function(){\n${body}\n})()`;
+}
+
+/**
  * @param {object} input
  *   opId            — registry operation id (e.g. "item.addComp")
  *   args            — operation arguments (validated by the op schema)
@@ -76,6 +87,7 @@ export async function runOperation(input = {}) {
   } catch (err) {
     return refused("INVALID_ARGS", err instanceof Error ? err.message : String(err), { opId });
   }
+  source = toProgramSource(source);
 
   // Consent scope is computed here so the provider approves exactly
   // this dispatch — it cannot substitute different args or source.

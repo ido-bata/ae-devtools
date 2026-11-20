@@ -4985,6 +4985,23 @@ int main(int argc, char** argv)
             });
             h->numProjects = 1;
         }
+        /* optional 6th arg: per-invocation fault injection for the
+           shared consent fixture's wire cases that need a host-side
+           failure — "setcomment-error" makes AEGP_SetItemComment
+           return A_Err_GENERIC, "null-itementry" removes the
+           AEGP_SetItemComment suite entry (not-sent). One channel-server
+           run serves one requestId, so the caller passes the fault that
+           case requires. */
+        if (argc > 6)
+        {
+            if (strcmp(argv[6], "setcomment-error") == 0)
+                h->setCommentErr = A_Err_GENERIC;
+            else if (strcmp(argv[6], "null-itementry") == 0)
+            {
+                h->nullItemEntry = 5;
+                h->PopulateSuites();
+            }
+        }
         setenv("AE_DEVTOOLS_NATIVE_CHANNEL", argv[2], 1);
         if (CallEntry(*h) != A_Err_NONE)
             return 4;
