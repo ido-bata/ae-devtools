@@ -1,7 +1,15 @@
 /**
- * CI verification: (1) committed manifest is byte-identical to a fresh build
- * from the current inventories, (2) the drift gate reports no violations.
- * Exit non-zero on either failure.
+ * Ticket-stage verification: (1) committed manifest is byte-identical to a
+ * fresh build from the current inventories, (2) the drift gate reports no
+ * violations, (3) the committed domain-coverage report is byte-identical to
+ * a fresh build. Exit non-zero on any failure.
+ *
+ * The candidate-bound conformance gate (real-host evidence freshness vs the
+ * candidate head) is intentionally NOT part of this stage — it runs at the
+ * release-candidate stage via `bun run conformance-gate`
+ * (.github/workflows/release-source-check.yml). Ordinary ticket PRs cannot
+ * produce fresh real-host evidence, so enforcing it here would fail every
+ * PR until an authorized evidence session runs.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -10,7 +18,6 @@ import { REPO_ROOT, loadRepoInputs } from "./inputs.ts";
 import { buildCatalog, serializeCatalog, type CatalogManifest } from "../src/generate.ts";
 import { runDriftGate } from "../src/drift.ts";
 import { generateDomainCoverage } from "./domain-coverage.ts";
-import { runConformanceGate } from "./conformance-gate.ts";
 
 const manifestPath = join(REPO_ROOT, "packages/capability-catalog/generated/catalog.json");
 const inputs = loadRepoInputs();
@@ -51,21 +58,7 @@ if (existsSync(domainsDir)) {
   console.error("domain-coverage report byte-identical to a fresh build");
 }
 
-// Conformance release gate (Issue #147, CAP056): derives the claim set
-// from release-scope.json ∪ catalog verified-real-host rows and demands
-// same-bytes evidence per claim. `no-claims` is reported honestly — it
-// is not a conformance pass and must not be read as one.
-const gate = runConformanceGate();
-if (!gate.ok) {
-  console.error(`conformance gate FAILED: ${gate.fatalError}`);
-  process.exit(1);
-}
-console.log(JSON.stringify(gate.report, null, 2));
-if (!gate.report.ok) {
-  console.error(
-    `conformance gate FAILED: verdict=${gate.report.verdict}, ` +
-      `${gate.report.scopeViolations.length} scope violation(s), ${gate.report.violations.length} claim violation(s)`,
-  );
-  process.exit(1);
-}
-console.error(`conformance gate: verdict=${gate.report.verdict}, ${gate.report.claimsEvaluated} claim(s) evaluated`);
+// Stage boundary (Issue #21 follow-up): the conformance release gate is a
+// release-candidate check, not a ticket check. `bun run conformance-gate`
+// remains the strict entry point and is wired into release-source-check.yml
+// for `release-* → main` PRs; stale-evidence detection is unchanged there.

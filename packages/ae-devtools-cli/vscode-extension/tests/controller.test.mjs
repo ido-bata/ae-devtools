@@ -57,6 +57,23 @@ test("discover returns registry ops with honest metadata, no session opened", as
   assert.equal(spy.calls.length, 0);
 });
 
+test("sessionStatus reports closed then open state without dispatching itself (CAP049)", async () => {
+  const spy = factorySpy();
+  const c = createController({ sessionFactory: spy.factory, ui: recordingUi() });
+  const before = await c.sessionStatus();
+  assert.equal(before.session.state, "closed");
+  assert.equal(before.session.kind, "fake");
+  assert.equal(before.session.evidenceLevel, undefined);
+  assert.equal(spy.calls.length, 0, "sessionStatus must never open a session");
+
+  await c.execute({ opId: "read.projectSummary", args: {} });
+  const after = await c.sessionStatus();
+  assert.equal(after.session.state, "open");
+  assert.equal(after.session.evidenceLevel, "fake/mock only");
+  assert.ok(after.session.pin && typeof after.session.pin === "object");
+  assert.equal(spy.calls.length, 1);
+});
+
 test("inspect returns op metadata; unknown op is a typed result, never executes", async () => {
   const spy = factorySpy();
   const c = createController({ sessionFactory: spy.factory, ui: recordingUi() });
@@ -171,6 +188,21 @@ test("adapter payload failure reports FAILED outcome, never COMPLETED (Issue #19
     if (prev === undefined) delete process.env.AE_DEVTOOLS_CLI_FAKE_REPLY;
     else process.env.AE_DEVTOOLS_CLI_FAKE_REPLY = prev;
   }
+});
+
+test("execute/verify attach an explicit empty diagnostics plan when nothing failed (Issue #302)", async () => {
+  const c = createController({
+    sessionFactory: async () => openFakeSession(),
+    ui: recordingUi(),
+  });
+  const ex = await c.execute({ opId: "read.projectSummary", args: {} });
+  assert.equal(ex.diagnostics?.schema, "ae-devtools.vscode-diagnostics/v1");
+  assert.equal(ex.diagnostics.summary.total, 0);
+  assert.deepEqual(ex.diagnostics.items, []);
+  const vf = await c.verify();
+  assert.equal(vf.diagnostics?.schema, "ae-devtools.vscode-diagnostics/v1");
+  assert.equal(vf.diagnostics.summary.total, 0);
+  await c.close();
 });
 
 // ---- run-guard residue markers for a8n sessions (Issue #198, 案 C) ----

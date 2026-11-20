@@ -34,6 +34,27 @@
       ],
       "evidence": "fake/mock only"
     },
+    "ae.scripting.Item.parentFolder": {
+      "ops": [
+        "item.addComp",
+        "item.addFolder",
+        "item.setParentFolder",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.rootFolder": {
+      "ops": [
+        "item.addComp",
+        "item.addFolder",
+        "item.setParentFolder",
+        "read.projectSummary",
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
     "ae.scripting.ItemCollection.addFolder": {
       "ops": [
         "item.addFolder"
@@ -46,6 +67,52 @@
       ],
       "evidence": "fake/mock only"
     },
+    "ae.scripting.Item.name": {
+      "ops": [
+        "item.setParentFolder",
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail",
+        "comp.duplicate",
+        "item.setLabel",
+        "item.setComment",
+        "comp.setResolutionFactor",
+        "read.compSettings",
+        "layer.addShape"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.id": {
+      "ops": [
+        "item.setParentFolder",
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail",
+        "comp.duplicate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.selected": {
+      "ops": [
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.selection": {
+      "ops": [
+        "item.setSelected",
+        "read.projectSummary",
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
     "ae.scripting.LayerCollection.addNull": {
       "ops": [
         "comp.addNullLayer"
@@ -55,13 +122,19 @@
     "ae.scripting.Property.setValue": {
       "ops": [
         "layer.setTransformPosition",
-        "anim.setValue"
+        "anim.setValue",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.value": {
       "ops": [
-        "layer.setTransformPosition"
+        "layer.setTransformPosition",
+        "read.layerDetail",
+        "read.propertyValue",
+        "read.propertyDetail",
+        "shape.readContents",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
@@ -79,7 +152,9 @@
     },
     "ae.scripting.Layer.parent": {
       "ops": [
-        "layer.setParent"
+        "layer.setParent",
+        "read.compLayers",
+        "read.layerDetail"
       ],
       "evidence": "fake/mock only"
     },
@@ -95,21 +170,43 @@
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.Item.name": {
+    "ae.scripting.Project.items": {
       "ops": [
         "read.projectSummary"
       ],
       "evidence": "fake/mock only"
     },
-    "ae.scripting.Item.id": {
+    "ae.scripting.Project.numItems": {
       "ops": [
-        "read.projectSummary"
+        "read.projectSummary",
+        "read.projectTree"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Item.typeName": {
       "ops": [
-        "read.projectSummary"
+        "read.projectSummary",
+        "read.projectTree",
+        "read.itemById",
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FolderItem.numItems": {
+      "ops": [
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FolderItem.item": {
+      "ops": [
+        "read.projectTree"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.itemByID": {
+      "ops": [
+        "read.itemById"
       ],
       "evidence": "fake/mock only"
     },
@@ -121,61 +218,1444 @@
     },
     "ae.scripting.Property.setValueAtTime": {
       "ops": [
-        "anim.setValueAtTime"
+        "anim.setValueAtTime",
+        "marker.setLayerMarker",
+        "marker.setCompMarker"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.expression": {
       "ops": [
-        "anim.setExpression"
+        "anim.setExpression",
+        "read.propertyDetail"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.expressionEnabled": {
       "ops": [
-        "anim.setExpression"
+        "anim.setExpression",
+        "read.propertyDetail",
+        "anim.setExpressionEnabled"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.canSetExpression": {
       "ops": [
-        "anim.setExpression"
+        "anim.setExpression",
+        "read.propertyDetail",
+        "anim.setExpressionEnabled"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Property.expressionError": {
       "ops": [
-        "anim.setExpression"
+        "anim.setExpression",
+        "read.propertyDetail"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.PropertyGroup.addProperty": {
       "ops": [
-        "effect.add"
+        "effect.add",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.PropertyGroup.canAddProperty": {
       "ops": [
-        "effect.add"
+        "effect.add",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.Project.renderQueue": {
       "ops": [
-        "render.queueComp"
+        "render.queueComp",
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.removeFromQueue",
+        "render.getOutputSettings",
+        "render.setOutputSetting",
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueue.items": {
       "ops": [
-        "render.queueComp"
+        "render.queueComp",
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.removeFromQueue",
+        "render.getOutputSettings",
+        "render.setOutputSetting",
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions",
+        "render.duplicateQueueItem"
       ],
       "evidence": "fake/mock only"
     },
     "ae.scripting.RenderQueue.render": {
       "ops": [
         "render.renderQueued"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.layers": {
+      "ops": [
+        "read.compLayers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.index": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.inPoint": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setInOutPoint"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.outPoint": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setInOutPoint"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.locked": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.adjustmentLayer": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setLayerFlags"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.preserveTransparency": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setLayerFlags"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.frameBlending": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setLayerFlags"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.collapseTransformation": {
+      "ops": [
+        "read.compLayers",
+        "read.layerDetail",
+        "layer.setLayerFlags"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.hasTrackMatte": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.trackMatteType": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.trackMatteLayer": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.isTrackMatte": {
+      "ops": [
+        "read.compLayers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.timeRemapEnabled": {
+      "ops": [
+        "read.compLayers",
+        "layer.setTimeRemap"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.source": {
+      "ops": [
+        "read.layerDetail",
+        "layer.replaceSource"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyGroup.property": {
+      "ops": [
+        "read.layerDetail",
+        "read.propertyValue",
+        "read.keyframes",
+        "read.valueAtTime",
+        "read.propertyDetail",
+        "anim.setExpressionEnabled",
+        "text.setText",
+        "text.setStyle",
+        "text.readStyle",
+        "layer.addBoxText",
+        "text.setPaint",
+        "text.setBoxMetrics",
+        "text.setCharAttributes",
+        "text.readDocument",
+        "anim.setInterpolation",
+        "anim.setTemporalEase",
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.numKeys": {
+      "ops": [
+        "read.propertyValue",
+        "read.keyframes",
+        "anim.removeKeyframe",
+        "read.valueAtTime",
+        "read.propertyDetail",
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.isTimeVarying": {
+      "ops": [
+        "read.propertyValue",
+        "read.propertyDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyTime": {
+      "ops": [
+        "read.keyframes",
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyValue": {
+      "ops": [
+        "read.keyframes",
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueue.rendering": {
+      "ops": [
+        "read.renderQueueStatus"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.comp": {
+      "ops": [
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.removeFromQueue",
+        "render.getOutputSettings",
+        "render.setOutputSetting",
+        "render.listTemplates",
+        "render.applyTemplate",
+        "render.saveTemplate",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions",
+        "render.duplicateQueueItem"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.status": {
+      "ops": [
+        "read.renderQueueStatus"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.timeSpanStart": {
+      "ops": [
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.timeSpanDuration": {
+      "ops": [
+        "read.renderQueueStatus",
+        "render.setTimeSpan",
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.startTime": {
+      "ops": [
+        "read.renderQueueStatus",
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.skipFrames": {
+      "ops": [
+        "read.renderQueueStatus",
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.logType": {
+      "ops": [
+        "read.renderQueueStatus",
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.elapsedSeconds": {
+      "ops": [
+        "read.renderQueueStatus"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.duration": {
+      "ops": [
+        "read.itemDetail",
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.width": {
+      "ops": [
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.height": {
+      "ops": [
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.pixelAspect": {
+      "ops": [
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.frameRate": {
+      "ops": [
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.numLayers": {
+      "ops": [
+        "read.itemDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.resolutionFactor": {
+      "ops": [
+        "read.itemDetail",
+        "comp.setResolutionFactor"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.importFile": {
+      "ops": [
+        "item.import"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.ImportOptions.file": {
+      "ops": [
+        "item.import"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.duplicate": {
+      "ops": [
+        "comp.duplicate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.label": {
+      "ops": [
+        "item.setLabel"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.startTime": {
+      "ops": [
+        "layer.setTiming"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.stretch": {
+      "ops": [
+        "layer.setTiming"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.solo": {
+      "ops": [
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.shy": {
+      "ops": [
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.label": {
+      "ops": [
+        "layer.setState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.removeKey": {
+      "ops": [
+        "anim.removeKeyframe"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.valueAtTime": {
+      "ops": [
+        "read.valueAtTime"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.remove": {
+      "ops": [
+        "render.removeFromQueue"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.audioEnabled": {
+      "ops": [
+        "layer.setAvState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.threeDLayer": {
+      "ops": [
+        "layer.setAvState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.motionBlur": {
+      "ops": [
+        "layer.setAvState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.guideLayer": {
+      "ops": [
+        "layer.setAvState"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyBase.matchName": {
+      "ops": [
+        "read.propertyDetail",
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.minValue": {
+      "ops": [
+        "read.propertyDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.maxValue": {
+      "ops": [
+        "read.propertyDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.propertyValueType": {
+      "ops": [
+        "read.propertyDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.outputModule": {
+      "ops": [
+        "render.getOutputSettings",
+        "render.setOutputSetting",
+        "render.listOutputModules",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.name": {
+      "ops": [
+        "render.getOutputSettings",
+        "render.listOutputModules",
+        "render.addOutputModule",
+        "render.applyOutputModuleTemplate",
+        "render.saveOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.getSettings": {
+      "ops": [
+        "render.getOutputSettings",
+        "render.applyOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.setSetting": {
+      "ops": [
+        "render.setOutputSetting"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.templates": {
+      "ops": [
+        "render.listTemplates",
+        "render.saveTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.applyTemplate": {
+      "ops": [
+        "render.applyTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.saveAsTemplate": {
+      "ops": [
+        "render.saveTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.numOutputModules": {
+      "ops": [
+        "render.listOutputModules",
+        "render.addOutputModule"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.file": {
+      "ops": [
+        "render.listOutputModules",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.includeSourceXMP": {
+      "ops": [
+        "render.listOutputModules",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.postRenderAction": {
+      "ops": [
+        "render.listOutputModules",
+        "render.setOutputModuleOptions"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.templates": {
+      "ops": [
+        "render.listOutputModules",
+        "render.saveOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.outputModules": {
+      "ops": [
+        "render.addOutputModule"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OMCollection.add": {
+      "ops": [
+        "render.addOutputModule"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.applyTemplate": {
+      "ops": [
+        "render.applyOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.OutputModule.saveAsTemplate": {
+      "ops": [
+        "render.saveOutputModuleTemplate"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Item.comment": {
+      "ops": [
+        "item.setComment"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addSolid": {
+      "ops": [
+        "layer.addSolid"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addText": {
+      "ops": [
+        "layer.addText"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.text": {
+      "ops": [
+        "layer.addText",
+        "text.setText",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addCamera": {
+      "ops": [
+        "layer.addCamera"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addLight": {
+      "ops": [
+        "layer.addLight"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.font": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fontSize": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fontStyle": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.justification": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fillColor": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.tracking": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.leading": {
+      "ops": [
+        "text.setStyle",
+        "text.readStyle",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addBoxText": {
+      "ops": [
+        "layer.addBoxText"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.boxText": {
+      "ops": [
+        "layer.addBoxText",
+        "text.setBoxMetrics",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.pointText": {
+      "ops": [
+        "layer.addBoxText",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.boxTextSize": {
+      "ops": [
+        "layer.addBoxText",
+        "text.setBoxMetrics",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.applyFill": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.applyStroke": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.strokeColor": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.strokeWidth": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.strokeOverFill": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.autoLeading": {
+      "ops": [
+        "text.setPaint",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.boxTextPos": {
+      "ops": [
+        "text.setBoxMetrics",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.baselineShift": {
+      "ops": [
+        "text.setCharAttributes",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.horizontalScale": {
+      "ops": [
+        "text.setCharAttributes",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.verticalScale": {
+      "ops": [
+        "text.setCharAttributes",
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.paragraphCount": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.composedLineCount": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fontFamily": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fauxBold": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.fauxItalic": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.smallCaps": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.subscript": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.superscript": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.TextDocument.allCaps": {
+      "ops": [
+        "text.readDocument"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.hasVideo": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.hasAudio": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.frameDuration": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.useProxy": {
+      "ops": [
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "item.setProxyWithSolid",
+        "item.setProxyWithPlaceholder",
+        "item.setProxyToNone",
+        "item.setUseProxy",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.footageMissing": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageItem.mainSource": {
+      "ops": [
+        "read.footageDetail",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FileSource.file": {
+      "ops": [
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.alphaMode": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.hasAlpha": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.isStill": {
+      "ops": [
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.loop": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.nativeFrameRate": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FootageSource.conformFrameRate": {
+      "ops": [
+        "read.footageDetail"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.FileSource.missingFootagePath": {
+      "ops": [
+        "read.footageDetail",
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxy": {
+      "ops": [
+        "item.setProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.proxySource": {
+      "ops": [
+        "item.setProxy",
+        "item.setProxyWithSequence",
+        "item.setProxyWithSolid",
+        "item.setProxyWithPlaceholder",
+        "item.setProxyToNone",
+        "item.setUseProxy",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyWithSequence": {
+      "ops": [
+        "item.setProxyWithSequence"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyWithSolid": {
+      "ops": [
+        "item.setProxyWithSolid"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.SolidSource.color": {
+      "ops": [
+        "item.setProxyWithSolid",
+        "read.itemProxy"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyWithPlaceholder": {
+      "ops": [
+        "item.setProxyWithPlaceholder"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVItem.setProxyToNone": {
+      "ops": [
+        "item.setProxyToNone"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.bitsPerChannel": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.expressionEngine": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.displayStartFrame": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.framesUseFeetFrames": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.footageTimecodeDisplayStartType": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Project.file": {
+      "ops": [
+        "read.projectSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.havePref": {
+      "ops": [
+        "pref.get",
+        "pref.delete"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsString": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsBool": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsLong": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.getPrefAsFloat": {
+      "ops": [
+        "pref.get"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsString": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsBool": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsLong": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.savePrefAsFloat": {
+      "ops": [
+        "pref.set"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.deletePref": {
+      "ops": [
+        "pref.delete"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Preferences.saveToDisk": {
+      "ops": [
+        "pref.saveToDisk"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.version": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.buildName": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.buildNumber": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.isoLanguage": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.effects": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.app.fonts": {
+      "ops": [
+        "read.appInfo"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setInterpolationTypeAtKey": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.isInterpolationTypeValid": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyInInterpolationType": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyOutInterpolationType": {
+      "ops": [
+        "anim.setInterpolation"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.setTemporalEaseAtKey": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyInTemporalEase": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Property.keyOutTemporalEase": {
+      "ops": [
+        "anim.setTemporalEase"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.setTrackMatte": {
+      "ops": [
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.removeTrackMatte": {
+      "ops": [
+        "layer.setTrackMatte"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.canSetTimeRemapEnabled": {
+      "ops": [
+        "layer.setTimeRemap"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.bgColor": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.displayStartTime": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.displayStartFrame": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.shutterAngle": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.shutterPhase": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.motionBlur": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.frameBlending": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.draft3d": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.hideShyLayers": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.preserveNestedFrameRate": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.dropFrame": {
+      "ops": [
+        "comp.setSettings",
+        "read.compSettings"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.AVLayer.replaceSource": {
+      "ops": [
+        "layer.replaceSource"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.RenderQueueItem.duplicate": {
+      "ops": [
+        "render.duplicateQueueItem"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Layer.marker": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.readLayerMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.comment": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.chapter": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.url": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.frameTarget": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.cuePointName": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.duration": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.eventCuePoint": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.setParameters": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.MarkerValue.getParameters": {
+      "ops": [
+        "marker.setLayerMarker",
+        "marker.setCompMarker",
+        "marker.readLayerMarkers",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.CompItem.markerProperty": {
+      "ops": [
+        "marker.setCompMarker",
+        "marker.readCompMarkers"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.LayerCollection.addShape": {
+      "ops": [
+        "layer.addShape"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.PropertyGroup.numProperties": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.vertices": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.inTangents": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.outTangents": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
+      ],
+      "evidence": "fake/mock only"
+    },
+    "ae.scripting.Shape.closed": {
+      "ops": [
+        "shape.readContents",
+        "shape.addPath"
       ],
       "evidence": "fake/mock only"
     }

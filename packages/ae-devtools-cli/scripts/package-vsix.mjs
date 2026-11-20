@@ -42,6 +42,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const PKG_ROOT = resolve(HERE, "..");
@@ -185,7 +186,7 @@ function main() {
   if (!keepStage) rmSync(stageDir, { recursive: true, force: true });
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainEntry(import.meta.url)) {
   try {
     main();
   } catch (e) {

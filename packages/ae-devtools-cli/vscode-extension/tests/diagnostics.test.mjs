@@ -15,6 +15,7 @@ import {
   recordsFromExecuteResult,
   recordsFromLoopReport,
   buildPublishPlan,
+  diffPublishPlan,
   DIAGNOSTICS_PUBLISH_SCHEMA,
 } from "../diagnostics.mjs";
 import { makeDiagnosticsRecord } from "../../diagnostics/schema.mjs";
@@ -163,6 +164,28 @@ test("publish plan summarizes positioned/unmapped/no-position honestly", () => {
   assert.equal(plan.summary.unmapped, 1);
 });
 
+test("diffPublishPlan groups items by key and clears only stale keys", () => {
+  const records = [
+    recordWith({ assetKind: "jsx-script", path: SINGLE_JSX, line: 3 }),
+    recordWith({ assetKind: "transport" }),
+  ];
+  const plan = buildPublishPlan(records, { sourceMapOpts: { mapDir: SINGLE_DIR } });
+  const keyForItem = (item) => item.range?.file ?? item.file ?? "no-file";
+  const mappedKey = keyForItem(plan.items[0]);
+  const noFileKey = keyForItem(plan.items[1]);
+  const diff = diffPublishPlan(plan, new Set(["stale.ts", mappedKey]), keyForItem);
+  assert.deepEqual(diff.clear, ["stale.ts"]);
+  assert.deepEqual(diff.publish.map((p) => p.key).sort(), [mappedKey, noFileKey].sort());
+  assert.ok(diff.publish.every((p) => p.items.length >= 1));
+});
+
+test("diffPublishPlan treats an empty plan as authoritative and clears all previous keys", () => {
+  const plan = buildPublishPlan([]);
+  const diff = diffPublishPlan(plan, new Set(["a.ts", "b.ts"]), () => "unused");
+  assert.deepEqual(diff.publish, []);
+  assert.deepEqual(diff.clear.sort(), ["a.ts", "b.ts"]);
+});
+
 // --- controller integration ----------------------------------------------
 
 test("execute failure attaches a diagnostics publish plan (fake host error)", async () => {
@@ -197,4 +220,92 @@ test("execute failure attaches a diagnostics publish plan (fake host error)", as
   } finally {
     delete process.env.AE_DEVTOOLS_CLI_FAKE_HOST_ERROR;
   }
+});
+
+// --- multi-run / multi-URI lifecycle (Issue #20/#172 residual) -----------
+// The Problems panel is driven by successive publish plans: each run's
+// plan is authoritative for the ae-devtools collection, so URIs absent
+// from the newest plan are cleared while overlapping URIs are replaced.
+// These tests lock that contract at the vscode-free plan/diff level.
+
+function uriKeyFor(item) {
+  return item.range?.file ?? item.file ?? `ae-devtools:diagnostics/${item.kind}`;
+}
+
+test("sequential runs: stale file URIs clear, overlapping URIs replace, empty plan clears all", () => {
+  // Run 1: two positioned records on different files + one no-position.
+  const run1 = buildPublishPlan([
+    recordWith({ assetKind: "jsx-script", path: "/proj/a.jsx", line: 3 }),
+    recordWith({ assetKind: "jsx-script", path: "/proj/b.jsx", line: 7 }),
+    recordWith({ assetKind: "transport" }),
+  ]);
+  const published = new Set();
+  const d1 = diffPublishPlan(run1, published, uriKeyFor);
+  for (const { key } of d1.publish) published.add(key);
+  assert.equal(published.size, 3);
+
+  // Run 2: only b.jsx fails again (a.jsx recovered) + a different
+  // no-position kind. a.jsx and the old no-position URI must clear.
+  const run2 = buildPublishPlan([
+    recordWith({ assetKind: "jsx-script", path: "/proj/b.jsx", line: 9 }),
+    recordWith({ assetKind: "transport" }, { kind: "transport-outcome" }),
+  ]);
+  const d2 = diffPublishPlan(run2, published, uriKeyFor);
+  assert.deepEqual(d2.clear.sort(), ["/proj/a.jsx", "ae-devtools:diagnostics/script-exception"].sort());
+  assert.deepEqual(d2.publish.map((p) => p.key).sort(), ["/proj/b.jsx", "ae-devtools:diagnostics/transport-outcome"].sort());
+  const next = new Set([...published].filter((k) => !d2.clear.includes(k)));
+  for (const { key } of d2.publish) next.add(key);
+  assert.deepEqual([...next].sort(), ["/proj/b.jsx", "ae-devtools:diagnostics/transport-outcome"].sort());
+
+  // Run 3: clean execute — empty plan is authoritative, clears all.
+  const run3 = buildPublishPlan([]);
+  const d3 = diffPublishPlan(run3, next, uriKeyFor);
+  assert.deepEqual(d3.publish, []);
+  assert.deepEqual(d3.clear.sort(), [...next].sort());
+});
+
+test("multiple records sharing one URI publish as one grouped set, latest run replaces", () => {
+  const recs = [
+    recordWith({ assetKind: "transport" }),
+    recordWith({ assetKind: "transport" }, { message: "second failure" }),
+  ];
+  const plan = buildPublishPlan(recs);
+  const keyFor = uriKeyFor;
+  const d = diffPublishPlan(plan, new Set(), keyFor);
+  assert.equal(d.publish.length, 1);
+  assert.equal(d.publish[0].items.length, 2);
+
+  // A later run with a single same-kind record replaces the whole set.
+  const plan2 = buildPublishPlan([recordWith({ assetKind: "transport" }, { message: "latest" })]);
+  const d2 = diffPublishPlan(plan2, new Set(d.publish.map((p) => p.key)), keyFor);
+  assert.deepEqual(d2.clear, []);
+  assert.equal(d2.publish.length, 1);
+  assert.equal(d2.publish[0].items.length, 1);
+  assert.equal(d2.publish[0].items[0].message, "latest");
+});
+
+test("mappingStatus vocabulary stays within the documented resolver statuses", () => {
+  const records = [
+    recordWith({ assetKind: "jsx-script", path: SINGLE_JSX, line: 3 }),
+    recordWith({ assetKind: "jsx-script", path: SINGLE_JSX, line: 9999 }),
+    recordWith({ assetKind: "jsx-script", path: "/nonexistent/x.jsx", line: 7 }),
+    recordWith({ assetKind: "transport" }),
+    recordWith({ assetKind: "plugin-binary", path: "/x.dylib", line: 12 }),
+  ];
+  const plan = buildPublishPlan(records, { sourceMapOpts: { mapDir: SINGLE_DIR } });
+  const allowed = new Set([
+    "mapped", "unmapped", "no-map", "invalid-map", "ambiguous",
+    "no-position", "not-attempted", "record-position",
+    "unsupported-with-reason", "resolve-error",
+  ]);
+  for (const item of plan.items) {
+    assert.ok(allowed.has(item.mappingStatus), `unexpected mappingStatus '${item.mappingStatus}'`);
+  }
+  // plugin-binary positions are honestly unsupported — the record's
+  // own position is still shown verbatim (host-reported truth), but
+  // no map resolution is claimed.
+  const bin = plan.items.find((i) => i.record.source.assetKind === "plugin-binary");
+  assert.equal(bin.mappingStatus, "unsupported-with-reason");
+  assert.equal(bin.range.file, "/x.dylib");
+  assert.equal(bin.range.start.line, 11);
 });

@@ -130,16 +130,79 @@ int FakeHost::StartCount() const
 }
 
 /* ------------------------------------------------------------------ */
+/* opaque-handle allocation                                            */
+/*                                                                     */
+/* Every AEGP handle is a pointer-to-pointer: the fake allocates the   */
+/* payload struct AND the pointer slot on the heap, so callers can     */
+/* never observe a pointer to a stack/local. WrapPayload is the single */
+/* place that performs the two-level allocation — handle makers must   */
+/* use it (or an equivalent heap double-pointer) and must never return */
+/* &local. Payloads mirror AE handle ownership (borrowed by the caller */
+/* for the call duration, never freed mid-run); every allocation is    */
+/* registered with the live FakeHost so ~FakeHost reclaims whatever    */
+/* the probe did not free — deterministic teardown that keeps         */
+/* sanitizer runs honest (double-free/UAF still fire under ASan).    */
+/* ------------------------------------------------------------------ */
+
+template <typename T>
+static void DestroyPayload(void* w)
+{
+    T** hp = (T**)w;
+    delete *hp;
+    delete hp;
+}
+
+template <typename T>
+static void* WrapPayload(T* payload)
+{
+    T** hp = new T*;
+    *hp = payload;
+    if (g_host)
+    {
+        g_host->TrackAlloc(hp, &DestroyPayload<T>);
+    }
+    return hp;
+}
+
+void FakeHost::TrackAlloc(void* ptr, void (*destroy)(void*))
+{
+    trackedAllocs.push_back({ptr, destroy});
+}
+
+void FakeHost::UntrackAlloc(void* ptr)
+{
+    for (size_t i = 0; i < trackedAllocs.size(); ++i)
+    {
+        if (trackedAllocs[i].ptr == ptr)
+        {
+            trackedAllocs.erase(trackedAllocs.begin() + (ptrdiff_t)i);
+            return;
+        }
+    }
+}
+
+FakeHost::~FakeHost()
+{
+    for (size_t i = 0; i < trackedAllocs.size(); ++i)
+    {
+        trackedAllocs[i].destroy(trackedAllocs[i].ptr);
+    }
+    trackedAllocs.clear();
+    if (g_host == this)
+    {
+        g_host = NULL; /* never let WrapPayload register into a dead host */
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* mem-handle plumbing                                                */
 /* ------------------------------------------------------------------ */
 
 static AEGP_MemHandle MakeMemHandle(FakeMemRec* rec)
 {
     struct _Up_OpaqueMem* inner = new struct _Up_OpaqueMem;
-    struct _Up_OpaqueMem** hp = new struct _Up_OpaqueMem*;
     inner->rec = rec;
-    *hp = inner;
-    return (AEGP_MemHandle)hp;
+    return (AEGP_MemHandle)WrapPayload(inner);
 }
 
 static FakeMemRec* RecFromHandle(AEGP_MemHandle h)
@@ -207,6 +270,18 @@ static SPErr FakeAcquireSuite(const char* nameZ, int32 versionL, const void** su
     {
         slot = 6; fail = h->failAcquireRQItem; table = &h->rqItemSuite;
     }
+    else if (strcmp(nameZ, kAEGPItemViewSuite) == 0)
+    {
+        slot = 7; fail = h->failAcquireItemView; table = &h->itemViewSuite;
+    }
+    else if (strcmp(nameZ, kAEGPCompSuite) == 0)
+    {
+        slot = 8; fail = h->failAcquireComp; table = &h->compSuite;
+    }
+    else if (strcmp(nameZ, kAEGPLayerSuite) == 0)
+    {
+        slot = 9; fail = h->failAcquireLayer; table = &h->layerSuite;
+    }
     else
     {
         return 1; /* unknown suite: acquisition fails */
@@ -232,6 +307,9 @@ static SPErr FakeReleaseSuite(const char* nameZ, int32 versionL)
     else if (strcmp(nameZ, kAEGPRegisterSuite) == 0) h->releaseCount[4]++;
     else if (strcmp(nameZ, kAEGPRenderQueueSuite) == 0) h->releaseCount[5]++;
     else if (strcmp(nameZ, kAEGPRQItemSuite) == 0) h->releaseCount[6]++;
+    else if (strcmp(nameZ, kAEGPItemViewSuite) == 0) h->releaseCount[7]++;
+    else if (strcmp(nameZ, kAEGPCompSuite) == 0) h->releaseCount[8]++;
+    else if (strcmp(nameZ, kAEGPLayerSuite) == 0) h->releaseCount[9]++;
     return 0;
 }
 
@@ -343,9 +421,7 @@ static A_Err FakeGetProjectByIndex(A_long idxL, AEGP_ProjectH* projPH)
     }
     struct _AEGP_Project* p = new struct _AEGP_Project;
     p->index = (int)idxL;
-    struct _AEGP_Project** hp = new struct _AEGP_Project*;
-    *hp = p;
-    *projPH = (AEGP_ProjectH)hp;
+    *projPH = (AEGP_ProjectH)WrapPayload(p);
     return A_Err_NONE;
 }
 
@@ -406,9 +482,7 @@ static A_Err FakeGetProjectRootFolder(AEGP_ProjectH projH, AEGP_ItemH* itemPH)
     struct _AEGP_Item* it = new struct _AEGP_Item;
     it->projIndex = p - &g_host->projects[0];
     it->itemIndex = -1;
-    struct _AEGP_Item** hp = new struct _AEGP_Item*;
-    *hp = it;
-    *itemPH = (AEGP_ItemH)hp;
+    *itemPH = (AEGP_ItemH)WrapPayload(it);
     return A_Err_NONE;
 }
 
@@ -436,9 +510,7 @@ static AEGP_ItemH MakeItemHandle(int projIndex, int itemIndex)
     struct _AEGP_Item* it = new struct _AEGP_Item;
     it->projIndex = projIndex;
     it->itemIndex = itemIndex;
-    struct _AEGP_Item** hp = new struct _AEGP_Item*;
-    *hp = it;
-    return (AEGP_ItemH)hp;
+    return (AEGP_ItemH)WrapPayload(it);
 }
 
 static A_Err FakeGetFirstProjItem(AEGP_ProjectH projH, AEGP_ItemH* itemPH)
@@ -542,8 +614,13 @@ static A_Err FakeNewMemHandle(
 static A_Err FakeFreeMemHandle(AEGP_MemHandle memH)
 {
     FakeMemRec* rec = RecFromHandle(memH);
+    if (rec->freed)
+    {
+        return A_Err_GENERIC; /* double-free is an error, not a no-op */
+    }
     rec->freed = true;
     g_host->memHandlesFreed++;
+    g_host->UntrackAlloc(memH);
     struct _Up_OpaqueMem** hp = (struct _Up_OpaqueMem**)memH;
     delete *hp;
     delete hp;
@@ -605,13 +682,34 @@ static A_Err FakeGetNumRQItems(A_long* numP)
     return A_Err_NONE;
 }
 
+static AEGP_CompH MakeCompHandle(int projIndex, int itemIndex);
+
+/* Returns NULL in legacy mode (rqItemMeta never configured) so the
+   getters fall back to the pre-§7f hardcoded values the probe tests
+   pin; once tests configure rqItemMeta, every slot resolves per-item
+   (out-of-range slots get the struct defaults). */
+static const FakeRQItemMeta* RQMetaFor(int index)
+{
+    static const FakeRQItemMeta kDefault;
+    if (!g_host || g_host->rqItemMeta.empty())
+    {
+        return NULL;
+    }
+    if (index < 0 || index >= (int)g_host->rqItemMeta.size())
+    {
+        return &kDefault;
+    }
+    return &g_host->rqItemMeta[index];
+}
+
 static AEGP_RQItemRefH NewRQItemHandle(int index)
 {
     struct _AEGP_RenderQueueItem* p = new struct _AEGP_RenderQueueItem;
+    const FakeRQItemMeta* m = RQMetaFor(index);
     p->index = index;
-    struct _AEGP_RenderQueueItem** hp = new struct _AEGP_RenderQueueItem*;
-    *hp = p;
-    return (AEGP_RQItemRefH)hp;
+    p->compProject = m ? m->compProject : -1;
+    p->compItem = m ? m->compItem : -1;
+    return (AEGP_RQItemRefH)WrapPayload(p);
 }
 
 static A_Err FakeGetRQItemByIndex(A_long idxL, AEGP_RQItemRefH* rq_item_refPH)
@@ -629,48 +727,85 @@ static A_Err FakeGetRQItemByIndex(A_long idxL, AEGP_RQItemRefH* rq_item_refPH)
     return A_Err_NONE;
 }
 
+static const _AEGP_RenderQueueItem* RQPayload(AEGP_RQItemRefH rq_itemH)
+{
+    return *(struct _AEGP_RenderQueueItem**)rq_itemH;
+}
+
 static A_Err FakeGetRenderState(AEGP_RQItemRefH rq_itemH,
                                 AEGP_RenderItemStatusType* statusP)
 {
-    (void)rq_itemH;
-    *statusP = 0; /* QUEUED */
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *statusP = m ? m->status : AEGP_RenderItemStatus_NEEDS_OUTPUT;
     return A_Err_NONE;
 }
 
 static A_Err FakeGetStartedTime(AEGP_RQItemRefH rq_itemH, A_Time* render_timePT)
 {
-    (void)rq_itemH;
-    render_timePT->value = 0;
-    render_timePT->scale = 1;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *render_timePT = m ? m->startedTime : (A_Time){0, 1};
     return A_Err_NONE;
 }
 
 static A_Err FakeGetElapsedTime(AEGP_RQItemRefH rq_itemH, A_Time* render_timePT)
 {
-    (void)rq_itemH;
-    render_timePT->value = 0;
-    render_timePT->scale = 1;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *render_timePT = m ? m->elapsedTime : (A_Time){0, 1};
     return A_Err_NONE;
 }
 
 static A_Err FakeGetLogType(AEGP_RQItemRefH rq_itemH, AEGP_LogType* logtypeP)
 {
-    (void)rq_itemH;
-    *logtypeP = AEGP_LogType_ERRORS_ONLY;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *logtypeP = m ? m->logType : AEGP_LogType_ERRORS_ONLY;
     return A_Err_NONE;
 }
 
 static A_Err FakeGetNumOutputModulesForRQItem(AEGP_RQItemRefH rq_itemH,
                                               A_long* num_itemsPL)
 {
-    (void)rq_itemH;
-    *num_itemsPL = 1;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    *num_itemsPL = m ? m->numOutputModules : 1;
     return A_Err_NONE;
 }
 
 static A_Err FakeGetComment(AEGP_RQItemRefH rq_itemH, AEGP_MemHandle* unicodeH)
 {
-    (void)rq_itemH;
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const FakeRQItemMeta* m = RQMetaFor(RQPayload(rq_itemH)->index);
+    if (m && !m->comment.units.empty())
+    {
+        *unicodeH = NewMemHandleFromSpec(m->comment);
+        return A_Err_NONE;
+    }
+    if (m)
+    {
+        *unicodeH = NewMemHandleFromSpec(FakeNameSpec());
+        return A_Err_NONE;
+    }
     FakeNameSpec spec = g_host->MakeNameSpec(FakeHost::U16("fake rq comment"));
     *unicodeH = NewMemHandleFromSpec(spec);
     return A_Err_NONE;
@@ -678,8 +813,759 @@ static A_Err FakeGetComment(AEGP_RQItemRefH rq_itemH, AEGP_MemHandle* unicodeH)
 
 static A_Err FakeGetCompFromRQItem(AEGP_RQItemRefH rq_itemH, AEGP_CompH* compPH)
 {
-    (void)rq_itemH;
-    *compPH = NULL; /* fake host has no comp objects */
+    if (g_host->rqItemQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->rqItemQueryErr;
+    }
+    const _AEGP_RenderQueueItem* p = RQPayload(rq_itemH);
+    *compPH = NULL;
+    if (p->compProject < 0 || p->compItem < 0) return A_Err_NONE;
+    if (p->compProject >= (int)g_host->projects.size()) return A_Err_NONE;
+    FakeProject& proj = g_host->projects[p->compProject];
+    if (p->compItem >= (int)proj.itemTypes.size()) return A_Err_NONE;
+    if (proj.itemTypes[p->compItem] != AEGP_ItemType_COMP) return A_Err_NONE;
+    *compPH = MakeCompHandle(p->compProject, p->compItem);
+    return A_Err_NONE;
+}
+
+/* ---- Issue #63 extended read-only getters ---- */
+
+static const FakeItemMeta& MetaFor(FakeProject* p, int ii)
+{
+    static const FakeItemMeta kDefault;
+    if (!p || ii < 0 || ii >= (int)p->itemMeta.size())
+    {
+        return kDefault;
+    }
+    return p->itemMeta[ii];
+}
+
+/* Mutable variant for the Issue #327 mutating getter: grows
+   itemMeta with defaults when the fixture did not pre-populate the
+   slot, so a set on an unconfigured item still round-trips through
+   FakeGetItemComment. */
+static FakeItemMeta& MetaForMut(FakeProject* p, int ii)
+{
+    static FakeItemMeta kSink;
+    if (!p || ii < 0) return kSink;
+    if (ii >= (int)p->itemMeta.size())
+        p->itemMeta.resize((size_t)ii + 1);
+    return p->itemMeta[ii];
+}
+
+static A_Err FakeSetItemComment(AEGP_ItemH itemH, const A_UTF16Char* commentZ)
+{
+    FakeProject* p;
+    FakeItemMeta* m;
+    if (g_host->setCommentErr != A_Err_NONE)
+        return (A_Err)g_host->setCommentErr;
+    p = ProjectOfItem(itemH);
+    m = &MetaForMut(p, ItemIndexOf(itemH));
+    m->comment.units.clear();
+    if (commentZ)
+        for (const A_UTF16Char* s = commentZ; *s; s++)
+            m->comment.units.push_back(*s);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetProjectTimeDisplay(AEGP_ProjectH projH, AEGP_TimeDisplay3* tdP)
+{
+    FakeProject* p = ProjectForHandle(projH);
+    if (!p) return A_Err_PARAMETER;
+    if (g_host->projectTimeDisplayErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->projectTimeDisplayErr;
+    }
+    *tdP = p->timeDisplay;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetActiveItem(AEGP_ItemH* itemPH)
+{
+    *itemPH = NULL;
+    if (g_host->activeItemErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->activeItemErr;
+    }
+    int pi = g_host->activeItemProject;
+    int ii = g_host->activeItemIndex;
+    if (pi < 0 || pi >= (int)g_host->projects.size() || ii < 0)
+    {
+        return A_Err_NONE; /* no active item */
+    }
+    *itemPH = MakeItemHandle(pi, ii);
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsItemSelected(AEGP_ItemH itemH, A_Boolean* selectedPB)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *selectedPB = MetaFor(p, ItemIndexOf(itemH)).selected;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetTypeName(AEGP_ItemType item_type, A_char* nameZ)
+{
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    snprintf(nameZ, AEGP_MAX_TYPE_NAME_SIZE + 1, "fake-type-%d", (int)item_type);
+    nameZ[AEGP_MAX_TYPE_NAME_SIZE] = '\0';
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemID(AEGP_ItemH itemH, A_long* item_idPL)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    int ii = ItemIndexOf(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    const FakeItemMeta& m = MetaFor(p, ii);
+    *item_idPL = m.id >= 0 ? m.id : 1000 + ii;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemFlags(AEGP_ItemH itemH, AEGP_ItemFlags* item_flagsP)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *item_flagsP = MetaFor(p, ItemIndexOf(itemH)).flags;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemParentFolder(AEGP_ItemH itemH, AEGP_ItemH* parentPH)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    if (!p) return A_Err_PARAMETER;
+    int pi = (int)(p - &g_host->projects[0]);
+    *parentPH = MakeItemHandle(pi, -1); /* top-level items live in root */
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemDuration(AEGP_ItemH itemH, A_Time* durationPT)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *durationPT = MetaFor(p, ItemIndexOf(itemH)).duration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemCurrentTime(AEGP_ItemH itemH, A_Time* curr_timePT)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *curr_timePT = MetaFor(p, ItemIndexOf(itemH)).currentTime;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemDimensions(AEGP_ItemH itemH, A_long* widthPL, A_long* heightPL)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    const FakeItemMeta& m = MetaFor(p, ItemIndexOf(itemH));
+    *widthPL = m.width;
+    *heightPL = m.height;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemPixelAspectRatio(AEGP_ItemH itemH, A_Ratio* pix_aspect_ratioPRt)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *pix_aspect_ratioPRt = MetaFor(p, ItemIndexOf(itemH)).par;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemComment(AEGP_ItemH itemH, AEGP_MemHandle* unicodePH)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    *unicodePH = NULL;
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    FakeNameSpec spec = MetaFor(p, ItemIndexOf(itemH)).comment;
+    if (spec.units.empty())
+    {
+        /* No configured comment: return an empty-string handle. */
+        static const A_UTF16Char emptyU16[1] = {0};
+        spec.units.assign(emptyU16, emptyU16 + 1);
+    }
+    if (spec.failMode == 3)
+    {
+        return A_Err_GENERIC;
+    }
+    if (spec.failMode == 4)
+    {
+        return A_Err_NONE; /* success but NULL handle */
+    }
+    *unicodePH = NewMemHandleFromSpec(spec);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemLabel(AEGP_ItemH itemH, AEGP_LabelID* labelP)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    *labelP = MetaFor(p, ItemIndexOf(itemH)).label;
+    return A_Err_NONE;
+}
+
+static AEGP_ItemViewP NewItemViewHandle(int index)
+{
+    struct _AEGP_ItemView* v = new struct _AEGP_ItemView;
+    v->index = index;
+    /* AEGP_ItemViewP is a single pointer (not pointer-to-pointer), so
+       it cannot go through WrapPayload; track the raw allocation for
+       ~FakeHost reclamation instead. */
+    if (g_host)
+    {
+        g_host->TrackAlloc(v, [](void* p) { delete (struct _AEGP_ItemView*)p; });
+    }
+    return (AEGP_ItemViewP)v;
+}
+
+static A_Err FakeGetItemMRUView(AEGP_ItemH itemH, AEGP_ItemViewP* mru_viewP)
+{
+    FakeProject* p = ProjectOfItem(itemH);
+    int ii = ItemIndexOf(itemH);
+    *mru_viewP = NULL;
+    if (g_host->itemMetaErr != A_Err_NONE) return (A_Err)g_host->itemMetaErr;
+    if (MetaFor(p, ii).hasView)
+    {
+        *mru_viewP = NewItemViewHandle(ii);
+    }
+    return A_Err_NONE;
+}
+
+/* ---- item view suite (read-only getters) ---- */
+
+static A_Err FakeGetItemViewPlaybackTime(AEGP_ItemViewP viewP,
+                                         A_Boolean* is_currently_previewingPB0,
+                                         A_Time* curr_timePT)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *is_currently_previewingPB0 = TRUE;
+    curr_timePT->value = 12;
+    curr_timePT->scale = 30;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemViewGuidesVisible(AEGP_ItemViewP viewP,
+                                          A_Boolean* guides_visiblePB)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *guides_visiblePB = TRUE;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemViewGuidesSnap(AEGP_ItemViewP viewP,
+                                       A_Boolean* guides_snapPB)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *guides_snapPB = FALSE;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemViewGuidesLocked(AEGP_ItemViewP viewP,
+                                         A_Boolean* guides_lockedPB)
+{
+    (void)viewP;
+    if (g_host->itemViewQueryErr != A_Err_NONE)
+    {
+        return (A_Err)g_host->itemViewQueryErr;
+    }
+    *guides_lockedPB = TRUE;
+    return A_Err_NONE;
+}
+
+/* ---- comp suite (Issue #64 read-only getters) ---- */
+
+static AEGP_CompH MakeCompHandle(int projIndex, int itemIndex)
+{
+    struct _AEGP_Comp* c = new struct _AEGP_Comp;
+    c->projIndex = projIndex;
+    c->itemIndex = itemIndex;
+    return (AEGP_CompH)WrapPayload(c);
+}
+
+static FakeProject* ProjectOfComp(AEGP_CompH compH)
+{
+    struct _AEGP_Comp** hp = (struct _AEGP_Comp**)compH;
+    int pi = (*hp)->projIndex;
+    if (pi < 0 || pi >= (int)g_host->projects.size())
+    {
+        return NULL;
+    }
+    return &g_host->projects[pi];
+}
+
+static int ItemIndexOfComp(AEGP_CompH compH)
+{
+    struct _AEGP_Comp** hp = (struct _AEGP_Comp**)compH;
+    return (*hp)->itemIndex;
+}
+
+static A_Err FakeGetCompFromItem(AEGP_ItemH itemH, AEGP_CompH* compPH)
+{
+    *compPH = NULL;
+    FakeProject* p = ProjectOfItem(itemH);
+    int ii = ItemIndexOf(itemH);
+    if (!p || ii < 0) return A_Err_PARAMETER;
+    AEGP_ItemType t = AEGP_ItemType_COMP;
+    if (ii < (int)p->itemTypes.size()) t = p->itemTypes[ii];
+    if (t != AEGP_ItemType_COMP) return A_Err_GENERIC; /* not a comp */
+    int pi = (int)(p - &g_host->projects[0]);
+    *compPH = MakeCompHandle(pi, ii);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetItemFromComp(AEGP_CompH compH, AEGP_ItemH* itemPH)
+{
+    *itemPH = NULL;
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return A_Err_PARAMETER;
+    int pi = (int)(p - &g_host->projects[0]);
+    *itemPH = MakeItemHandle(pi, ItemIndexOfComp(compH));
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetMostRecentlyUsedComp(AEGP_CompH* compPH)
+{
+    *compPH = NULL;
+    int pi = g_host->mruCompProject;
+    int ii = g_host->mruCompIndex;
+    if (pi >= 0 && pi < (int)g_host->projects.size() && ii >= 0)
+    {
+        *compPH = MakeCompHandle(pi, ii);
+    }
+    return A_Err_NONE;
+}
+
+#define FAKE_COMP_ERR() \
+    if (g_host->compQueryErr != A_Err_NONE) return (A_Err)g_host->compQueryErr
+
+static const FakeCompMeta& CompMetaFor(AEGP_CompH compH)
+{
+    static const FakeCompMeta kDefault;
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return kDefault;
+    return MetaFor(p, ItemIndexOfComp(compH)).compMeta;
+}
+
+static A_Err FakeGetCompFramerate(AEGP_CompH compH, A_FpLong* fpsPF)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *fpsPF = CompMetaFor(compH).fps;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompFrameDuration(AEGP_CompH compH, A_Time* timeP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *timeP = CompMetaFor(compH).frameDuration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompDownsampleFactor(AEGP_CompH compH,
+                                         AEGP_DownsampleFactor* dsfP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *dsfP = CompMetaFor(compH).dsf;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompBGColor(AEGP_CompH compH, AEGP_ColorVal* bgP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *bgP = CompMetaFor(compH).bgColor;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompFlags(AEGP_CompH compH, AEGP_CompFlags* flagsP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *flagsP = CompMetaFor(compH).flags;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetShowLayerNameOrSourceName(AEGP_CompH compH,
+                                              A_Boolean* shownPB)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *shownPB = CompMetaFor(compH).showLayerNames;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetShowBlendModes(AEGP_CompH compH, A_Boolean* shownPB)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *shownPB = CompMetaFor(compH).showBlendModes;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompShutterAnglePhase(AEGP_CompH compH,
+                                          A_Ratio* angleP, A_Ratio* phaseP)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    const FakeCompMeta& m = CompMetaFor(compH);
+    *angleP = m.shutterAngle;
+    *phaseP = m.shutterPhase;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompShutterFrameRange(AEGP_CompH compH,
+                                          const A_Time* comp_timeP,
+                                          A_Time* startPT, A_Time* durationPT)
+{
+    (void)comp_timeP;
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    const FakeCompMeta& m = CompMetaFor(compH);
+    *startPT = m.shutterStart;
+    *durationPT = m.shutterDuration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompSuggestedMotionBlurSamples(AEGP_CompH compH,
+                                                   A_long* samplesPL)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *samplesPL = CompMetaFor(compH).mbSamples;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompMotionBlurAdaptiveSampleLimit(AEGP_CompH compH,
+                                                      A_long* samplesPL)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *samplesPL = CompMetaFor(compH).mbAdaptiveLimit;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompWorkAreaStart(AEGP_CompH compH,
+                                      A_Time* work_area_startPT)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *work_area_startPT = CompMetaFor(compH).workAreaStart;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompWorkAreaDuration(AEGP_CompH compH,
+                                         A_Time* work_area_durationPT)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *work_area_durationPT = CompMetaFor(compH).workAreaDuration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompDisplayStartTime(AEGP_CompH compH,
+                                         A_Time* start_timePT)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *start_timePT = CompMetaFor(compH).displayStart;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompDisplayDropFrame(AEGP_CompH compH,
+                                         A_Boolean* dropFramePB)
+{
+    FAKE_COMP_ERR();
+    if (!ProjectOfComp(compH)) return A_Err_PARAMETER;
+    *dropFramePB = CompMetaFor(compH).displayDropFrame;
+    return A_Err_NONE;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* AEGP_LayerSuite9 fakes (Issue #64 layer slice — read-only)          */
+/* ------------------------------------------------------------------ */
+
+static AEGP_LayerH MakeLayerHandle(int projIndex, int itemIndex, int layerIndex)
+{
+    struct _AEGP_Layer* l = new struct _AEGP_Layer;
+    l->projIndex = projIndex;
+    l->itemIndex = itemIndex;
+    l->layerIndex = layerIndex;
+    return (AEGP_LayerH)WrapPayload(l);
+}
+
+static FakeProject* ProjectOfLayer(AEGP_LayerH layerH)
+{
+    struct _AEGP_Layer** hp = (struct _AEGP_Layer**)layerH;
+    int pi = (*hp)->projIndex;
+    if (pi < 0 || pi >= (int)g_host->projects.size())
+    {
+        return NULL;
+    }
+    return &g_host->projects[pi];
+}
+
+static int ItemIndexOfLayer(AEGP_LayerH layerH)
+{
+    struct _AEGP_Layer** hp = (struct _AEGP_Layer**)layerH;
+    return (*hp)->itemIndex;
+}
+
+static int LayerIndexOfLayer(AEGP_LayerH layerH)
+{
+    struct _AEGP_Layer** hp = (struct _AEGP_Layer**)layerH;
+    return (*hp)->layerIndex;
+}
+
+static const FakeLayerMeta& LayerMetaFor(AEGP_LayerH layerH)
+{
+    static const FakeLayerMeta kDefault;
+    FakeProject* p = ProjectOfLayer(layerH);
+    if (!p) return kDefault;
+    int ii = ItemIndexOfLayer(layerH);
+    int li = LayerIndexOfLayer(layerH);
+    if (ii < 0 || ii >= (int)p->itemMeta.size()) return kDefault;
+    const std::vector<FakeLayerMeta>& layers = p->itemMeta[ii].compMeta.layers;
+    if (li < 0 || li >= (int)layers.size()) return kDefault;
+    return layers[li];
+}
+
+#define FAKE_LAYER_ERR() \
+    if (g_host->layerQueryErr != A_Err_NONE) return (A_Err)g_host->layerQueryErr
+
+static A_Err FakeGetCompNumLayers(AEGP_CompH compH, A_long* num_layersPL)
+{
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return A_Err_PARAMETER;
+    int ii = ItemIndexOfComp(compH);
+    if (ii < 0 || ii >= (int)p->itemMeta.size()) { *num_layersPL = 0; return A_Err_NONE; }
+    *num_layersPL = (A_long)p->itemMeta[ii].compMeta.layers.size();
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetCompLayerByIndex(AEGP_CompH compH, A_long layer_indexL,
+                                     AEGP_LayerH* layerPH)
+{
+    *layerPH = NULL;
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfComp(compH);
+    if (!p) return A_Err_PARAMETER;
+    int ii = ItemIndexOfComp(compH);
+    int pi = (int)(p - &g_host->projects[0]);
+    if (ii < 0 || ii >= (int)p->itemMeta.size()) return A_Err_PARAMETER;
+    const std::vector<FakeLayerMeta>& layers = p->itemMeta[ii].compMeta.layers;
+    if (layer_indexL < 0 || layer_indexL >= (A_long)layers.size())
+    {
+        return A_Err_PARAMETER;
+    }
+    *layerPH = MakeLayerHandle(pi, ii, (int)layer_indexL);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerIndex(AEGP_LayerH layerH, A_long* layer_indexPL)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *layer_indexPL = LayerIndexOfLayer(layerH);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerName(AEGP_PluginID pluginID, AEGP_LayerH layerH,
+                              AEGP_MemHandle* utf_layer_namePH0,
+                              AEGP_MemHandle* utf_source_namePH0)
+{
+    (void)pluginID;
+    *utf_layer_namePH0 = NULL;
+    *utf_source_namePH0 = NULL;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    const FakeLayerMeta& m = LayerMetaFor(layerH);
+    *utf_layer_namePH0 = NewMemHandleFromSpec(m.name);
+    *utf_source_namePH0 = NewMemHandleFromSpec(m.sourceName);
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerFlags(AEGP_LayerH layerH, AEGP_LayerFlags* flagsP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *flagsP = LayerMetaFor(layerH).flags;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerQuality(AEGP_LayerH layerH, AEGP_LayerQuality* qualityP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *qualityP = LayerMetaFor(layerH).quality;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerObjectType(AEGP_LayerH layerH, AEGP_ObjectType* object_typeP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *object_typeP = LayerMetaFor(layerH).objectType;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayer3D(AEGP_LayerH layerH, A_Boolean* is_3DPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *is_3DPB = LayerMetaFor(layerH).is3D;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayer2D(AEGP_LayerH layerH, A_Boolean* is_2DPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *is_2DPB = LayerMetaFor(layerH).is2D;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerCurrentTime(AEGP_LayerH layerH, AEGP_LTimeMode time_mode,
+                                     A_Time* curr_timePT)
+{
+    (void)time_mode;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *curr_timePT = LayerMetaFor(layerH).currentTime;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerInPoint(AEGP_LayerH layerH, AEGP_LTimeMode time_mode,
+                                 A_Time* in_pointPT)
+{
+    (void)time_mode;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *in_pointPT = LayerMetaFor(layerH).inPoint;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerDuration(AEGP_LayerH layerH, AEGP_LTimeMode time_mode,
+                                  A_Time* durationPT)
+{
+    (void)time_mode;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *durationPT = LayerMetaFor(layerH).duration;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerID(AEGP_LayerH layerH, AEGP_LayerIDVal* id_valP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *id_valP = LayerMetaFor(layerH).id;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerLabel(AEGP_LayerH layerH, AEGP_LabelID* labelP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *labelP = LayerMetaFor(layerH).label;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerSamplingQuality(AEGP_LayerH layerH,
+                                         AEGP_LayerSamplingQuality* qualityP)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *qualityP = LayerMetaFor(layerH).samplingQuality;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerSourceItemID(AEGP_LayerH layerH, A_long* source_item_idPL)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *source_item_idPL = LayerMetaFor(layerH).sourceItemID;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetLayerParentComp(AEGP_LayerH layerH, AEGP_CompH* compPH)
+{
+    *compPH = NULL;
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfLayer(layerH);
+    if (!p) return A_Err_PARAMETER;
+    *compPH = MakeCompHandle((int)(p - &g_host->projects[0]), ItemIndexOfLayer(layerH));
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayerVideoReallyOn(AEGP_LayerH layerH, A_Boolean* onPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *onPB = LayerMetaFor(layerH).videoOn;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayerAudioReallyOn(AEGP_LayerH layerH, A_Boolean* onPB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *onPB = LayerMetaFor(layerH).audioOn;
+    return A_Err_NONE;
+}
+
+static A_Err FakeDoesLayerHaveTrackMatte(AEGP_LayerH layerH,
+                                         A_Boolean* has_track_mattePB)
+{
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *has_track_mattePB = LayerMetaFor(layerH).hasTrackMatte;
+    return A_Err_NONE;
+}
+
+static A_Err FakeIsLayerUsedAsTrackMatte(AEGP_LayerH layerH,
+                                         A_Boolean fill_must_be_activeB,
+                                         A_Boolean* is_track_mattePB)
+{
+    (void)fill_must_be_activeB;
+    FAKE_LAYER_ERR();
+    if (!ProjectOfLayer(layerH)) return A_Err_PARAMETER;
+    *is_track_mattePB = LayerMetaFor(layerH).isTrackMatte;
+    return A_Err_NONE;
+}
+
+static A_Err FakeGetTrackMatteLayer(const AEGP_LayerH layerH,
+                                    AEGP_LayerH* track_matte_layerPH)
+{
+    *track_matte_layerPH = NULL;
+    FAKE_LAYER_ERR();
+    FakeProject* p = ProjectOfLayer((AEGP_LayerH)layerH);
+    if (!p) return A_Err_PARAMETER;
+    const FakeLayerMeta& m = LayerMetaFor((AEGP_LayerH)layerH);
+    if (m.trackMatteLayerIndex >= 0)
+    {
+        *track_matte_layerPH = MakeLayerHandle(
+            (int)(p - &g_host->projects[0]), ItemIndexOfLayer((AEGP_LayerH)layerH),
+            m.trackMatteLayerIndex);
+    }
     return A_Err_NONE;
 }
 
@@ -701,6 +1587,9 @@ void FakeHost::PopulateSuites()
     memset(&regSuite, 0, sizeof(regSuite));
     memset(&rqSuite, 0, sizeof(rqSuite));
     memset(&rqItemSuite, 0, sizeof(rqItemSuite));
+    memset(&itemViewSuite, 0, sizeof(itemViewSuite));
+    memset(&compSuite, 0, sizeof(compSuite));
+    memset(&layerSuite, 0, sizeof(layerSuite));
     memset(&basicSuite, 0, sizeof(basicSuite));
 
     /* utility */
@@ -722,12 +1611,27 @@ void FakeHost::PopulateSuites()
     projSuite.AEGP_ProjectIsDirty = FakeProjectIsDirty;
     projSuite.AEGP_GetProjectBitDepth = FakeGetProjectBitDepth;
     projSuite.AEGP_GetProjectRootFolder = FakeGetProjectRootFolder;
+    if (nullProjEntry != 4) projSuite.AEGP_GetProjectTimeDisplay = FakeGetProjectTimeDisplay;
 
     /* item */
     itemSuite.AEGP_GetFirstProjItem = FakeGetFirstProjItem;
     itemSuite.AEGP_GetNextProjItem = FakeGetNextProjItem;
     itemSuite.AEGP_GetItemType = FakeGetItemType;
     itemSuite.AEGP_GetItemName = FakeGetItemName;
+    if (nullItemEntry != 3) itemSuite.AEGP_GetActiveItem = FakeGetActiveItem;
+    itemSuite.AEGP_IsItemSelected = FakeIsItemSelected;
+    if (nullItemEntry != 4) itemSuite.AEGP_GetTypeName = FakeGetTypeName;
+    itemSuite.AEGP_GetItemID = FakeGetItemID;
+    itemSuite.AEGP_GetItemFlags = FakeGetItemFlags;
+    itemSuite.AEGP_GetItemParentFolder = FakeGetItemParentFolder;
+    itemSuite.AEGP_GetItemDuration = FakeGetItemDuration;
+    itemSuite.AEGP_GetItemCurrentTime = FakeGetItemCurrentTime;
+    itemSuite.AEGP_GetItemDimensions = FakeGetItemDimensions;
+    itemSuite.AEGP_GetItemPixelAspectRatio = FakeGetItemPixelAspectRatio;
+    if (nullItemEntry != 2) itemSuite.AEGP_GetItemComment = FakeGetItemComment;
+    if (nullItemEntry != 5) itemSuite.AEGP_SetItemComment = FakeSetItemComment;
+    itemSuite.AEGP_GetItemLabel = FakeGetItemLabel;
+    if (nullItemEntry != 1) itemSuite.AEGP_GetItemMRUView = FakeGetItemMRUView;
 
     /* memory */
     memSuite.AEGP_NewMemHandle = FakeNewMemHandle;
@@ -750,6 +1654,57 @@ void FakeHost::PopulateSuites()
     rqItemSuite.AEGP_GetNumOutputModulesForRQItem = FakeGetNumOutputModulesForRQItem;
     rqItemSuite.AEGP_GetComment = FakeGetComment;
     rqItemSuite.AEGP_GetCompFromRQItem = FakeGetCompFromRQItem;
+
+    /* item view — read-only getters only */
+    if (nullItemViewEntry != 1) itemViewSuite.AEGP_GetItemViewPlaybackTime = FakeGetItemViewPlaybackTime;
+    if (nullItemViewEntry != 2) itemViewSuite.AEGP_GetItemViewGuidesVisible = FakeGetItemViewGuidesVisible;
+    if (nullItemViewEntry != 3) itemViewSuite.AEGP_GetItemViewGuidesSnap = FakeGetItemViewGuidesSnap;
+    if (nullItemViewEntry != 4) itemViewSuite.AEGP_GetItemViewGuidesLocked = FakeGetItemViewGuidesLocked;
+
+    /* comp — read-only getters only; nullCompEntry 1..18 nulls one
+       entry each (order matches probe.cpp CompEntriesOk). */
+    if (nullCompEntry != 1) compSuite.AEGP_GetCompFromItem = FakeGetCompFromItem;
+    if (nullCompEntry != 2) compSuite.AEGP_GetItemFromComp = FakeGetItemFromComp;
+    if (nullCompEntry != 3) compSuite.AEGP_GetCompDownsampleFactor = FakeGetCompDownsampleFactor;
+    if (nullCompEntry != 4) compSuite.AEGP_GetCompBGColor = FakeGetCompBGColor;
+    if (nullCompEntry != 5) compSuite.AEGP_GetCompFlags = FakeGetCompFlags;
+    if (nullCompEntry != 6) compSuite.AEGP_GetShowLayerNameOrSourceName = FakeGetShowLayerNameOrSourceName;
+    if (nullCompEntry != 7) compSuite.AEGP_GetShowBlendModes = FakeGetShowBlendModes;
+    if (nullCompEntry != 8) compSuite.AEGP_GetCompFramerate = FakeGetCompFramerate;
+    if (nullCompEntry != 9) compSuite.AEGP_GetCompShutterAnglePhase = FakeGetCompShutterAnglePhase;
+    if (nullCompEntry != 10) compSuite.AEGP_GetCompShutterFrameRange = FakeGetCompShutterFrameRange;
+    if (nullCompEntry != 11) compSuite.AEGP_GetCompSuggestedMotionBlurSamples = FakeGetCompSuggestedMotionBlurSamples;
+    if (nullCompEntry != 12) compSuite.AEGP_GetCompMotionBlurAdaptiveSampleLimit = FakeGetCompMotionBlurAdaptiveSampleLimit;
+    if (nullCompEntry != 13) compSuite.AEGP_GetCompWorkAreaStart = FakeGetCompWorkAreaStart;
+    if (nullCompEntry != 14) compSuite.AEGP_GetCompWorkAreaDuration = FakeGetCompWorkAreaDuration;
+    if (nullCompEntry != 15) compSuite.AEGP_GetCompDisplayStartTime = FakeGetCompDisplayStartTime;
+    if (nullCompEntry != 16) compSuite.AEGP_GetCompFrameDuration = FakeGetCompFrameDuration;
+    if (nullCompEntry != 17) compSuite.AEGP_GetMostRecentlyUsedComp = FakeGetMostRecentlyUsedComp;
+    if (nullCompEntry != 18) compSuite.AEGP_GetCompDisplayDropFrame = FakeGetCompDisplayDropFrame;
+
+    /* layer suite (Issue #64) */
+    if (nullLayerEntry != 1) layerSuite.AEGP_GetCompNumLayers = FakeGetCompNumLayers;
+    if (nullLayerEntry != 2) layerSuite.AEGP_GetCompLayerByIndex = FakeGetCompLayerByIndex;
+    if (nullLayerEntry != 3) layerSuite.AEGP_GetLayerIndex = FakeGetLayerIndex;
+    if (nullLayerEntry != 4) layerSuite.AEGP_GetLayerName = FakeGetLayerName;
+    if (nullLayerEntry != 5) layerSuite.AEGP_GetLayerFlags = FakeGetLayerFlags;
+    if (nullLayerEntry != 6) layerSuite.AEGP_GetLayerQuality = FakeGetLayerQuality;
+    if (nullLayerEntry != 7) layerSuite.AEGP_GetLayerObjectType = FakeGetLayerObjectType;
+    if (nullLayerEntry != 8) layerSuite.AEGP_IsLayer3D = FakeIsLayer3D;
+    if (nullLayerEntry != 9) layerSuite.AEGP_IsLayer2D = FakeIsLayer2D;
+    if (nullLayerEntry != 10) layerSuite.AEGP_GetLayerCurrentTime = FakeGetLayerCurrentTime;
+    if (nullLayerEntry != 11) layerSuite.AEGP_GetLayerInPoint = FakeGetLayerInPoint;
+    if (nullLayerEntry != 12) layerSuite.AEGP_GetLayerDuration = FakeGetLayerDuration;
+    if (nullLayerEntry != 13) layerSuite.AEGP_GetLayerID = FakeGetLayerID;
+    if (nullLayerEntry != 14) layerSuite.AEGP_GetLayerLabel = FakeGetLayerLabel;
+    if (nullLayerEntry != 15) layerSuite.AEGP_GetLayerSamplingQuality = FakeGetLayerSamplingQuality;
+    if (nullLayerEntry != 16) layerSuite.AEGP_GetLayerSourceItemID = FakeGetLayerSourceItemID;
+    if (nullLayerEntry != 17) layerSuite.AEGP_GetLayerParentComp = FakeGetLayerParentComp;
+    if (nullLayerEntry != 18) layerSuite.AEGP_IsLayerVideoReallyOn = FakeIsLayerVideoReallyOn;
+    if (nullLayerEntry != 19) layerSuite.AEGP_IsLayerAudioReallyOn = FakeIsLayerAudioReallyOn;
+    if (nullLayerEntry != 20) layerSuite.AEGP_DoesLayerHaveTrackMatte = FakeDoesLayerHaveTrackMatte;
+    if (nullLayerEntry != 21) layerSuite.AEGP_IsLayerUsedAsTrackMatte = FakeIsLayerUsedAsTrackMatte;
+    if (nullLayerEntry != 22) layerSuite.AEGP_GetTrackMatteLayer = FakeGetTrackMatteLayer;
 
     /* basic */
     basicSuite.AcquireSuite = FakeAcquireSuite;

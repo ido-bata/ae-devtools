@@ -68,8 +68,11 @@
 
 #include <AE_GeneralPlug.h>
 
+#include "native_intake.h"
+
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define PROBE_PLUGIN_NAME "ae-a8n NativeProbe"
@@ -543,12 +546,835 @@ static void ProbeRootFolderName(
     }
 }
 
+/* Read-only view-detail getters for one open item view (Issue #63).
+   itemViewP is the AEGP_ItemViewSuite2 table; item_viewP is the
+   opaque view handle returned by AEGP_GetItemMRUView. Every call is
+   op-recorded; failures are logged and skipped. */
+static void ProbeItemViewDetails(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ItemViewSuite2* itemViewP,
+    AEGP_ItemViewP item_viewP,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    {
+        A_Boolean previewingB = FALSE;
+        A_Time t = {0, 0};
+        err = itemViewP->AEGP_GetItemViewPlaybackTime(item_viewP, &previewingB, &t);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewPlaybackTime",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.previewing=%d playback=%ld/%lu",
+                         item_indexL, (int)previewingB, (long)t.value,
+                         (unsigned long)t.scale);
+        }
+    }
+    {
+        A_Boolean visibleB = FALSE;
+        err = itemViewP->AEGP_GetItemViewGuidesVisible(item_viewP, &visibleB);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesVisible",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.guidesVisible=%d",
+                         item_indexL, (int)visibleB);
+        }
+    }
+    {
+        A_Boolean snapB = FALSE;
+        err = itemViewP->AEGP_GetItemViewGuidesSnap(item_viewP, &snapB);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesSnap",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.guidesSnap=%d",
+                         item_indexL, (int)snapB);
+        }
+    }
+    {
+        A_Boolean lockedB = FALSE;
+        err = itemViewP->AEGP_GetItemViewGuidesLocked(item_viewP, &lockedB);
+        OpRecordV(utilP, "AEGP_ItemViewSuite2.AEGP_GetItemViewGuidesLocked",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].view.guidesLocked=%d",
+                         item_indexL, (int)lockedB);
+        }
+    }
+}
+
+static void ProbeCompLayers(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_LayerSuite9* layerP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id,
+    AEGP_CompH compH,
+    long item_indexL);
+
+/* Read-only comp-detail getters for one comp item (Issue #64).
+   compP is the AEGP_CompSuite13 table; compH is the opaque comp
+   handle returned by AEGP_GetCompFromItem (borrowed — never freed).
+   Every call is op-recorded; per-call failures are logged and
+   skipped, never aborting the item walk. */
+static void ProbeCompDetails(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_CompSuite13* compP,
+    const AEGP_LayerSuite9* layerP,   /* NULL when suite unavailable */
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id,
+    AEGP_ItemH itemH,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    AEGP_CompH compH = NULL;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    err = compP->AEGP_GetCompFromItem(itemH, &compH);
+    OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompFromItem", (long)err, idx);
+    if (err != A_Err_NONE || !compH)
+    {
+        LogFormatted(utilP, "project.items[%ld].comp: unavailable err=%ld",
+                     item_indexL, (long)err);
+        return;
+    }
+    LogFormatted(utilP, "project.items[%ld].comp=present", item_indexL);
+
+    {
+        AEGP_ItemH backH = NULL;
+        err = compP->AEGP_GetItemFromComp(compH, &backH);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetItemFromComp", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.itemFromComp=%s",
+                         item_indexL, backH ? "present" : "none");
+        }
+    }
+    {
+        A_FpLong fps = 0;
+        err = compP->AEGP_GetCompFramerate(compH, &fps);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompFramerate", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.fps=%g",
+                         item_indexL, fps);
+        }
+    }
+    {
+        A_Time t = {0, 0};
+        err = compP->AEGP_GetCompFrameDuration(compH, &t);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompFrameDuration", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.frameDuration=%ld/%lu",
+                         item_indexL, (long)t.value, (unsigned long)t.scale);
+        }
+    }
+    {
+        AEGP_DownsampleFactor dsf;
+        dsf.xS = 0; dsf.yS = 0;
+        err = compP->AEGP_GetCompDownsampleFactor(compH, &dsf);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.downsample=%dx%d",
+                         item_indexL, (int)dsf.xS, (int)dsf.yS);
+        }
+    }
+    {
+        AEGP_ColorVal bg;
+        memset(&bg, 0, sizeof(bg));
+        err = compP->AEGP_GetCompBGColor(compH, &bg);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompBGColor", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP,
+                         "project.items[%ld].comp.bgColor a=%g r=%g g=%g b=%g",
+                         item_indexL, bg.alphaF, bg.redF, bg.greenF, bg.blueF);
+        }
+    }
+    {
+        AEGP_CompFlags flags = 0;
+        err = compP->AEGP_GetCompFlags(compH, &flags);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompFlags", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.flags=%ld",
+                         item_indexL, (long)flags);
+        }
+    }
+    {
+        A_Boolean shownB = FALSE;
+        err = compP->AEGP_GetShowLayerNameOrSourceName(compH, &shownB);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.showLayerNames=%d",
+                         item_indexL, (int)shownB);
+        }
+    }
+    {
+        A_Boolean shownB = FALSE;
+        err = compP->AEGP_GetShowBlendModes(compH, &shownB);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetShowBlendModes", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.showBlendModes=%d",
+                         item_indexL, (int)shownB);
+        }
+    }
+    {
+        A_Ratio angle = {0, 0}, phase = {0, 0};
+        err = compP->AEGP_GetCompShutterAnglePhase(compH, &angle, &phase);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP,
+                         "project.items[%ld].comp.shutterAngle=%ld/%lu phase=%ld/%lu",
+                         item_indexL, (long)angle.num, (unsigned long)angle.den,
+                         (long)phase.num, (unsigned long)phase.den);
+        }
+    }
+    {
+        /* Shutter frame range evaluated at comp time zero. */
+        A_Time at = {0, 30};
+        A_Time start = {0, 0}, duration = {0, 0};
+        err = compP->AEGP_GetCompShutterFrameRange(compH, &at, &start, &duration);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompShutterFrameRange",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP,
+                         "project.items[%ld].comp.shutterRange start=%ld/%lu duration=%ld/%lu",
+                         item_indexL, (long)start.value, (unsigned long)start.scale,
+                         (long)duration.value, (unsigned long)duration.scale);
+        }
+    }
+    {
+        A_long samplesL = 0;
+        err = compP->AEGP_GetCompSuggestedMotionBlurSamples(compH, &samplesL);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.mbSamples=%ld",
+                         item_indexL, (long)samplesL);
+        }
+    }
+    {
+        A_long samplesL = 0;
+        err = compP->AEGP_GetCompMotionBlurAdaptiveSampleLimit(compH, &samplesL);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.mbAdaptiveLimit=%ld",
+                         item_indexL, (long)samplesL);
+        }
+    }
+    {
+        A_Time t = {0, 0};
+        err = compP->AEGP_GetCompWorkAreaStart(compH, &t);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.workAreaStart=%ld/%lu",
+                         item_indexL, (long)t.value, (unsigned long)t.scale);
+        }
+    }
+    {
+        A_Time t = {0, 0};
+        err = compP->AEGP_GetCompWorkAreaDuration(compH, &t);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.workAreaDuration=%ld/%lu",
+                         item_indexL, (long)t.value, (unsigned long)t.scale);
+        }
+    }
+    {
+        A_Time t = {0, 0};
+        err = compP->AEGP_GetCompDisplayStartTime(compH, &t);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.displayStart=%ld/%lu",
+                         item_indexL, (long)t.value, (unsigned long)t.scale);
+        }
+    }
+    {
+        A_Boolean dropB = FALSE;
+        err = compP->AEGP_GetCompDisplayDropFrame(compH, &dropB);
+        OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
+                  (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].comp.displayDropFrame=%d",
+                         item_indexL, (int)dropB);
+        }
+    }
+
+    if (layerP != NULL)
+    {
+        ProbeCompLayers(utilP, layerP, memP, plugin_id, compH, item_indexL);
+    }
+}
+
+
+/* Read-only layer enumeration + per-layer getters for one comp
+   (Issue #64 layer slice). layerH values are opaque borrowed handles —
+   never freed. Every call is op-recorded; per-call failures are
+   logged and skipped. Runs only when the Layer suite was acquired
+   and its entries validated; suite-level failure is non-fatal. */
+static void ProbeCompLayers(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_LayerSuite9* layerP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id,
+    AEGP_CompH compH,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    A_long num_layersL = 0;
+    A_long li;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    err = layerP->AEGP_GetCompNumLayers(compH, &num_layersL);
+    OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetCompNumLayers", (long)err, idx);
+    if (err != A_Err_NONE)
+    {
+        LogFormatted(utilP, "project.items[%ld].comp.numLayers err=%ld",
+                     item_indexL, (long)err);
+        return;
+    }
+    LogFormatted(utilP, "project.items[%ld].comp.numLayers=%ld",
+                 item_indexL, num_layersL);
+
+    for (li = 0; li < num_layersL; li++)
+    {
+        AEGP_LayerH layerH = NULL;
+        char lidx[48];
+        snprintf(lidx, sizeof(lidx), " i=%ld l=%ld", item_indexL, (long)li);
+        lidx[sizeof(lidx) - 1] = '\0';
+
+        err = layerP->AEGP_GetCompLayerByIndex(compH, li, &layerH);
+        OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
+                  (long)err, lidx);
+        if (err != A_Err_NONE || !layerH)
+        {
+            LogFormatted(utilP,
+                         "project.items[%ld].comp.layers[%ld]: unavailable err=%ld",
+                         item_indexL, li, (long)err);
+            continue;
+        }
+
+        {
+            A_long layer_indexL = -1;
+            err = layerP->AEGP_GetLayerIndex(layerH, &layer_indexL);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerIndex",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].index=%ld",
+                             item_indexL, li, layer_indexL);
+            }
+        }
+        {
+            AEGP_MemHandle nameH = NULL;
+            AEGP_MemHandle srcH = NULL;
+            err = layerP->AEGP_GetLayerName(plugin_id, layerH, &nameH, &srcH);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerName",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                char label[96];
+                snprintf(label, sizeof(label),
+                         "project.items[%ld].comp.layers[%ld].name", item_indexL, (long)li);
+                label[sizeof(label) - 1] = '\0';
+                LogMemHandleUtf16(utilP, memP, label, nameH);
+                snprintf(label, sizeof(label),
+                         "project.items[%ld].comp.layers[%ld].sourceName", item_indexL, (long)li);
+                label[sizeof(label) - 1] = '\0';
+                LogMemHandleUtf16(utilP, memP, label, srcH);
+            }
+        }
+        {
+            AEGP_LayerFlags flags = 0;
+            err = layerP->AEGP_GetLayerFlags(layerH, &flags);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerFlags",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].flags=%ld",
+                             item_indexL, li, (long)flags);
+            }
+        }
+        {
+            AEGP_LayerQuality quality = AEGP_LayerQual_NONE;
+            err = layerP->AEGP_GetLayerQuality(layerH, &quality);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerQuality",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].quality=%d",
+                             item_indexL, li, (int)quality);
+            }
+        }
+        {
+            AEGP_ObjectType obj = AEGP_ObjectType_NONE;
+            err = layerP->AEGP_GetLayerObjectType(layerH, &obj);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].objectType=%ld",
+                             item_indexL, li, (long)obj);
+            }
+        }
+        {
+            A_Boolean is3dB = FALSE;
+            err = layerP->AEGP_IsLayer3D(layerH, &is3dB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayer3D",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].is3D=%d",
+                             item_indexL, li, (int)is3dB);
+            }
+        }
+        {
+            A_Boolean is2dB = FALSE;
+            err = layerP->AEGP_IsLayer2D(layerH, &is2dB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayer2D",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].is2D=%d",
+                             item_indexL, li, (int)is2dB);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = layerP->AEGP_GetLayerCurrentTime(layerH,
+                                                   AEGP_LTimeMode_CompTime, &t);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].currentTime=%ld/%lu",
+                             item_indexL, li, (long)t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = layerP->AEGP_GetLayerInPoint(layerH,
+                                               AEGP_LTimeMode_CompTime, &t);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].inPoint=%ld/%lu",
+                             item_indexL, li, (long)t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            A_Time t = {0, 0};
+            err = layerP->AEGP_GetLayerDuration(layerH,
+                                                AEGP_LTimeMode_CompTime, &t);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerDuration",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].duration=%ld/%lu",
+                             item_indexL, li, (long)t.value,
+                             (unsigned long)t.scale);
+            }
+        }
+        {
+            AEGP_LayerIDVal idv = AEGP_LayerIDVal_NONE;
+            err = layerP->AEGP_GetLayerID(layerH, &idv);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerID",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].id=%ld",
+                             item_indexL, li, (long)idv);
+            }
+        }
+        {
+            AEGP_LabelID label = 0;
+            err = layerP->AEGP_GetLayerLabel(layerH, &label);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerLabel",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].label=%d",
+                             item_indexL, li, (int)label);
+            }
+        }
+        {
+            AEGP_LayerSamplingQuality sq = 0;
+            err = layerP->AEGP_GetLayerSamplingQuality(layerH, &sq);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].samplingQuality=%d",
+                             item_indexL, li, (int)sq);
+            }
+        }
+        {
+            A_long src_idL = 0;
+            err = layerP->AEGP_GetLayerSourceItemID(layerH, &src_idL);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].sourceItemID=%ld",
+                             item_indexL, li, src_idL);
+            }
+        }
+        {
+            AEGP_CompH parentH = NULL;
+            err = layerP->AEGP_GetLayerParentComp(layerH, &parentH);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetLayerParentComp",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].parentComp=%s",
+                             item_indexL, li, parentH ? "present" : "none");
+            }
+        }
+        {
+            A_Boolean onB = FALSE;
+            err = layerP->AEGP_IsLayerVideoReallyOn(layerH, &onB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].videoOn=%d",
+                             item_indexL, li, (int)onB);
+            }
+        }
+        {
+            A_Boolean onB = FALSE;
+            err = layerP->AEGP_IsLayerAudioReallyOn(layerH, &onB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].audioOn=%d",
+                             item_indexL, li, (int)onB);
+            }
+        }
+        {
+            A_Boolean hasB = FALSE;
+            err = layerP->AEGP_DoesLayerHaveTrackMatte(layerH, &hasB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].hasTrackMatte=%d",
+                             item_indexL, li, (int)hasB);
+            }
+        }
+        {
+            A_Boolean isB = FALSE;
+            err = layerP->AEGP_IsLayerUsedAsTrackMatte(layerH, TRUE, &isB);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].isTrackMatte=%d",
+                             item_indexL, li, (int)isB);
+            }
+        }
+        {
+            AEGP_LayerH matteH = NULL;
+            err = layerP->AEGP_GetTrackMatteLayer(layerH, &matteH);
+            OpRecordV(utilP, "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
+                      (long)err, lidx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project.items[%ld].comp.layers[%ld].trackMatteLayer=%s",
+                             item_indexL, li, matteH ? "present" : "none");
+            }
+        }
+    }
+}
+
+/* Most-recently-used comp, once per probe run (app-level). A NULL
+   comp is a normal state (no comp has been opened this session). */
+static void ProbeMostRecentComp(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_CompSuite13* compP)
+{
+    AEGP_CompH compH = NULL;
+    A_Err err = compP->AEGP_GetMostRecentlyUsedComp(&compH);
+    OpRecordV(utilP, "AEGP_CompSuite13.AEGP_GetMostRecentlyUsedComp",
+              (long)err, err == A_Err_NONE ? (compH ? " hasComp=1" : " hasComp=0") : NULL);
+    if (err != A_Err_NONE)
+    {
+        LogFormatted(utilP, "AEGP_GetMostRecentlyUsedComp err=%ld", (long)err);
+        return;
+    }
+    LogFormatted(utilP, "app.mruComp=%s", compH ? "present" : "none");
+}
+
+/* Extended read-only metadata for one top-level item (Issue #63):
+   type, name, id, flags, selection, label, duration/current time,
+   dimensions, pixel aspect, parent folder, comment, and — when the
+   Item View suite is available — the MRU view's read-only getters.
+   Every call is op-recorded; per-call failures are logged and
+   skipped, never aborting the walk. */
+static void ProbeNamedItem(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ItemSuite9* itemP,
+    const AEGP_MemorySuite1* memP,
+    const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
+    const AEGP_CompSuite13* compP,        /* NULL when suite unavailable */
+    const AEGP_LayerSuite9* layerP,       /* NULL when suite unavailable */
+    AEGP_PluginID plugin_id,
+    AEGP_ItemH itemH,
+    long item_indexL)
+{
+    char idx[32];
+    A_Err err;
+    AEGP_ItemType type = AEGP_ItemType_NONE;
+    snprintf(idx, sizeof(idx), " i=%ld", item_indexL);
+    idx[sizeof(idx) - 1] = '\0';
+
+    err = itemP->AEGP_GetItemType(itemH, &type);
+    {
+        char extra[48];
+        if (err == A_Err_NONE)
+        {
+            snprintf(extra, sizeof(extra), " i=%ld value=%d", item_indexL, (int)type);
+        }
+        else
+        {
+            snprintf(extra, sizeof(extra), "%s", idx);
+        }
+        extra[sizeof(extra) - 1] = '\0';
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemType", (long)err, extra);
+    }
+    if (err == A_Err_NONE)
+    {
+        LogFormatted(utilP, "project.items[%ld].type=%d", item_indexL, (int)type);
+        if (item_indexL == 0)
+        {
+            LogFormatted(utilP, "project.items.firstType=%d", (int)type);
+        }
+
+        /* Type name is only meaningful for a successfully queried
+           type; AEGP_ItemType_NONE is not a valid GetTypeName input. */
+        {
+            char type_nameZ[AEGP_MAX_TYPE_NAME_SIZE + 1];
+            memset(type_nameZ, 0, sizeof(type_nameZ));
+            err = itemP->AEGP_GetTypeName(type, type_nameZ);
+            OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetTypeName", (long)err, idx);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP, "project.items[%ld].typeName=%s", item_indexL, type_nameZ);
+            }
+        }
+    }
+
+    {
+        AEGP_MemHandle nameH = NULL;
+        A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr, NULL);
+        if (nerr == A_Err_NONE)
+        {
+            char label[64];
+            snprintf(label, sizeof(label), "project.items[%ld].name", item_indexL);
+            label[sizeof(label) - 1] = '\0';
+            LogMemHandleUtf16(utilP, memP, label, nameH);
+        }
+    }
+
+    {
+        A_long item_idL = 0;
+        err = itemP->AEGP_GetItemID(itemH, &item_idL);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemID", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].id=%ld", item_indexL, (long)item_idL);
+        }
+    }
+    {
+        AEGP_ItemFlags flags = 0;
+        err = itemP->AEGP_GetItemFlags(itemH, &flags);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemFlags", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].flags=%ld", item_indexL, (long)flags);
+        }
+    }
+    {
+        A_Boolean selectedB = FALSE;
+        err = itemP->AEGP_IsItemSelected(itemH, &selectedB);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_IsItemSelected", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].selected=%d", item_indexL, (int)selectedB);
+        }
+    }
+    {
+        AEGP_LabelID label = AEGP_Label_NO_LABEL;
+        err = itemP->AEGP_GetItemLabel(itemH, &label);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemLabel", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].label=%d", item_indexL, (int)label);
+        }
+    }
+    {
+        A_Time duration = {0, 0};
+        err = itemP->AEGP_GetItemDuration(itemH, &duration);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemDuration", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].duration=%ld/%lu",
+                         item_indexL, (long)duration.value, (unsigned long)duration.scale);
+        }
+    }
+    {
+        A_Time current = {0, 0};
+        err = itemP->AEGP_GetItemCurrentTime(itemH, &current);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].currentTime=%ld/%lu",
+                         item_indexL, (long)current.value, (unsigned long)current.scale);
+        }
+    }
+    {
+        A_long widthL = 0, heightL = 0;
+        err = itemP->AEGP_GetItemDimensions(itemH, &widthL, &heightL);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemDimensions", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].dimensions=%ldx%ld",
+                         item_indexL, (long)widthL, (long)heightL);
+        }
+    }
+    {
+        A_Ratio par = {0, 0};
+        err = itemP->AEGP_GetItemPixelAspectRatio(itemH, &par);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].pixelAspect=%ld/%lu",
+                         item_indexL, (long)par.num, (unsigned long)par.den);
+        }
+    }
+    {
+        AEGP_ItemH parentH = NULL;
+        err = itemP->AEGP_GetItemParentFolder(itemH, &parentH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemParentFolder", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].parentFolder=%s",
+                         item_indexL, parentH ? "present" : "none");
+        }
+    }
+    {
+        AEGP_MemHandle commentH = NULL;
+        err = itemP->AEGP_GetItemComment(itemH, &commentH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemComment", (long)err, idx);
+        if (err == A_Err_NONE)
+        {
+            char label[64];
+            snprintf(label, sizeof(label), "project.items[%ld].comment", item_indexL);
+            label[sizeof(label) - 1] = '\0';
+            LogMemHandleUtf16(utilP, memP, label, commentH); /* consumes handle */
+        }
+    }
+
+    /* MRU view slice: only when the Item View suite was acquired and
+       its entries validated. A NULL view is a normal state (item has
+       no open viewer), not an error. */
+    if (itemViewP != NULL)
+    {
+        AEGP_ItemViewP viewP = NULL;
+        err = itemP->AEGP_GetItemMRUView(itemH, &viewP);
+        {
+            char extra[48];
+            if (err == A_Err_NONE)
+            {
+                snprintf(extra, sizeof(extra), "%s hasView=%d", idx, viewP ? 1 : 0);
+            }
+            else
+            {
+                snprintf(extra, sizeof(extra), "%s", idx);
+            }
+            extra[sizeof(extra) - 1] = '\0';
+            OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemMRUView", (long)err, extra);
+        }
+        if (err == A_Err_NONE)
+        {
+            LogFormatted(utilP, "project.items[%ld].mruView=%d",
+                         item_indexL, viewP ? 1 : 0);
+            if (viewP)
+            {
+                ProbeItemViewDetails(utilP, itemViewP, viewP, item_indexL);
+            }
+        }
+    }
+
+    /* Comp slice (Issue #64): only for items whose type query
+       succeeded as COMP and only when the comp suite is usable. */
+    if (compP != NULL && type == AEGP_ItemType_COMP)
+    {
+        ProbeCompDetails(utilP, compP, layerP, memP, plugin_id, itemH, item_indexL);
+    }
+}
+
 /* Walk the top-level project item list read-only: count items, log the
-   type and (up to MAX_ITEM_NAMES) names of the first items. */
+   type and (up to MAX_ITEM_NAMES) names plus extended metadata of
+   the first items. */
 static void ProbeProjectItems(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ItemSuite9* itemP,
     const AEGP_MemorySuite1* memP,
+    const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
+    const AEGP_CompSuite13* compP,        /* NULL when suite unavailable */
+    const AEGP_LayerSuite9* layerP,       /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     AEGP_ProjectH projectH)
 {
@@ -567,30 +1393,9 @@ static void ProbeProjectItems(
 
     while (itemH && count < MAX_ITEMS_SCANNED)
     {
-        AEGP_ItemType type = AEGP_ItemType_NONE;
-
-        if (named == 0)
-        {
-            A_Err terr = itemP->AEGP_GetItemType(itemH, &type);
-            {
-                char extra[32];
-                snprintf(extra, sizeof(extra), " value=%d", (int)type);
-                extra[sizeof(extra) - 1] = '\0';
-                OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemType", (long)terr, extra);
-            }
-            LogFormatted(utilP, "project.items.firstType=%d", (int)type);
-        }
         if (named < MAX_ITEM_NAMES)
         {
-            AEGP_MemHandle nameH = NULL;
-            A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
-            OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr, NULL);
-            if (nerr == A_Err_NONE)
-            {
-                char label[64];
-                snprintf(label, sizeof(label), "project.items[%ld].name", (long)named);
-                LogMemHandleUtf16(utilP, memP, label, nameH);
-            }
+            ProbeNamedItem(utilP, itemP, memP, itemViewP, compP, layerP, plugin_id, itemH, named);
             named++;
         }
         count++;
@@ -610,6 +1415,41 @@ static void ProbeProjectItems(
                  (count >= MAX_ITEMS_SCANNED) ? " (capped)" : "");
 }
 
+/* Active-item query, once per probe run (app-level, not per-project).
+   A NULL item is a normal state. When present, its name is resolved
+   through the same bounded mem-handle plumbing as item names. */
+static void ProbeActiveItem(
+    const AEGP_UtilitySuite6* utilP,
+    const AEGP_ItemSuite9* itemP,
+    const AEGP_MemorySuite1* memP,
+    AEGP_PluginID plugin_id)
+{
+    AEGP_ItemH itemH = NULL;
+    A_Err err = itemP->AEGP_GetActiveItem(&itemH);
+    OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetActiveItem", (long)err,
+              err == A_Err_NONE ? (itemH ? " hasItem=1" : " hasItem=0") : NULL);
+    if (err != A_Err_NONE)
+    {
+        LogFormatted(utilP, "AEGP_GetActiveItem err=%ld", (long)err);
+        return;
+    }
+    if (!itemH)
+    {
+        LogFormatted(utilP, "app.activeItem=none");
+        return;
+    }
+    LogFormatted(utilP, "app.activeItem=present");
+    {
+        AEGP_MemHandle nameH = NULL;
+        A_Err nerr = itemP->AEGP_GetItemName(plugin_id, itemH, &nameH);
+        OpRecordV(utilP, "AEGP_ItemSuite9.AEGP_GetItemName", (long)nerr, NULL);
+        if (nerr == A_Err_NONE)
+        {
+            LogMemHandleUtf16(utilP, memP, "app.activeItem.name", nameH);
+        }
+    }
+}
+
 /* Per-project read-only queries. num_projectsL comes from the caller's
    single AEGP_GetNumProjects call so the count and the iteration agree. */
 static void ProbeProject(
@@ -617,6 +1457,9 @@ static void ProbeProject(
     const AEGP_ProjSuite6* projP,
     const AEGP_ItemSuite9* itemP,
     const AEGP_MemorySuite1* memP,
+    const AEGP_ItemViewSuite2* itemViewP, /* NULL when suite unavailable */
+    const AEGP_CompSuite13* compP,        /* NULL when suite unavailable */
+    const AEGP_LayerSuite9* layerP,       /* NULL when suite unavailable */
     AEGP_PluginID plugin_id,
     A_long num_projectsL)
 {
@@ -693,6 +1536,28 @@ static void ProbeProject(
             LogFormatted(utilP, "project[%ld].bitDepth=%d", i, (int)bit_depth);
         }
 
+        /* Project time display: read-only snapshot of the project's
+           timecode/frames display settings (Issue #63). */
+        {
+            AEGP_TimeDisplay3 time_display;
+            memset(&time_display, 0, sizeof(time_display));
+            err = projP->AEGP_GetProjectTimeDisplay(projectH, &time_display);
+            OpRecordV(utilP, "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", (long)err, NULL);
+            if (err == A_Err_NONE)
+            {
+                LogFormatted(utilP,
+                             "project[%ld].timeDisplay displayMode=%d footageMode=%d "
+                             "dropFrame=%d feetFrames=%d timebase=%d framesPerFoot=%d framesMode=%d",
+                             i, (int)time_display.display_mode,
+                             (int)time_display.footage_display_mode,
+                             (int)time_display.display_dropframeB,
+                             (int)time_display.use_feet_framesB,
+                             (int)time_display.timebaseC,
+                             (int)time_display.frames_per_footC,
+                             (int)time_display.frames_display_mode);
+            }
+        }
+
         /* Project path: empty string for untitled projects; disposed
            through the shared mem-handle plumbing. */
         {
@@ -713,7 +1578,7 @@ static void ProbeProject(
         }
 
         ProbeRootFolderName(utilP, projP, itemP, memP, plugin_id, projectH);
-        ProbeProjectItems(utilP, itemP, memP, plugin_id, projectH);
+        ProbeProjectItems(utilP, itemP, memP, itemViewP, compP, layerP, plugin_id, projectH);
     }
 }
 
@@ -782,13 +1647,20 @@ static A_Boolean ProjEntriesOk(const AEGP_ProjSuite6* p)
     return p && p->AEGP_GetNumProjects && p->AEGP_GetProjectByIndex &&
            p->AEGP_GetProjectName && p->AEGP_GetProjectPath &&
            p->AEGP_ProjectIsDirty && p->AEGP_GetProjectBitDepth &&
-           p->AEGP_GetProjectRootFolder;
+           p->AEGP_GetProjectRootFolder && p->AEGP_GetProjectTimeDisplay;
 }
 
 static A_Boolean ItemEntriesOk(const AEGP_ItemSuite9* i)
 {
     return i && i->AEGP_GetFirstProjItem && i->AEGP_GetNextProjItem &&
-           i->AEGP_GetItemType && i->AEGP_GetItemName;
+           i->AEGP_GetItemType && i->AEGP_GetItemName &&
+           i->AEGP_GetActiveItem && i->AEGP_IsItemSelected &&
+           i->AEGP_GetTypeName && i->AEGP_GetItemID &&
+           i->AEGP_GetItemFlags && i->AEGP_GetItemParentFolder &&
+           i->AEGP_GetItemDuration && i->AEGP_GetItemCurrentTime &&
+           i->AEGP_GetItemDimensions && i->AEGP_GetItemPixelAspectRatio &&
+           i->AEGP_GetItemComment && i->AEGP_GetItemLabel &&
+           i->AEGP_GetItemMRUView;
 }
 
 static A_Boolean MemoryEntriesOk(const AEGP_MemorySuite1* m)
@@ -812,6 +1684,52 @@ static A_Boolean RQItemEntriesOk(const AEGP_RQItemSuite4* r)
            r->AEGP_GetElapsedTime && r->AEGP_GetLogType &&
            r->AEGP_GetNumOutputModulesForRQItem && r->AEGP_GetComment &&
            r->AEGP_GetCompFromRQItem;
+}
+
+/* Item-view slice (Issue #63): only the read-only getters the probe
+   calls are required; like the render-queue slice this is auxiliary
+   evidence — a missing entry degrades the section, not the run. */
+static A_Boolean ItemViewEntriesOk(const AEGP_ItemViewSuite2* v)
+{
+    return v && v->AEGP_GetItemViewPlaybackTime &&
+           v->AEGP_GetItemViewGuidesVisible && v->AEGP_GetItemViewGuidesSnap &&
+           v->AEGP_GetItemViewGuidesLocked;
+}
+
+/* Comp slice (Issue #64): only the read-only entries the probe calls
+   are required; like the render-queue and item-view slices this is
+   auxiliary evidence — a missing entry degrades the section, not
+   the run. */
+static A_Boolean CompEntriesOk(const AEGP_CompSuite13* c)
+{
+    return c && c->AEGP_GetCompFromItem && c->AEGP_GetItemFromComp &&
+           c->AEGP_GetCompDownsampleFactor && c->AEGP_GetCompBGColor &&
+           c->AEGP_GetCompFlags && c->AEGP_GetShowLayerNameOrSourceName &&
+           c->AEGP_GetShowBlendModes && c->AEGP_GetCompFramerate &&
+           c->AEGP_GetCompShutterAnglePhase && c->AEGP_GetCompShutterFrameRange &&
+           c->AEGP_GetCompSuggestedMotionBlurSamples &&
+           c->AEGP_GetCompMotionBlurAdaptiveSampleLimit &&
+           c->AEGP_GetCompWorkAreaStart && c->AEGP_GetCompWorkAreaDuration &&
+           c->AEGP_GetCompDisplayStartTime && c->AEGP_GetCompFrameDuration &&
+           c->AEGP_GetMostRecentlyUsedComp && c->AEGP_GetCompDisplayDropFrame;
+}
+
+/* Layer slice (Issue #64): only the read-only entries the probe calls
+   are required; like the comp slice this is auxiliary evidence — a
+   missing entry degrades the section, not the run. */
+static A_Boolean LayerEntriesOk(const AEGP_LayerSuite9* l)
+{
+    return l && l->AEGP_GetCompNumLayers && l->AEGP_GetCompLayerByIndex &&
+           l->AEGP_GetLayerIndex && l->AEGP_GetLayerName &&
+           l->AEGP_GetLayerFlags && l->AEGP_GetLayerQuality &&
+           l->AEGP_GetLayerObjectType && l->AEGP_IsLayer3D &&
+           l->AEGP_IsLayer2D && l->AEGP_GetLayerCurrentTime &&
+           l->AEGP_GetLayerInPoint && l->AEGP_GetLayerDuration &&
+           l->AEGP_GetLayerID && l->AEGP_GetLayerLabel &&
+           l->AEGP_GetLayerSamplingQuality && l->AEGP_GetLayerSourceItemID &&
+           l->AEGP_GetLayerParentComp && l->AEGP_IsLayerVideoReallyOn &&
+           l->AEGP_IsLayerAudioReallyOn && l->AEGP_DoesLayerHaveTrackMatte &&
+           l->AEGP_IsLayerUsedAsTrackMatte && l->AEGP_GetTrackMatteLayer;
 }
 
 /* Read-only render-queue observation. Every call is op-recorded; the
@@ -968,6 +1886,12 @@ static A_Err ProbeIdleHook(
     const AEGP_MemorySuite1* memP = NULL;
     const AEGP_RenderQueueSuite1* rqP = NULL;
     const AEGP_RQItemSuite4* rqItemP = NULL;
+    const AEGP_ItemViewSuite2* itemViewP = NULL;
+    const AEGP_ItemViewSuite2* usableItemViewP = NULL;
+    const AEGP_CompSuite13* compP = NULL;
+    const AEGP_CompSuite13* usableCompP = NULL;
+    const AEGP_LayerSuite9* layerP = NULL;
+    const AEGP_LayerSuite9* usableLayerP = NULL;
     A_Err first_err = A_Err_NONE;
     A_long num_projectsL = 0;
     const char* reasonZ = NULL;
@@ -1027,6 +1951,12 @@ static A_Err ProbeIdleHook(
         goto done;
     }
     s_abort_loggedB = FALSE;
+
+    /* Native intake (Issue #267 Slice A): opt-in via
+       AE_DEVTOOLS_NATIVE_CHANNEL, off by default. Runs inside the same
+       host-dispatched context with the fingerprint suites already
+       held; it never disturbs the probe trigger state. */
+    NativeIntakeTick(utilP, projP, s_basicP, s_aegp_plugin_id);
 
     /* Stage 2: project-set fingerprint. A failed count query or a
        failed fingerprint component invalidates the stored fingerprint
@@ -1223,10 +2153,61 @@ static A_Err ProbeIdleHook(
             LogLine(utilP, "probe.error: AEGP Render Queue suite unavailable");
         }
 
+        /* Item-view slice (Issue #63): auxiliary viewer-state getters.
+           Acquisition/entry failure is NON-fatal like the render-queue
+           slice — the acquired table is still released in done:. */
+        if (AcquireSuite(s_basicP, utilP, kAEGPItemViewSuite,
+                         kAEGPItemViewSuiteVersion2,
+                         (const void**)&itemViewP) == A_Err_NONE &&
+            ItemViewEntriesOk(itemViewP))
+        {
+            usableItemViewP = itemViewP;
+        }
+        else
+        {
+            LogLine(utilP, "probe.error: AEGP Item View suite unavailable");
+        }
+
+        /* Comp slice (Issue #64): auxiliary read-only comp getters.
+           Acquisition/entry failure is NON-fatal like the item-view
+           slice — the acquired table is still released in done:. */
+        if (AcquireSuite(s_basicP, utilP, kAEGPCompSuite,
+                         kAEGPCompSuiteVersion13,
+                         (const void**)&compP) == A_Err_NONE &&
+            CompEntriesOk(compP))
+        {
+            usableCompP = compP;
+        }
+        else
+        {
+            LogLine(utilP, "probe.error: AEGP Comp suite unavailable");
+        }
+
+        /* Layer slice (Issue #64): auxiliary read-only layer getters
+           inside comps. Same non-fatal degradation model as comp. */
+        if (AcquireSuite(s_basicP, utilP, kAEGPLayerSuite,
+                         kAEGPLayerSuiteVersion9,
+                         (const void**)&layerP) == A_Err_NONE &&
+            LayerEntriesOk(layerP))
+        {
+            usableLayerP = layerP;
+        }
+        else
+        {
+            LogLine(utilP, "probe.error: AEGP Layer suite unavailable");
+        }
+
+        ProbeActiveItem(utilP, itemP, memP, s_aegp_plugin_id);
+        if (usableCompP)
+        {
+            ProbeMostRecentComp(utilP, usableCompP);
+        }
+
         /* num_projectsL == 0 is a NORMAL host state (no project open),
            not an error: ProbeProject logs app.numProjects=0 and skips
            per-project queries. */
-        ProbeProject(utilP, projP, itemP, memP, s_aegp_plugin_id, num_projectsL);
+        ProbeProject(utilP, projP, itemP, memP, usableItemViewP,
+                     usableCompP, usableLayerP, s_aegp_plugin_id, num_projectsL);
 
         LogLine(utilP, "probe.end");
     }
@@ -1237,6 +2218,18 @@ done:
     /* Suite releases are op-recorded too: on probe ticks the mode is
        still DIRECT so they land inside this execution's evidence;
        on quiet ticks they stay buffered and are discarded. */
+    if (layerP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPLayerSuite, kAEGPLayerSuiteVersion9);
+    }
+    if (compP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPCompSuite, kAEGPCompSuiteVersion13);
+    }
+    if (itemViewP)
+    {
+        ReleaseSuiteSafe(s_basicP, utilP, kAEGPItemViewSuite, kAEGPItemViewSuiteVersion2);
+    }
     if (rqItemP)
     {
         ReleaseSuiteSafe(s_basicP, utilP, kAEGPRQItemSuite, kAEGPRQItemSuiteVersion4);
@@ -1297,6 +2290,11 @@ extern "C" __attribute__((visibility("default"))) A_Err AEProbePluginEntry(
     s_count_err_loggedB = FALSE;
     s_fp_err_loggedB = FALSE;
     s_abort_loggedB = FALSE;
+
+    /* Native intake channel (Issue #267): enabled only when the operator
+       exports AE_DEVTOOLS_NATIVE_CHANNEL pointing at a prepared channel
+       root; absent/empty disables intake entirely. */
+    NativeIntakeConfigure(getenv("AE_DEVTOOLS_NATIVE_CHANNEL"));
 
     /* Entry-phase op records are buffered and flushed once at the end
        so a failed utility-suite acquisition (no log sink yet) simply

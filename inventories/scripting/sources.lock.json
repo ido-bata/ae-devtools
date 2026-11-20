@@ -5,38 +5,38 @@
     {
       "key": "adobe-automation",
       "tier": "adobe-official",
-      "revision": "http-2026-11-12",
+      "revision": "http-2026-11-20",
       "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/automate-in-after-effects/automate-animation/automation.html",
-      "sha256": "9c7da025f94f520b0b37004bb6b0de3cd15c01414f88dde3b757ad9a1c7e6855",
-      "bytes": 413151,
-      "fetchedAt": "2026-11-12"
+      "sha256": "584baf42ee0d9da37cbb5c966754e539b12dd9b940fd10050096294944057efc",
+      "bytes": 413079,
+      "fetchedAt": "2026-11-20"
     },
     {
       "key": "adobe-legacy-extendscript-engine",
       "tier": "adobe-official",
-      "revision": "http-2026-11-12",
+      "revision": "http-2026-11-20",
       "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/work-with-expressions/expression-basics/legacy-and-extend-script-engine.html",
-      "sha256": "4d5bc0adddaeb913a795c22869bcbfd6173d0acbc6c30ffb2f7e8fc8abfc3d7e",
-      "bytes": 478305,
-      "fetchedAt": "2026-11-12"
+      "sha256": "39e1edf4161c42dc27a9f3dbdef79ba3914f9f62d220c94d4c60bc7088c28aac",
+      "bytes": 478397,
+      "fetchedAt": "2026-11-20"
     },
     {
       "key": "adobe-scripts",
       "tier": "adobe-official",
-      "revision": "http-2026-11-12",
+      "revision": "http-2026-11-20",
       "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/automate-in-after-effects/automate-animation/scripts.html",
-      "sha256": "d4638b86f6742ca5a517569a110ce1d6ffaa018f299371c1f8f42b7733dfe8ce",
-      "bytes": 445045,
-      "fetchedAt": "2026-11-12"
+      "sha256": "51d0e3cfb4fa451835677aba1b77e0bf1501b433807f705795a34ccc5db136da",
+      "bytes": 444979,
+      "fetchedAt": "2026-11-20"
     },
     {
       "key": "adobe-variable-font-axes",
       "tier": "adobe-official",
-      "revision": "http-2026-11-12",
+      "revision": "http-2026-11-20",
       "fetchUrl": "https://helpx.adobe.com/after-effects/desktop/variable-font-axes/work-with-variable-font-axes/scripting-support-for-variable-font-axes.html",
-      "sha256": "35bd372cc05adde0755bd3dd662c3e6ea97c7a63cbd2d0ead7ed27f6f7d7eec1",
-      "bytes": 428722,
-      "fetchedAt": "2026-11-12"
+      "sha256": "0a8dde5fffa93f9b50265c534fdc76140549711dfbd7a81997aadf928d46aa32",
+      "bytes": 428584,
+      "fetchedAt": "2026-11-20"
     },
     {
       "key": "dfad",

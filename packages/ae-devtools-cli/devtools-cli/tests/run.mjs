@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
-  attachEvidence, ATTESTATION_SOURCE,
+  attachEvidence, pidAlive, processStartStampSync, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
 import { failureOutcome, isFailureResult, normalizedOutcome, isUnknownOutcome } from "../../dev-loop/outcomes.mjs";
 import { parseArgs, arg as argvArg, hasFlag } from "../argv.mjs";
@@ -56,9 +56,10 @@ t("doctor reports environment without contacting AE", () => {
   assert.equal(typeof r.a8nTransportPresent, "boolean");
 });
 
-t("discover lists registry ops, honest evidence", () => {
+t("discover lists registry ops, honest evidence", async () => {
   const r = run(["discover"]).body;
-  assert.equal(r.operationCount, 20);
+  const { OPERATIONS } = await import("../../scripting-adapters/registry.mjs");
+  assert.equal(r.operationCount, OPERATIONS.length);
   assert.equal(r.evidence.realHostVerified, 0);
 });
 
@@ -67,6 +68,29 @@ t("inspect returns metadata without executing", () => {
   assert.equal(r.status, "ok");
   assert.equal(r.evidenceLevel, "metadata only — nothing executed");
   assert.equal(run(["inspect", "no.such"]).body.status, "unknown-operation");
+});
+
+t("consent audit records approved and refused decisions (Issue #277)", () => {
+  const auditDir = mkdtempSync(join(tmpdir(), "ca-cli-"));
+  const env = { AE_DEVTOOLS_CONSENT_AUDIT_DIR: auditDir };
+  run(["execute", "read.projectSummary", "--session", "fake", "--consent", "grant"], env);
+  run(["execute", "read.projectSummary", "--session", "fake", "--consent", "deny"], env);
+  const file = join(auditDir, "consent-audit.jsonl");
+  assert.ok(existsSync(file), "audit file must exist after dispatch commands");
+  const records = readFileSync(file, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  assert.equal(records.length, 2);
+  assert.deepEqual(records.map((r) => r.decision), ["approved", "refused"]);
+  for (const r of records) {
+    assert.equal(r.schema, "ae-devtools.consent-audit/v1");
+    assert.equal(r.opId, "read.projectSummary");
+    assert.match(r.scopeHash, /^[0-9a-f]{64}$/);
+    assert.match(r.dispatchKey, /^[0-9a-f]{64}$/);
+    assert.ok(!("reason" in r) && !("source" in r) && !("args" in r), "audit must not carry reason/source/args");
+  }
+  // Read-only commands must not mint the audit directory.
+  const emptyDir = mkdtempSync(join(tmpdir(), "ca-cli-empty-"));
+  run(["doctor"], { AE_DEVTOOLS_CONSENT_AUDIT_DIR: join(emptyDir, "audit") });
+  assert.ok(!existsSync(join(emptyDir, "audit")), "doctor must not create the audit dir");
 });
 
 t("execute on fake session completes and verify reads back", () => {
@@ -878,6 +902,32 @@ await at("guard: reap passes the quit target via osascript argv, never interpola
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---- pidAlive canonical semantics (Issue #253 item 2) ----
+// The guard and the recovery orchestrator share this probe; the pinned
+// rule is "alive only on kill-success or EPERM" — stricter than
+// ae-a8n's ESRCH-only defaultPidAlive. A non-ESRCH kill error must NOT
+// count as alive: unproven liveness is the unsafe direction for
+// quit/recovery authorization.
+
+t("guard: pidAlive — success and EPERM alive, ESRCH/other errors dead", () => {
+  assert.equal(pidAlive(1234, () => {}), true);
+  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "EPERM"; throw e; }), true);
+  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "ESRCH"; throw e; }), false);
+  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "EINVAL"; throw e; }), false);
+  assert.equal(pidAlive(1234, () => { throw new Error("no code"); }), false);
+  assert.equal(pidAlive(0, () => {}), false);
+  assert.equal(pidAlive(-1, () => {}), false);
+  assert.equal(pidAlive(1.5, () => {}), false);
+  assert.equal(pidAlive("1234", () => {}), false);
+});
+
+t("guard: processStartStampSync returns trimmed stamp or null", () => {
+  const stamp = processStartStampSync(1, () => "  Mon Jan  1 00:00:00 2024\n");
+  assert.equal(stamp, "Mon Jan  1 00:00:00 2024");
+  assert.equal(processStartStampSync(1, () => "   \n"), null);
+  assert.equal(processStartStampSync(1, () => { throw new Error("no ps"); }), null);
 });
 
 t("diagnose refuses marker-lookup traversal ids", () => {

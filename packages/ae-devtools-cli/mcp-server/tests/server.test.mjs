@@ -129,11 +129,11 @@ test("initialize falls back to latest supported protocol version", async () => {
   await c.server.close();
 });
 
-test("tools/list exposes exactly the four dev-loop tools", async () => {
+test("tools/list exposes the dev-loop tools including ae_session", async () => {
   const c = makeClient();
   const res = await c.request("tools/list");
   const names = res.result.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_verify"]);
+  assert.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_session", "ae_verify"]);
   for (const t of res.result.tools) {
     assert.equal(t.inputSchema.type, "object");
     assert.ok(t.description.length > 0);
@@ -180,7 +180,8 @@ test("ae_discover lists ops with honest evidence; opens no session", async () =>
     name: "ae_discover", arguments: {},
   }));
   assert.equal(isError, false);
-  assert.equal(payload.operationCount, 20);
+  const { OPERATIONS } = await import("../../scripting-adapters/registry.mjs");
+  assert.equal(payload.operationCount, OPERATIONS.length);
   assert.equal(payload.evidence.realHostVerified, 0);
   assert.equal(payload.evidenceLevel, "registry metadata — no dispatch");
   assert.equal(calls.count, 0, "discover must not open a session");
@@ -201,6 +202,53 @@ test("ae_inspect returns metadata without executing or opening a session", async
   }));
   assert.equal(bad.payload.status, "unknown-operation");
   assert.equal(calls.count, 0);
+  await c.server.close();
+});
+
+test("ae_session reports closed state without opening a session (CAP049)", async () => {
+  const { factory, calls } = countingSessionFactory();
+  const c = makeClient({ sessionFactory: factory });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_session", arguments: {},
+  }));
+  assert.equal(isError, false);
+  assert.equal(payload.session.state, "closed");
+  assert.equal(payload.session.kind, "fake");
+  assert.equal(payload.session.evidenceLevel, undefined, "closed state must not fabricate evidence");
+  assert.equal(payload.session.pin, undefined);
+  assert.equal(payload.api.mcp, "ae-devtools.mcp/v1");
+  assert.equal(payload.api.devLoop, "ae-devtools.dev-loop/v1");
+  assert.equal(calls.count, 0, "ae_session must never open a session");
+  await c.server.close();
+});
+
+test("ae_session reports the open session's honest evidence after dispatch", async () => {
+  const c = makeClient();
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_session", arguments: {},
+  }));
+  assert.equal(payload.session.state, "open");
+  assert.equal(payload.session.kind, "fake");
+  assert.equal(payload.session.evidenceLevel, "fake/mock only");
+  assert.ok(payload.session.pin && typeof payload.session.pin === "object");
+  await c.server.close();
+});
+
+test("ae_session reports failed state after a rejected session open", async () => {
+  const c = makeClient({ sessionFactory: async () => { throw new Error("open boom"); } });
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_session", arguments: {},
+  }));
+  assert.equal(payload.session.state, "failed");
+  assert.equal(payload.session.evidenceLevel, undefined);
   await c.server.close();
 });
 
@@ -562,7 +610,7 @@ test("spawned server over real stdio: initialize → tools → execute → verif
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
 
     const list = await request("tools/list");
-    assert.equal(list.result.tools.length, 4);
+    assert.equal(list.result.tools.length, 5);
 
     const ex = await request("tools/call", {
       name: "ae_execute",

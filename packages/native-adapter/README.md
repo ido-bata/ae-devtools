@@ -39,8 +39,8 @@ treatable as callable. The coverage matrix itself records
 line up" — it is not authorization and not behavioural proof.
 
 **Dispatchable operation count today: 0.** Of the 933 registry entries,
-34 are `implemented-unverified` (NativeProbe compiles on macOS arm64;
-no authorized AE session has loaded it), 876 are `inventory-only`
+70 are `implemented-unverified` (NativeProbe compiles on macOS arm64;
+no authorized AE session has loaded it), 840 are `inventory-only`
 (reporting metadata, never callable), and 23 are
 `unsupported-or-unknown`.
 

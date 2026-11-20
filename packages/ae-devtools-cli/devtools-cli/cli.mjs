@@ -56,6 +56,7 @@
  * 130/143 interrupted by SIGINT/SIGTERM.
  */
 import { existsSync, writeFileSync, readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -63,14 +64,21 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "./argv.mjs";
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
-import { closeSessionWithTimeout, DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
+import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { aeDevtoolsSourceRef } from "./real-run-kit.mjs";
+import { createConsentAudit } from "../trusted-execution/consent-audit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EXP = join(HERE, "..");
+
+// Consent-decision audit (Issue #277, CAP052): durable append-only
+// JSONL outside the runs dir — run markers get reaped, audit history
+// must not. Env override exists for tests; default is per-user tmp.
+const CONSENT_AUDIT_DIR = process.env.AE_DEVTOOLS_CONSENT_AUDIT_DIR
+  ?? join(tmpdir(), "ae-devtools-consent-audit");
 
 /** Write the JSON result. Never exits — callers decide the exit code. */
 function emit(obj) {
@@ -163,14 +171,11 @@ function makeCleanup(state, flags) {
       const cleanup = { attempted: false, ok: null, error: null, result: null };
       if (state.session) {
         // Bounded close is shared with MCP/VSCode
-        // (dev-loop/session-close.mjs, Issue #196).
-        // A bare `--close-timeout-ms` parses to boolean true; Number(true)
-        // is 1 — guard on string + finite + positive like the MCP path.
-        const closeTimeoutRaw = flags["close-timeout-ms"];
-        const closeTimeoutNum = typeof closeTimeoutRaw === "string" ? Number(closeTimeoutRaw) : NaN;
-        const timeoutMs = Number.isFinite(closeTimeoutNum) && closeTimeoutNum > 0
-          ? closeTimeoutNum
-          : DEFAULT_CLOSE_TIMEOUT_MS;
+        // (dev-loop/session-close.mjs, Issues #196/#253). The flag
+        // parse rule lives in parseCloseTimeoutMs — a bare
+        // `--close-timeout-ms` parses to boolean true and must never
+        // become a 1ms bound.
+        const timeoutMs = parseCloseTimeoutMs(flags["close-timeout-ms"]);
         Object.assign(cleanup, await closeSessionWithTimeout(state.session, { timeoutMs }));
       }
       if (state.guard) {
@@ -372,11 +377,15 @@ async function main() {
         recordRequestEvent(RUNS_DIR, guard.runId, {
           requestId, method: opId ?? flags["read-op"] ?? "read.projectSummary", event: "dispatched",
         });
+        // Created lazily per dispatch command: read-only commands
+        // (doctor/runs/diagnose) must not mint an audit directory.
+        const consentAudit = createConsentAudit({ dir: CONSENT_AUDIT_DIR });
         const shared = {
           runner: state.session.runner,
           pin: state.session.pin,
           projectIdentity: "cli-devtools",
           consentProvider: consentProviderFor(flags),
+          consentAudit,
           trustedScriptOptIn: true,
           scriptProvenance: "devtools-cli",
           requestId,

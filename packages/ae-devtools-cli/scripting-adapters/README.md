@@ -35,6 +35,27 @@ After Effects Scripting API — per the issue, NOT per-symbol MCP tools.
   uses matchName (`ADBE ...`) — `typeName`/display names are localized
   and never branched on; results serialize via a hand-rolled ES3
   serializer (host `JSON` is not guaranteed).
+- Existing-item selector args (`compName`, item-target `name` such as
+  `item.remove`/`item.setLabel`/`read.itemDetail`, `footageName`, and
+  folder selectors `parentFolder`) accept either a legacy name string
+  or an `itemRef` object `{id?, name?, path?, project?}`. `id` uses
+  `Project.itemByID` (project-local persistent id); `name`+`path`
+  resolves a unique direct child under a folder path from
+  `Project.rootFolder`; `id` with `name`/`path`/`project` treats them
+  as consistency checks (`project` compares `Project.file.fsName` and
+  requires a saved project). Legacy strings keep project-wide
+  name+type lookup and still refuse same-name ambiguity. `id` is only
+  meaningful inside the project bound by the dispatch's
+  `projectIdentity`/session pin — the selector does not prove
+  cross-project identity by itself, and unsaved projects have no
+  `Project.file` to check against.
+- Host-fidelity audit (Issue #300): `KeyframeEase` is modeled as a
+  constructor with `influence` in `[0.1..100]` and temporal-ease arrays
+  sized to property dimensions; `AVLayer.canSetTimeRemapEnabled` is a
+  read-only Boolean property; `AVLayer.replaceSource` accepts any
+  `AVItem` (`CompItem`/`FootageItem`) and requires `fixExpressions`;
+  `AVLayer.isTrackMatte` is a read-side Boolean. Enum numeric values and
+  deeper usage/cycle/version rules remain fake-level approximations.
 - Adapter-level `implemented` ≠ verified: all ops are fake-level until
   disposable-project real-host tests run (Issue #15 acceptance —
   BLOCKED on owned AE session).

@@ -29,14 +29,16 @@
  */
 import { createInterface } from "node:readline";
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
-import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
+import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
+import { lazyConsentAudit } from "../trusted-execution/consent-audit.mjs";
 
 export const SERVER_NAME = "ae-devtools-mcp";
 // Single source of truth for the published version — avoids the drift
@@ -98,10 +100,22 @@ export function createServer(opts = {}) {
     surface: "mcp", sessionKind, dir: opts.runsDir,
   });
 
+  // Consent-decision audit (Issue #277): lazy so an idle server never
+  // mints the directory; shares the CLI's default location so decisions
+  // correlate across surfaces. opts.consentAudit overrides for tests.
+  const consentAudit = opts.consentAudit !== undefined
+    ? opts.consentAudit
+    : lazyConsentAudit(
+        opts.consentAuditDir
+          ?? process.env.AE_DEVTOOLS_CONSENT_AUDIT_DIR
+          ?? join(tmpdir(), "ae-devtools-consent-audit"),
+      );
+
   // Lazy single-flight session: opened on first dispatch-capable call,
   // shared by every later call, closed by close().
   let sessionPromise = null;
   let resolvedSession = null;
+  let sessionFailed = false;
   const getSession = () => {
     if (!sessionPromise) {
       sessionPromise = Promise.resolve()
@@ -119,9 +133,21 @@ export function createServer(opts = {}) {
             throw e;
           }
         });
+      // Any open failure — including guard.begin() before the try —
+      // settles the peek state to "failed" instead of stuck "opening".
+      sessionPromise.catch(() => { sessionFailed = true; });
     }
     return sessionPromise;
   };
+
+  // Read-only session state for metadata surfaces (ae_session, CAP049):
+  // reports the already-tracked open session without ever triggering
+  // an open itself.
+  const peekSession = () => ({
+    session: resolvedSession,
+    opening: sessionPromise !== null && resolvedSession === null && !sessionFailed,
+    failed: sessionFailed,
+  });
 
   async function close() {
     if (!sessionPromise) return;
@@ -193,9 +219,12 @@ export function createServer(opts = {}) {
           }
           const result = await callTool(name, args, {
             getSession,
+            sessionKind,
+            peekSession,
             // Request lifecycle events land in the a8n run-guard marker
             // when one exists (Issue #198); inert for fake sessions.
             onRequestEvent: (ev) => guard.request(ev),
+            consentAudit,
           });
           return rpcResult(id, result);
         }
@@ -250,11 +279,7 @@ if (isMain) {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
     },
-    closeTimeoutMs: (() => {
-      const raw = flags["close-timeout-ms"];
-      const n = typeof raw === "string" ? Number(raw) : NaN;
-      return Number.isFinite(n) && n > 0 ? n : undefined;
-    })(),
+    closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });
   process.stderr.write(
     `mcp-server: ${SERVER_NAME}@${SERVER_VERSION} schema=${MCP_SCHEMA} session=${sessionKind} ` +

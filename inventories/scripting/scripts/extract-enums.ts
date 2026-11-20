@@ -235,6 +235,28 @@ export function extractEnums(
     const bullets = bulletValueLines(body);
     for (const enumName of declared) {
       const values: EnumValueRecord[] = [];
+      // Fallback source: enum constants qualified inside parameter-table
+      // cells (`| - `CloseOptions.X`: desc |`). Bullet lists cannot see
+      // them, so a declared enum whose bullets yield nothing is rescanned
+      // across the whole chunk for `EnumName.VALUE` mentions.
+      const tableValues = () => {
+        const out: EnumValueRecord[] = [];
+        for (const line of body.split("\n")) {
+          for (const m of line.matchAll(QUALIFIED_ALL)) {
+            if (m[1] !== enumName || !m[2]) continue;
+            if (!/^[A-Z][A-Z0-9_]*$/.test(m[2])) continue;
+            if (out.some((v) => v.value === m[2])) continue;
+            out.push({
+              id: `provisional.ae.scripting.enum.${enumName}.${m[2]}`,
+              enumName,
+              value: m[2],
+              numericValue: numericFrom(line),
+              sourceLine: chunk.startLine,
+            });
+          }
+        }
+        return out;
+      };
       for (const b of bullets) {
         const qualified = QUALIFIED.exec(b.raw);
         if (qualified && qualified[1] === enumName && qualified[2]) {
@@ -258,6 +280,13 @@ export function extractEnums(
           });
         }
       }
+      // Bullets yielded nothing: fall back to `EnumName.VALUE` constants
+      // qualified inside the chunk's parameter/table cells.
+      let fromTable = false;
+      if (values.length === 0) {
+        for (const v of tableValues()) values.push(v);
+        fromTable = values.length > 0;
+      }
       if (values.length === 0) continue;
       const existing = enums.find((e) => e.name === enumName);
       if (existing) {
@@ -271,7 +300,7 @@ export function extractEnums(
           sourceKey: opts.sourceKey,
           url,
           anchor: slugify(h),
-          definition: "typed-bullet-list",
+          definition: fromTable ? "inline-qualified-values" : "typed-bullet-list",
           values,
         });
       }

@@ -42,7 +42,7 @@
  * This is an experiment-level reaper. The durable adopt/resume contract is
  * ae-a8n #108; GUI/modal classification is ae-a8n #109.
  */
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync,
@@ -72,7 +72,18 @@ export const RUNS_DIR = process.env.AE_DEVTOOLS_CLI_RUNS_DIR
  *  not a marker we own and must never reach a path join (Issue #227). */
 export const RUN_ID_RE = /^run-[A-Za-z0-9-]+$/;
 
-/** pid liveness. EPERM means the process exists but is not ours to signal. */
+/**
+ * pid liveness. Canonical rule (Issue #253 item 2): a pid counts as
+ * ALIVE only when kill(pid, 0) succeeds or fails with EPERM (the
+ * process exists but is not ours to signal). ESRCH proves death; ANY
+ * other error (EINVAL, unexpected errno) counts as dead because
+ * liveness is unproven — "dead unless proven alive" is the fail-closed
+ * direction for quit/recovery authorization. This is deliberately
+ * stricter than ae-a8n's defaultPidAlive (ESRCH-only death); the
+ * orchestrator's authorizeRecovery probes and the guard's
+ * reap/listRuns share THIS judgment — the divergence the issue
+ * resolved in favor of session-guard semantics.
+ */
 export function pidAlive(pid, kill = process.kill.bind(process)) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
@@ -88,6 +99,22 @@ export function processStartStamp(pid, exec = execFileAsync) {
   return exec("ps", ["-o", "lstart=", "-p", String(pid)], { timeout: 5_000 })
     .then(({ stdout }) => (stdout ?? "").trim() || null)
     .catch(() => null);
+}
+
+/**
+ * Synchronous variant of processStartStamp for callers that cannot
+ * await (recovery-orchestrator's authorizeRecovery probes are sync).
+ * Same `ps -o lstart=` probe, same null-on-unreadable contract.
+ */
+export function processStartStampSync(pid, exec = execFileSync) {
+  try {
+    const out = exec("ps", ["-o", "lstart=", "-p", String(pid)], {
+      encoding: "utf-8", timeout: 5_000, stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return out.length === 0 ? null : out;
+  } catch {
+    return null;
+  }
 }
 
 function markerPath(dir, runId) {

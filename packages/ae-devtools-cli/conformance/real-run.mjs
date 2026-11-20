@@ -52,7 +52,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { openSliceSession } from "../a8n-transport/session.mjs";
+import { openRealRunSession } from "../dev-loop/real-run-session.mjs";
 import { runVerticalSlice, assertSliceOutcomes } from "../a8n-transport/scenario.mjs";
 import { createJsxRunner } from "../trusted-execution/runner.mjs";
 import { runOperation } from "../scripting-adapters/execute.mjs";
@@ -108,13 +108,23 @@ export async function main() {
   };
 
   let session = null;
+  let guard = null;
   const opResults = {};
   const evalResults = {};
   try {
-    session = await openSliceSession({
-      ...(installDir !== undefined ? { installDir } : {}),
-      workdir: join(workdir, "session"),
+    // Canonical session open + run-guard marker (Issue #252): a killed
+    // driver leaves an attested, reap/recover-visible residue record.
+    // The raw slice handle stays available as `session` for internals.
+    const opened = await openRealRunSession({
+      surface: "conformance-real-run",
+      argv: process.argv.slice(2),
+      sessionOptions: {
+        ...(installDir !== undefined ? { installDir } : {}),
+        workdir: join(workdir, "session"),
+      },
     });
+    guard = opened.guard;
+    session = opened.slice;
     step("session.launch", {
       ok: true,
       aeVersion: session.info?.version ?? null,
@@ -471,6 +481,11 @@ export async function main() {
         };
         step("session.close", { ok: false, message: evidence.close.error });
         evidence.ok = false;
+      }
+      // Settle the run marker with the CLI contract: "closed" removes
+      // it, "close-failed" keeps it as residue (Issue #252).
+      if (guard !== null) {
+        guard.end(evidence.close.quit === true ? "closed" : "close-failed");
       }
       const after = await aeProcessSnapshot(processFragment);
       evidence.aeProcessesAfterClose = after;

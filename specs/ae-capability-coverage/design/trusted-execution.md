@@ -169,3 +169,106 @@ behind ADR-0005 and ae-a8n #97–#99.
 - Fake-host coverage of these rules is `fake/mock only` until real-AE
   evidence exists per OS; Windows stays `UNVERIFIED` until Issue #21's
   gate.
+
+## 8. Native-channel mutation path — concrete design (Issue #318 follow-up)
+
+Design only — nothing in this section is implemented. It fixes how a
+future mutating `NATIVE_INTAKE_OPERATIONS` entry would satisfy §1–§4 on
+the file channel (`contracts/native-channel.md`), reusing guarantees the
+channel already has instead of inventing parallel machinery.
+
+### 8.1 Authorization
+
+- A mutating op enters the allowlist only with a catalog row whose
+  `access` is `write`/`read-write` and a manifest `idempotent` flag —
+  the same §1 preconditions as every write class. Intake membership
+  still never promotes dispatchability.
+- Consent scope = (session pin, operationId, canonical arg hash). On the
+  file channel the pin is already carried: `session.{sessionId,
+  aeVersion, sdkRelease}` is shape-validated today and `channel.json`'s
+  `sessionAeVersion` pin already refuses `WRONG_TARGET` on mismatch —
+  project identity joins the scope via the §7e `aeRefProject` descriptor
+  (index + name + path), which is exactly the corroborated identity a
+  consent must bind to.
+- The arg hash covers the **canonical serialized args object**,
+  including descriptor bytes verbatim — consent issued for descriptor D
+  never covers a mutated D' (same argument-hash rule as §1).
+- `authorizationRef` stays opaque: the plug-in checks presence/shape
+  only; token issuance, storage, and verification are ae-a8n-owned
+  (ADR-0005, ae-a8n #97–#99). The channel cannot prove a consent token
+  is genuine — that boundary is documented, not patched over.
+
+### 8.2 Audit
+
+- The evidence window already brackets every dispatch:
+  `SPBasicSuite.AcquireSuite`/`ReleaseSuite` + resolution records +
+  the op's own `AEGP_*` record in `opCalls`, plus the atomic
+  `*.result.json` artifact and the retained `*.claimed` file. A
+  mutating op adds no new evidence channel — it inherits this trail.
+- `mayHaveMutated` becomes meaningful: read-only paths hardcode `false`;
+  a mutating op sets `true` whenever the outcome cannot prove the host
+  call did not run (§8.3). The field already exists in the result
+  schema — the contract change is semantic, not structural.
+- Request artifacts are retained for reconciliation: `*.claimed` is
+  never deleted before a verdict publishes, and a crash leaves it as
+  evidence (native-channel.md §5). Mutations additionally record the
+  pre-dispatch descriptor state (the resolved identity fields) in the
+  request file itself — the file is already the audit input.
+
+### 8.3 UNKNOWN and reconciliation
+
+- The channel's existing rule carries over verbatim: a claimed request
+  whose plug-in crashes or whose result publish fails is client-side
+  `UNKNOWN`, **never resent**, `mayHaveMutated:true` in trace.
+  `not-sent` (unclaimed/expired/suite-unavailable) remains the only
+  re-issuable outcome, and only as a new request after re-authorization.
+- Reconciliation is read-back, not retry — and read-back yields
+  **state consistency, never causal proof**. After `UNKNOWN` the
+  client re-issues the read-only descriptor getters (§7b–§7f) against
+  the same descriptors and classifies three distinct verdicts:
+  - `state-inconsistent` — observed state contradicts the intended
+    post-state → the mutation provably did **not** land (for ops whose
+    effect is fully observable through allowlisted getters).
+  - `state-consistent` — observed state matches the intended
+    post-state → consistent with landing, **but not proof this
+    request caused it**: the same state could arise from a concurrent
+    actor, a prior identical mutation, or coincidence. Recorded as
+    evidence, never upgraded to "landed".
+  - `unobservable` — no allowlisted getter exposes the op's effect →
+    outcome stays quarantined for manual reconciliation.
+  Where an op's effect is not observable, the manifest must mark it
+  `idempotent:false` + `reconcilable:false`; `UNKNOWN` is never
+  guessed into either landed or not-landed.
+- Timeout-after-possible-dispatch is always `UNKNOWN` (§4); the
+  `STALE_REQUEST` pre-execution refusal stays `not-sent` because claim
+  order proves non-dispatch.
+- Undo is a separate named mutating op with its own consent scope and
+  `idempotent:false`; a failed undo is `FAILED`, never folded into the
+  original outcome (§4).
+
+### 8.4 Status — first mutating op landed (Issue #327)
+
+`AEGP_ItemSuite9.AEGP_SetItemComment` is the first `requiresConsent`
+allowlist entry (native-channel.md §7h):
+
+1. **Catalog/manifest**: `implemented-unverified` via the operations
+   registry; per-op `idempotent`/`reconcilable` flags are fixed in
+   §7h (`idempotent:true`, `reconcilable:true` — effect observable
+   through `GetItemComment`).
+2. **`mayHaveMutated`**: `true` on every attempted mutating call
+   (completed or failed), `false` on all pre-execution outcomes —
+   native-channel.md §4 step 12 / §7h.
+3. **Consent scope**: implemented as the §7g HMAC proof
+   (`native_consent.cpp` + `packages/native-adapter/src/consent.ts`,
+   pinned shared vectors) — stronger than the `authorizationRef`
+   shape check originally sketched here; `authorizationRef` remains
+   the opaque ae-a8n grant reference.
+4. **Fake-host evidence**: `TestIntakeSetItemComment` covers
+   no-consent → `CONSENT_REQUIRED`, missing channel key →
+   `CONSENT_REQUIRED`, wrong MAC → `CONSENT_INVALID`, scope tamper →
+   `CONSENT_INVALID`, stale identity → `STALE_REFERENCE` (no mutation
+   call recorded), AEGP failure → `failed`+`mayHaveMutated:true`,
+   missing suite entry → `not-sent`, and read-back reconciliation via
+   `GetItemComment`. All `fake/mock only`.
+5. Real-host evidence per #223 before any `verified` claim — still
+   open.

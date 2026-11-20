@@ -29,11 +29,17 @@
  *     source positions are host-reported, never inferred client-side
  *
  * Guarantee scope (explicit): requestId single-use and UNKNOWN
- * quarantine are enforced ONLY within one createJsxRunner() instance.
- * A second runner instance, another process, or a restart does not
- * share sentIds/quarantinedIds — cross-instance dedup requires a
- * shared store owned by the deployment layer (not implemented here).
- * Tests cover the single-instance contract only.
+ * quarantine are ALWAYS enforced within one createJsxRunner() instance.
+ * When a `dispatchStore` is configured (Issue #255 — opt-in via the
+ * runner option or `transport.dispatchStore`, which a8n-transport's
+ * session attaches by default), the same guarantees extend ACROSS
+ * runner instances and process restarts: the dispatch identity
+ * (session pin + operation + canonical args hash + project, hashed by
+ * the permissions.mjs machinery — see dispatch-store.mjs) is recorded
+ * in-flight BEFORE send, settled with the classified outcome, and an
+ * UNKNOWN quarantines the identity until explicitly resolved. Store
+ * I/O failure refuses the dispatch (fail closed — this endpoint only
+ * runs execute-class, potentially mutating, ExtendScript).
  *
  * NOT proven here (explicit non-claims): consent-token authenticity
  * (issuance/verification is ae-a8n #97–#99 territory), host-side
@@ -49,7 +55,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { authorizeExecution } from "./permissions.mjs";
+import { authorizeExecution, evalConsentArgs } from "./permissions.mjs";
+import { dispatchIdentity } from "./dispatch-store.mjs";
 import { classifyWriteResult, toContractOutcome } from "./outcomes.mjs";
 import { retryDecision } from "./mutation-guard.mjs";
 
@@ -126,13 +133,19 @@ function normalizeReply(reply) {
  *   codec     — TrustedCodec-compatible {stringify,parse}; default loads
  *               codec/trusted-codec.js via node:vm.
  *   deadlineMs— per-dispatch deadline (default DEFAULT_DEADLINE_MS).
+ *   dispatchStore — optional createDispatchStore() instance for
+ *               cross-instance dedup/quarantine (Issue #255). When
+ *               absent, `transport.dispatchStore` is used if present
+ *               (a8n-transport sessions attach one); otherwise dedup
+ *               stays instance-local — the pre-#255 behavior.
  */
-export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
+export function createJsxRunner({ transport, codec, deadlineMs, dispatchStore } = {}) {
   if (!transport || typeof transport.send !== "function") {
     throw new Error("createJsxRunner: transport.send is required");
   }
   const c = codec ?? loadTrustedCodec();
   const deadline = deadlineMs ?? DEFAULT_DEADLINE_MS;
+  const store = dispatchStore ?? transport.dispatchStore ?? null;
 
   // Request ids that were actually dispatched (single-use) and ids whose
   // outcome was UNKNOWN (quarantined — never silently re-issued).
@@ -201,7 +214,7 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
       permission: "execute",
       pin: input.pin,
       operationId: input.operationId,
-      args: { source, dispatchArgs: input.args ?? null },
+      args: evalConsentArgs(source, input.args),
       projectIdentity: input.projectIdentity,
       consent: input.consent,
       trustedScriptOptIn: input.trustedScriptOptIn,
@@ -232,6 +245,34 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
     } catch (err) {
       return blocked("encode", "ENCODE_REFUSED",
         err instanceof Error ? err.message : String(err), base);
+    }
+
+    // 3b. Cross-instance dedup gate (Issue #255): when a dispatch store
+    // is configured, the dispatch identity is recorded in-flight BEFORE
+    // send and an UNKNOWN/unresolved identity refuses re-dispatch. This
+    // endpoint only runs execute-class (potentially mutating)
+    // ExtendScript, so store failure is always fail-closed — there is
+    // no read-only degrade path here.
+    let dedupKey = null;
+    if (store !== null) {
+      try {
+        dedupKey = dispatchIdentity({
+          pin: input.pin,
+          operationId: input.operationId,
+          args: evalConsentArgs(source, input.args),
+          projectIdentity: input.projectIdentity,
+        });
+        const gate = await store.begin(dedupKey, {
+          requestId,
+          operationId: input.operationId ?? null,
+        });
+        if (!gate.allowed) {
+          return blocked("dispatch-store", gate.reason, gate.detail ?? "dispatch identity is quarantined", base);
+        }
+      } catch (err) {
+        return blocked("dispatch-store", "DISPATCH_STORE_ERROR",
+          `dedup store unavailable: ${err instanceof Error ? err.message : String(err)}`, base);
+      }
     }
 
     // The id is burned at dispatch time — even an UNKNOWN outcome must not
@@ -328,6 +369,19 @@ export function createJsxRunner({ transport, codec, deadlineMs } = {}) {
       contractOutcome: toContractOutcome(classified.outcome),
       retry: retryDecision({ outcome: classified.outcome }),
     };
+
+    // Settle the cross-instance record. The dispatch already happened —
+    // a settle failure cannot un-send it, so it is recorded honestly on
+    // the result instead of hidden. For UNKNOWN the instance-level
+    // quarantine above still applies; only the cross-instance half
+    // degrades, and `storeError` says so.
+    if (store !== null && dedupKey !== null) {
+      try {
+        await store.settle(dedupKey, { requestId, outcome: classified.outcome });
+      } catch (err) {
+        out.storeError = err instanceof Error ? err.message : String(err);
+      }
+    }
 
     // Host-reported error fields pass through for diagnostics (#37).
     if (classified.error != null && typeof classified.error === "object") {

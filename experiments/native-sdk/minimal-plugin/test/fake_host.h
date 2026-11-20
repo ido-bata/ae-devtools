@@ -38,6 +38,23 @@ struct _AEGP_Project
 struct _AEGP_RenderQueueItem
 {
     int index;
+    int compProject;  /* bound comp's project index; -1 = unbound */
+    int compItem;     /* bound comp's item index; -1 = unbound */
+};
+struct _AEGP_ItemView
+{
+    int index;
+};
+struct _AEGP_Comp
+{
+    int projIndex;
+    int itemIndex;
+};
+struct _AEGP_Layer
+{
+    int projIndex;
+    int itemIndex;  /* the comp item this layer belongs to */
+    int layerIndex;
 };
 
 struct FakeMemRec
@@ -59,15 +76,104 @@ struct FakeNameSpec
     int failMode = 0; /* 0 ok, 1 = size fails, 2 = lock fails, 3 = err return, 4 = NULL handle + NONE */
 };
 
+/* Per-layer read-only metadata returned by the Issue #64
+   AEGP_LayerSuite9 getters. Indexed by layer position in the comp. */
+struct FakeLayerMeta
+{
+    FakeNameSpec name;
+    FakeNameSpec sourceName;
+    AEGP_LayerFlags flags = 0;
+    AEGP_LayerQuality quality = AEGP_LayerQual_BEST;
+    AEGP_ObjectType objectType = AEGP_ObjectType_AV;
+    A_Boolean is3D = FALSE;
+    A_Boolean is2D = TRUE;
+    A_Time currentTime = {0, 30};
+    A_Time inPoint = {0, 30};
+    A_Time duration = {90, 30};
+    AEGP_LayerIDVal id = 0;
+    AEGP_LabelID label = AEGP_Label_NO_LABEL;
+    AEGP_LayerSamplingQuality samplingQuality = AEGP_LayerSamplingQual_BILINEAR;
+    A_long sourceItemID = -1;
+    A_Boolean videoOn = TRUE;
+    A_Boolean audioOn = FALSE;
+    A_Boolean hasTrackMatte = FALSE;
+    A_Boolean isTrackMatte = FALSE;
+    int trackMatteLayerIndex = -1; /* -1 → GetTrackMatteLayer returns NULL */
+};
+
+/* Per-comp read-only metadata returned by the Issue #64
+   AEGP_CompSuite13 getters. Parallel to itemMeta by item index;
+   defaults are sane comp values. */
+struct FakeCompMeta
+{
+    A_FpLong fps = 30.0;
+    A_Time frameDuration = {1, 30};
+    AEGP_DownsampleFactor dsf = {1, 1};
+    AEGP_ColorVal bgColor = {1.0, 0.0, 0.0, 0.0};
+    AEGP_CompFlags flags = 0;
+    A_Boolean showLayerNames = TRUE;
+    A_Boolean showBlendModes = FALSE;
+    A_Ratio shutterAngle = {180, 1};
+    A_Ratio shutterPhase = {0, 1};
+    A_Time shutterStart = {0, 30};
+    A_Time shutterDuration = {1, 30};
+    A_long mbSamples = 16;
+    A_long mbAdaptiveLimit = 128;
+    A_Time workAreaStart = {0, 30};
+    A_Time workAreaDuration = {90, 30};
+    A_Time displayStart = {0, 30};
+    A_Boolean displayDropFrame = FALSE;
+    std::vector<FakeLayerMeta> layers;
+};
+
+/* Per-item extended metadata returned by the Issue #63 read-only
+   getters. Parallel to itemNames/itemTypes by index; missing entries
+   fall back to FakeItemMeta defaults. */
+struct FakeItemMeta
+{
+    A_long id = -1; /* -1 → fake derives 1000 + item index */
+    AEGP_ItemFlags flags = 0;
+    A_Boolean selected = FALSE;
+    AEGP_LabelID label = AEGP_Label_NO_LABEL;
+    A_Time duration = {90, 30};
+    A_Time currentTime = {0, 30};
+    A_long width = 640;
+    A_long height = 360;
+    A_Ratio par = {1, 1};
+    bool hasView = false;      /* AEGP_GetItemMRUView returns a view */
+    FakeNameSpec comment;      /* empty units → empty-string handle */
+    FakeCompMeta compMeta;     /* meaningful only for COMP items */
+};
+
 struct FakeProject
 {
     std::string name;    /* ASCII/UTF-8 project name */
     std::string path;    /* ASCII/UTF-8 project path; empty = untitled */
     bool dirty = false;
     AEGP_ProjBitDepth bitDepth = AEGP_ProjBitDepth_8;
+    AEGP_TimeDisplay3 timeDisplay = {};
     FakeNameSpec rootName;
     std::vector<FakeNameSpec> itemNames;
     std::vector<AEGP_ItemType> itemTypes;
+    std::vector<FakeItemMeta> itemMeta;
+};
+
+/* Per-queue-item metadata returned by the Issue #318 §7f
+   AEGP_RQItemSuite4 getters. Parallel to queue positions; missing
+   entries fall back to defaults (unbound comp, QUEUED, 1 OM). The
+   bound comp is identified by (project index, item index) — the fake
+   has no real comp objects, so the binding is positional metadata,
+   matching how FakeCompMeta is parallel to itemMeta. */
+struct FakeRQItemMeta
+{
+    int compProject = -1;   /* -1 → no bound comp (GetCompFromRQItem NULL) */
+    int compItem = -1;
+    AEGP_RenderItemStatusType status = AEGP_RenderItemStatus_QUEUED;
+    A_long numOutputModules = 1;
+    FakeNameSpec comment;
+    AEGP_LogType logType = AEGP_LogType_ERRORS_ONLY;
+    A_Time startedTime = {0, 1};   /* {0,1} sentinel = never started */
+    A_Time elapsedTime = {0, 1};
 };
 
 struct FakeHost
@@ -82,9 +188,21 @@ struct FakeHost
     int getProjectByIndexErr = A_Err_NONE; /* when != NONE, GetProjectByIndex fails */
 
     int numRQItems = 0;          /* items the fake render queue reports */
+    std::vector<FakeRQItemMeta> rqItemMeta; /* per-slot §7f metadata */
     int rqStateErr = A_Err_NONE; /* when != NONE, GetRenderQueueState fails */
     int rqItemsErr = A_Err_NONE; /* when != NONE, GetNumRQItems fails */
     int rqItemByIndexErr = A_Err_NONE; /* when != NONE, GetRQItemByIndex fails */
+    int rqItemQueryErr = A_Err_NONE; /* when != NONE, all RQItemSuite4 getters fail */
+
+    /* Issue #63 extended read-only getters. */
+    int projectTimeDisplayErr = A_Err_NONE; /* GetProjectTimeDisplay fails */
+    int activeItemErr = A_Err_NONE;         /* GetActiveItem fails */
+    int itemMetaErr = A_Err_NONE; /* all extended ItemSuite9 detail getters fail */
+    int itemViewQueryErr = A_Err_NONE; /* ItemViewSuite2 getters fail */
+    int compQueryErr = A_Err_NONE;     /* CompSuite13 getters fail */
+    int layerQueryErr = A_Err_NONE;    /* LayerSuite9 getters fail */
+    int activeItemProject = -1; /* -1 → GetActiveItem returns NULL item */
+    int activeItemIndex = -1;
 
     bool failAcquireUtility = false;
     bool failAcquireProj = false;
@@ -93,17 +211,27 @@ struct FakeHost
     bool failAcquireRegister = false;
     bool failAcquireRQ = false;
     bool failAcquireRQItem = false;
+    bool failAcquireItemView = false;
+    bool failAcquireComp = false;
+    bool failAcquireLayer = false;
     bool registerWithAegpFails = false;
     bool registerIdleHookFails = false;
     bool registerIdleHookMissing = false; /* entry left NULL in suite */
     bool nullWriteToDebugLog = false;
-    int nullProjEntry = 0; /* 1 = AEGP_GetNumProjects NULL, 2 = GetProjectByIndex NULL */
+    int nullProjEntry = 0; /* 1 = GetNumProjects NULL, 2 = GetProjectByIndex NULL, 3 = GetProjectPath NULL, 4 = GetProjectTimeDisplay NULL */
     int nullMemEntry = 0;  /* 1 = FreeMemHandle NULL, 2 = GetMemHandleSize NULL */
+    int nullItemEntry = 0; /* 1 = GetItemMRUView NULL, 2 = GetItemComment NULL, 3 = GetActiveItem NULL, 4 = GetTypeName NULL, 5 = SetItemComment NULL */
+    int setCommentErr = A_Err_NONE; /* Issue #327: AEGP_SetItemComment fails with this */
+    int nullItemViewEntry = 0; /* 1..4 = the four ItemViewSuite2 getters NULL */
+    int nullCompEntry = 0; /* 1..18 = the CompSuite13 entries the probe calls NULL */
+    int nullLayerEntry = 0; /* 1..22 = the LayerSuite9 entries the probe calls NULL */
+    int mruCompProject = -1; /* -1 → GetMostRecentlyUsedComp returns NULL */
+    int mruCompIndex = -1;
 
     /* ---- observed state ---- */
     std::vector<std::string> log; /* raw infoZ strings passed to WriteToDebugLog */
-    int acquireCount[8] = {0};
-    int releaseCount[8] = {0};
+    int acquireCount[10] = {0};
+    int releaseCount[10] = {0};
     int idleHookRegistrations = 0;
     AEGP_IdleHook idleHook = NULL;
     AEGP_PluginID idleHookPluginId = 0;
@@ -123,9 +251,27 @@ struct FakeHost
     AEGP_RegisterSuite5 regSuite;
     AEGP_RenderQueueSuite1 rqSuite;
     AEGP_RQItemSuite4 rqItemSuite;
+    AEGP_ItemViewSuite2 itemViewSuite;
+    AEGP_CompSuite13 compSuite;
+    AEGP_LayerSuite9 layerSuite;
     SPBasicSuite basicSuite;
 
+    /* Every heap allocation the fake hands out as an opaque handle is
+       tracked here so ~FakeHost can release what the probe borrowed
+       but never freed (mirroring AE handle ownership). Mem-handle
+       wrappers freed via FakeFreeMemHandle are untracked at free
+       time; anything still tracked at destruction is reclaimed. */
+    struct TrackedAlloc
+    {
+        void* ptr;
+        void (*destroy)(void*);
+    };
+    std::vector<TrackedAlloc> trackedAllocs;
+    void TrackAlloc(void* ptr, void (*destroy)(void*));
+    void UntrackAlloc(void* ptr);
+
     FakeHost();
+    ~FakeHost();
     /* (Re)populate the suite tables from the current flags. Called by
        the constructor; call again after changing suite-related flags
        (failAcquire*, null*Entry, registerIdleHookMissing,

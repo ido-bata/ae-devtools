@@ -1005,6 +1005,12 @@ declare enum ChannelType {
   CHANNEL_RGB_STRAIGHT,
 }
 
+declare enum CloseOptions {
+  DO_NOT_SAVE_CHANGES,
+  PROMPT_TO_SAVE_CHANGES,
+  SAVE_CHANGES,
+}
+
 declare enum ComposerEngine {
   UNIVERSAL_TYPE_ENGINE,
   LATIN_CJK_ENGINE,
@@ -1332,6 +1338,25 @@ declare enum PropertyValueType {
   TEXT_DOCUMENT,
 }
 
+declare enum PulldownMethod {
+  PULLDOWN_3_2,
+  ADVANCE_24P,
+}
+
+declare enum PurgeTarget {
+  ALL_CACHES,
+  ALL_MEMORY_CACHES,
+  UNDO_CACHES,
+  SNAPSHOT_CACHES,
+  IMAGE_CACHES,
+}
+
+declare enum ResolveType {
+  ACCEPT_THEIRS,
+  ACCEPT_YOURS,
+  ACCEPT_THEIRS_AND_COPY,
+}
+
 declare enum RQItemStatus {
   QUEUED,
   UNQUEUED,
@@ -1341,6 +1366,13 @@ declare enum RQItemStatus {
   USER_STOPPED,
   ERR_STOPPED,
   DONE,
+}
+
+declare enum SceneEditDetectionMode {
+  MARKERS,
+  SPLIT,
+  SPLIT_PRECOMP,
+  NONE,
 }
 
 declare enum SubstitutedFontReplacementMatchPolicy {

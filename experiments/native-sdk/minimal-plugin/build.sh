@@ -37,16 +37,19 @@ rm -rf "$PLUGIN" "$WORK"
 mkdir -p "$PLUGIN/Contents/MacOS" "$PLUGIN/Contents/Resources" "$WORK"
 
 echo "=== compiling $NAME (C++, arm64 host) ==="
-clang++ -std=c++17 -O2 -Wall -Wextra -Werror \
-  -D__MACH__=1 \
-  -I"$HEADERS" -I"$HEADERS/SP" \
-  -c "$HERE/src/probe.cpp" -o "$WORK/probe.o" \
-  > "$OUT/$NAME.compile.log" 2>&1 \
-  || { echo "compile FAILED (see $OUT/$NAME.compile.log)"; exit 1; }
+: > "$OUT/$NAME.compile.log"
+for src in probe native_intake native_support native_state native_suites native_request native_registry native_identity native_ops native_json native_consent; do
+  clang++ -std=c++17 -O2 -Wall -Wextra -Werror \
+    -D__MACH__=1 \
+    -I"$HEADERS" -I"$HEADERS/SP" \
+    -c "$HERE/src/$src.cpp" -o "$WORK/$src.o" \
+    >> "$OUT/$NAME.compile.log" 2>&1 \
+    || { echo "compile FAILED: $src (see $OUT/$NAME.compile.log)"; exit 1; }
+done
 
 echo "=== linking $NAME.bundle ==="
 clang -bundle -arch arm64 \
-  -o "$PLUGIN/Contents/MacOS/$NAME" "$WORK/probe.o" \
+  -o "$PLUGIN/Contents/MacOS/$NAME" "$WORK/probe.o" "$WORK/native_intake.o" "$WORK/native_support.o" "$WORK/native_state.o" "$WORK/native_suites.o" "$WORK/native_request.o" "$WORK/native_registry.o" "$WORK/native_identity.o" "$WORK/native_ops.o" "$WORK/native_json.o" "$WORK/native_consent.o" \
   > "$OUT/$NAME.link.log" 2>&1 \
   || { echo "link FAILED (see $OUT/$NAME.link.log)"; exit 1; }
 

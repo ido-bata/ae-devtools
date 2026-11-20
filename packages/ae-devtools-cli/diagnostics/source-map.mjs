@@ -36,7 +36,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
 import { lookup, parseMappings } from "../jsx-toolchain/src/sourcemap.mjs";
 
 export const SOURCE_MAP_RESULT_SCHEMA = "ae-devtools.diagnostics.source-map/v1";
@@ -527,6 +527,6 @@ function cliMain(argv) {
   return result.status === "mapped" ? 0 : 1;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainEntry(import.meta.url)) {
   process.exitCode = cliMain(process.argv);
 }

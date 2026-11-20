@@ -19,10 +19,11 @@
  *     suite.member + header, which `assertRegistryInvariants` checks.
  *
  * Scope notes:
- * - Only probe.cpp is scanned. fake_host.* implements suite entries
- *   the probe does NOT call (e.g. AEGP_NewMemHandle, SPBasicSuite
- *   IsEqual) — those are host-side fixtures, not probe calls, and
- *   must NOT appear in the registry.
+ * - probe.cpp AND native_intake.cpp are scanned (Issue #327: the
+ *   intake path is a second implementation site). fake_host.*
+ *   implements suite entries the probe does NOT call (e.g.
+ *   AEGP_NewMemHandle, SPBasicSuite IsEqual) — those are host-side
+ *   fixtures, not probe calls, and must NOT appear in the registry.
  * - Member accesses without a call (`if (utilP->AEGP_X)`) are not
  *   matched: the regex requires `(` after the member name.
  * - The receiver→suite map below mirrors probe.cpp's variable names;
@@ -34,11 +35,37 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { DISPATCH_ENTRIES } from "../src/operations.ts";
+import {
+  NATIVE_INTAKE_OPERATIONS,
+  NATIVE_INTAKE_CONSENT_OPS,
+} from "../src/dispatch.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PROBE_CPP = join(
   HERE,
   "../../../experiments/native-sdk/minimal-plugin/src/probe.cpp",
+);
+/* Issue #327: the intake path is a second implementation site — the
+   consent-gated mutating op (and every intake getter) makes real
+   suite calls there. Issue #328 split native_intake.cpp into
+   responsibility modules; ALL of them are scanned so registry
+   `implemented` claims reconcile against the UNION of probe.cpp and
+   every intake module's call sites. */
+const INTAKE_SOURCES = [
+  "native_intake.cpp",
+  "native_support.cpp",
+  "native_state.cpp",
+  "native_suites.cpp",
+  "native_request.cpp",
+  "native_registry.cpp",
+  "native_identity.cpp",
+  "native_ops.cpp",
+].map((f) =>
+  join(HERE, `../../../experiments/native-sdk/minimal-plugin/src/${f}`),
+);
+const REGISTRY_CPP = join(
+  HERE,
+  "../../../experiments/native-sdk/minimal-plugin/src/native_registry.cpp",
 );
 
 /** probe.cpp local variable → SDK suite struct name (registry `suite`). */
@@ -53,6 +80,9 @@ const RECEIVER_TO_SUITE: Record<string, string> = {
   regP: "AEGP_RegisterSuite5",
   rqP: "AEGP_RenderQueueSuite1",
   rqItemP: "AEGP_RQItemSuite4",
+  itemViewP: "AEGP_ItemViewSuite2",
+  compP: "AEGP_CompSuite13",
+  layerP: "AEGP_LayerSuite9",
 };
 
 /** Members that count as suite calls for reconciliation. */
@@ -66,14 +96,23 @@ const CALL_RE = /([A-Za-z_]\w*)\s*->\s*([A-Za-z_]\w*)\s*\(/g;
  */
 const OP_RECORD_RE = /OpRecordV\s*\([^,]+,\s*"([^"]+)"/g;
 
-function probeCallIds(): Set<string> {
-  const src = readFileSync(PROBE_CPP, "utf8");
+/** native_intake.cpp local variable → SDK suite struct name. Differs
+    from probe.cpp: `rqP` there is AEGP_RQItemSuite4 (the RenderQueue
+    suite pointer was renamed rqQueueP to keep the map unambiguous). */
+const INTAKE_RECEIVER_TO_SUITE: Record<string, string> = {
+  ...RECEIVER_TO_SUITE,
+  rqP: "AEGP_RQItemSuite4",
+  rqQueueP: "AEGP_RenderQueueSuite1",
+};
+
+function suiteCallIds(srcPath: string, map: Record<string, string>): Set<string> {
+  const src = readFileSync(srcPath, "utf8");
   const ids = new Set<string>();
   const unmapped = new Set<string>();
   for (const m of src.matchAll(CALL_RE)) {
     const receiver = m[1]!;
     const member = m[2]!;
-    const suite = RECEIVER_TO_SUITE[receiver];
+    const suite = map[receiver];
     if (suite === undefined) {
       unmapped.add(`${receiver}->${member}`);
       continue;
@@ -82,8 +121,18 @@ function probeCallIds(): Set<string> {
   }
   if (unmapped.size > 0) {
     throw new Error(
-      `probe.cpp calls through unmapped receivers: ${[...unmapped].sort().join(", ")}`,
+      `${srcPath}: calls through unmapped receivers: ${[...unmapped].sort().join(", ")}`,
     );
+  }
+  return ids;
+}
+
+function probeCallIds(): Set<string> {
+  const ids = suiteCallIds(PROBE_CPP, RECEIVER_TO_SUITE);
+  for (const src of INTAKE_SOURCES) {
+    for (const id of suiteCallIds(src, INTAKE_RECEIVER_TO_SUITE)) {
+      ids.add(id);
+    }
   }
   return ids;
 }
@@ -146,6 +195,55 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
       if (entry !== undefined) {
         expect(entry.implemented).toBe(false);
       }
+    }
+  });
+});
+
+/* Issue #328 residual: the C++ allowlist is the single declarative
+   source for intake ops — opId + arg spec + execKind. These tests
+   make the TS mirror (NATIVE_INTAKE_OPERATIONS /
+   NATIVE_INTAKE_CONSENT_OPS) mechanically reconciled against
+   S_ALLOWLIST in native_registry.cpp instead of editorially synced. */
+describe("S_ALLOWLIST ↔ NATIVE_INTAKE_* reconciliation", () => {
+  const src = readFileSync(REGISTRY_CPP, "utf8");
+  /* Entry shape: { "OP",\n      "OP",<spec>, <n>, EXEC_KIND }, —
+     capture opId + execKind. */
+  const ENTRY_RE =
+    /\{\s*"(AEGP_[^"]+)",\s*\n\s*"AEGP_[^"]+",[^}\n]*?,\s*\d+,\s*(EXEC_\w+)\s*\}/g;
+  const entries = [...src.matchAll(ENTRY_RE)].map((m) => ({
+    opId: m[1]!,
+    execKind: m[2]!,
+  }));
+
+  test("S_ALLOWLIST parses to a non-empty op table", () => {
+    expect(entries.length).toBeGreaterThan(50);
+  });
+
+  test("allowlist opIds exactly equal NATIVE_INTAKE_OPERATIONS", () => {
+    const cppIds = new Set(entries.map((e) => e.opId));
+    const tsIds = new Set<string>(NATIVE_INTAKE_OPERATIONS);
+    expect([...cppIds].filter((id) => !tsIds.has(id)).sort()).toEqual([]);
+    expect([...tsIds].filter((id) => !cppIds.has(id)).sort()).toEqual([]);
+  });
+
+  test("consent-gated ops exactly equal the mutating execKind entries", () => {
+    const cppConsent = new Set(
+      entries.filter((e) => e.execKind === "EXEC_SET_ITEM_COMMENT").map((e) => e.opId),
+    );
+    expect([...cppConsent].sort()).toEqual([...NATIVE_INTAKE_CONSENT_OPS].sort());
+  });
+
+  test("every execKind used is a declared EXEC_* member", () => {
+    const DECLARED = new Set([
+      "EXEC_NUM_PROJECTS", "EXEC_DRIVER_IMPL_VERSION", "EXEC_GET_TYPE_NAME",
+      "EXEC_ITEM_NAME_OR_ID", "EXEC_ENUM_PROJ_ITEMS", "EXEC_COMP_GETTER",
+      "EXEC_SET_ITEM_COMMENT", "EXEC_ITEM_GETTER", "EXEC_LAYER_COMP_OP",
+      "EXEC_LAYER_GETTER", "EXEC_PROJECT_GETTER", "EXEC_ENUM_RQ_ITEMS",
+      "EXEC_RQ_ITEM_GETTER", "EXEC_DRIVER_PLUGIN_INIT_VERSION",
+      "EXEC_SUPPRESS_UI", "EXEC_HOST_ACTIVATED", "EXEC_RQ_ZERO_ARG",
+    ]);
+    for (const e of entries) {
+      expect(DECLARED.has(e.execKind), `${e.opId} -> ${e.execKind}`).toBe(true);
     }
   });
 });

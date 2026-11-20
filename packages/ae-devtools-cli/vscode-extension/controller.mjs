@@ -20,10 +20,13 @@
  * `vscode` UI, tests inject a fake. `ui.confirm` must resolve true only
  * on an explicit affirmative user action.
  */
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { callTool } from "../mcp-server/tools.mjs";
 import { openSession } from "../mcp-server/session.mjs";
 import { closeSessionWithTimeout } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
+import { lazyConsentAudit } from "../trusted-execution/consent-audit.mjs";
 import { recordsFromExecuteResult, buildPublishPlan } from "./diagnostics.mjs";
 import { buildAttachConfig, writeLaunchJson } from "../vscode-debugger/src/gen.mjs";
 import { validateLaunchJson, hasErrors } from "../vscode-debugger/src/schema.mjs";
@@ -62,6 +65,8 @@ function uiDeclined(detail) {
  * @param {string} [options.runsDir] — run-guard marker dir for a8n
  *   sessions (default: devtools-cli RUNS_DIR; Issue #198 residue
  *   markers — surface "vscode", no attestation, reap/recover refuse)
+ * @param {object} [options.consentAudit] — consent-decision audit sink
+ *   (Issue #277); default lazy store in the shared tmpdir location
  */
 export function createController(options = {}) {
   const {
@@ -72,6 +77,7 @@ export function createController(options = {}) {
     sessionFactory = openSession,
     closeTimeoutMs,
     runsDir,
+    consentAudit: consentAuditOpt,
   } = options;
 
   // Run-guard residue markers for a8n sessions only (Issue #198, 案 C)
@@ -82,7 +88,19 @@ export function createController(options = {}) {
     surface: "vscode", sessionKind, dir: runsDir,
   });
 
+  // Consent-decision audit (Issue #277): lazy so constructing a
+  // controller never mints the directory; shares the CLI/MCP default
+  // location so decisions correlate across surfaces.
+  const consentAudit = consentAuditOpt !== undefined
+    ? consentAuditOpt
+    : lazyConsentAudit(
+        process.env.AE_DEVTOOLS_CONSENT_AUDIT_DIR
+          ?? join(tmpdir(), "ae-devtools-consent-audit"),
+      );
+
   let sessionPromise = null;
+  let resolvedSession = null;
+  let sessionFailed = false;
   const getSession = () => {
     sessionPromise ??= (async () => {
       // Marker BEFORE open: a launch that dies mid-open still leaves
@@ -91,19 +109,28 @@ export function createController(options = {}) {
       try {
         const s = await sessionFactory(sessionKind, { aeA8nRoot, installDir });
         guard.mark(s);
+        resolvedSession = s;
         return s;
       } catch (e) {
         guard.failOpen();
         throw e;
       }
     })();
+    sessionPromise.catch(() => { sessionFailed = true; });
     return sessionPromise;
   };
 
   async function tool(name, args) {
     const res = await callTool(name, args ?? {}, {
       getSession,
+      sessionKind,
+      peekSession: () => ({
+        session: resolvedSession,
+        opening: sessionPromise !== null && resolvedSession === null && !sessionFailed,
+        failed: sessionFailed,
+      }),
       onRequestEvent: (ev) => guard.request(ev),
+      consentAudit,
     });
     // callTool wraps the payload as MCP text content; unwrap it so
     // commands/tests see the honest payload (session.evidenceLevel
@@ -141,7 +168,9 @@ export function createController(options = {}) {
         : payload.session,
       requestId: inner.requestId,
     });
-    if (records.length === 0) return payload;
+    // Always attach the publish plan — including an empty one — so the
+    // Problems panel can clear stale ae-devtools entries after a clean
+    // execute/verify instead of preserving the previous failure (Issue #302).
     return { ...payload, diagnostics: buildPublishPlan(records) };
   }
 
@@ -149,6 +178,11 @@ export function createController(options = {}) {
     /** Registry metadata only — never opens a session. */
     discover(args = {}) {
       return tool("ae_discover", args);
+    },
+
+    /** Session/API metadata — reports open-session state; never opens one. */
+    sessionStatus() {
+      return tool("ae_session", {});
     },
 
     /** Op schema/metadata — never executes, never opens a session. */
