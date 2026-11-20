@@ -55,10 +55,11 @@ runner.runScript(source)
 
 ## ae-a8n pin
 
-`package.json` pins `@ido-bata/ae-a8n@0.2.0` — the first published
-version carrying the ae-a8n #102 handshake exports and #103/#104/#105
-host-context fixes (published under the `next` dist-tag; `latest`
-still resolves `0.1.0-alpha.0`). Earlier pins (`<=0.1.0-alpha.2`)
+`package.json` pins `@ido-bata/ae-a8n@0.5.0` — it carries the ae-a8n
+#102 handshake exports and #103/#104/#105 host-context fixes (first
+published carrying them was `0.2.0`) plus `AfterEffects.attach`
+(ae-a8n #269), which the `a8n-attached` lane requires. Earlier pins
+(`<=0.1.0-alpha.2`)
 predated those fixes — a real launch through them fails
 (`EVIDENCE.md`, Attempt 1); the contract gate in `compat.mjs`
 (Issue #138) refuses them with `AE_A8N_CONTRACT_UNSUPPORTED` before
