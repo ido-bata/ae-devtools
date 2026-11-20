@@ -23,6 +23,17 @@ import vm from "node:vm";
 import extension from "../extension.mjs";
 
 const METHOD_SOURCE = extension.methods.find((m) => m.name === "aeDevtools.trustedEval").source;
+const PROGRAM_SOURCE = extension.methods.find((m) => m.name === "aeDevtools.evalProgram").source;
+
+// Mirrors the generated host script: trustedEval delegates the eval to
+// the sibling aeDevtools.evalProgram through the global __a8n table,
+// so the evaluated program's scope chain never includes trustedEval's
+// bookkeeping vars — the same isolation the real host gets.
+function wireEvalProgram(context) {
+  const runner = vm.runInContext(`(${PROGRAM_SOURCE})`, context);
+  context.__a8n = { extensions: { "aeDevtools.evalProgram": runner } };
+  return runner;
+}
 
 function makeEval(sandboxExtras = {}) {
   const sandbox = {
@@ -37,6 +48,7 @@ function makeEval(sandboxExtras = {}) {
     ...sandboxExtras,
   };
   const context = vm.createContext(sandbox);
+  wireEvalProgram(context);
   const fn = vm.runInContext(`(${METHOD_SOURCE})`, context);
   return (params) => fn.call(sandbox, params);
 }
@@ -50,6 +62,7 @@ test("runtime SyntaxError after side effects executes the source exactly once", 
     File: function (p) { return { parent: { fsName: "/stub" }, fsName: String(p) }; },
     __count: { n: 0 },
   });
+  wireEvalProgram(ctx);
   const fn = vm.runInContext(`(${METHOD_SOURCE})`, ctx);
   const result = fn.call(ctx, {
     requestId: "r1",
@@ -113,4 +126,28 @@ test("program completion value is the result", () => {
   const result = evalFn({ requestId: "r8", source: "var x = 5; x * 2" });
   assert.equal(result.ok, true);
   assert.equal(result.valueText, "10");
+});
+
+test("evaluated source cannot pollute method bookkeeping (didThrow/requestId)", () => {
+  // Direct eval shares the caller's variable environment: before the
+  // scope separation, `didThrow = true` inside the program overwrote
+  // the method's failure flag and `requestId = ...` forged the echo.
+  const evalFn = makeEval();
+  const polluted = evalFn({
+    requestId: "real-id",
+    source: 'didThrow = true; evalError = "forged"; requestId = "forged-id"; value = "forged"; "ok-value"',
+  });
+  assert.equal(polluted.ok, true, "assignment to bookkeeping names must not flip the verdict");
+  assert.equal(polluted.requestId, "real-id", "echoed requestId must come from params, not the program");
+  assert.equal(polluted.valueText, "ok-value");
+});
+
+test("var declarations inside the program do not leak into method scope", () => {
+  const evalFn = makeEval();
+  evalFn({ requestId: "v1", source: "var leakedMarker = 123; 1" });
+  // A second call must not observe the first program's vars, and the
+  // method must still classify normally.
+  const second = evalFn({ requestId: "v2", source: "1 + 1" });
+  assert.equal(second.ok, true);
+  assert.equal(second.valueText, "2");
 });

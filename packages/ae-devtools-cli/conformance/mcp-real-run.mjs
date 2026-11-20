@@ -24,6 +24,11 @@
  *
  * --fixture may be a directory (a Conformance-MCP-Disposable.aep is
  * created inside it) or a direct .aep path.
+ *
+ * Replay: the archived harness-*.mjs copies under evidence/ resolve
+ * their imports (mcp-server/server.mjs, devtools-cli/*.mjs) against the
+ * repository checkout — replay requires the tree at the run's recorded
+ * sourceSha, not the evidence directory alone.
  */
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -123,6 +128,18 @@ try {
     300000,
     "project.new",
   ));
+  // A failed project.new/project.save leaves the pre-mutation project
+  // identity unverified — every later step would mutate an unknown
+  // project. Fail closed before the first content mutation.
+  const gateMutation = (tag) => {
+    const r = results[tag];
+    if (!r || r.isError || r.outcome !== "COMPLETED") {
+      throw new Error(
+        `${tag} did not complete (isError=${r?.isError === true}, outcome=${r?.outcome ?? "missing"}); refusing to mutate`,
+      );
+    }
+  };
+  gateMutation("project.new");
 
   rec({ step: "ae_execute.project.save" });
   recordToolResult("project.save", await withTimeout(
@@ -130,6 +147,7 @@ try {
     120000,
     "project.save",
   ));
+  gateMutation("project.save");
 
   rec({ step: "ae_execute.item.addComp" });
   recordToolResult("item.addComp", await withTimeout(
@@ -180,15 +198,20 @@ try {
   child.kill("SIGTERM");
   await new Promise((r) => setTimeout(r, 15000));
   let shutdownConfirmed = child.exitCode !== null || child.signalCode !== null;
+  let forcedKill = false;
   if (!shutdownConfirmed) {
-    try { child.kill("SIGKILL"); } catch {}
+    try { child.kill("SIGKILL"); forcedKill = true; } catch {}
     await new Promise((r) => setTimeout(r, 3000));
     shutdownConfirmed = child.exitCode !== null || child.signalCode !== null;
   }
-  rec({ step: "server.stopped", fixturePath, shutdownConfirmed, results });
-  if (!shutdownConfirmed) {
+  // A child that only exits because SIGKILL destroyed it did NOT shut
+  // down cleanly — session.close() (unsavedChanges:"refuse") never ran
+  // to completion. That is a failed run, not a confirmed cleanup.
+  const cleanShutdown = shutdownConfirmed && !forcedKill && child.signalCode !== "SIGKILL";
+  rec({ step: "server.stopped", fixturePath, shutdownConfirmed, cleanShutdown, forcedKill, results });
+  if (!cleanShutdown) {
     fatal = true;
-    rec({ fatal: "MCP server child did not exit after SIGTERM+SIGKILL" });
+    rec({ fatal: shutdownConfirmed ? "MCP server child required SIGKILL — unclean shutdown" : "MCP server child did not exit after SIGTERM+SIGKILL" });
   }
 
   // Verdict: a recorded isError or a non-COMPLETED outcome is a failed
@@ -220,10 +243,18 @@ try {
     failures.push("ae_verify.readback: comp not observed in project items");
   }
   const finalItems = itemsOf("ae_verify.final");
-  if (finalItems === null ||
-      finalItems.some((i) => i && i.name === COMP_NAME)) {
-    failures.push("ae_verify.final: comp still present (or items unreadable) after item.remove");
+  // The fixture was created EMPTY: a correct run must leave zero items.
+  // Checking only for COMP_NAME's absence would pass a project still
+  // holding unrelated leftovers (e.g. a stray "Other Comp").
+  if (finalItems === null) {
+    failures.push("ae_verify.final: items unreadable after item.remove");
+  } else if (finalItems.length !== 0) {
+    failures.push(`ae_verify.final: ${finalItems.length} item(s) remain (expected empty fixture)`);
   }
+  // Verdict and exit status must share ONE failure state: an unconfirmed
+  // or SIGKILL-forced shutdown recorded above is a failed run, never a
+  // "pass" verdict with a nonzero exit.
+  if (!cleanShutdown) failures.push("server.stopped: shutdown was not a confirmed clean exit");
   if (failures.length > 0) {
     fatal = true;
     rec({ verdict: "fail", failures });
