@@ -218,6 +218,30 @@ async function main(): Promise<void> {
   for (const s of symbols) {
     s.notes.includes("domain unresolved") || s.notes.push(`domain=${domainFor(s.owner)}`);
   }
+
+  // dfad stub entries defer their Example to another member ("See the
+  // example in `Owner.member()`); inherit the referenced member's
+  // extracted signature so the `()` usage stub is not mistaken for a
+  // documented zero-argument signature.
+  const byOwnerMember = new Map<string, SymbolRecord>();
+  for (const s of symbols) byOwnerMember.set(`${s.owner}.${s.member}`, s);
+  for (const s of symbols) {
+    if (!s.signatureExampleRef) continue;
+    const target = byOwnerMember.get(s.signatureExampleRef);
+    if (target?.signature && target.signature.length > 0) {
+      s.signature = [...target.signature];
+      s.notes.push(
+        `signature inherited from ${s.signatureExampleRef} example (this entry's usage line is a "()" stub)`,
+      );
+    } else {
+      // The `[]` was only the unresolved `()` stub — record unknown
+      // arity rather than a documented zero-argument signature.
+      s.signature = null;
+      s.notes.push(
+        `signatureExampleRef ${s.signatureExampleRef} did not resolve to a signatured member`,
+      );
+    }
+  }
   symbols.sort((a, b) => a.id.localeCompare(b.id));
   classes.sort((a, b) => a.name.localeCompare(b.name));
   enums.sort((a, b) => a.name.localeCompare(b.name));

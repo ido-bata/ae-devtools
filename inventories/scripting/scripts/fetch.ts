@@ -119,7 +119,12 @@ export async function obtainSource(
           `(cached ${digest}, locked ${priorEntry.sha256}); run \`bun run refresh\` to re-pin deliberately`,
       );
     }
-    if (priorEntry.revision !== spec.revision) {
+    // Revision pinning only applies to immutable revisions (commit SHAs).
+    // `http-<date>` revisions label live pages whose real pin is the
+    // SHA-256 checked above; the lock's revision is stamped with the
+    // actual fetch date on refresh, so it legitimately differs from the
+    // initial pin declared in sources.ts.
+    if (!spec.revision.startsWith("http-") && priorEntry.revision !== spec.revision) {
       throw new Error(
         `revision drift for "${spec.key}": sources.ts pins ${spec.revision} but ` +
           `sources.lock.json records ${priorEntry.revision}; run \`bun run refresh\``,
@@ -129,7 +134,7 @@ export async function obtainSource(
   }
 
   const payload = await download(spec.fetchUrl);
-  const entry: LockEntry = {
+  let entry: LockEntry = {
     key: spec.key,
     tier: spec.tier,
     revision: spec.revision,
@@ -145,6 +150,18 @@ export async function obtainSource(
         `(locked ${priorEntry.sha256}, now ${entry.sha256}). ` +
         "Review the change, then re-run with `--refresh` to accept it.",
     );
+  }
+
+  // Refresh noise control: when the re-downloaded bytes are identical to
+  // the locked bytes, keep the prior lock entry verbatim (fetchedAt
+  // included) so a refresh diff shows ONLY real upstream changes.
+  if (opts.refresh && priorEntry && priorEntry.sha256 === entry.sha256 &&
+      priorEntry.bytes === entry.bytes) {
+    entry = priorEntry;
+  } else if (opts.refresh && spec.revision.startsWith("http-")) {
+    // Live pages: stamp the revision with the actual fetch date so the
+    // lock records when THESE bytes were pinned, not the initial date.
+    entry = { ...entry, revision: `http-${entry.fetchedAt}` };
   }
 
   await mkdir(dirname(cached), { recursive: true });

@@ -1352,7 +1352,11 @@ return __adp_json({ ok: true, property: "keyframe-removed", keyIndex: ${a.keyInd
     source: (a) => `${PRELUDE}${PROP_WALK.replace("@COMP@", js(a.compName)).replace("@LAYER@", js(a.layerName)).replace("@PATH@", jsPath(a.propertyPath))}
 return __adp_json({
   ok: true, time: ${a.time},
-  value: prop.valueAtTime(${a.time}),
+  // Documented signature is valueAtTime(time, preExpression); false =
+  // evaluate the expression, which matches the previous 1-arg call's
+  // behavior (the arg was added in AE 13.6 and is optional in practice,
+  // but the inventory records both parameters — pass it explicitly).
+  value: prop.valueAtTime(${a.time}, false),
   numKeys: prop.numKeys
 });
 `,
@@ -2744,16 +2748,31 @@ return __adp_json({
         throw new Error(`pref.get: ${a.type} default must be a finite number`);
       }
     },
-    source: (a) => `${PRELUDE}
+    // Documented signature is getPrefAsX(sectionName, keyName[, prefType])
+    // — the optional third parameter selects the preferences FILE, it is
+    // NOT a default value. The caller default is applied in generated
+    // code only when havePref proves the key absent (Issue #336 audit).
+    source: (a) => {
+      const dflt = {
+        string: a.default === undefined ? '""' : js(a.default),
+        bool: a.default === undefined ? "false" : js(a.default),
+        long: a.default === undefined ? "0" : String(Number(a.default)),
+        float: a.default === undefined ? "0" : String(Number(a.default)),
+      }[a.type];
+      // Literal per-type calls (not p[getter](...)) so member sites stay
+      // visible to static audit; default applies only when havePref
+      // proves the key absent.
+      return `${PRELUDE}
 var p = app.preferences;
 var exists = (typeof p.havePref === "function") ? p.havePref(${js(a.section)}, ${js(a.key)}) : null;
 var v;
-${a.type === "string" ? `v = p.getPrefAsString(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? '""' : js(a.default)});` : ""}
-${a.type === "bool" ? `v = p.getPrefAsBool(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? "false" : js(a.default)});` : ""}
-${a.type === "long" ? `v = p.getPrefAsLong(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? "0" : String(Number(a.default))});` : ""}
-${a.type === "float" ? `v = p.getPrefAsFloat(${js(a.section)}, ${js(a.key)}, ${a.default === undefined ? "0" : String(Number(a.default))});` : ""}
+${a.type === "string" ? `v = (exists === false) ? ${dflt} : p.getPrefAsString(${js(a.section)}, ${js(a.key)});` : ""}
+${a.type === "bool" ? `v = (exists === false) ? ${dflt} : p.getPrefAsBool(${js(a.section)}, ${js(a.key)});` : ""}
+${a.type === "long" ? `v = (exists === false) ? ${dflt} : p.getPrefAsLong(${js(a.section)}, ${js(a.key)});` : ""}
+${a.type === "float" ? `v = (exists === false) ? ${dflt} : p.getPrefAsFloat(${js(a.section)}, ${js(a.key)});` : ""}
 return __adp_json({ ok: true, section: ${js(a.section)}, key: ${js(a.key)}, type: ${js(a.type)}, exists: exists, value: v });
-`,
+`;
+    },
   },
   {
     id: "pref.set",

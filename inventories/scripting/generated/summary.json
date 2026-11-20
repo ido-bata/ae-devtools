@@ -6,8 +6,8 @@
   "denominators": {
     "scriptingMembers": 656,
     "scriptingClasses": 48,
-    "enums": 49,
-    "enumValues": 322,
+    "enums": 54,
+    "enumValues": 339,
     "byKind": {
       "attribute": 406,
       "global-function": 8,

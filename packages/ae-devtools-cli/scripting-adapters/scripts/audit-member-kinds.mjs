@@ -168,6 +168,9 @@ function lookupMember(byOwnerMember, kind, member) {
 // Populated per audit run; member reads on them (`CloseOptions.X`)
 // yield plain values, so they type as "js" — resolved, non-host.
 const ENUM_OBJECTS = new Set();
+// enum name -> documented value names, for grounded enum-argument
+// checks (Issue #336). Populated per audit run alongside ENUM_OBJECTS.
+const ENUM_VALUES = new Map();
 
 // Globals and JS builtins — never host objects.
 const JS_KINDS = new Set([
@@ -1020,19 +1023,31 @@ function argProbes(op, argName, sampleVal) {
 // Audit
 // ---------------------------------------------------------------------------
 
-// Arity range from an inventory signature array: required params are
-// top-level comma-separated items; `[ ... ]` groups are optional.
+// Arity range from an inventory signature array. The signature string is
+// a comma-joined parameter list where OPTIONAL params appear inside
+// `[...]` groups (the extractor's naive comma split may spread one
+// bracket group across adjacent items, e.g. "keyName[" + "prefType]").
+// A depth-0 segment counts as required only when it contains text
+// OUTSIDE brackets — a fully-bracketed segment like "[sourceText]" is
+// optional, so `addText([sourceText])` correctly yields 0..1 (not the
+// 1..2 a naive non-empty check would produce).
 export function signatureArity(signature) {
   const sigStr = signature.join(",");
-  let depth = 0, required = sigStr.trim() === "" ? 0 : 1;
+  const segments = [];
+  let depth = 0, cur = "", curOuter = false;
+  const flush = () => { segments.push({ text: cur, outer: curOuter }); cur = ""; curOuter = false; };
   for (const ch of sigStr) {
-    if (ch === "[") depth++;
-    else if (ch === "]") depth--;
-    else if (ch === "," && depth === 0) required++;
+    if (ch === "[") { depth++; continue; }
+    if (ch === "]") { depth = Math.max(0, depth - 1); continue; }
+    if (ch === "," && depth === 0) { flush(); continue; }
+    if (depth === 0 && !/\s/.test(ch)) curOuter = true;
+    cur += ch;
   }
+  flush();
+  const required = segments.filter((s) => s.outer).length;
   let optional = 0;
   for (const m of sigStr.matchAll(/\[([^\]]*)\]/g)) {
-    optional += m[1].split(",").filter((s) => s.trim() !== "").length;
+    optional += (m[1] ?? "").split(",").filter((s) => s.trim() !== "").length;
   }
   return { min: required, max: required + optional, sig: sigStr };
 }
@@ -1058,6 +1073,7 @@ export function auditMemberKinds(opts = {}) {
     typedSites: 0, nonHostSites: 0, untypedSites: 0,
     arityChecked: 0, aritySites: 0, sigClaims: 0,
     unsigClaims: 0,
+    typeClaims: 0, typeCheckedArgs: 0, typeUnknownArgs: 0,
     argsProbed: 0, discriminatingArgs: 0,
     helpersReached: 0, gapSuppressed: 0,
   };
@@ -1066,7 +1082,13 @@ export function auditMemberKinds(opts = {}) {
   const symbolsDoc = JSON.parse(readFileSync(symbolsPath, "utf8"));
   const symbols = symbolsDoc.symbols;
   ENUM_OBJECTS.clear();
-  for (const e of symbolsDoc.enums || []) if (e && e.name) ENUM_OBJECTS.add(e.name);
+  ENUM_VALUES.clear();
+  for (const e of symbolsDoc.enums || []) {
+    if (e && e.name) {
+      ENUM_OBJECTS.add(e.name);
+      ENUM_VALUES.set(e.name, new Set((e.values || []).map((v) => v.value)));
+    }
+  }
   const byId = new Map(symbols.map((s) => [s.id, s]));
   const owners = new Set(symbols.map((s) => s.owner));
   const byOwnerMember = new Map();
@@ -1088,7 +1110,7 @@ export function auditMemberKinds(opts = {}) {
     // Collect sources once; split each into functions.
     const srcFns = []; // {fn, env} — main bodies, one per variant
     const helperFns = new Map(); // name -> [{params, body}] (all variants)
-    for (const args of argSets) {
+    for (const [variantIndex, args] of argSets.entries()) {
       let src;
       try { src = buildFn(op.id, args); }
       catch (e) {
@@ -1097,7 +1119,7 @@ export function auditMemberKinds(opts = {}) {
       }
       for (const f of splitFunctions(src)) {
         if (f.isMain) {
-          srcFns.push({ fn: f, env: inferEnv(f.body) });
+          srcFns.push({ fn: f, env: inferEnv(f.body), canonical: variantIndex === 0 });
         } else {
           if (!helperFns.has(f.name)) helperFns.set(f.name, []);
           helperFns.get(f.name).push(f);
@@ -1132,8 +1154,13 @@ export function auditMemberKinds(opts = {}) {
 
     // Analysis units: every main variant body + each DISTINCT reachable
     // helper body (deduped — identical helper text analyzed once).
+    // `canonical` marks the sample-args source: arg-variant probes
+    // deliberately substitute wrong-typed values to enumerate member
+    // coverage, so only canonical units feed argument-TYPE checks
+    // (arity/kind checks still run on every variant — Issue #336).
     const units = [];
-    for (const { fn, env } of srcFns) units.push({ name: fn.name, body: fn.body, env, isMain: true });
+    for (const { fn, env, canonical } of srcFns)
+      units.push({ name: fn.name, body: fn.body, env, isMain: true, canonical });
     const seenHelperBody = new Set();
     for (const n of reachable) {
       const hs = HELPERS[n] || { params: {} };
@@ -1141,26 +1168,38 @@ export function auditMemberKinds(opts = {}) {
         const key = n + "\n" + hf.body;
         if (seenHelperBody.has(key)) continue;
         seenHelperBody.add(key);
+        // Params NOT documented in HELPERS start UNKNOWN (null), not
+        // "js": a default "js" would make member sites on a host object
+        // passed through an untypeable path count as resolved-non-host
+        // and inflate coverage (Issue #336 counterexample class).
         const paramKinds = {};
-        hf.params.forEach((p) => { paramKinds[p] = (hs.params && hs.params[p]) || "js"; });
-        // Call-site inference: for params still "js", union the kinds of
-        // the corresponding arguments at every call in the main tails.
+        hf.params.forEach((p) => { paramKinds[p] = (hs.params && hs.params[p]) ?? null; });
+        // Call-site inference: union the kinds of the corresponding
+        // arguments at every call in the main tails — INCLUDING "js",
+        // which is positive evidence (literal / JS-builtin arg), unlike
+        // the old default that labelled unknown params "js".
         const argKinds = hf.params.map(() => []);
         for (const { fn, env } of srcFns) {
           for (const argText of callArgsOf(fn.body, n)) {
             splitArgs(argText).forEach((a, i) => {
               if (i >= hf.params.length) return;
               const k = exprKind(a.trim(), env);
-              if (k && k !== "js") argKinds[i].push(k);
+              if (k) argKinds[i].push(k);
             });
           }
         }
         hf.params.forEach((p, i) => {
-          if (paramKinds[p] === "js" && argKinds[i].length) {
-            paramKinds[p] = [...new Set(argKinds[i].flatMap((k) => kindList(k)))].join("|");
+          if (!argKinds[i].length) return;
+          const inferred = [...new Set(argKinds[i].flatMap((k) => kindList(k)))].join("|");
+          // Documented "js" params may be refined by call-site evidence
+          // (e.g. __adp_proxySnapshot's `it`); unknown params adopt it.
+          if (paramKinds[p] == null || paramKinds[p] === "js") {
+            paramKinds[p] = inferred;
           }
         });
-        units.push({ name: n, body: hf.body, env: inferEnv(hf.body, paramKinds), isMain: false });
+        // Helper bodies are emitted code, not probe output: their
+        // internal literals are fixed, so they stay type-checkable.
+        units.push({ name: n, body: hf.body, env: inferEnv(hf.body, paramKinds), isMain: false, canonical: true });
       }
     }
 
@@ -1183,7 +1222,7 @@ export function auditMemberKinds(opts = {}) {
         if (typed) stats.typedSites++;
         else if (kinds.length > 0) stats.nonHostSites++;
         else stats.untypedSites++;
-        sites.push({ ...s, unit: u.name, kinds: kindList(hostKinds.join("|")), typed });
+        sites.push({ ...s, unit: u.name, kinds: kindList(hostKinds.join("|")), typed, canonical: u.canonical });
       }
     }
 
@@ -1240,9 +1279,12 @@ export function auditMemberKinds(opts = {}) {
 
       // ---- signature coverage: method claims without a recorded
       // signature cannot be arity-checked — count them explicitly so
-      // the unchecked surface is visible, not implied.
+      // the unchecked surface is visible, not implied. `signature: []`
+      // is a DOCUMENTED zero-arg signature (the extractor only emits it
+      // when a usage line literally shows `member()`); `null` means the
+      // arity is unknown.
       if (sym.kind === "method") {
-        if (Array.isArray(sym.signature) && sym.signature.length > 0) {
+        if (Array.isArray(sym.signature)) {
           stats.arityChecked++;
           stats.sigClaims++;
         } else {
@@ -1252,18 +1294,44 @@ export function auditMemberKinds(opts = {}) {
       }
 
       // ---- site-level checks for this member across all sources ----
-      if (sym.kind === "method" && Array.isArray(sym.signature) && sym.signature.length > 0) {
+      if (sym.kind === "method" && Array.isArray(sym.signature)) {
         const { min, max, sig } = signatureArity(sym.signature);
+        // Grounded argument-type checking (Issue #336): only when the
+        // inventory's Parameters table aligns positionally with the
+        // signature (same length — merged "a|b" alternatives and
+        // bracket-grouped params break alignment and are skipped, not
+        // guessed). Only literal argument expressions are checked;
+        // identifiers/calls are counted as unknown, never inferred.
+        const params = Array.isArray(sym.signatureParams) &&
+          sym.signatureParams.length === sym.signature.length
+          ? sym.signatureParams : null;
+        if (params) stats.typeClaims++;
         for (const s of sites) {
           if (s.name !== name || s.kind !== "call" || !s.typed) continue;
           if (!s.kinds.some((k) => kindIsA(k, owner))) continue;
           stats.aritySites++;
-          const n = callArgCount(s.argsText);
+          const callArgs = splitArgs(s.argsText);
+          const n = callArgs.length;
           if (n < min || n > max) {
             findings.push({
               op: op.id, member: memberId, kind: sym.kind,
               issue: `method '${owner}.${name}' called with ${n} arg(s); documented signature allows ${min}..${max} (${sig})`,
             });
+          }
+          if (!params || !s.canonical) continue;
+          for (let i = 0; i < n && i < params.length; i++) {
+            const token = params[i] && params[i].type;
+            if (!token) { stats.typeUnknownArgs++; continue; }
+            const argKind = literalArgKind(callArgs[i]);
+            if (argKind === "unknown") { stats.typeUnknownArgs++; continue; }
+            stats.typeCheckedArgs++;
+            const problem = typeMismatch(token, argKind);
+            if (problem) {
+              findings.push({
+                op: op.id, member: memberId, kind: sym.kind,
+                issue: `method '${owner}.${name}' arg ${i + 1} documented type '${token}' but literal arg is ${problem} (${s.unit})`,
+              });
+            }
           }
         }
       }
@@ -1388,13 +1456,43 @@ function safeBuild(id, args, buildFn) {
 }
 
 // Exported for counterexample tests (tests/audit-member-kinds.test.mjs).
-export { splitFunctions, memberSites, inferEnv, exprKind, receiverKinds, kindChain, kindIsA, lookupMember, callArgsOf, argProbes, HELPERS, INHERITS, variantArgSetsFor };
+export { splitFunctions, memberSites, inferEnv, exprKind, receiverKinds, kindChain, kindIsA, lookupMember, callArgsOf, argProbes, literalArgKind, typeMismatch, HELPERS, INHERITS, variantArgSetsFor };
 export const __testables = { MEMBER_RETURN, COLLECTION_ELEMENT, UNION_KINDS, JS_KINDS, GLOBAL_KINDS };
 
-// Count top-level comma-separated args in an arg list (0 for empty).
-function callArgCount(argText) {
-  if (!argText || argText.trim() === "") return 0;
-  return splitArgs(argText).length;
+// Classify a call-site argument expression for grounded type checking.
+// Only syntactic literals are classified — identifiers, calls and member
+// expressions return "unknown" and are never type-inferred (Issue #336:
+// no unfounded type inference). `EnumName.CONST` returns an object so
+// enum tokens can verify the constant against the inventory.
+function literalArgKind(argText) {
+  const t = argText.trim();
+  if (t === "") return "unknown";
+  if (t.startsWith("`") ||
+      /^"(?:[^"\\]|\\.)*"$/.test(t) || /^'(?:[^'\\]|\\.)*'$/.test(t)) return "string";
+  if (/^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/.test(t)) return "number";
+  if (t === "true" || t === "false") return "boolean";
+  if (t.startsWith("[")) return "array";
+  const em = /^([A-Z][\w$]*)\.([A-Z][\w$]*)$/.exec(t);
+  if (em) return { enum: em[1], value: em[2] };
+  return "unknown";
+}
+
+// Compare a documented parameter-type token ("string" | "number" |
+// "boolean" | "array" | "enum:Name") against a literalArgKind result.
+// Returns null on match/unchecked, else a description of the mismatch.
+function typeMismatch(token, argKind) {
+  if (typeof argKind === "object" && argKind !== null && argKind.enum) {
+    if (token === `enum:${argKind.enum}`) {
+      const vals = ENUM_VALUES.get(argKind.enum);
+      if (!vals) return `reference to undocumented enum ${argKind.enum}`;
+      return vals.has(argKind.value) ? null : `undocumented ${argKind.enum}.${argKind.value} value`;
+    }
+    return `${argKind.enum}.${argKind.value}`;
+  }
+  if (token.startsWith("enum:")) return argKind;
+  const want = { string: "string", number: "number", boolean: "boolean", array: "array" }[token];
+  if (!want) return null;
+  return argKind === want ? null : argKind;
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
@@ -1406,7 +1504,7 @@ if (isMain) {
   }
   console.log(`audit-member-kinds: ${stats.ops} ops, ${stats.sources} sources, ${stats.claims} claims (${stats.methods} methods, ${stats.attributes} attributes)`);
   console.log(`  sites: ${stats.callSites} calls, ${stats.writeSites} writes, ${stats.readSites} reads — typed ${stats.typedSites}, resolved-non-host ${stats.nonHostSites}, untyped ${stats.untypedSites}`);
-  console.log(`  args: ${stats.argsProbed} probes, ${stats.discriminatingArgs} discriminating args; signature coverage: ${stats.sigClaims}/${stats.methods} method claims signatured (${stats.unsigClaims} unsigned, ${stats.unsigMembers.length} distinct members), ${stats.aritySites} typed call sites arity-checked; ${stats.gapSuppressed} known-inventory-gap site(s) suppressed`);
+  console.log(`  args: ${stats.argsProbed} probes, ${stats.discriminatingArgs} discriminating args; signature coverage: ${stats.sigClaims}/${stats.methods} method claims signatured (${stats.unsigClaims} unsigned, ${stats.unsigMembers.length} distinct members), ${stats.aritySites} typed call sites arity-checked; arg types: ${stats.typeClaims} claims with aligned documented types, ${stats.typeCheckedArgs} literal args type-checked, ${stats.typeUnknownArgs} args unknown/untyped; ${stats.gapSuppressed} known-inventory-gap site(s) suppressed`);
   if (findings.length === 0) {
     console.log("audit-member-kinds: no findings");
     process.exit(0);
