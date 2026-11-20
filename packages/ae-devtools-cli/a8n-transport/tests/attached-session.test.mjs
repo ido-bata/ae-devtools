@@ -86,11 +86,11 @@ const openImpl = async (options, sink) => {
   };
 export const AfterEffects = Object.assign(function AfterEffects() {}, {
   launch: (options) => openImpl(options, { args: launchArgs, log: launchLog }),
-  // Attach-only API (ae-a8n attach contract): present only when the
-  // fixture opts in, so tests cover BOTH the preferred path and the
-  // transitional launch fallback. Records into attachArgs so tests can
-  // prove which opener ran.
-  ...(process.env.AE_FIXTURE_ATTACH === "1"
+  // Attach-only API (ae-a8n >= 0.5.0 contract): present by default so
+  // tests exercise the only supported opener; AE_FIXTURE_NO_ATTACH=1
+  // removes it to cover the ATTACHED_TARGET_UNSUPPORTED refusal.
+  // Records into attachArgs so tests can prove which opener ran.
+  ...(process.env.AE_FIXTURE_NO_ATTACH !== "1"
     ? { attach: (options) => { attachArgs.push(options ?? {}); return openImpl(options, { args: launchArgs, log: launchLog }); } }
     : {}),
 });
@@ -507,14 +507,14 @@ test("openAttachedSliceSession: unknown/read-only/forbidden mutatingOps refuse B
 });
 
 /* ------------------------------------------------------------------ */
-/* attach-only opener + target re-validation (Issue #366)              */
+/* attach-only opener + target re-validation (Issues #366, #374)     */
 /* ------------------------------------------------------------------ */
 
-test("attach boundary: AfterEffects.attach is preferred when exported", async () => {
+test("attach boundary: AfterEffects.attach is the only opener", async () => {
   const root = launchFixtureRoot();
   const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
   try {
-    await withEnvVars({ ...FAKE_EXE_ENV, AE_FIXTURE_ATTACH: "1" }, async () => {
+    await withEnvVars({ ...FAKE_EXE_ENV }, async () => {
       const s = await openAttachedSliceSession({
         aeA8nRoot: root,
         workdir,
@@ -539,19 +539,18 @@ test("attach boundary: AfterEffects.attach is preferred when exported", async ()
   }
 });
 
-test("attach boundary: launch fallback is marked transitional", async () => {
+test("attach boundary: ae-a8n without attach API refuses — no launch fallback", async () => {
   const root = launchFixtureRoot();
   const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
   try {
-    await withBehavior("attached-ok", async () => {
-      const s = await openAttachedSliceSession({ aeA8nRoot: root, workdir });
-      try {
-        assert.equal(s.target.attachApi, "AfterEffects.launch(transitional)");
-        // No census ran (resolveInstall null) → identity unattested.
-        assert.equal(s.target.identity.pid, null);
-      } finally {
-        await s.close();
-      }
+    await withEnvVars({ AE_FIXTURE_NO_ATTACH: "1" }, async () => {
+      await assert.rejects(
+        openAttachedSliceSession({ aeA8nRoot: root, workdir }),
+        (e) => e.code === "ATTACHED_TARGET_UNSUPPORTED",
+      );
+      // The launch path must never run for the attached lane.
+      const { launchArgs } = await importFixture(root);
+      assert.equal(launchArgs.length, 0, "AfterEffects.launch must not be called");
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -48,10 +48,10 @@
  * where ae-a8n's own census + ownership check remain the authority.
  *
  * Attach-only boundary: the session is obtained through
- * openAttachTarget(), which prefers ae-a8n's `AfterEffects.attach`
- * (never spawns) and only falls back to `launch` on ae-a8n builds that
- * do not export it yet — the transitional fallback still cannot produce
- * a session this module accepts unless ownership comes back "attached".
+ * openAttachTarget(), which calls ae-a8n's `AfterEffects.attach`
+ * (never spawns) and refuses with ATTACHED_TARGET_UNSUPPORTED when the
+ * resolved ae-a8n does not export it — there is no launch fallback in
+ * this lane (Issue #374).
  *
  * Identity + re-validation (Issue #366): the matched census row's pid
  * and process start stamp are recorded as `target.identity` together
@@ -431,10 +431,9 @@ export async function openAttachedSliceSession(options = {}) {
 
   let ae;
   try {
-    // Attach-only boundary (attach-target.mjs): prefers ae-a8n's
-    // AfterEffects.attach which can never spawn a process; the
-    // transitional launch fallback still requires ownership
-    // "attached" below before anything is dispatched.
+    // Attach-only boundary (attach-target.mjs): AfterEffects.attach
+    // can never spawn a process; an ae-a8n without the attach API
+    // refuses here with ATTACHED_TARGET_UNSUPPORTED (Issue #374).
     ae = await openAttachTarget({
       AfterEffects,
       installDir: optInstallDir,
@@ -725,9 +724,8 @@ export async function openAttachedSliceSession(options = {}) {
       project,
       projectFile: expectedProjectFile,
       identity,
-      // Which opener actually ran ("AfterEffects.attach" once the
-      // ae-a8n attach-only API ships; the launch fallback is marked
-      // transitional in attach-target.mjs).
+      // Which opener actually ran — always "AfterEffects.attach" now
+      // that the launch fallback is removed (Issue #374).
       attachApi: typeof ae.attachApi === "string" ? ae.attachApi : null,
     };
 

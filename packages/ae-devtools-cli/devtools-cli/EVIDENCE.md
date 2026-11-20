@@ -157,3 +157,27 @@ this loop, MCP/VSCode surfaces on the attached session.
   `vscode-extension/evidence/vscode-iso-a8n-366/`. Status:
   **BLOCKED (environmental)** — needs an unlocked GUI session to
   settle consent, then Problems-panel verification.
+
+## 2026-11-21 — attach-only hardening (branch 374, issue #374)
+
+- `attach-target.mjs` no longer has any `AfterEffects.launch` path:
+  an ae-a8n build without `AfterEffects.attach` refuses with
+  `ATTACHED_TARGET_UNSUPPORTED` before any session object exists.
+- Real-host refusal proof: `verify --session a8n-attached` against
+  registry-pinned ae-a8n 0.2.0 (no attach API) exits with
+  `ATTACHED_TARGET_UNSUPPORTED`; no AE process was spawned
+  (user AE 2026 pid 34792 untouched).
+- Real-host attach proof via `aeA8nRoot` → ae-a8n release-0-5-0 tree
+  (c104e39, identical to merge a9af7e0):
+  `devtools-cli/evidence/run-374-attached-no-fallback-2026.json` —
+  `attachApi: "AfterEffects.attach"`, ownership attached,
+  `read.projectSummary` COMPLETED, `cleanup.quit: null`.
+- Packed-tarball verification (branch 366, same code path):
+  `run-366-attached-a8n-050-tarball-2026.json` — npm-installed
+  `ido-bata-ae-a8n-0.5.0.tgz` from release-0-5-0 HEAD
+  (sha512 `cmJJNuJp/88N32qNLaFZiA1/WinfP6D+Y+pjCsb0+QOQ6UGITWBsEM3cTL5DVtvXkrnU/1IWat9t5VXhWrRI6g==`).
+- Dependency note: `@ido-bata/ae-a8n` stays pinned at 0.2.0 in this
+  PR so `npm ci` keeps working before ae-a8n 0.5.0 is published;
+  the spec flips to the published 0.5.0 at release time (human-gated
+  npm publish). Until then the attached lane refuses honestly on
+  registry installs and works via `aeA8nRoot`/tarball installs.
