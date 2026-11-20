@@ -36,22 +36,42 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 /** The main AE executable — helpers (crashpad_handler, CEPHtmlEngine,
- *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it. */
-export const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)/;
+ *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it.
+ *  macOS: `Contents/MacOS/After Effects`; Windows: `Support Files\AfterFX.exe`. */
+export const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)|Support Files\\AfterFX\.exe/i;
 /** Known Adobe helper executables — used to classify
  *  aeHelpersAfterClose. Anything else matching the install fragment
  *  (e.g. this node's own harness) is NOT an Adobe helper. */
 export const ADOBE_HELPER = /crashpad_handler|CEPHtmlEngine|dynamiclinkmanager|TeamProjectsLocalHub|AdobeCrashReport/i;
 
 /**
- * Snapshot `ps` rows whose command line mentions the AE install. With no
- * --install-dir the fragment is the generic bundle directory name, which
- * matches every installed AE version — the evidence records all of them so
- * a leftover is never hidden by an over-narrow filter.
+ * Raw "pid args" process rows for the host platform. Unix uses
+ * `ps -axo pid=,args=`; Windows has no `ps`, so PowerShell
+ * `Get-CimInstance Win32_Process` supplies ProcessId + CommandLine in
+ * the same shape. Both degrade to {error} — never fabricated rows.
+ */
+async function processRows() {
+  if (process.platform === "win32") {
+    const script =
+      "Get-CimInstance Win32_Process -Property ProcessId,CommandLine | " +
+      "ForEach-Object { if ($_.CommandLine) { \"$($_.ProcessId) $($_.CommandLine)\" } }";
+    const { stdout } = await execFileAsync(
+      "powershell", ["-NoProfile", "-Command", script], { timeout: 20_000 });
+    return stdout;
+  }
+  const { stdout } = await execFileAsync("ps", ["-axo", "pid=,args="], { timeout: 10_000 });
+  return stdout;
+}
+
+/**
+ * Snapshot process rows whose command line mentions the AE install.
+ * With no --install-dir the fragment is the generic bundle/directory
+ * name, which matches every installed AE version — the evidence records
+ * all of them so a leftover is never hidden by an over-narrow filter.
  */
 export async function aeProcessSnapshot(fragment) {
   try {
-    const { stdout } = await execFileAsync("ps", ["-axo", "pid=,args="], { timeout: 10_000 });
+    const stdout = await processRows();
     return stdout
       .split("\n")
       .map((line) => line.trim())
