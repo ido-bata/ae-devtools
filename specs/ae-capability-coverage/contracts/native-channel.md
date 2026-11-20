@@ -9,7 +9,7 @@
 The NativeProbe plug-in's only execution context is its registered **idle hook** (AE main thread, host-dispatched). This contract defines an **opt-in, off-by-default** intake inside that hook: when explicitly enabled, each idle dispatch polls a private channel directory for read-only dispatch requests and publishes typed results.
 
 ```
-external request file → claim → validate → one allowlisted read-only AEGP op → atomic result file + op/marker evidence
+external request file → claim → validate → consent (mutating ops only) → one allowlisted AEGP op → atomic result file + op/marker evidence
 ```
 
 **Verification lane, not a dispatch grant.** Intake membership in `NATIVE_INTAKE_OPERATIONS` is an *explicitly authorized verification path* so the first real-host proof (Issue #223 / Slice C) has a defined way to reach the plug-in. It is **not** the `dispatchable` gate: registry entries stay `implemented-unverified`, `resolveDispatchOperation` keeps refusing every committed entry, and no operation is promoted by intake alone. Evidence-free capability is never publicly exposed — the lane is off unless an operator points the plug-in at a prepared channel.
@@ -66,7 +66,7 @@ POSIX privacy is enforced per tick, fail-closed: root/`inbox`/`outbox`/`channel.
 | --- | --- |
 | `v` | `1` |
 | `token` | must equal `channel.json`'s token |
-| `consent` | optional `{"v":1,"mac":"<64hex>"}` — per-request authorization proof for consent-requiring operations (§7g). `v` must be `1`; `mac` is 64 lowercase hex. Ignored entirely for read-only operations; mandatory and verified for `requiresConsent` allowlist entries |
+| `consent` | optional `{"v":1,"mac":"<64hex>"}` — per-request authorization proof for consent-requiring operations (§7g). `v` must be `1`; `mac` is 64 lowercase hex. Ignored entirely for read-only operations; mandatory and verified for allowlist entries whose executor binding is marked mutating |
 | `timeoutMs` | finite number in `[0, 3600000]` (1 h ceiling); deadline = request-file mtime + `timeoutMs` (same convention as the ae-a8n dispatcher). Out-of-bounds values refuse `MALFORMED_REQUEST`; already-expired requests refuse `STALE_REQUEST` **before execution**; an unreadable mtime yields `not-sent` (freshness unproven) |
 | `target` | optional instance binding. A request naming a different instance is **not claimed** (left for its instance); the plug-in's instance id is reported in `state.json` |
 | `request` | the `native-dispatch/v1` envelope, unchanged. `requestId` must equal the file-name stem and, on this file channel, must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` (the semantic envelope keeps "non-empty string"; the file channel narrows it so names are path-safe and JSON-escape-free) |
@@ -90,8 +90,8 @@ After claim (`*.request.json` → `*.claimed` rename; one request per idle dispa
 8a. `args` satisfies the operation's declared argument schema (§7a) → `refused` `MALFORMED_REQUEST`. Runs before the duplicate check, session attestation, and any AEGP call — unpermitted input never reaches the host
 9. duplicate `requestId` (seen-ring, last 64 claimed ids) → `refused` `DUPLICATE_REQUEST`
 10. session attestation: `AEGP_GetDriverImplementationVersion` must succeed (`not-sent` otherwise — environment-proven non-dispatch), `session.aeVersion` must equal the observed `"M.m"` and any `channel.json` pin → `refused` `WRONG_TARGET`
-11. consent verification — **only when the allowlist entry is `requiresConsent`** (§7g): `consent` present and well-formed → `refused` `CONSENT_REQUIRED`; `channel.json` has no `consentKey` → `CONSENT_REQUIRED`; recomputed MAC ≠ presented `mac` → `refused` `CONSENT_INVALID`. Read-only entries skip this step entirely — a `consent` field on a read-only request is ignored, never an error
-12. execute the allowlisted op → `completed` or `failed`. Read-only ops: `mayHaveMutated:false` always. `requiresConsent` ops (§7h): `mayHaveMutated:true` whenever the mutating AEGP call was attempted — `completed` and `failed` alike, since the host may have applied the change before reporting an error; `false` on `not-sent`/`refused` (pre-execution) and on client-side `unknown` the field is `true` in trace
+11. consent verification — **only when the allowlist entry's executor binding is mutating** (§7g; the mutation class lives in the C++ executor binding table, `NATIVE_INTAKE_CONSENT_OPS` mirrors it devtools-side): `consent` present and well-formed → `refused` `CONSENT_REQUIRED`; `channel.json` has no `consentKey` → `CONSENT_REQUIRED`; recomputed MAC ≠ presented `mac` → `refused` `CONSENT_INVALID`. Read-only entries skip this step entirely — a `consent` field on a read-only request is ignored, never an error
+12. execute the allowlisted op → `completed` or `failed`. Read-only ops: `mayHaveMutated:false` always (structurally — read-only executors receive no mutation channel). Mutating ops (§7h): `mayHaveMutated:true` whenever the mutating AEGP call was attempted — `completed` and `failed` alike, since the host may have applied the change before reporting an error; `false` on `not-sent`/`refused` (pre-execution) and on client-side `unknown` the field is `true` in trace
 
 `not-sent` is the only outcome the client may re-issue (as a **new** request). `unknown` is never emitted by the plug-in: a crashed/interrupted claim leaves `*.claimed` behind and the client times out `UNKNOWN` — claimed requests are never replayed. The plug-in removes `*.claimed` only after a verdict has been published (or attempted); a crash mid-request leaves it as evidence, never re-executed. The duplicate `requestId` seen-ring is per plug-in session: after a plug-in restart the ring resets, so dedup across restarts relies on client-side requestId uniqueness (read-only allowlisted ops make a replay benign but it is still refused within a session).
 
@@ -469,7 +469,7 @@ Both implementations (C++ plug-in, TS adapter/ae-a8n) MUST produce byte-identica
 
 ### Verification and refusals
 
-- Applies only to allowlist entries flagged `requiresConsent`; `AEGP_ItemSuite9.AEGP_SetItemComment` (§7h) is the first.
+- Applies only to allowlist entries whose executor binding is mutating (contract term: `requiresConsent`); `AEGP_ItemSuite9.AEGP_SetItemComment` (§7h) is the first.
 - `consent` absent, or present but not exactly `{"v":1,"mac":"<64hex>"}` → `refused` `CONSENT_REQUIRED`.
 - `channel.json` lacks `consentKey`, or the key fails shape check → `CONSENT_REQUIRED` (fail closed — the channel cannot authorize what it cannot verify).
 - canonicalization fails (non-integer number in args) or recomputed MAC ≠ `mac` (constant-time compare) → `refused` `CONSENT_INVALID`. One code covers tampering, forgery, and scope mismatch — the MAC binds every scope field, so there is no separate "valid MAC, wrong scope" case.
@@ -487,7 +487,7 @@ The canonical cross-repo fixture is [`packages/native-adapter/tests/fixtures/nat
 
 ## 7h. Mutating operations — `AEGP_ItemSuite9.AEGP_SetItemComment` (Issue #327)
 
-The first `requiresConsent` allowlist entry and the template for every future mutation:
+The first mutating-binding allowlist entry (`requiresConsent` in contract terms) and the template for every future mutation:
 
 - **Identity**: identical to the read-only item getters — `{projectIndex, item:<aeRefItem>}` resolves through the shared `ResolveAeRefItem` inside the request window; a stale/ambiguous/cross-project descriptor refuses `STALE_REFERENCE` *before* the mutation call, and consent never bypasses identity checks.
 - **Consent**: mandatory §7g envelope `consent` — verified after session attestation, before the AEGP call. `opCalls` contains no `AEGP_SetItemComment` record on any consent refusal.
@@ -498,7 +498,7 @@ The first `requiresConsent` allowlist entry and the template for every future mu
 
 ## 8. Non-goals / explicit limitations
 
-- One mutating operation exists: `AEGP_ItemSuite9.AEGP_SetItemComment` (§7h, Issue #327) — consent-gated, UNDOABLE, reconcilable via `GetItemComment`. Consent-token *issuance policy* and `authorizationRef` grant verification remain ae-a8n-owned; the channel-side consent *proof* (HMAC verification, §7g) is implemented for `requiresConsent` allowlist entries. The concrete mutation-path design — authorization scope, audit trail, `UNKNOWN`/reconciliation semantics — is fixed in [trusted-execution.md §8](../design/trusted-execution.md#8-native-channel-mutation-path--concrete-design-issue-318-follow-up).
+- One mutating operation exists: `AEGP_ItemSuite9.AEGP_SetItemComment` (§7h, Issue #327) — consent-gated, UNDOABLE, reconcilable via `GetItemComment`. Consent-token *issuance policy* and `authorizationRef` grant verification remain ae-a8n-owned; the channel-side consent *proof* (HMAC verification, §7g) is implemented for mutating-binding allowlist entries. The concrete mutation-path design — authorization scope, audit trail, `UNKNOWN`/reconciliation semantics — is fixed in [trusted-execution.md §8](../design/trusted-execution.md#8-native-channel-mutation-path--concrete-design-issue-318-follow-up).
 - No transport selection, no fallback policy beyond what the channel contract fixes, and no second transport in ae-devtools. The ae-a8n-owned client side (channel preparation, token issuance, request publication, result collection) is implemented in ae-a8n `src/driver/native-channel.ts` under ae-a8n Issue #238 (Slice B; merged to ae-a8n `release-0-4-0` via PR ae-a8n#239 `ba4ae1b`, including an opt-in interop test that runs the real client against `probe_test --channel-server`). A devtools-side fake E2E (`experiments/native-sdk/minimal-plugin/test/e2e_channel.ts` + `probe_test --channel-server`) already proves the file-channel vertical slice — external request → claim → allowlisted getter → atomic result → contract validation — at fake/mock level; the real ae-a8n client has since been verified against the same channel via ae-a8n's opt-in interop test (`AE_DEVTOOLS_PROBE_TEST=<probe_test> npx vitest run test/native-channel-interop.test.ts`), completing the Slice B fake-level vertical slice on both sides.
 - File-channel privacy is not authentication — same limitation as the ae-a8n dispatcher, documented not hidden.
 - `sessionId` is shape-validated only; the plug-in cannot prove which client process supplied it.

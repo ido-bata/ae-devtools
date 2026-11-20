@@ -35,6 +35,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { DISPATCH_ENTRIES } from "../src/operations.ts";
+import {
+  NATIVE_INTAKE_OPERATIONS,
+  NATIVE_INTAKE_CONSENT_OPS,
+} from "../src/dispatch.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PROBE_CPP = join(
@@ -58,6 +62,10 @@ const INTAKE_SOURCES = [
   "native_ops.cpp",
 ].map((f) =>
   join(HERE, `../../../experiments/native-sdk/minimal-plugin/src/${f}`),
+);
+const REGISTRY_CPP = join(
+  HERE,
+  "../../../experiments/native-sdk/minimal-plugin/src/native_registry.cpp",
 );
 
 /** probe.cpp local variable → SDK suite struct name (registry `suite`). */
@@ -187,6 +195,55 @@ describe("operations registry ↔ probe.cpp reconciliation", () => {
       if (entry !== undefined) {
         expect(entry.implemented).toBe(false);
       }
+    }
+  });
+});
+
+/* Issue #328 residual: the C++ allowlist is the single declarative
+   source for intake ops — opId + arg spec + execKind. These tests
+   make the TS mirror (NATIVE_INTAKE_OPERATIONS /
+   NATIVE_INTAKE_CONSENT_OPS) mechanically reconciled against
+   S_ALLOWLIST in native_registry.cpp instead of editorially synced. */
+describe("S_ALLOWLIST ↔ NATIVE_INTAKE_* reconciliation", () => {
+  const src = readFileSync(REGISTRY_CPP, "utf8");
+  /* Entry shape: { "OP",\n      "OP",<spec>, <n>, EXEC_KIND }, —
+     capture opId + execKind. */
+  const ENTRY_RE =
+    /\{\s*"(AEGP_[^"]+)",\s*\n\s*"AEGP_[^"]+",[^}\n]*?,\s*\d+,\s*(EXEC_\w+)\s*\}/g;
+  const entries = [...src.matchAll(ENTRY_RE)].map((m) => ({
+    opId: m[1]!,
+    execKind: m[2]!,
+  }));
+
+  test("S_ALLOWLIST parses to a non-empty op table", () => {
+    expect(entries.length).toBeGreaterThan(50);
+  });
+
+  test("allowlist opIds exactly equal NATIVE_INTAKE_OPERATIONS", () => {
+    const cppIds = new Set(entries.map((e) => e.opId));
+    const tsIds = new Set<string>(NATIVE_INTAKE_OPERATIONS);
+    expect([...cppIds].filter((id) => !tsIds.has(id)).sort()).toEqual([]);
+    expect([...tsIds].filter((id) => !cppIds.has(id)).sort()).toEqual([]);
+  });
+
+  test("consent-gated ops exactly equal the mutating execKind entries", () => {
+    const cppConsent = new Set(
+      entries.filter((e) => e.execKind === "EXEC_SET_ITEM_COMMENT").map((e) => e.opId),
+    );
+    expect([...cppConsent].sort()).toEqual([...NATIVE_INTAKE_CONSENT_OPS].sort());
+  });
+
+  test("every execKind used is a declared EXEC_* member", () => {
+    const DECLARED = new Set([
+      "EXEC_NUM_PROJECTS", "EXEC_DRIVER_IMPL_VERSION", "EXEC_GET_TYPE_NAME",
+      "EXEC_ITEM_NAME_OR_ID", "EXEC_ENUM_PROJ_ITEMS", "EXEC_COMP_GETTER",
+      "EXEC_SET_ITEM_COMMENT", "EXEC_ITEM_GETTER", "EXEC_LAYER_COMP_OP",
+      "EXEC_LAYER_GETTER", "EXEC_PROJECT_GETTER", "EXEC_ENUM_RQ_ITEMS",
+      "EXEC_RQ_ITEM_GETTER", "EXEC_DRIVER_PLUGIN_INIT_VERSION",
+      "EXEC_SUPPRESS_UI", "EXEC_HOST_ACTIVATED", "EXEC_RQ_ZERO_ARG",
+    ]);
+    for (const e of entries) {
+      expect(DECLARED.has(e.execKind), `${e.opId} -> ${e.execKind}`).toBe(true);
     }
   });
 });

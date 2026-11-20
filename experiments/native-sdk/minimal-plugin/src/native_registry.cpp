@@ -140,21 +140,21 @@ static const IntakeArgSpec S_RQENUM_ARGS[] = {
 
 const AllowEntry S_ALLOWLIST[] = {
     { "AEGP_ProjSuite6.AEGP_GetNumProjects",
-      "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, 0, 0 },
+      "AEGP_ProjSuite6.AEGP_GetNumProjects",NULL, 0, EXEC_NUM_PROJECTS },
     { "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
-      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion", NULL, 0, 0 },
+      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",NULL, 0, EXEC_DRIVER_IMPL_VERSION },
     { "AEGP_ItemSuite9.AEGP_GetTypeName",
-      "AEGP_ItemSuite9.AEGP_GetTypeName", S_TYPENAME_ARGS, 1, 0 },
+      "AEGP_ItemSuite9.AEGP_GetTypeName",S_TYPENAME_ARGS, 1, EXEC_GET_TYPE_NAME },
     { "AEGP_ItemSuite9.AEGP_GetItemName",
-      "AEGP_ItemSuite9.AEGP_GetItemName", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemName",S_AEREF_ARGS, 2, EXEC_ITEM_NAME_OR_ID },
     /* Issue #270 identity slice: GetItemID is descriptor issuance
        (resolve → read live id + project identity → canonical aeRef);
        GetFirstProjItem is discovery/enumeration. Both reuse the same
        identity resolver — no per-kind resolver duplication. */
     { "AEGP_ItemSuite9.AEGP_GetItemID",
-      "AEGP_ItemSuite9.AEGP_GetItemID", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemID",S_AEREF_ARGS, 2, EXEC_ITEM_NAME_OR_ID },
     { "AEGP_ItemSuite9.AEGP_GetFirstProjItem",
-      "AEGP_ItemSuite9.AEGP_GetFirstProjItem", S_FIRSTITEM_ARGS, 3, 0 },
+      "AEGP_ItemSuite9.AEGP_GetFirstProjItem",S_FIRSTITEM_ARGS, 3, EXEC_ENUM_PROJ_ITEMS },
     /* Issue #318 / #64: CompSuite13 read-only getters. All share the
        {projectIndex, comp:<aeRefItem type=comp>} contract; the comp
        handle is derived host-side via AEGP_GetCompFromItem — never
@@ -162,31 +162,31 @@ const AllowEntry S_ALLOWLIST[] = {
        takes an A_Time input argument (arg-bearing ops are a separate
        slice). */
     { "AEGP_CompSuite13.AEGP_GetCompFramerate",
-      "AEGP_CompSuite13.AEGP_GetCompFramerate", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompFramerate",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompFrameDuration",
-      "AEGP_CompSuite13.AEGP_GetCompFrameDuration", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompFrameDuration",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart",
-      "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaStart",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",
-      "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompWorkAreaDuration",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",
-      "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompDisplayStartTime",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",
-      "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompDisplayDropFrame",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor",
-      "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompDownsampleFactor",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",
-      "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetShowLayerNameOrSourceName",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetShowBlendModes",
-      "AEGP_CompSuite13.AEGP_GetShowBlendModes", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetShowBlendModes",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",
-      "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompSuggestedMotionBlurSamples",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",
-      "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompMotionBlurAdaptiveSampleLimit",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompBGColor",
-      "AEGP_CompSuite13.AEGP_GetCompBGColor", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompBGColor",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     { "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",
-      "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase", S_COMP_ARGS, 2, 0 },
+      "AEGP_CompSuite13.AEGP_GetCompShutterAnglePhase",S_COMP_ARGS, 2, EXEC_COMP_GETTER },
     /* Issue #318 / #63: ItemSuite9 read-only detail getters that take
        AEGP_ItemH — same {projectIndex, item:<aeRefItem>} contract as
        GetItemName; the resolved handle is used directly (no derived
@@ -194,31 +194,32 @@ const AllowEntry S_ALLOWLIST[] = {
        return host handles of other identity kinds (folder item /
        item-view) that need their own descriptor story first. */
     { "AEGP_ItemSuite9.AEGP_GetItemType",
-      "AEGP_ItemSuite9.AEGP_GetItemType", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemType",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemFlags",
-      "AEGP_ItemSuite9.AEGP_GetItemFlags", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemFlags",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_IsItemSelected",
-      "AEGP_ItemSuite9.AEGP_IsItemSelected", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_IsItemSelected",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemLabel",
-      "AEGP_ItemSuite9.AEGP_GetItemLabel", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemLabel",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemDuration",
-      "AEGP_ItemSuite9.AEGP_GetItemDuration", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemDuration",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemCurrentTime",
-      "AEGP_ItemSuite9.AEGP_GetItemCurrentTime", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemCurrentTime",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemDimensions",
-      "AEGP_ItemSuite9.AEGP_GetItemDimensions", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemDimensions",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
-      "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     { "AEGP_ItemSuite9.AEGP_GetItemComment",
-      "AEGP_ItemSuite9.AEGP_GetItemComment", S_AEREF_ARGS, 2, 0 },
+      "AEGP_ItemSuite9.AEGP_GetItemComment",S_AEREF_ARGS, 2, EXEC_ITEM_GETTER },
     /* Issue #327: first mutating op — AEGP_ItemSuite9.AEGP_SetItemComment
-       (UNDOABLE). requiresConsent=1: the §7g MAC is verified after
-       session attestation and before the AEGP call; the aeRef item is
-       resolved host-side exactly like the read-only getters. `comment`
-       is bounded UTF-8 (same 2048-byte bound as the getter payload);
-       empty string clears the comment. */
+       (UNDOABLE). EXEC_SET_ITEM_COMMENT is the mutating binding: the
+       §7g MAC is verified after session attestation and before the
+       AEGP call; the aeRef item is resolved host-side exactly like
+       the read-only getters. `comment` is bounded UTF-8 (same
+       2048-byte bound as the getter payload); empty string clears
+       the comment. */
     { "AEGP_ItemSuite9.AEGP_SetItemComment",
-      "AEGP_ItemSuite9.AEGP_SetItemComment", S_SETCOMMENT_ARGS, 3, 1 },
+      "AEGP_ItemSuite9.AEGP_SetItemComment",S_SETCOMMENT_ARGS, 3, EXEC_SET_ITEM_COMMENT },
     /* Issue #318 / #64 layer slice: AEGP_LayerSuite9. The layer handle
        is never taken from the wire — `layer` is an aeRefLayer descriptor
        embedding its parent comp's aeRef item descriptor; resolution is
@@ -232,72 +233,72 @@ const AllowEntry S_ALLOWLIST[] = {
        handled by emitting an aeRefLayer instead), all mutating members,
        and members needing A_Time/A_FloatRect/stream arguments. */
     { "AEGP_LayerSuite9.AEGP_GetCompNumLayers",
-      "AEGP_LayerSuite9.AEGP_GetCompNumLayers", S_COMP_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetCompNumLayers",S_COMP_ARGS, 2, EXEC_LAYER_COMP_OP },
     { "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",
-      "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex", S_COMP_INDEX_ARGS, 3, 0 },
+      "AEGP_LayerSuite9.AEGP_GetCompLayerByIndex",S_COMP_INDEX_ARGS, 3, EXEC_LAYER_COMP_OP },
     { "AEGP_LayerSuite9.AEGP_GetLayerIndex",
-      "AEGP_LayerSuite9.AEGP_GetLayerIndex", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerIndex",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerName",
-      "AEGP_LayerSuite9.AEGP_GetLayerName", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerName",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerFlags",
-      "AEGP_LayerSuite9.AEGP_GetLayerFlags", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerFlags",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerQuality",
-      "AEGP_LayerSuite9.AEGP_GetLayerQuality", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerQuality",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerObjectType",
-      "AEGP_LayerSuite9.AEGP_GetLayerObjectType", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerObjectType",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_IsLayer3D",
-      "AEGP_LayerSuite9.AEGP_IsLayer3D", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_IsLayer3D",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_IsLayer2D",
-      "AEGP_LayerSuite9.AEGP_IsLayer2D", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_IsLayer2D",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",
-      "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime", S_LAYER_TIME_ARGS, 3, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerCurrentTime",S_LAYER_TIME_ARGS, 3, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerInPoint",
-      "AEGP_LayerSuite9.AEGP_GetLayerInPoint", S_LAYER_TIME_ARGS, 3, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerInPoint",S_LAYER_TIME_ARGS, 3, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerDuration",
-      "AEGP_LayerSuite9.AEGP_GetLayerDuration", S_LAYER_TIME_ARGS, 3, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerDuration",S_LAYER_TIME_ARGS, 3, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerID",
-      "AEGP_LayerSuite9.AEGP_GetLayerID", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerID",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerLabel",
-      "AEGP_LayerSuite9.AEGP_GetLayerLabel", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerLabel",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",
-      "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerSamplingQuality",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",
-      "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetLayerSourceItemID",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",
-      "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_IsLayerVideoReallyOn",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",
-      "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_IsLayerAudioReallyOn",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",
-      "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_DoesLayerHaveTrackMatte",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",
-      "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte", S_LAYER_MATTE_ARGS, 3, 0 },
+      "AEGP_LayerSuite9.AEGP_IsLayerUsedAsTrackMatte",S_LAYER_MATTE_ARGS, 3, EXEC_LAYER_GETTER },
     { "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",
-      "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer", S_LAYER_ARGS, 2, 0 },
+      "AEGP_LayerSuite9.AEGP_GetTrackMatteLayer",S_LAYER_ARGS, 2, EXEC_LAYER_GETTER },
     /* Issue #270 Stage 2: zero-arg read-only getters needing no
        identity resolution. The three UtilitySuite members use the
        already-held utilP; the two render-queue members acquire their
        suite inside the request window like GetTypeName. */
     { "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
-      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion", NULL, 0, 0 },
+      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",NULL, 0, EXEC_DRIVER_PLUGIN_INIT_VERSION },
     { "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
-      "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI", NULL, 0, 0 },
+      "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",NULL, 0, EXEC_SUPPRESS_UI },
     { "AEGP_UtilitySuite6.AEGP_HostIsActivated",
-      "AEGP_UtilitySuite6.AEGP_HostIsActivated", NULL, 0, 0 },
+      "AEGP_UtilitySuite6.AEGP_HostIsActivated",NULL, 0, EXEC_HOST_ACTIVATED },
     { "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
-      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState", NULL, 0, 0 },
+      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",NULL, 0, EXEC_RQ_ZERO_ARG },
     { "AEGP_RQItemSuite4.AEGP_GetNumRQItems",
-      "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, 0, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetNumRQItems",NULL, 0, EXEC_RQ_ZERO_ARG },
     /* Issue #318 §7e: project-scoped read-only getters on the
        aeRefProject descriptor (§7e). GetProjectRootFolder stays out —
        the root folder is not a top-level item, so its itemId is outside
        the GetFirstProjItem scan and an emitted aeRef could never
        resolve. */
     { "AEGP_ProjSuite6.AEGP_ProjectIsDirty",
-      "AEGP_ProjSuite6.AEGP_ProjectIsDirty", S_PROJECT_ARGS, 1, 0 },
+      "AEGP_ProjSuite6.AEGP_ProjectIsDirty",S_PROJECT_ARGS, 1, EXEC_PROJECT_GETTER },
     { "AEGP_ProjSuite6.AEGP_GetProjectBitDepth",
-      "AEGP_ProjSuite6.AEGP_GetProjectBitDepth", S_PROJECT_ARGS, 1, 0 },
+      "AEGP_ProjSuite6.AEGP_GetProjectBitDepth",S_PROJECT_ARGS, 1, EXEC_PROJECT_GETTER },
     { "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay",
-      "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay", S_PROJECT_ARGS, 1, 0 },
+      "AEGP_ProjSuite6.AEGP_GetProjectTimeDisplay",S_PROJECT_ARGS, 1, EXEC_PROJECT_GETTER },
     /* Issue #318 §7f: RQ-item read-only getters on the aeRefRQItem
        descriptor — index + bound-comp aeRef + (status,
        numOutputModules) fingerprint, all re-verified atomically inside
@@ -308,21 +309,21 @@ const AllowEntry S_ALLOWLIST[] = {
        AddDefaultOutputModule, RemoveOutputModule, DeleteRQItem) are
        out of scope. */
     { "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",
-      "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", S_RQENUM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex",S_RQENUM_ARGS, 2, EXEC_ENUM_RQ_ITEMS },
     { "AEGP_RQItemSuite4.AEGP_GetRenderState",
-      "AEGP_RQItemSuite4.AEGP_GetRenderState", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetRenderState",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
     { "AEGP_RQItemSuite4.AEGP_GetStartedTime",
-      "AEGP_RQItemSuite4.AEGP_GetStartedTime", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetStartedTime",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
     { "AEGP_RQItemSuite4.AEGP_GetElapsedTime",
-      "AEGP_RQItemSuite4.AEGP_GetElapsedTime", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetElapsedTime",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
     { "AEGP_RQItemSuite4.AEGP_GetLogType",
-      "AEGP_RQItemSuite4.AEGP_GetLogType", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetLogType",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
     { "AEGP_RQItemSuite4.AEGP_GetComment",
-      "AEGP_RQItemSuite4.AEGP_GetComment", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetComment",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
     { "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",
-      "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
     { "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",
-      "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem", S_RQITEM_ARGS, 2, 0 },
+      "AEGP_RQItemSuite4.AEGP_GetCompFromRQItem",S_RQITEM_ARGS, 2, EXEC_RQ_ITEM_GETTER },
 };
 const int S_ALLOWLIST_COUNT =
     (int)(sizeof(S_ALLOWLIST) / sizeof(S_ALLOWLIST[0]));
@@ -825,6 +826,119 @@ long ArgsInt(const AllowEntry* allow, JVal* args, int index)
 {
     JVal* v = JGet(args, allow->argsSpec[index].name);
     return v ? (long)v->num : 0;
+}
+
+/* Table self-consistency (Issue #328): the allowlist is the single
+   declarative source for opId + arg schema + executor binding, so a
+   corrupt row must be caught mechanically rather than at dispatch.
+   Checks: non-empty unique ids, opRecordId mirrors operationId,
+   nargs >= 0, argsSpec present iff nargs > 0, arg kinds in range with
+   sane bounds, execKind in [0, EXEC_KIND_COUNT). Pure — callers may
+   pass deliberately corrupted tables (tests do). */
+int ValidateOpTable(
+    const AllowEntry* table, int count,
+    char* detailZ, size_t detailCap)
+{
+    int i, j;
+    if (count <= 0)
+    {
+        snprintf(detailZ, detailCap, "empty operation table");
+        return 0;
+    }
+    for (i = 0; i < count; i++)
+    {
+        const AllowEntry* e = &table[i];
+        if (!e->operationId || !e->operationId[0])
+        {
+            snprintf(detailZ, detailCap, "entry %d: missing operationId", i);
+            return 0;
+        }
+        if (!e->opRecordId || strcmp(e->opRecordId, e->operationId) != 0)
+        {
+            snprintf(detailZ, detailCap,
+                     "entry %d (%s): opRecordId does not mirror operationId",
+                     i, e->operationId);
+            return 0;
+        }
+        for (j = 0; j < i; j++)
+        {
+            if (strcmp(table[j].operationId, e->operationId) == 0)
+            {
+                snprintf(detailZ, detailCap,
+                         "entry %d: duplicate operationId %s",
+                         i, e->operationId);
+                return 0;
+            }
+        }
+        if (e->nargs < 0 || e->nargs > 8)
+        {
+            snprintf(detailZ, detailCap,
+                     "entry %d (%s): nargs %d out of range",
+                     i, e->operationId, e->nargs);
+            return 0;
+        }
+        if (e->nargs == 0)
+        {
+            if (e->argsSpec != NULL)
+            {
+                snprintf(detailZ, detailCap,
+                         "entry %d (%s): nargs=0 but argsSpec present",
+                         i, e->operationId);
+                return 0;
+            }
+        }
+        else
+        {
+            int k;
+            if (!e->argsSpec)
+            {
+                snprintf(detailZ, detailCap,
+                         "entry %d (%s): nargs=%d but argsSpec missing",
+                         i, e->operationId, e->nargs);
+                return 0;
+            }
+            for (k = 0; k < e->nargs; k++)
+            {
+                const IntakeArgSpec* s = &e->argsSpec[k];
+                if (!s->name || !s->name[0])
+                {
+                    snprintf(detailZ, detailCap,
+                             "entry %d (%s): arg %d missing name",
+                             i, e->operationId, k);
+                    return 0;
+                }
+                if (s->kind < ARGK_INT || s->kind > ARGK_STR)
+                {
+                    snprintf(detailZ, detailCap,
+                             "entry %d (%s): arg %s bad kind %d",
+                             i, e->operationId, s->name, s->kind);
+                    return 0;
+                }
+                if (s->kind == ARGK_INT && !(s->min <= s->max))
+                {
+                    snprintf(detailZ, detailCap,
+                             "entry %d (%s): arg %s inverted int bounds",
+                             i, e->operationId, s->name);
+                    return 0;
+                }
+                if (s->kind == ARGK_STR && s->max <= 0)
+                {
+                    snprintf(detailZ, detailCap,
+                             "entry %d (%s): arg %s non-positive bound",
+                             i, e->operationId, s->name);
+                    return 0;
+                }
+            }
+        }
+        if (e->execKind < 0 || e->execKind >= EXEC_KIND_COUNT)
+        {
+            snprintf(detailZ, detailCap,
+                     "entry %d (%s): execKind %d out of range",
+                     i, e->operationId, e->execKind);
+            return 0;
+        }
+    }
+    return 1;
 }
 
 

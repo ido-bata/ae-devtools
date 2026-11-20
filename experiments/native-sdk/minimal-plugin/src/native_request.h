@@ -14,6 +14,18 @@
 #include "native_intake.h"  /* AE_GeneralPlug.h types */
 #include "native_registry.h" /* AllowEntry */
 
+/* Mutation-attempt channel (Issue #328 residual): ProcessClaimed
+   passes a non-NULL IntakeMutCtx ONLY to executors whose binding is
+   mutating; read-only executors receive NULL, so they cannot express
+   mayHaveMutated at all — ReqVerdict deliberately does NOT carry the
+   flag. The mutating executor sets attempted=1 at the exact point the
+   mutating AEGP call is invoked (success or error — the host may
+   have applied the change before reporting failure). */
+typedef struct
+{
+    int attempted;
+} IntakeMutCtx;
+
 typedef struct
 {
     char outcome[16];
@@ -21,7 +33,6 @@ typedef struct
     char detail[160];
     char payload[14000];    /* JSON for `result` member, or "" — identity-slice payloads (issuance/enumeration) need real headroom under RESULT_MAX */
     int havePayload;
-    int mayHaveMutated;
     int publish;            /* 0 = no result file (should not happen) */
 } ReqVerdict;
 

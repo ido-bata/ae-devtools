@@ -22,7 +22,6 @@
 #include "native_state.h"
 #include "native_request.h"
 #include "native_registry.h"
-#include "native_identity.h"
 #include "native_ops.h"
 
 /* ae-devtools NativeProbe — opt-in native intake channel.
@@ -39,89 +38,13 @@
 #define REQ_TIMEOUT_MAX_MS 3600000L /* 1 h ceiling on request deadline */
 #define RESULT_MAX 16384
 
-/* ---- Issue #328: dispatch routing table -----------------------------
-   The allowlist dispatch is data, not code: each row maps an
-   operationId (exact, prefix, or prefix-minus-exclusion) or a set
-   predicate to its executor. Order is significant — the first match
-   wins, preserving the historical if/else precedence exactly. Adding
-   an op = allowlist entry + arg spec + executor + one row here. */
-typedef enum {
-    RM_EXACT,        /* a == operationId */
-    RM_PREFIX,       /* operationId starts with a */
-    RM_PREFIX_EXCL,  /* starts with a AND != excl */
-    RM_CUSTOM        /* custom(operationId) predicate */
-} RouteMatchKind;
-
-typedef struct {
-    RouteMatchKind kind;
-    const char* a;
-    const char* excl;
-    int (*custom)(const char*);
-    IntakeExecFn exec;
-} RouteEntry;
-
-static const RouteEntry kRoutes[] = {
-    { RM_EXACT, "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, NULL,
-      ExecNumProjects },
-    { RM_EXACT,
-      "AEGP_UtilitySuite6.AEGP_GetDriverImplementationVersion",
-      NULL, NULL, ExecDriverImplVersion },
-    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetTypeName", NULL, NULL,
-      ExecGetTypeName },
-    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetItemName", NULL, NULL,
-      ExecItemNameOrId },
-    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetItemID", NULL, NULL,
-      ExecItemNameOrId },
-    { RM_EXACT, "AEGP_ItemSuite9.AEGP_GetFirstProjItem", NULL, NULL,
-      EnumerateProjItems },
-    { RM_PREFIX, "AEGP_CompSuite13.", NULL, NULL, ExecCompGetter },
-    { RM_EXACT, "AEGP_ItemSuite9.AEGP_SetItemComment", NULL, NULL,
-      ExecSetItemComment },
-    { RM_CUSTOM, NULL, NULL, IsItemGetterOpId, ExecItemGetter },
-    { RM_CUSTOM, NULL, NULL, IsLayerCompOpId, ExecLayerCompOp },
-    { RM_CUSTOM, NULL, NULL, IsLayerGetterOpId, ExecLayerGetter },
-    { RM_PREFIX_EXCL, "AEGP_ProjSuite6.",
-      "AEGP_ProjSuite6.AEGP_GetNumProjects", NULL, ExecProjectGetter },
-    { RM_EXACT, "AEGP_RQItemSuite4.AEGP_GetRQItemByIndex", NULL, NULL,
-      EnumerateRQItems },
-    { RM_PREFIX_EXCL, "AEGP_RQItemSuite4.",
-      "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, ExecRQItemGetter },
-    { RM_EXACT,
-      "AEGP_UtilitySuite6.AEGP_GetDriverPluginInitFuncVersion",
-      NULL, NULL, ExecDriverPluginInitVersion },
-    { RM_EXACT, "AEGP_UtilitySuite6.AEGP_GetSuppressInteractiveUI",
-      NULL, NULL, ExecSuppressUI },
-    { RM_EXACT, "AEGP_UtilitySuite6.AEGP_HostIsActivated",
-      NULL, NULL, ExecHostActivated },
-    { RM_EXACT,
-      "AEGP_RenderQueueSuite1.AEGP_GetRenderQueueState",
-      NULL, NULL, ExecRQZeroArg },
-    { RM_EXACT, "AEGP_RQItemSuite4.AEGP_GetNumRQItems", NULL, NULL,
-      ExecRQZeroArg },
-};
-
-static int RouteMatches(const RouteEntry* r, const char* opId)
-{
-    switch (r->kind)
-    {
-        case RM_EXACT:
-            return strcmp(opId, r->a) == 0;
-        case RM_PREFIX:
-            return strncmp(opId, r->a, strlen(r->a)) == 0;
-        case RM_PREFIX_EXCL:
-            return strncmp(opId, r->a, strlen(r->a)) == 0 &&
-                   strcmp(opId, r->excl) != 0;
-        case RM_CUSTOM:
-        {
-            /* local copy keeps the call site free of an arrow-call —
-               the registry-reconcile scanner maps suite receivers by
-               name and must not see an unmapped indirect call. */
-            int (*fn)(const char*) = r->custom;
-            return fn(opId);
-        }
-    }
-    return 0;
-}
+/* ---- Issue #328: dispatch ------------------------------------------
+   There is no routing table here anymore: the allowlist entry's
+   execKind IS the dispatch key, resolved through the executor binding
+   table in native_ops.cpp (ExecForKind). Operation → executor →
+   mutation class all come from one declarative pair (S_ALLOWLIST +
+   binding table) that OpTableSelfCheck validates at configure time
+   and tests re-validate. */
 
 static void ProcessClaimed(
     const AEGP_UtilitySuite6* utilP,
@@ -143,6 +66,7 @@ static void ProcessClaimed(
     char outDoc[RESULT_MAX];
     char opCallsJson[1024];
     int hasOpCalls = 0;
+    int mayHaveMutated = 0;
 
     memset(&v, 0, sizeof(v));
     v.publish = 1;
@@ -223,7 +147,7 @@ static void ProcessClaimed(
         {
             snprintf(v.outcome, sizeof(v.outcome), "not-sent");
             snprintf(v.detail, sizeof(v.detail), "request mtime unavailable");
-            v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
+            v.havePayload = 0; v.publish = 1;
             goto verdict;
         }
         if (NowMs() > mtimeMs + (long long)tmo->num)
@@ -295,7 +219,7 @@ static void ProcessClaimed(
                 snprintf(v.outcome, sizeof(v.outcome), "not-sent");
                 snprintf(v.detail, sizeof(v.detail),
                          "driver version attestation unavailable");
-                v.havePayload = 0; v.mayHaveMutated = 0; v.publish = 1;
+                v.havePayload = 0; v.publish = 1;
                 goto verdict;
             }
             IntakeNoteObservedVersion((int)maj, (int)min);
@@ -315,11 +239,14 @@ static void ProcessClaimed(
         }
 
         /* ---- consent verification (Issue #326 / contract §7g) ----
-           Only requiresConsent allowlist entries verify; read-only ops
-           skip entirely and a stray consent field is ignored. Runs
-           after session attestation, before any AEGP mutation call —
-           a refusal here leaves opCalls with no mutation record. */
-        if (allow->requiresConsent)
+           Only mutating bindings verify; read-only ops skip entirely
+           and a stray consent field is ignored. The mutation class
+           comes from the executor binding table — the same source
+           that hands the executor its IntakeMutCtx — so consent and
+           outcome classification cannot diverge. Runs after session
+           attestation, before any AEGP mutation call — a refusal
+           here leaves opCalls with no mutation record. */
+        if (ExecKindIsMutating(allow->execKind))
         {
             JVal* consent = JGet(doc, "consent");
             JVal* cv = consent ? JGet(consent, "v") : NULL;
@@ -367,26 +294,26 @@ static void ProcessClaimed(
             }
         }
 
-        /* ---- execute the allowlisted op: routing table (Issue #328)
-           First matching row wins; rows preserve the historical
-           if/else precedence. No match → OPERATION_NOT_DISPATCHABLE. */
+        /* ---- execute the allowlisted op --------------------------------
+           execKind -> executor via the binding table (Issue #328). A
+           mutating binding receives a live IntakeMutCtx; a read-only
+           binding receives NULL so it cannot express mayHaveMutated —
+           the flag lives only in this frame and reaches the wire
+           solely through EmitResult. */
         {
-            size_t ri;
-            int routed = 0;
-            for (ri = 0; ri < sizeof(kRoutes) / sizeof(kRoutes[0]); ri++)
-            {
-                if (RouteMatches(&kRoutes[ri], allow->operationId))
-                {
-                    kRoutes[ri].exec(utilP, projP, basicP, plugin_id,
-                                     allow, args, &v);
-                    routed = 1;
-                    break;
-                }
-            }
-            if (!routed)
+            IntakeExecFn exec = ExecForKind(allow->execKind);
+            if (!exec)
             {
                 VerdictRefuse(&v, "OPERATION_NOT_DISPATCHABLE",
                               "allowlist entry has no executor");
+            }
+            else
+            {
+                IntakeMutCtx mc;
+                memset(&mc, 0, sizeof(mc));
+                exec(utilP, projP, basicP, plugin_id, allow, args, &v,
+                     ExecKindIsMutating(allow->execKind) ? &mc : NULL);
+                mayHaveMutated = mc.attempted;
             }
         }
     verdict:
@@ -405,7 +332,7 @@ tail:
     if (EmitResult(outDoc, sizeof(outDoc), plugin_id, stemZ,
                    v.outcome, v.refusal[0] ? v.refusal : NULL,
                    v.havePayload ? v.payload : NULL,
-                   v.mayHaveMutated,
+                   mayHaveMutated,
                    hasOpCalls ? opCallsJson : NULL,
                    v.detail[0] ? v.detail : NULL) == 0)
     {
@@ -555,6 +482,12 @@ void NativeIntakeTick(
 
 void NativeIntakeConfigure(const char* channelRootZ)
 {
+    /* Fail-closed metadata gate (Issue #328): the allowlist is the
+       single declarative source — if any entry's execKind does not
+       resolve to a bound executor, the table is corrupt and the
+       channel refuses to arm rather than dispatching on drift. */
+    if (!OpTableSelfCheck())
+        return;
     IntakeConfigureChannel(channelRootZ);
 }
 
