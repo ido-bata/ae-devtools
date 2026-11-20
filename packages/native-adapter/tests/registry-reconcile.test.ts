@@ -41,13 +41,23 @@ const PROBE_CPP = join(
   HERE,
   "../../../experiments/native-sdk/minimal-plugin/src/probe.cpp",
 );
-/* Issue #327: native_intake.cpp is a second implementation site — the
+/* Issue #327: the intake path is a second implementation site — the
    consent-gated mutating op (and every intake getter) makes real
-   suite calls there. Registry `implemented` claims must reconcile
-   against the UNION of both files' call sites. */
-const INTAKE_CPP = join(
-  HERE,
-  "../../../experiments/native-sdk/minimal-plugin/src/native_intake.cpp",
+   suite calls there. Issue #328 split native_intake.cpp into
+   responsibility modules; ALL of them are scanned so registry
+   `implemented` claims reconcile against the UNION of probe.cpp and
+   every intake module's call sites. */
+const INTAKE_SOURCES = [
+  "native_intake.cpp",
+  "native_support.cpp",
+  "native_state.cpp",
+  "native_suites.cpp",
+  "native_request.cpp",
+  "native_registry.cpp",
+  "native_identity.cpp",
+  "native_ops.cpp",
+].map((f) =>
+  join(HERE, `../../../experiments/native-sdk/minimal-plugin/src/${f}`),
 );
 
 /** probe.cpp local variable → SDK suite struct name (registry `suite`). */
@@ -110,10 +120,13 @@ function suiteCallIds(srcPath: string, map: Record<string, string>): Set<string>
 }
 
 function probeCallIds(): Set<string> {
-  return new Set([
-    ...suiteCallIds(PROBE_CPP, RECEIVER_TO_SUITE),
-    ...suiteCallIds(INTAKE_CPP, INTAKE_RECEIVER_TO_SUITE),
-  ]);
+  const ids = suiteCallIds(PROBE_CPP, RECEIVER_TO_SUITE);
+  for (const src of INTAKE_SOURCES) {
+    for (const id of suiteCallIds(src, INTAKE_RECEIVER_TO_SUITE)) {
+      ids.add(id);
+    }
+  }
+  return ids;
 }
 
 describe("operations registry ↔ probe.cpp reconciliation", () => {

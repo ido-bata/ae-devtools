@@ -61,7 +61,7 @@ export type DispatchSchema = typeof DISPATCH_SCHEMA;
  * every committed operation, and `verifiedOnRealHost` /
  * `externalDispatchVerified` stay false until authorized real-host
  * evidence exists (Issue #223). The C++ mirror lives in
- * `native_intake.cpp` (`S_ALLOWLIST`); keep the two in sync — the
+ * `native_registry.cpp` (`S_ALLOWLIST`); keep the two in sync — the
  * guard test in `tests/dispatch.test.ts` pins registry membership.
  */
 export const NATIVE_INTAKE_OPERATIONS = [
@@ -180,7 +180,7 @@ export const NATIVE_INTAKE_CONSENT_OPS: ReadonlySet<string> = new Set([
 // ES3-serializable; it says nothing about what a given operation accepts.
 // Each intake-allowlisted operation carries an explicit argument contract
 // here — the devtools-side canonical statement of it. The C++ mirror lives
-// in `native_intake.cpp` (`S_ALLOWLIST` arg specs); the two must stay in
+// in `native_registry.cpp` (`S_ALLOWLIST` arg specs); the two must stay in
 // sync, and `tests/dispatch.test.ts` pins the shapes.
 //
 // Rules encoded by `validateNativeIntakeArgs`:

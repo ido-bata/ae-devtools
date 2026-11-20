@@ -93,7 +93,7 @@ timing. Not `fake/mock only`-as-working for the plugin itself — the
 plugin remains UNVERIFIED below build-host level.
 
 The suite also covers the Issue #267 Slice A native intake channel
-(`native-channel/v1`, `src/native_intake.cpp` + `src/native_json.cpp`):
+(`native-channel/v1`, `src/native_*.cpp` module set + `src/native_json.cpp`):
 opt-in gating, claim/validate/execute/publish, every refusal code,
 duplicate/stale/token/session/target mismatch, suite and publish
 failure, channel privacy violation, and channel-token non-leakage —
