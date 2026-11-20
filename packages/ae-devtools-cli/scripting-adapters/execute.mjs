@@ -52,6 +52,35 @@ export function toProgramSource(body) {
 }
 
 /**
+ * Host-side project identity guard (Issue #385).
+ *
+ * The attached-session targetGuard re-proves the target immediately
+ * before dispatch, but the generated ExtendScript evaluates later — a
+ * project switch in that window would write into a project the consent
+ * scope never named. When the session can attest the open project's
+ * file, the expected `app.project.file.fsName` is injected into the
+ * SAME evaluation that performs the operation: the guard runs before
+ * the op body and returns the adapter failure shape (the same JSON
+ * contract __adp_json emits) on mismatch, so the outcome is a
+ * structured FAILED with adapterError.code PROJECT_IDENTITY_MISMATCH
+ * and no write ever ran.
+ *
+ * The literal is part of the consent-bound source — approval covers
+ * exactly this check. ES3 only (var / typeof / ternary): no JSON, no
+ * let/const inside the host program.
+ */
+export function withHostProjectGuard(programSource, expectedFsName) {
+  return `(function(){
+var __adp_guardFile = app.project.file;
+var __adp_guardName = (__adp_guardFile !== null && __adp_guardFile !== undefined && typeof __adp_guardFile.fsName === "string") ? String(__adp_guardFile.fsName) : null;
+if (__adp_guardName !== ${JSON.stringify(expectedFsName)}) {
+  return '{"ok":false,"error":{"code":"PROJECT_IDENTITY_MISMATCH","message":"active project file does not match the consented project identity; the operation was refused before any write"}}';
+}
+return ${programSource};
+})()`;
+}
+
+/**
  * @param {object} input
  *   opId            — registry operation id (e.g. "item.addComp")
  *   args            — operation arguments (validated by the op schema)
@@ -64,6 +93,14 @@ export function toProgramSource(body) {
  *   trustedScriptOptIn / scriptProvenance — forwarded to the runner
  *                     (required by the trusted-dev-script consent class)
  *   requestId       — optional caller-chosen id
+ *   hostProjectGuard — expected app.project.file.fsName attested by the
+ *                     session (attached lane, Issue #385); injected
+ *                     into the consent-bound source so the host
+ *                     re-verifies project identity in the same
+ *                     evaluation as the operation
+ *   hostProjectGuardRequired — when true, mutating ops refuse
+ *                     (PROJECT_GUARD_UNAVAILABLE) if no guard value
+ *                     could be attested (unsaved/unreadable project)
  */
 export async function runOperation(input = {}) {
   const { opId, args = {}, runner, pin, projectIdentity } = input;
@@ -88,6 +125,25 @@ export async function runOperation(input = {}) {
     return refused("INVALID_ARGS", err instanceof Error ? err.message : String(err), { opId });
   }
   source = toProgramSource(source);
+
+  // Host project guard (Issue #385): `hostProjectGuard` is the
+  // session-attested app.project.file.fsName; when present it is
+  // injected into the consent-bound source below. When the session
+  // REQUIRES a guard (attached lane) but cannot attest a project file
+  // (unsaved or unreadable project), mutating ops refuse before
+  // consent — a write that cannot be host-verified must not dispatch.
+  const hostProjectGuard = typeof input.hostProjectGuard === "string" && input.hostProjectGuard.length > 0
+    ? input.hostProjectGuard
+    : null;
+  if (input.hostProjectGuardRequired === true && op.mutating === true && hostProjectGuard === null) {
+    return refused("PROJECT_GUARD_UNAVAILABLE",
+      `'${opId}' mutates project state but this session cannot attest a host-verifiable project file ` +
+      "(project unsaved or identity unreadable); mutations require a saved, attested project",
+      { opId });
+  }
+  if (hostProjectGuard !== null) {
+    source = withHostProjectGuard(source, hostProjectGuard);
+  }
 
   // Consent scope is computed here so the provider approves exactly
   // this dispatch — it cannot substitute different args or source.
@@ -182,6 +238,34 @@ export async function runOperation(input = {}) {
     return refused("CONSENT_AUDIT_UNAVAILABLE",
       `consent approved but audit record failed: ${auditError}`,
       { opId });
+  }
+
+  // Attached-session target re-validation (Issue #366): for a mutating
+  // op on a session that supplied `targetGuard`, re-prove the target
+  // identity AFTER consent approval and IMMEDIATELY before dispatch —
+  // consent can sit with a human for minutes, so an earlier check
+  // would be stale. The guard resolves {ok:true} or
+  // {ok:false, code, detail}; anything else (throw, malformed result)
+  // refuses — fail-closed, nothing is sent. Read ops never invoke it.
+  if (op.mutating === true && typeof input.targetGuard === "function") {
+    let guard = null;
+    try {
+      guard = await input.targetGuard();
+    } catch (err) {
+      guard = {
+        ok: false,
+        code: "TARGET_GUARD_ERROR",
+        detail: err instanceof Error ? err.message : String(err),
+      };
+    }
+    if (guard === null || typeof guard !== "object" || guard.ok !== true) {
+      return refused(
+        "ATTACHED_TARGET_GUARD",
+        `target re-validation refused the mutating dispatch: ` +
+          `${guard?.detail ?? "guard returned no verdict"}`,
+        { opId, guardCode: typeof guard?.code === "string" ? guard.code : null },
+      );
+    }
   }
 
   const outcome = await runner.runScript({

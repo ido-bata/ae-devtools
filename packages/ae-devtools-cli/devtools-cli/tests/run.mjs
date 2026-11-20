@@ -18,6 +18,8 @@ import {
   aeProcessSnapshot,
   createEvalDispatch,
   gitHeadAndDirty,
+  isCleanServerShutdown,
+  isCleanTimeoutProbe,
   spawnMcpStdio,
   withTimeout,
 } from "../real-run-kit.mjs";
@@ -185,6 +187,33 @@ t("unknown --session is a usage error and leaves no run marker (Issue #219)", ()
   assert.equal(r.code, 2);
   assert.equal(r.body.code, "USAGE");
   assert.equal(run(["runs"]).body.runs.length, 0);
+});
+
+t("valueless --project-file / --ae-version refuse USAGE before session open (Issue #383)", () => {
+  freshRunsDir();
+  const cases = [
+    // bare flag → true; `--flag=` → ""; both must not silently unpin
+    ["execute", "read.projectSummary", "--session", "a8n-attached", "--project-file", "--consent", "grant"],
+    ["execute", "read.projectSummary", "--session", "a8n-attached", "--project-file=", "--consent", "grant"],
+    ["execute", "read.projectSummary", "--session", "a8n-attached", "--ae-version", "--consent", "grant"],
+    ["execute", "read.projectSummary", "--session", "a8n-attached", "--ae-version="],
+    ["verify", "--session", "a8n-attached", "--project-file"],
+  ];
+  for (const args of cases) {
+    const r = run(args);
+    assert.equal(r.code, 2, `expected exit 2 for ${JSON.stringify(args)}`);
+    assert.equal(r.body.code, "USAGE", JSON.stringify(r.body));
+    assert.match(r.body.message, /requires a nonempty value/);
+  }
+  assert.equal(run(["runs"]).body.runs.length, 0, "usage refusal must not leave a run marker");
+});
+
+t("a valued --project-file still reaches the session-kind check (Issue #383)", () => {
+  const r = run(["execute", "read.projectSummary", "--session", "fake",
+    "--project-file", "/tmp/pin.aep", "--consent", "grant"]);
+  assert.equal(r.code, 2);
+  assert.equal(r.body.code, "USAGE");
+  assert.match(r.body.message, /only valid with --session a8n-attached/);
 });
 
 await at("SIGTERM during execute runs cleanup then exits 143", async () => {
@@ -828,6 +857,30 @@ t("kit: aeProcessSnapshot and gitHeadAndDirty degrade honestly", async () => {
   const git = await gitHeadAndDirty(HERE);
   assert.ok("head" in git && "dirty" in git);
   assert.ok(git.head === null || typeof git.head === "string");
+});
+
+// ---- Issue #384: conformance verdict helpers (fake-level) ----
+
+t("kit: isCleanTimeoutProbe requires UNKNOWN AND exactly one send", () => {
+  assert.equal(isCleanTimeoutProbe({ outcome: "UNKNOWN", sendDelta: 1 }), true);
+  // A resend still lands UNKNOWN — the delta is what catches it.
+  assert.equal(isCleanTimeoutProbe({ outcome: "UNKNOWN", sendDelta: 2 }), false);
+  assert.equal(isCleanTimeoutProbe({ outcome: "UNKNOWN", sendDelta: 0 }), false);
+  assert.equal(isCleanTimeoutProbe({ outcome: "COMPLETED", sendDelta: 1 }), false);
+});
+
+t("kit: isCleanServerShutdown requires the server's own exit-143 path", () => {
+  const clean = { shutdownConfirmed: true, forcedKill: false, exitCode: 143, signalCode: null };
+  assert.equal(isCleanServerShutdown(clean), true);
+  // Exit 1 during shutdown (e.g. unhandled rejection in close) is NOT clean.
+  assert.equal(isCleanServerShutdown({ ...clean, exitCode: 1 }), false);
+  assert.equal(isCleanServerShutdown({ ...clean, exitCode: 0 }), false);
+  // Death by signal means session.close() never confirmed the AE close.
+  assert.equal(isCleanServerShutdown({ ...clean, exitCode: null, signalCode: "SIGTERM" }), false);
+  assert.equal(isCleanServerShutdown({ ...clean, exitCode: null, signalCode: "SIGKILL" }), false);
+  // SIGKILL rescue or unconfirmed exit is never clean.
+  assert.equal(isCleanServerShutdown({ ...clean, forcedKill: true }), false);
+  assert.equal(isCleanServerShutdown({ ...clean, shutdownConfirmed: false, exitCode: null, signalCode: null }), false);
 });
 
 

@@ -1,0 +1,73 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T17-10-26-471Z-3a7e0b14",
+  "command": "verify",
+  "sourceSha": "adf0df46a30c0920433d744a8667aafe7f7a7ce7",
+  "sourceDirty": true,
+  "opId": null,
+  "requestId": "req-run-2026-11-20T17-10-26-471Z-3a7e0b14-verify",
+  "session": {
+    "aeVersion": "26.5.3x9",
+    "ownership": "attached",
+    "aeA8nHead": "0.5.0",
+    "attached": true,
+    "target": {
+      "ownership": "attached",
+      "ownershipEvidence": "attached to pid 34792 (the process running since 2026-11-20T16:36:38.000Z); it was already running and is not this session's to quit in the session of rebui (uid 501, asid 100022)",
+      "aeVersion": "26.5.3x9",
+      "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+      "appPath": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+      "project": {
+        "file": null,
+        "name": null
+      },
+      "projectFile": null,
+      "identity": {
+        "pid": 34792,
+        "processStart": "Sat Nov 21 01:36:38 2026",
+        "executable": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app/Contents/MacOS/After Effects",
+        "aeVersion": "26.5.3x9",
+        "projectFile": null,
+        "projectName": null,
+        "ownershipEvidence": "attached to pid 34792 (the process running since 2026-11-20T16:36:38.000Z); it was already running and is not this session's to quit in the session of rebui (uid 501, asid 100022)",
+        "attestedAt": "2026-11-20T17:10:36.049Z"
+      },
+      "attachApi": "AfterEffects.attach"
+    },
+    "kind": "a8n-attached",
+    "evidenceLevel": "verified on real host (attach to a running AE)",
+    "policy": {
+      "readOnly": true,
+      "mode": "attached"
+    }
+  },
+  "at": "2026-11-20T17:10:36.252Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T17-10-26-471Z-3a7e0b14-verify",
+    "operationId": "read.projectSummary",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "count": 0,
+      "numItems": 0,
+      "items": [],
+      "activeItem": null,
+      "selection": []
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.projectSummary",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "devtools-cli/evidence/run-366-attached-a8n-050-tarball-2026.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-20T17-53-48-481Z-097a07eb",
+  "command": "verify",
+  "sourceSha": "fdb7fdeba331191be131cc6929f0e6c6984a898e",
+  "sourceDirty": true,
+  "opId": null,
+  "requestId": "req-run-2026-11-20T17-53-48-481Z-097a07eb-verify",
+  "session": {
+    "aeVersion": "27.0x78",
+    "ownership": "owned",
+    "aeA8nHead": "0.5.0",
+    "kind": "a8n",
+    "evidenceLevel": "verified on real host (macOS)",
+    "policy": null
+  },
+  "at": "2026-11-20T17:54:05.246Z",
+  "result": {
+    "requestId": "req-run-2026-11-20T17-53-48-481Z-097a07eb-verify",
+    "operationId": "read.projectSummary",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "count": 0,
+      "numItems": 0,
+      "items": [],
+      "activeItem": null,
+      "selection": []
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "read.projectSummary",
+    "mutating": false,
+    "destructive": false
+  },
+  "outcome": "COMPLETED",
+  "evidenceFile": "devtools-cli\\evidence\\run-win-owned-verify.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

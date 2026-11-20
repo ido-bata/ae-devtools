@@ -248,3 +248,11 @@ candidate tarball. It is scoped to macOS arm64 + AE 2026 `26.5.3x9`
 + owned sessions; Windows, AE2027, VSCode+a8n real-host, Problems
 panel, and SDK/CEP/UXP surfaces remain unverified (Issue #21,
 `release-scope.json` stays `not-recorded` pending owner decision).
+
+
+## Issue #366 follow-up — moved
+
+The #366 attach pre-flight / project-pin / comp-layer-loop real-host runs are
+CLI `--out` artifacts (`ae-devtools.cli.run/v1`), not `a8n-transport`
+real-run records, so they live under `../devtools-cli/evidence/` and are
+documented in `../devtools-cli/EVIDENCE.md`.

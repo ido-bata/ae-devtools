@@ -1,0 +1,32 @@
+{
+  "schema": "ae-devtools.vscode-iso-attempt/v1",
+  "issue": 172,
+  "ticket": 366,
+  "attemptedAt": "2026-11-20T16:55:30Z",
+  "host": "macOS (MacBook, VS Code 1.146.0, isolated --extensions-dir/--user-data-dir)",
+  "packagedVsix": "ae-devtools-vscode-extension-0.0.0.vsix built by scripts/package-vsix.mjs from branch 366 @ d3d69e4",
+  "config": {
+    "session": "a8n",
+    "aeA8nRoot": "/Users/rebui/work/ae-a8n (release-0-5-0 @ 716dada)"
+  },
+  "driver": "tests/qa-driver mode=verify",
+  "observed": {
+    "extensionInstalled": true,
+    "extensionActivatedViaRealCommand": "ae-devtools.ae-devtools-vscode-extension activated onCommand:ae-devtools.verify (exthost.log 2026-11-21T01:55:33.772)",
+    "consentGateReached": true,
+    "note": "verify reached the modal consent gate; settlement requires GUI input"
+  },
+  "blocked": {
+    "reason": "macOS screen locked (frontmost=loginwindow); window not on-screen; AX reports 0 windows; consent modal could not be settled",
+    "environmental": true,
+    "dispatchCompleted": false,
+    "diagnosticsPublished": false,
+    "aeSessionOpened": false
+  },
+  "evidenceLevel": "partial real-host: real isolated VSCode + packaged extension + real activation + real consent gate; dispatch NOT completed",
+  "artifacts": {
+    "exthostLog": "exthost-log-015530/exthost.log",
+    "mode": "mode.txt",
+    "userSettings": "user-settings.json"
+  }
+}

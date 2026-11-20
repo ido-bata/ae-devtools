@@ -1,0 +1,51 @@
+{
+  "schema": "ae-devtools.win-slice/v1",
+  "steps": [
+    {
+      "name": "session.open",
+      "at": "2026-11-20T17:58:30.455Z",
+      "aeVersion": "27.0x78",
+      "ownership": "owned",
+      "aeA8nHead": "0.5.0"
+    },
+    {
+      "name": "addComp",
+      "at": "2026-11-20T17:58:31.527Z",
+      "outcome": "COMPLETED",
+      "result": {
+        "ok": true,
+        "id": 1,
+        "name": "WinSliceComp",
+        "parent": null
+      }
+    },
+    {
+      "name": "readback.summary",
+      "at": "2026-11-20T17:58:31.527Z",
+      "outcome": "BLOCKED"
+    },
+    {
+      "name": "addNullLayer",
+      "at": "2026-11-20T17:58:31.527Z"
+    },
+    {
+      "name": "readback.layers",
+      "at": "2026-11-20T17:58:31.527Z"
+    },
+    {
+      "name": "removeComp",
+      "at": "2026-11-20T17:58:31.527Z"
+    },
+    {
+      "name": "readback.final",
+      "at": "2026-11-20T17:58:31.527Z",
+      "outcome": "BLOCKED"
+    },
+    {
+      "name": "session.close",
+      "at": "2026-11-20T17:58:32.487Z",
+      "ok": false,
+      "error": "session.close refused: the open project has unsaved changes"
+    }
+  ]
+}

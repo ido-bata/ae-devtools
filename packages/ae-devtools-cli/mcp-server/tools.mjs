@@ -175,11 +175,14 @@ function consentRefusal(opLabel, consent) {
 
 function sessionBlock(session) {
   // meta first: session-supplied fields must not override the honest
-  // top-level kind/evidenceLevel (Issue #226).
+  // top-level kind/evidenceLevel (Issue #226). `policy` is the
+  // session-imposed dispatch scope (Issue #366) — attached sessions
+  // record exactly which mutating ops were granted at open time.
   return {
     ...(session.meta ?? {}),
     kind: session.kind,
     evidenceLevel: session.evidenceLevel,
+    policy: session.policy ?? null,
   };
 }
 
@@ -246,12 +249,17 @@ export async function callTool(name, args = {}, ctx = {}) {
         args: args.args ?? {},
         runner: session.runner,
         pin: session.pin,
-        projectIdentity: "mcp-devtools",
+        projectIdentity: session.hostProjectGuard ?? "mcp-devtools",
+        hostProjectGuard: session.hostProjectGuard ?? null,
+        hostProjectGuardRequired: session.hostProjectGuardRequired === true,
         consentProvider: async () => ({ approved: true }),
         consentAudit: ctx.consentAudit ?? null,
         trustedScriptOptIn: true,
         scriptProvenance: "mcp-server",
         requestId,
+        sessionPolicy: session.policy ?? null,
+        // Attached-session target re-validation (Issue #366).
+        targetGuard: session.targetGuard ?? null,
         confirmDestructive: args.confirmDestructive === true,
         confirmRender: args.confirmRender === true,
       });
@@ -281,7 +289,9 @@ export async function callTool(name, args = {}, ctx = {}) {
         readArgs: args.args ?? {},
         runner: session.runner,
         pin: session.pin,
-        projectIdentity: "mcp-devtools",
+        projectIdentity: session.hostProjectGuard ?? "mcp-devtools",
+        hostProjectGuard: session.hostProjectGuard ?? null,
+        hostProjectGuardRequired: session.hostProjectGuardRequired === true,
         consentProvider: async () => ({ approved: true }),
         consentAudit: ctx.consentAudit ?? null,
         trustedScriptOptIn: true,

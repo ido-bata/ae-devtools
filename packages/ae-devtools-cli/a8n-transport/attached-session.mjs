@@ -1,0 +1,880 @@
+/**
+ * attached-session.mjs — explicit attach to an already-running After
+ * Effects for the dev-loop surfaces (Issue #366).
+ *
+ * This is a DIFFERENT mode from openSliceSession (session.mjs), which
+ * requires `ownership.kind === "owned"` for disposable conformance runs.
+ * Here the target is a host the USER opened — possibly with unsaved
+ * work — so the rules differ:
+ *
+ *   - attach is explicit: the caller chooses session kind
+ *     "a8n-attached" and may pin the target with installDir/aeVersion;
+ *   - the session MUST come back `attached`. If ae-a8n reports `owned`,
+ *     this launch started a fresh After Effects — that is not the
+ *     requested target, so the session is closed (safe: owned) and the
+ *     open refuses. `unknown` refuses the same way;
+ *   - extension dispatch runs under an ae-a8n `authorization` grant
+ *     naming ONLY `aeDevtools.trustedEval` — the narrowest scope that
+ *     lets the trusted-execution runner reach the host. `hostEnvironment`
+ *     and `menuCommands` are never granted on an attached session;
+ *   - the returned session carries `policy.readOnly === true` unless the
+ *     caller explicitly scoped mutating ops at open time
+ *     (`options.mutatingOps`): then `policy.mutation.allowedOps` names
+ *     exactly those ops and dev-loop surfaces refuse every other
+ *     mutating op before consent. Ops that can destroy unsaved user
+ *     work (ATTACHED_FORBIDDEN_OPS) are never grantable on an attached
+ *     session, no matter what the caller asks for;
+ *   - close() releases the connection only. ae-a8n never quits a host
+ *     the session does not own, and this module adds no quit path.
+ *
+ * Target evidence: ae-a8n does not expose a host pid for attached
+ * sessions, so identity comes from the OS process census (pid +
+ * start stamp + executable path) plus what the session CAN attest —
+ * AE version, resolved install dir, ownership evidence, and the open
+ * project's file path when readable. It is evidence for the caller,
+ * and the baseline revalidateTarget() re-checks before every mutating
+ * dispatch — never authority by itself.
+ *
+ * Attach pre-flight (Issue #366): launching AE only to discover there
+ * is no usable target costs a full cold start plus a forced quit.
+ * Before launch the opener censuses running AE processes for the
+ * resolved install: no processes, or only processes fully attributed
+ * to other installs, refuse as ATTACHED_TARGET_NOT_RUNNING; two or
+ * more instances of the same install refuse as ambiguous
+ * (ATTACHED_TARGET_AMBIGUOUS); AE processes whose image path the OS
+ * would not disclose refuse as ATTACHED_TARGET_UNVERIFIED — falling
+ * through could cold-start a duplicate AE. Exactly one attributed
+ * match falls through to the attach-only opener (attach-target.mjs),
+ * where ae-a8n's own census + ownership check remain the authority.
+ *
+ * Attach-only boundary: the session is obtained through
+ * openAttachTarget(), which calls ae-a8n's `AfterEffects.attach`
+ * (never spawns) and refuses with ATTACHED_TARGET_UNSUPPORTED when the
+ * resolved ae-a8n does not export it — there is no launch fallback in
+ * this lane (Issue #374).
+ *
+ * Identity + re-validation (Issue #366): the matched census row's pid
+ * and process start stamp are recorded as `target.identity` together
+ * with the live AE version and open-project file. `revalidateTarget()`
+ * re-runs the census and re-reads version/project immediately before
+ * every mutating dispatch (wired as `targetGuard` through
+ * dev-loop/session-open.mjs → runOperation): a changed pid, a reused
+ * pid (start stamp differs), a second instance of the same install, an
+ * unreadable census, a version drift, or a project switch all refuse —
+ * fail-closed, nothing is sent. Sessions whose identity could not be
+ * attested at open (no pid) refuse mutating ops the same way; reads
+ * are unaffected.
+ *
+ * Project pin: `options.projectFile` names the project file the
+ * caller expects the attached AE to have open. After attach the open
+ * project's file is compared (normalized, case-folded on
+ * case-insensitive filesystems); a missing or different file refuses
+ * with ATTACHED_TARGET_MISMATCH before any dispatch.
+ */
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdtempSync, realpathSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+
+import { createJsxRunner } from "../trusted-execution/runner.mjs";
+import { getOperation } from "../scripting-adapters/registry.mjs";
+import { createDispatchStore, defaultDispatchStoreDir } from "../trusted-execution/dispatch-store.mjs";
+import { createA8nTransport, EVAL_METHOD } from "./transport.mjs";
+import { resolveDispatchBudgets } from "./dispatch-budget.mjs";
+import { openAttachTarget } from "./attach-target.mjs";
+import { resolveAeA8n } from "./ae-a8n-resolve.mjs";
+import {
+  missingContractExports,
+  aeA8nContractError,
+  aeA8nHandshakeError,
+} from "./compat.mjs";
+import { runHandshakeContractChecks } from "./contract.mjs";
+import { DEFAULT_CLOSE_TIMEOUT_MS } from "../dev-loop/session-close.mjs";
+
+const execFileAsync = promisify(execFile);
+const HERE = dirname(fileURLToPath(import.meta.url));
+const EXTENSION_MODULE = join(HERE, "extension.mjs");
+
+/**
+ * Ops an attached session must NEVER dispatch, even when the caller
+ * explicitly lists them in mutatingOps. `project.close` runs
+ * CloseOptions.DO_NOT_SAVE_CHANGES — on a user's live AE that silently
+ * discards unsaved work, which no consent flag can make safe. The list
+ * is enforced at session open AND recorded in the policy so evidence
+ * shows the scope that was actually granted.
+ */
+export const ATTACHED_FORBIDDEN_OPS = Object.freeze(["project.close"]);
+
+/**
+ * Normalize and validate the caller's mutation scope BEFORE any AE
+ * process is touched. Every entry must name a registered MUTATING op;
+ * reads need no grant and unknown/typo'd ids fail fast here instead of
+ * silently widening or narrowing the session's authority.
+ *
+ * @returns {string[]} deduplicated op ids
+ */
+function normalizeMutatingOps(raw) {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) {
+    const e = new Error("mutatingOps must be an array of operation ids");
+    e.code = "ATTACHED_MUTATION_SCOPE";
+    throw e;
+  }
+  const seen = new Set();
+  for (const opId of raw) {
+    if (typeof opId !== "string" || opId.length === 0) {
+      const e = new Error(`mutatingOps entries must be non-empty strings, got ${JSON.stringify(opId)}`);
+      e.code = "ATTACHED_MUTATION_SCOPE";
+      throw e;
+    }
+    if (seen.has(opId)) continue;
+    seen.add(opId);
+    if (ATTACHED_FORBIDDEN_OPS.includes(opId)) {
+      const e = new Error(
+        `'${opId}' can never be granted on an attached session: it discards ` +
+        `unsaved work or quits the host (DO_NOT_SAVE_CHANGES).`,
+      );
+      e.code = "ATTACHED_MUTATION_FORBIDDEN";
+      throw e;
+    }
+    let op = null;
+    try { op = getOperation(opId); } catch { op = null; }
+    if (op === null) {
+      const e = new Error(`mutatingOps names unknown operation '${opId}'`);
+      e.code = "ATTACHED_MUTATION_SCOPE";
+      throw e;
+    }
+    if (op.mutating !== true) {
+      const e = new Error(`mutatingOps names '${opId}' which is not a mutating op — reads need no grant`);
+      e.code = "ATTACHED_MUTATION_SCOPE";
+      throw e;
+    }
+  }
+  return [...seen];
+}
+
+/**
+ * Normalize a host path for comparison: slash-folded, trailing slashes
+ * stripped. Case is NOT folded — case-sensitive volumes (case-sensitive
+ * APFS, case-sensitive NTFS mounts) can hold distinct projects whose
+ * paths differ only by case, and folding would equate them. Alias
+ * validity (symlinks, `..`, case-variant spellings on case-insensitive
+ * volumes) is handled by hostPathsEqual via realpath/stat identity,
+ * not by string folding.
+ */
+function normalizeHostPath(p) {
+  return String(p).replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+/**
+ * Path equality for target identity. Exact normalized-string match
+ * first; otherwise compare filesystem identity (dev+ino after stat,
+ * which follows symlinks) so aliases of the SAME file still match
+ * regardless of spelling — while `Cut/Main.aep` vs `cut/Main.aep` on a
+ * case-sensitive volume remain distinct (different inodes or ENOENT).
+ * When either side cannot be stat'ed the answer is false: an
+ * unverifiable path equality must fail closed, never equate.
+ */
+function hostPathsEqual(a, b) {
+  const na = normalizeHostPath(a);
+  const nb = normalizeHostPath(b);
+  if (na === nb) return true;
+  try {
+    // bigint stats: dev/ino can exceed Number.MAX_SAFE_INTEGER on some
+    // filesystems — a rounded comparison could equate distinct files
+    // and accept the wrong project pin (CodeRabbit, Issue #390).
+    const sa = statSync(na, { bigint: true });
+    const sb = statSync(nb, { bigint: true });
+    // ino 0n means "no useful file index" on some filesystems — never
+    // treat two zero-inode stats as the same file.
+    return sa.dev === sb.dev && sa.ino !== 0n && sa.ino === sb.ino;
+  } catch {
+    return false;
+  }
+}
+
+/** Normalize a project-file path the same way, resolving relative
+ * paths and symlinks where the filesystem allows. */
+function normalizeProjectFilePath(p) {
+  let s = String(p).trim();
+  if (s.startsWith("file://")) {
+    try { s = fileURLToPath(s); } catch { /* keep raw */ }
+  }
+  s = resolve(s);
+  try { s = realpathSync.native(s); } catch { /* keep resolved form */ }
+  return normalizeHostPath(s);
+}
+
+/**
+ * Census running After Effects processes for the attach pre-flight.
+ *
+ * Contract: resolves to an array of { pid, path, startedAt } rows —
+ * one per process whose image name is an After Effects executable
+ * (ANY install/version; `path` is its executable path, or null when
+ * the OS would not disclose it; `startedAt` is the OS process-start
+ * stamp used for pid-reuse detection, or null when unreadable), or
+ * null when the platform has no probe or the probe failed. Callers
+ * must treat null AND any row with a null path as inconclusive.
+ */
+async function defaultHostProcessProbe() {
+  if (process.platform === "darwin") {
+    const { stdout } = await execFileAsync("ps", ["-axo", "pid=,comm="], {
+      timeout: 5_000, maxBuffer: 4 * 1024 * 1024,
+    });
+    const rows = [];
+    for (const line of stdout.split("\n")) {
+      const m = line.match(/^\s*(\d+)\s+(.+)$/);
+      if (m === null) continue;
+      const path = m[2].trim();
+      const base = path.split("/").pop();
+      // "After Effects" is the .app executable name on every macOS
+      // version; "AfterFX" covers helper naming drift. Path-less comm
+      // values still match by basename and stay unattributed.
+      if (base === "After Effects" || base === "AfterFX") {
+        rows.push({ pid: Number(m[1]), path: path.includes("/") ? path : null, startedAt: null });
+      }
+    }
+    // Process-start stamps for pid-reuse detection: one extra `ps`
+    // per AE row (there is at most a handful). Unreadable → null,
+    // which weakens but never falsifies the identity check.
+    await Promise.all(rows.map(async (row) => {
+      try {
+        const { stdout: stamp } = await execFileAsync(
+          "ps", ["-o", "lstart=", "-p", String(row.pid)],
+          { timeout: 5_000 },
+        );
+        const s = (stamp ?? "").trim();
+        row.startedAt = s.length > 0 ? s : null;
+      } catch {
+        row.startedAt = null;
+      }
+    }));
+    return rows;
+  }
+  if (process.platform === "win32") {
+    const { stdout } = await execFileAsync(
+      "powershell.exe",
+      [
+        "-NoProfile", "-NonInteractive", "-Command",
+        "Get-CimInstance Win32_Process -Filter \"Name='AfterFX.exe'\" | " +
+          "ForEach-Object { \"$($_.ProcessId)`t$($_.ExecutablePath)`t$($_.CreationDate)\" }",
+      ],
+      { timeout: 8_000, maxBuffer: 1024 * 1024 },
+    );
+    const rows = [];
+    for (const line of stdout.split(/\r?\n/)) {
+      const t = line.indexOf("\t");
+      if (t === -1) continue;
+      const pid = Number(line.slice(0, t).trim());
+      if (!Number.isInteger(pid) || pid <= 0) continue;
+      const rest = line.slice(t + 1);
+      const t2 = rest.indexOf("\t");
+      const path = (t2 === -1 ? rest : rest.slice(0, t2)).trim();
+      const startedAt = t2 === -1 ? "" : rest.slice(t2 + 1).trim();
+      rows.push({
+        pid,
+        path: path.length > 0 ? path : null,
+        startedAt: startedAt.length > 0 ? startedAt : null,
+      });
+    }
+    return rows;
+  }
+  return null;
+}
+
+/**
+ * @param {object} options
+ *   installDir     — pin the AE install to attach to (forwarded to launch)
+ *   aeVersion      — optional expected AE version; a live version that
+ *                    differs refuses the session after attach
+ *   workdir        — scratch dir for the generated host script
+ *   callTimeoutMs  — per-dispatch ae.call budget (default 9500)
+ *   deadlineMs     — runner deadline; absent derives callTimeoutMs +
+ *                    margin so the deadline always covers the call
+ *                    budget, and an explicit deadline <= callTimeout
+ *                    refuses USAGE (Issue #383, shared with the owned
+ *                    opener via dispatch-budget.mjs)
+ *   aeA8nRoot      — local ae-a8n checkout root with a built dist/
+ *   mutatingOps    — explicit op-level mutation scope (Issue #366):
+ *                    array of registered mutating opIds the caller
+ *                    consents to dispatch on the attached host. Empty/
+ *                    absent keeps the session read-only. Validated
+ *                    before launch — a bad scope never opens AE.
+ *   projectFile    — expected open-project file path; after attach the
+ *                    live project's file must match (normalized) or the
+ *                    session refuses with ATTACHED_TARGET_MISMATCH.
+ *   hostProcessProbe — test seam for the attach pre-flight census;
+ *                    defaults to the platform process scan. Injected
+ *                    probes return the same {pid,path} row contract.
+ */
+export async function openAttachedSliceSession(options = {}) {
+  const mutatingOps = normalizeMutatingOps(options.mutatingOps);
+  // Budget validation FIRST (with mutatingOps): an incompatible
+  // callTimeout/deadline pair refuses before ae-a8n resolution,
+  // census or attach — same rule as the owned opener (Issue #383).
+  const budgets = resolveDispatchBudgets({
+    callTimeoutMs: options.callTimeoutMs,
+    deadlineMs: options.deadlineMs,
+  });
+  const { AfterEffects, mod: aeA8nMod, cliPath, source: aeA8nSource, head: aeA8nHead } =
+    await resolveAeA8n({ aeA8nRoot: options.aeA8nRoot });
+  const missing = missingContractExports(aeA8nMod);
+  if (missing.length > 0) {
+    throw aeA8nContractError({
+      source: aeA8nSource,
+      version: aeA8nHead,
+      missing,
+    });
+  }
+  const battery = runHandshakeContractChecks(aeA8nMod);
+  if (!battery.ok) {
+    throw aeA8nHandshakeError({
+      source: aeA8nSource,
+      version: aeA8nHead,
+      failures: battery.checks.filter((c) => !c.ok),
+    });
+  }
+  const optInstallDir =
+    typeof options.installDir === "string" && options.installDir.length > 0
+      ? options.installDir
+      : null;
+  const expectedVersion =
+    typeof options.aeVersion === "string" && options.aeVersion.length > 0
+      ? options.aeVersion
+      : null;
+  const expectedProjectFile =
+    typeof options.projectFile === "string" && options.projectFile.length > 0
+      ? options.projectFile
+      : null;
+  const workdir = options.workdir ?? mkdtempSync(join(tmpdir(), "a8n-attached-"));
+  const sessionRoot = join(workdir, "a8n-session");
+
+  // Resolve the install identity BEFORE launch: the attach pre-flight
+  // needs the executable path to census running hosts, and the same
+  // resolution feeds target evidence after attach. A resolution
+  // failure is not fatal here — launch surfaces the real error.
+  let installInfo = null;
+  try {
+    if (typeof aeA8nMod.resolveInstall === "function") {
+      installInfo = await aeA8nMod.resolveInstall(
+        process.platform,
+        optInstallDir !== null ? { installDir: optInstallDir } : {},
+      );
+    }
+  } catch {
+    installInfo = null;
+  }
+
+  const preflightError = (code, message) => {
+    const e = new Error(message);
+    e.code = code;
+    e.sliceWorkdir = workdir;
+    e.sliceSessionRoot = sessionRoot;
+    return e;
+  };
+
+  // Census row for the single install-attributed AE process, retained
+  // for the session identity (pid + process start stamp). Null when the
+  // probe was inconclusive — identity attestation is then weaker and
+  // mutating ops refuse at re-validation time.
+  let matchedCensusRow = null;
+  let processProbe = null;
+  let targetExe = null;
+
+  // Attach pre-flight: refuse BEFORE any AE side effect unless the
+  // census finds exactly one process attributable to the target
+  // install. Anything else — none, foreign-only, ambiguous, or
+  // unattributable — refuses here; only a single match falls through
+  // to the attach-only opener, where ae-a8n's own census + ownership
+  // check decide.
+  if (
+    installInfo !== null &&
+    typeof installInfo.executable === "string" &&
+    installInfo.executable.length > 0
+  ) {
+    targetExe = installInfo.executable;
+    processProbe = typeof options.hostProcessProbe === "function"
+      ? options.hostProcessProbe
+      : defaultHostProcessProbe;
+    let rows = null;
+    try {
+      rows = await processProbe(installInfo);
+    } catch {
+      rows = null;
+    }
+    if (Array.isArray(rows)) {
+      const exact = rows.filter(
+        (r) => typeof r?.path === "string" && r.path.length > 0 && hostPathsEqual(r.path, installInfo.executable),
+      );
+      const unattributed = rows.some((r) => typeof r?.path !== "string" || r.path.length === 0);
+      if (rows.length === 0) {
+        throw preflightError(
+          "ATTACHED_TARGET_NOT_RUNNING",
+          `a8n-attached found no running After Effects process for install ` +
+            `${installInfo.executable}; start AE first or use --session a8n ` +
+            `for a disposable owned session. No AE process was launched.`,
+        );
+      }
+      if (exact.length >= 2) {
+        throw preflightError(
+          "ATTACHED_TARGET_AMBIGUOUS",
+          `${exact.length} After Effects processes match install ` +
+            `${installInfo.executable}; the attach target is ambiguous. ` +
+            `Close extra instances or pin a single target.`,
+        );
+      }
+      if (exact.length === 0) {
+        if (unattributed) {
+          // AE processes exist but none could be attributed to this
+          // install (e.g. another user session / elevation hides the
+          // image path). We cannot prove there is no usable target, and
+          // falling through would cold-start a duplicate AE — refuse.
+          throw preflightError(
+            "ATTACHED_TARGET_UNVERIFIED",
+            `After Effects processes are running but none could be ` +
+              `attributed to install ${installInfo.executable} (process ` +
+              `image path undisclosed). Refusing to launch a duplicate; ` +
+              `run from the same user session as After Effects or close ` +
+              `the other instances.`,
+          );
+        }
+        // Every running AE process is fully attributed to a DIFFERENT
+        // install — this install has no running target.
+        throw preflightError(
+          "ATTACHED_TARGET_NOT_RUNNING",
+          `a8n-attached found After Effects processes but none match ` +
+            `install ${installInfo.executable}; start that AE first or ` +
+            `use --session a8n for a disposable owned session. No AE ` +
+            `process was launched.`,
+        );
+      }
+      // exact === 1: the target install has exactly one running
+      // process — retain it for identity attestation and fall through
+      // to the attach-only opener (a `-r` launcher can also transiently
+      // share the install path on Windows, so ownership stays the final
+      // authority).
+      matchedCensusRow = exact[0];
+    }
+  }
+
+  const hostScriptPath = join(workdir, "a8n-host-ext.js");
+  await execFileAsync(process.execPath, [
+    cliPath, "extension", "build",
+    "--extension", EXTENSION_MODULE,
+    "--out", hostScriptPath,
+  ], { timeout: 30_000 });
+
+  let ae;
+  try {
+    // Attach-only boundary (attach-target.mjs): AfterEffects.attach
+    // can never spawn a process; an ae-a8n without the attach API
+    // refuses here with ATTACHED_TARGET_UNSUPPORTED (Issue #374).
+    ae = await openAttachTarget({
+      AfterEffects,
+      installDir: optInstallDir,
+      hostScriptPath,
+      sessionRoot,
+      // Pin the census-identified process when we have one — ae-a8n's
+      // attach refuses if that pid no longer names an in-scope AE.
+      targetPid: matchedCensusRow !== null && Number.isInteger(matchedCensusRow.pid)
+        ? matchedCensusRow.pid
+        : null,
+      // The narrowest grant that lets the trusted-execution runner reach
+      // the host: only the caller-facing eval method. hostEnvironment and
+      // menuCommands stay ungranted on a host we do not own.
+      authorization: { extensionMethods: [EVAL_METHOD] },
+    });
+  } catch (error) {
+    if (error !== null && typeof error === "object") {
+      error.sliceWorkdir = workdir;
+      error.sliceSessionRoot = sessionRoot;
+    }
+    throw error;
+  }
+
+  try {
+    const info = ae.info();
+    const ownership = ae.ownership();
+    const liveVersion = typeof info.version === "string" ? info.version : null;
+
+    // Resolve the concrete install identity for evidence (same
+    // best-effort mechanics as session.mjs). installInfo was already
+    // resolved before launch for the pre-flight census.
+    let installDir = optInstallDir;
+    let appPath = null;
+    try {
+      const exe = typeof installInfo?.executable === "string" ? installInfo.executable : null;
+      if (exe !== null && exe.length > 0) {
+        if (process.platform === "darwin") {
+          appPath = dirname(dirname(dirname(exe)));
+          installDir = installDir ?? appPath.replace(/\.app$/, "");
+        } else {
+          installDir = installDir ?? dirname(exe);
+        }
+      }
+    } catch {
+      // marker metadata only
+    }
+
+    const refuse = (code, message) => {
+      const refusal = new Error(message);
+      refusal.code = code;
+      refusal.sliceWorkdir = workdir;
+      refusal.sliceSessionRoot = sessionRoot;
+      refusal.sliceTracePath = ae.tracePath;
+      // No close here: the shared catch below performs the single
+      // bounded close for every post-launch failure.
+      throw refusal;
+    };
+
+    if (!ownership || ownership.kind !== "attached") {
+      refuse(
+        "ATTACHED_TARGET_NOT_RUNNING",
+        `a8n-attached requires an already-running After Effects; ` +
+          `this session reports ownership ${JSON.stringify(ownership)}. ` +
+          `Use --session a8n for a disposable owned session.`,
+      );
+    }
+    if (expectedVersion !== null && liveVersion !== expectedVersion) {
+      refuse(
+        "ATTACHED_TARGET_MISMATCH",
+        `attached AE version ${JSON.stringify(liveVersion)} does not match ` +
+          `requested ${JSON.stringify(expectedVersion)}; nothing was dispatched`,
+      );
+    }
+
+    // Open-project identity, best-effort: a project that cannot be read
+    // is recorded as null, never guessed.
+    let project = null;
+    try {
+      if (typeof ae.project === "function") {
+        // ae.project() is async and resolves to a Project handle;
+        // .info() is a second call on that handle — awaiting the
+        // outer promise alone reads nothing.
+        const handle = await ae.project();
+        const info = await handle.info();
+        project = {
+          file: typeof info?.file === "string" ? info.file : null,
+          name: typeof info?.name === "string" ? info.name : null,
+        };
+      }
+    } catch {
+      project = null;
+    }
+
+    // Project pin: when the caller named the project file they expect
+    // open, the attached host must actually have THAT project open —
+    // "some AE answered" is not proof the target is the intended one.
+    // A null/unreadable project file can never satisfy a pin.
+    if (expectedProjectFile !== null) {
+      const actualFile =
+        project !== null && typeof project.file === "string" && project.file.length > 0
+          ? project.file
+          : null;
+      const matched =
+        actualFile !== null &&
+        hostPathsEqual(normalizeProjectFilePath(actualFile), normalizeProjectFilePath(expectedProjectFile));
+      if (!matched) {
+        refuse(
+          "ATTACHED_TARGET_MISMATCH",
+          `attached project's file ${JSON.stringify(actualFile)} does not match ` +
+            `requested project ${JSON.stringify(expectedProjectFile)}; ` +
+            `nothing was dispatched`,
+        );
+      }
+    }
+
+    // Session identity (Issue #366): the baseline every mutating
+    // dispatch re-validates against. pid/processStart come from the
+    // pre-flight census row (null when the probe was inconclusive —
+    // mutating ops then refuse as UNVERIFIED); version and project are
+    // the live values read above.
+    const identity = {
+      pid: matchedCensusRow !== null && Number.isInteger(matchedCensusRow.pid)
+        ? matchedCensusRow.pid
+        : null,
+      processStart: typeof matchedCensusRow?.startedAt === "string" &&
+          matchedCensusRow.startedAt.length > 0
+        ? matchedCensusRow.startedAt
+        : null,
+      executable: targetExe ??
+        (typeof installInfo?.executable === "string" ? installInfo.executable : null),
+      aeVersion: liveVersion,
+      projectFile: project !== null && typeof project.file === "string" && project.file.length > 0
+        ? normalizeProjectFilePath(project.file)
+        : null,
+      projectName: project !== null && typeof project.name === "string" ? project.name : null,
+      ownershipEvidence: typeof ownership.evidence === "string" ? ownership.evidence : null,
+      attestedAt: new Date().toISOString(),
+    };
+
+    /**
+     * Re-validate the attached target immediately before a mutating
+     * dispatch (targetGuard contract: resolves {ok:true} or
+     * {ok:false, code, detail}; never throws). Fail-closed on every
+     * unprovable state — census unreadable, target gone, a second
+     * instance, pid/start-stamp drift, version drift, project switch.
+     */
+    async function revalidateTarget() {
+      const refuseGuard = (code, detail) => ({ ok: false, code, detail });
+      try {
+        if (processProbe === null || identity.executable === null || identity.pid === null) {
+          return refuseGuard(
+            "ATTACHED_TARGET_UNVERIFIED",
+            "session identity was not fully attested at open (no pid/exe); mutating dispatch refused",
+          );
+        }
+        // Census verification, run TWICE around the version RPC and
+        // BEFORE the project read: a second instance of the same
+        // install can start while ae.info()/ae.project() is pending.
+        // The project attestation is deliberately the LAST observation
+        // (Issue #390): the census cannot see a project switch during
+        // its own await, and the residual project-read → dispatch
+        // window is covered in-eval by the host-side project guard
+        // (Issue #385).
+        const censusVerdict = async () => {
+          let rows = null;
+          try {
+            rows = await processProbe(installInfo);
+          } catch {
+            rows = null;
+          }
+          if (!Array.isArray(rows)) {
+            return refuseGuard(
+              "ATTACHED_TARGET_UNVERIFIED",
+              "host process census unreadable at re-validation; mutating dispatch refused",
+            );
+          }
+          if (rows.some((r) => typeof r?.path !== "string" || r.path.length === 0)) {
+            return refuseGuard(
+              "ATTACHED_TARGET_UNVERIFIED",
+              "an After Effects process image is undisclosed; target identity unprovable",
+            );
+          }
+          const matches = rows.filter(
+            (r) => typeof r?.path === "string" && r.path.length > 0 && hostPathsEqual(r.path, identity.executable),
+          );
+          if (matches.length === 0) {
+            return refuseGuard(
+              "ATTACHED_TARGET_NOT_RUNNING",
+              "the attached After Effects process is gone; mutating dispatch refused",
+            );
+          }
+          if (matches.length > 1) {
+            return refuseGuard(
+              "ATTACHED_TARGET_AMBIGUOUS",
+              `${matches.length} After Effects processes match the install; the target is ambiguous`,
+            );
+          }
+          const row = matches[0];
+          if (row.pid !== identity.pid) {
+            return refuseGuard(
+              "ATTACHED_TARGET_CHANGED",
+              `After Effects pid changed ${identity.pid} -> ${row.pid}; the original target is gone`,
+            );
+          }
+          // A missing baseline start stamp means pid reuse can never be
+          // ruled out for the life of this session — refuse mutation
+          // rather than skipping the check (reads stay available).
+          if (identity.processStart === null) {
+            return refuseGuard(
+              "ATTACHED_TARGET_UNVERIFIED",
+              "the attached process start stamp was not attested at open; mutating dispatch refused",
+            );
+          }
+          if (row.startedAt !== identity.processStart) {
+            const readable = typeof row.startedAt === "string" && row.startedAt.length > 0;
+            return refuseGuard(
+              readable ? "ATTACHED_TARGET_CHANGED" : "ATTACHED_TARGET_UNVERIFIED",
+              "After Effects process start stamp differs or is unreadable — possible pid reuse",
+            );
+          }
+          return { ok: true, row };
+        };
+
+        const firstCensus = await censusVerdict();
+        if (firstCensus.ok !== true) return firstCensus;
+
+        let liveVersion = null;
+        try {
+          const i = typeof ae.info === "function" ? ae.info() : null;
+          liveVersion = i !== null && typeof i === "object" && typeof i.version === "string"
+            ? i.version
+            : null;
+        } catch {
+          liveVersion = null;
+        }
+        if (liveVersion !== identity.aeVersion) {
+          return refuseGuard(
+            "ATTACHED_TARGET_CHANGED",
+            `After Effects version drifted ${JSON.stringify(identity.aeVersion)} -> ${JSON.stringify(liveVersion)}`,
+          );
+        }
+        // Post-RPC census BEFORE the project read: the census checks
+        // process identity only, so it cannot detect a project switch
+        // made during its own await. Running it first makes the
+        // project attestation below the LAST observation before the
+        // ok verdict — the residual window (project read → dispatch)
+        // is covered inside the mutation itself by the host-side
+        // project guard (Issue #385 / withHostProjectGuard).
+        const secondCensus = await censusVerdict();
+        if (secondCensus.ok !== true) return secondCensus;
+        // Project identity: writes require a SUCCESSFUL project
+        // attestation at re-validation — when the project cannot be
+        // read now, a project switch cannot be ruled out, so the
+        // weaker pid+version attestation is not enough for mutation.
+        // (Reads are unaffected: they never reach this guard.)
+        let liveProject = null;
+        try {
+          if (typeof ae.project === "function") {
+            const handle = await ae.project();
+            const pinfo = await handle.info();
+            liveProject = {
+              file: typeof pinfo?.file === "string" && pinfo.file.length > 0
+                ? normalizeProjectFilePath(pinfo.file)
+                : null,
+              name: typeof pinfo?.name === "string" ? pinfo.name : null,
+            };
+          }
+        } catch {
+          liveProject = null;
+        }
+        if (liveProject === null) {
+          return refuseGuard(
+            "ATTACHED_TARGET_UNVERIFIED",
+            "the open project could not be attested at re-validation; mutating dispatch refused",
+          );
+        }
+        const fileSame = liveProject.file !== null && identity.projectFile !== null
+          ? hostPathsEqual(liveProject.file, identity.projectFile)
+          : liveProject.file === identity.projectFile;
+        if (!fileSame || liveProject.name !== identity.projectName) {
+          return refuseGuard(
+            "ATTACHED_TARGET_CHANGED",
+            `the open project changed since attach ` +
+              `(${JSON.stringify(identity.projectFile)} -> ${JSON.stringify(liveProject.file)}); ` +
+              `mutating dispatch refused`,
+          );
+        }
+        return { ok: true };
+      } catch (error) {
+        return refuseGuard(
+          "ATTACHED_TARGET_UNVERIFIED",
+          `target re-validation failed: ${error?.message ?? String(error)}`,
+        );
+      }
+    }
+
+    const pin = {
+      sessionId: `a8n-attached-${randomUUID()}`,
+      aeVersion: liveVersion,
+      dispatchId: `disp-${randomUUID()}`,
+    };
+    const transport = createA8nTransport({
+      ae,
+      callTimeoutMs: budgets.callTimeoutMs,
+    });
+    transport.dispatchStore = createDispatchStore({
+      dir: options.dispatchStoreDir ?? defaultDispatchStoreDir(),
+    });
+    const runner = createJsxRunner({
+      transport,
+      deadlineMs: budgets.deadlineMs,
+    });
+
+    const target = {
+      ownership: ownership.kind,
+      ownershipEvidence: typeof ownership.evidence === "string" ? ownership.evidence : null,
+      aeVersion: liveVersion,
+      installDir,
+      appPath,
+      project,
+      projectFile: expectedProjectFile,
+      identity,
+      // Which opener actually ran — always "AfterEffects.attach" now
+      // that the launch fallback is removed (Issue #374).
+      attachApi: typeof ae.attachApi === "string" ? ae.attachApi : null,
+    };
+
+    async function close() {
+      try {
+        // Attached hosts are never quit by ae-a8n; this releases the
+        // session's connection and staged files only.
+        await ae.close({ unsavedChanges: "refuse" });
+      } finally {
+        if (options.workdir === undefined) {
+          rmSync(workdir, { recursive: true, force: true });
+        }
+      }
+    }
+
+    return {
+      ae, transport, runner, pin, info, ownership, close, workdir,
+      aeA8nSource, aeA8nHead, tracePath: ae.tracePath, sessionRoot,
+      installDir, appPath, target,
+      attached: true,
+      // Host-side project guard (Issue #385): the attested
+      // app.project.file.fsName (ae-a8n's project.info reports exactly
+      // that string). dev-loop surfaces forward it into runOperation,
+      // which injects it into the consent-bound source so the host
+      // re-verifies project identity inside the same evaluation that
+      // performs the op — closing the guard→eval TOCTOU window.
+      // Null when the open project has no file (unsaved) or identity
+      // was unreadable; hostProjectGuardRequired then refuses
+      // mutations that cannot be host-verified.
+      hostProjectGuard:
+        project !== null && typeof project.file === "string" && project.file.length > 0
+          ? project.file
+          : null,
+      hostProjectGuardRequired: true,
+      // Re-validation immediately before each mutating dispatch —
+      // dev-loop surfaces forward this as `targetGuard` into
+      // runOperation, which invokes it after consent approval and
+      // before anything is sent (fail-closed).
+      revalidateTarget,
+      // Dispatch policy: read-only unless the caller scoped mutating ops
+      // at open time. dev-loop surfaces refuse anything outside
+      // mutation.allowedOps before consent (dev-loop/devloop.mjs); the
+      // scope is part of the returned session so every surface's
+      // evidence records exactly what was granted.
+      policy: mutatingOps.length === 0
+        ? { readOnly: true, mode: "attached" }
+        : {
+            readOnly: false,
+            mode: "attached",
+            mutation: { allowedOps: mutatingOps },
+          },
+      negotiateCapabilities: aeA8nMod.negotiateCapabilities,
+      assertDispatchAllowed: aeA8nMod.assertDispatchAllowed,
+    };
+  } catch (error) {
+    let closeError = null;
+    try {
+      if (typeof ae.close === "function") {
+        const closePromise = Promise.resolve()
+          .then(() => ae.close({ unsavedChanges: "refuse" }))
+          .then(() => null, (e) => { closeError = e; });
+        let timedOut = false;
+        await Promise.race([
+          closePromise,
+          new Promise((resolve) => setTimeout(() => { timedOut = true; resolve(); }, DEFAULT_CLOSE_TIMEOUT_MS)),
+        ]);
+        if (timedOut) closeError = new Error(`ae.close timed out after ${DEFAULT_CLOSE_TIMEOUT_MS}ms`);
+      }
+    } catch (e) {
+      closeError = e;
+    }
+    if (error !== null && typeof error === "object") {
+      try { error.sliceWorkdir ??= workdir; } catch { /* frozen error */ }
+      try { error.sliceSessionRoot ??= sessionRoot; } catch { /* frozen error */ }
+      try { error.sliceTracePath ??= ae.tracePath; } catch { /* trace path is best-effort */ }
+      if (closeError !== null) {
+        try { error.sliceCloseError = String(closeError?.message ?? closeError); } catch { /* frozen error */ }
+      }
+    }
+    throw error;
+  }
+}

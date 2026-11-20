@@ -13,8 +13,10 @@
  * Nothing but protocol frames is ever written to stdout; diagnostics go
  * to stderr.
  *
- *   node server.mjs [--session fake|a8n] [--ae-a8n-root <dir>]
- *                   [--install-dir <dir>]
+ *   node server.mjs [--session fake|a8n|a8n-attached]
+ *                   [--ae-a8n-root <dir>] [--install-dir <dir>]
+ *                   [--ae-version <v>] [--allow-mutation <opId>]...
+ *                   [--project-file <path>] [--call-timeout-ms <n>] [--deadline-ms <n>]
  *
  * Session is opened LAZILY on the first ae_execute/ae_verify that passes
  * the consent pre-gate — discover/inspect/denied calls never touch a
@@ -35,7 +37,7 @@ import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
-import { parseArgs } from "../devtools-cli/argv.mjs";
+import { parseArgs, missingFlagValue } from "../devtools-cli/argv.mjs";
 import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
 import { lazyConsentAudit } from "../trusted-execution/consent-audit.mjs";
@@ -51,6 +53,11 @@ export const SERVER_VERSION = JSON.parse(
 // in `initialize`; we answer with the newest mutually supported one.
 const PROTOCOL_VERSIONS = ["2024-11-05", "2025-03-26", "2025-06-18"];
 const LATEST_PROTOCOL = PROTOCOL_VERSIONS[PROTOCOL_VERSIONS.length - 1];
+
+function positiveMsFlag(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
 
 const PARSE_ERROR = -32700;
 const INVALID_REQUEST = -32600;
@@ -80,7 +87,11 @@ function rpcError(id, code, message, data) {
  *                    never awaited forever (Issue #196)
  *   runsDir        — run-guard marker dir for a8n sessions (default:
  *                    devtools-cli RUNS_DIR; Issue #198 residue markers)
- * @returns {{close: () => Promise<void>}}
+ * @returns {{close: () => Promise<boolean>, getSession: () => unknown}}
+ *   close() resolves true when the owned session closed cleanly (or
+ *   there was nothing to close) and false when close failed/timed out —
+ *   callers use it to keep a failed close off the clean-exit path
+ *   (Issue #391).
  */
 export function createServer(opts = {}) {
   const input = opts.input ?? process.stdin;
@@ -150,7 +161,7 @@ export function createServer(opts = {}) {
   });
 
   async function close() {
-    if (!sessionPromise) return;
+    if (!sessionPromise) return true;
     let closeFailed = false;
     try {
       const s = await sessionPromise;
@@ -165,12 +176,16 @@ export function createServer(opts = {}) {
         }
       }
     } catch (e) {
+      // A thrown close is a failed close — the residue marker must say
+      // so, and the caller must not see this as a clean shutdown.
+      closeFailed = true;
       process.stderr.write(`mcp-server: session close failed: ${e?.message ?? e}\n`);
     } finally {
       // "closed" removes the marker; "close-failed" keeps it as
       // residue — the same contract the CLI cleanup path uses.
       guard.end(closeFailed ? "close-failed" : "closed");
     }
+    return !closeFailed;
   }
 
   function write(msg) {
@@ -267,10 +282,29 @@ import { isMainEntry } from "../devtools-cli/is-main-entry.mjs";
 const isMain = isMainEntry(import.meta.url);
 
 if (isMain) {
-  const { flags } = parseArgs(process.argv.slice(2));
+  const { flags, multi } = parseArgs(process.argv.slice(2), { multi: ["allow-mutation"] });
   const sessionKind = flags.session ?? "fake";
-  if (!["fake", "a8n"].includes(sessionKind)) {
-    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n] [--ae-a8n-root <dir>] [--install-dir <dir>]\n");
+  const allowMutationOps = (multi?.["allow-mutation"] ?? []).filter((v) => typeof v === "string" && v.length > 0);
+  if (!["fake", "a8n", "a8n-attached"].includes(sessionKind)) {
+    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>] [--allow-mutation <opId>]... [--project-file <path>] [--call-timeout-ms <n>] [--deadline-ms <n>]\n");
+    process.exit(2);
+  }
+  if (allowMutationOps.length > 0 && sessionKind !== "a8n-attached") {
+    process.stderr.write("ae-devtools-mcp: --allow-mutation is only valid with --session a8n-attached\n");
+    process.exit(2);
+  }
+  if (typeof flags["project-file"] === "string" && sessionKind !== "a8n-attached") {
+    process.stderr.write("ae-devtools-mcp: --project-file is only valid with --session a8n-attached\n");
+    process.exit(2);
+  }
+  // Target pins must carry a value (Issue #383): a bare `--project-file`
+  // parses to `true` and `--project-file=` to "" — both map to "pin
+  // absent" in the session openers, silently unpinning a granted
+  // mutation. `--ae-version` has the same silent-disable shape. Refuse
+  // before the server (and its lazy session) exists.
+  const valuelessPin = missingFlagValue(flags, ["project-file", "ae-version"]);
+  if (valuelessPin !== null) {
+    process.stderr.write(`ae-devtools-mcp: --${valuelessPin} requires a nonempty value\n`);
     process.exit(2);
   }
   const server = createServer({
@@ -278,6 +312,11 @@ if (isMain) {
     sessionOptions: {
       aeA8nRoot: typeof flags["ae-a8n-root"] === "string" ? flags["ae-a8n-root"] : undefined,
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
+      aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
+      mutatingOps: allowMutationOps,
+      projectFile: typeof flags["project-file"] === "string" ? flags["project-file"] : undefined,
+      callTimeoutMs: positiveMsFlag(flags["call-timeout-ms"]),
+      deadlineMs: positiveMsFlag(flags["deadline-ms"]),
     },
     closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });
@@ -290,8 +329,12 @@ if (isMain) {
   const shutdown = async (code) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    await server.close();
-    process.exit(code);
+    const closed = await server.close();
+    // A failed session close must not exit through the clean signal
+    // path: conformance treats exit 130/143 + no signal as proof the
+    // owned AE session closed, so a close failure exits 1 instead
+    // (Issue #391).
+    process.exit(closed === false ? 1 : code);
   };
   process.on("SIGINT", () => shutdown(130));
   process.on("SIGTERM", () => shutdown(143));

@@ -36,22 +36,42 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 /** The main AE executable — helpers (crashpad_handler, CEPHtmlEngine,
- *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it. */
-export const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)/;
+ *  dynamiclinkmanager, TeamProjectsLocalHub) legitimately outlive it.
+ *  macOS: `Contents/MacOS/After Effects`; Windows: `Support Files\AfterFX.exe`. */
+export const MAIN_EXE = /Contents\/MacOS\/After Effects(\s|$)|Support Files\\AfterFX\.exe/i;
 /** Known Adobe helper executables — used to classify
  *  aeHelpersAfterClose. Anything else matching the install fragment
  *  (e.g. this node's own harness) is NOT an Adobe helper. */
 export const ADOBE_HELPER = /crashpad_handler|CEPHtmlEngine|dynamiclinkmanager|TeamProjectsLocalHub|AdobeCrashReport/i;
 
 /**
- * Snapshot `ps` rows whose command line mentions the AE install. With no
- * --install-dir the fragment is the generic bundle directory name, which
- * matches every installed AE version — the evidence records all of them so
- * a leftover is never hidden by an over-narrow filter.
+ * Raw "pid args" process rows for the host platform. Unix uses
+ * `ps -axo pid=,args=`; Windows has no `ps`, so PowerShell
+ * `Get-CimInstance Win32_Process` supplies ProcessId + CommandLine in
+ * the same shape. Both degrade to {error} — never fabricated rows.
+ */
+async function processRows() {
+  if (process.platform === "win32") {
+    const script =
+      "Get-CimInstance Win32_Process -Property ProcessId,CommandLine | " +
+      "ForEach-Object { if ($_.CommandLine) { \"$($_.ProcessId) $($_.CommandLine)\" } }";
+    const { stdout } = await execFileAsync(
+      "powershell", ["-NoProfile", "-Command", script], { timeout: 20_000 });
+    return stdout;
+  }
+  const { stdout } = await execFileAsync("ps", ["-axo", "pid=,args="], { timeout: 10_000 });
+  return stdout;
+}
+
+/**
+ * Snapshot process rows whose command line mentions the AE install.
+ * With no --install-dir the fragment is the generic bundle/directory
+ * name, which matches every installed AE version — the evidence records
+ * all of them so a leftover is never hidden by an over-narrow filter.
  */
 export async function aeProcessSnapshot(fragment) {
   try {
-    const { stdout } = await execFileAsync("ps", ["-axo", "pid=,args="], { timeout: 10_000 });
+    const stdout = await processRows();
     return stdout
       .split("\n")
       .map((line) => line.trim())
@@ -222,4 +242,26 @@ export function withTimeout(promise, ms, tag) {
     promise,
     new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT " + tag)), ms)),
   ]);
+}
+
+/**
+ * Conformance timeout-probe verdict (Issue #384): UNKNOWN alone does
+ * not prove the runner did not resend. The probe passes only when the
+ * outcome is UNKNOWN AND the transport send-count delta across the
+ * probe window is exactly one.
+ */
+export function isCleanTimeoutProbe({ outcome, sendDelta }) {
+  return outcome === "UNKNOWN" && sendDelta === 1;
+}
+
+/**
+ * Conformance MCP-shutdown verdict (Issue #384): clean shutdown is the
+ * server's OWN SIGTERM path completing — exit code 143 (128+SIGTERM)
+ * after session.close(), with no signal and no forced kill. Mere
+ * termination (any other exit code, death by signal, SIGKILL rescue)
+ * is not proof the owned AE session closed.
+ */
+export function isCleanServerShutdown({ shutdownConfirmed, forcedKill, exitCode, signalCode }) {
+  return shutdownConfirmed === true && forcedKill !== true &&
+    exitCode === 143 && signalCode === null;
 }

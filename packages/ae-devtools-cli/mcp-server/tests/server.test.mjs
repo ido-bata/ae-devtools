@@ -423,6 +423,39 @@ test("server close is bounded when session.close hangs (Issue #196)", async () =
   assert.ok(Date.now() - started < 10_000, "session close was not bounded");
 });
 
+test("server close() reports success/failure for the shutdown exit path (Issue #391)", async () => {
+  // close() must resolve false when the owned session fails to close —
+  // the entry's shutdown handler maps that to a non-clean exit code so
+  // conformance cannot read exit 143 as "AE session closed".
+  const okFactory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-ok" },
+    runner: { runScript: async () => ({ outcome: "COMPLETED", result: null }) },
+    close: async () => {},
+  });
+  const c1 = makeClient({ sessionFactory: okFactory });
+  await c1.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  assert.equal(await c1.server.close(), true);
+
+  const failingFactory = async () => ({
+    kind: "fake",
+    evidenceLevel: "fake/mock only",
+    pin: { sessionId: "sess-fail" },
+    runner: { runScript: async () => ({ outcome: "COMPLETED", result: null }) },
+    close: async () => { throw new Error("fixture: close refused"); },
+  });
+  const c2 = makeClient({ sessionFactory: failingFactory });
+  await c2.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  assert.equal(await c2.server.close(), false);
+});
+
 test("ae_execute unknown op is a typed refusal, not a crash", async () => {
   const c = makeClient();
   const { payload, isError } = toolPayload(await c.request("tools/call", {
@@ -632,6 +665,26 @@ test("spawned server over real stdio: initialize → tools → execute → verif
     assert.equal(code, 0);
   } finally {
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  }
+});
+
+// ---- entry-flag validation (Issue #383): valueless target pins must
+// ---- refuse before the server exists — tested against the real
+// ---- spawned entry point, not just createServer ----
+
+test("spawned entry refuses valueless --project-file / --ae-version with exit 2", async () => {
+  for (const argv of [
+    ["--session", "a8n-attached", "--project-file"],
+    ["--session", "a8n-attached", "--project-file="],
+    ["--session", "a8n-attached", "--ae-version"],
+    ["--session", "fake", "--ae-version="],
+  ]) {
+    const child = spawn(process.execPath, [SERVER, ...argv], { stdio: ["ignore", "pipe", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", (d) => { stderr += d; });
+    const code = await new Promise((resolve) => child.on("exit", resolve));
+    assert.equal(code, 2, `argv ${JSON.stringify(argv)}: ${stderr}`);
+    assert.match(stderr, /requires a nonempty value/);
   }
 });
 
