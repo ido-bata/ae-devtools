@@ -243,3 +243,25 @@ export function withTimeout(promise, ms, tag) {
     new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT " + tag)), ms)),
   ]);
 }
+
+/**
+ * Conformance timeout-probe verdict (Issue #384): UNKNOWN alone does
+ * not prove the runner did not resend. The probe passes only when the
+ * outcome is UNKNOWN AND the transport send-count delta across the
+ * probe window is exactly one.
+ */
+export function isCleanTimeoutProbe({ outcome, sendDelta }) {
+  return outcome === "UNKNOWN" && sendDelta === 1;
+}
+
+/**
+ * Conformance MCP-shutdown verdict (Issue #384): clean shutdown is the
+ * server's OWN SIGTERM path completing — exit code 143 (128+SIGTERM)
+ * after session.close(), with no signal and no forced kill. Mere
+ * termination (any other exit code, death by signal, SIGKILL rescue)
+ * is not proof the owned AE session closed.
+ */
+export function isCleanServerShutdown({ shutdownConfirmed, forcedKill, exitCode, signalCode }) {
+  return shutdownConfirmed === true && forcedKill !== true &&
+    exitCode === 143 && signalCode === null;
+}

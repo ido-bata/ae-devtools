@@ -35,7 +35,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { arg } from "../devtools-cli/argv.mjs";
-import { spawnMcpStdio, withTimeout } from "../devtools-cli/real-run-kit.mjs";
+import { spawnMcpStdio, withTimeout, isCleanServerShutdown } from "../devtools-cli/real-run-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..");
@@ -204,14 +204,30 @@ try {
     await new Promise((r) => setTimeout(r, 3000));
     shutdownConfirmed = child.exitCode !== null || child.signalCode !== null;
   }
-  // A child that only exits because SIGKILL destroyed it did NOT shut
-  // down cleanly — session.close() (unsavedChanges:"refuse") never ran
-  // to completion. That is a failed run, not a confirmed cleanup.
-  const cleanShutdown = shutdownConfirmed && !forcedKill && child.signalCode !== "SIGKILL";
-  rec({ step: "server.stopped", fixturePath, shutdownConfirmed, cleanShutdown, forcedKill, results });
+  // Clean shutdown means the server's OWN shutdown path completed:
+  // SIGTERM → shutdown(143) → session.close() → process.exit(143).
+  // Merely stopping is not proof — an exit code of 1 (e.g. an
+  // unhandled rejection during close) or death by signal means
+  // session.close() never confirmed the owned AE session closed
+  // (Issue #384). exitCode/signalCode are recorded either way.
+  const exitCode = child.exitCode;
+  const signalCode = child.signalCode;
+  const cleanShutdown = isCleanServerShutdown({
+    shutdownConfirmed, forcedKill, exitCode, signalCode,
+  });
+  rec({
+    step: "server.stopped", fixturePath, shutdownConfirmed, cleanShutdown,
+    forcedKill, exitCode, signalCode, results,
+  });
   if (!cleanShutdown) {
     fatal = true;
-    rec({ fatal: shutdownConfirmed ? "MCP server child required SIGKILL — unclean shutdown" : "MCP server child did not exit after SIGTERM+SIGKILL" });
+    rec({
+      fatal: !shutdownConfirmed
+        ? "MCP server child did not exit after SIGTERM+SIGKILL"
+        : forcedKill
+          ? "MCP server child required SIGKILL — unclean shutdown"
+          : `MCP server shutdown exit was not the clean SIGTERM path (exitCode=${exitCode} signalCode=${signalCode})`,
+    });
   }
 
   // Verdict: a recorded isError or a non-COMPLETED outcome is a failed

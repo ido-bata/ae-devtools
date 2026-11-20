@@ -65,6 +65,7 @@ import {
   aeProcessSnapshot,
   createEvalDispatch,
   gitHeadAndDirty,
+  isCleanTimeoutProbe,
 } from "../devtools-cli/real-run-kit.mjs";
 
 const HERE = dirname(new URL(import.meta.url).pathname);
@@ -478,20 +479,31 @@ export async function main() {
     });
     const t0 = Date.now();
     const timeoutRequestId = `conf-timeout-${Date.now().toString(36)}`;
+    // Exactly-one-send check (Issue #384): an UNKNOWN outcome alone does
+    // not prove the runner did not resend. No other probe dispatches in
+    // this window, so the transport send-count delta across the probe +
+    // late-completion wait must be exactly 1.
+    const sendsBeforeTimeout = session.transport.sendCount();
     const timeoutResult = await timeoutDispatch('$.sleep(2000); "slept"', timeoutRequestId);
+    // Let the sleeping host script finish before close.
+    await new Promise((r) => setTimeout(r, 2500));
+    const sendsAfterTimeout = session.transport.sendCount();
+    const timeoutSendDelta = sendsAfterTimeout - sendsBeforeTimeout;
+
     evidence.timeoutProbe = {
       outcome: timeoutResult.outcome,
       contractOutcome: timeoutResult.contractOutcome ?? null,
       retry: timeoutResult.retry ?? null,
       elapsedMs: Date.now() - t0,
       quarantined: shortRunner.isQuarantined(timeoutRequestId),
+      sendsBefore: sendsBeforeTimeout,
+      sendsAfter: sendsAfterTimeout,
+      sendDelta: timeoutSendDelta,
     };
     step("timeout.probe", {
-      ok: timeoutResult.outcome === "UNKNOWN",
+      ok: isCleanTimeoutProbe({ outcome: timeoutResult.outcome, sendDelta: timeoutSendDelta }),
       ...evidence.timeoutProbe,
     });
-    // Let the sleeping host script finish before close.
-    await new Promise((r) => setTimeout(r, 2500));
 
     evidence.transportSends = session.transport.sendCount();
     evidence.opResultSummary = Object.fromEntries(
