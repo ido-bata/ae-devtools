@@ -16,6 +16,7 @@
  *   node server.mjs [--session fake|a8n|a8n-attached]
  *                   [--ae-a8n-root <dir>] [--install-dir <dir>]
  *                   [--ae-version <v>] [--allow-mutation <opId>]...
+ *                   [--project-file <path>] [--call-timeout-ms <n>] [--deadline-ms <n>]
  *
  * Session is opened LAZILY on the first ae_execute/ae_verify that passes
  * the consent pre-gate — discover/inspect/denied calls never touch a
@@ -52,6 +53,11 @@ export const SERVER_VERSION = JSON.parse(
 // in `initialize`; we answer with the newest mutually supported one.
 const PROTOCOL_VERSIONS = ["2024-11-05", "2025-03-26", "2025-06-18"];
 const LATEST_PROTOCOL = PROTOCOL_VERSIONS[PROTOCOL_VERSIONS.length - 1];
+
+function positiveMsFlag(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
 
 const PARSE_ERROR = -32700;
 const INVALID_REQUEST = -32600;
@@ -272,7 +278,7 @@ if (isMain) {
   const sessionKind = flags.session ?? "fake";
   const allowMutationOps = (multi?.["allow-mutation"] ?? []).filter((v) => typeof v === "string" && v.length > 0);
   if (!["fake", "a8n", "a8n-attached"].includes(sessionKind)) {
-    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>] [--allow-mutation <opId>]... [--project-file <path>]\n");
+    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>] [--allow-mutation <opId>]... [--project-file <path>] [--call-timeout-ms <n>] [--deadline-ms <n>]\n");
     process.exit(2);
   }
   if (allowMutationOps.length > 0 && sessionKind !== "a8n-attached") {
@@ -291,6 +297,8 @@ if (isMain) {
       aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
       mutatingOps: allowMutationOps,
       projectFile: typeof flags["project-file"] === "string" ? flags["project-file"] : undefined,
+      callTimeoutMs: positiveMsFlag(flags["call-timeout-ms"]),
+      deadlineMs: positiveMsFlag(flags["deadline-ms"]),
     },
     closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });

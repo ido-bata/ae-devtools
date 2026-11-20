@@ -71,6 +71,8 @@ export async function openSession(kind = "fake", options = {}) {
         ? options.mutatingOps.filter((v) => typeof v === "string")
         : undefined,
       projectFile: typeof options.projectFile === "string" ? options.projectFile : undefined,
+      callTimeoutMs: Number.isFinite(options.callTimeoutMs) ? options.callTimeoutMs : undefined,
+      deadlineMs: Number.isFinite(options.deadlineMs) ? options.deadlineMs : undefined,
     });
     return {
       kind: "a8n-attached",

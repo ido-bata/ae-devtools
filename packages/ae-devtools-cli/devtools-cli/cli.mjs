@@ -15,6 +15,7 @@
  *                 [--ae-a8n-root <dir>] [--install-dir <dir>]
  *                 [--ae-version <v>] [--allow-mutation <opId>]...
  *                 [--project-file <path>]
+ *                 [--call-timeout-ms <n>] [--deadline-ms <n>]
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
  *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
@@ -110,6 +111,11 @@ function findAeInstalls() {
   return found;
 }
 
+function positiveMsFlag(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 async function openSession(flags, mutatingOps = []) {
   const kind = flags.session ?? "fake";
   // Session-kind dispatch is shared with MCP/VSCode via
@@ -123,6 +129,8 @@ async function openSession(flags, mutatingOps = []) {
     aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
     mutatingOps,
     projectFile: typeof flags["project-file"] === "string" ? flags["project-file"] : undefined,
+    callTimeoutMs: positiveMsFlag(flags["call-timeout-ms"]),
+    deadlineMs: positiveMsFlag(flags["deadline-ms"]),
   });
   if (kind !== "a8n") {
     const { slice: _slice, ...session } = base;
