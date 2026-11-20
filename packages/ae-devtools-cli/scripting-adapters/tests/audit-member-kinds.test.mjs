@@ -310,7 +310,9 @@ return mode;`,
 test("signature coverage stats expose unchecked method claims", () => {
   const symbols = [
     sym("t.Foo.sig", "Foo", "sig", "method", { signature: ["a"] }),
-    sym("t.Foo.unsig", "Foo", "unsig", "method", { signature: [] }),
+    // `signature: null` = arity unknown (unchecked); `[]` would mean a
+    // documented zero-argument signature and IS arity-checked.
+    sym("t.Foo.unsig", "Foo", "unsig", "method", { signature: null }),
   ];
   const op = {
     id: "t.sigcov",
@@ -327,4 +329,60 @@ f.unsig(1, 2, 3);`,
   assert.equal(stats.unsigClaims, 1);
   assert.deepEqual(stats.unsigMembers, ["Foo.unsig"]);
   assert.ok(stats.aritySites >= 1, "expected arity-checked call sites");
+});
+
+test("documented zero-arg signature ([] ) is arity-checked, not 'unknown'", () => {
+  // Issue #336: the extractor emits `signature: []` only when a usage
+  // line literally shows `member()`; `null` carries the unknown-arity
+  // case. A call with arguments against a documented `()` signature is
+  // a real finding.
+  const symbols = [
+    sym("t.Foo.zap", "Foo", "zap", "method", { signature: [] }),
+  ];
+  const bad = {
+    id: "t.zapbad",
+    members: ["t.Foo.zap"],
+    args: [],
+    _sample: {},
+    source: () => `var f = new Foo();
+f.zap(1);`,
+  };
+  const good = {
+    id: "t.zapgood",
+    members: ["t.Foo.zap"],
+    args: [],
+    _sample: {},
+    source: () => `var f = new Foo();
+f.zap();`,
+  };
+  const { findings } = runAudit({ symbols, ops: [bad, good] });
+  assert.equal(findings.length, 1, `expected exactly the 0..0 arity finding, got: ${JSON.stringify(findings)}`);
+  assert.ok(findings[0].op === "t.zapbad");
+  assert.ok(findings[0].issue.includes("allows 0..0"), findings[0].issue);
+});
+
+test("host receivers count as typed sites, never as resolved non-host", () => {
+  // Issue #336 counterexample: "untyped 0" must not be an artifact of
+  // host receivers being dumped into the non-host bucket. A member
+  // access on an inventory-known host receiver (AVLayer) is a TYPED
+  // site — if it were misclassified as non-host the claim would go
+  // unexercised AND nonHostSites would inflate.
+  const symbols = [
+    sym("t.AVLayer.marker", "AVLayer", "marker", "attribute"),
+  ];
+  const op = {
+    id: "t.hostrecv",
+    members: ["t.AVLayer.marker"],
+    args: [],
+    _sample: {},
+    source: () => `var l = new AVLayer();
+var m = l.marker;
+return m;`,
+  };
+  const { findings, stats } = runAudit({ symbols, ops: [op] });
+  assert.equal(findings.length, 0, `unexpected findings: ${JSON.stringify(findings)}`);
+  assert.equal(stats.untypedSites, 0);
+  assert.equal(stats.nonHostSites, 0,
+    "host receiver sites must not land in the resolved-non-host bucket");
+  assert.ok(stats.typedSites >= 1, "expected the host member site to be typed");
 });

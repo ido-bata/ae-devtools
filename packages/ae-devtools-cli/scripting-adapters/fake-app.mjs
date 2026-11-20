@@ -572,7 +572,9 @@ function makeProperty(value, opts = {}) {
     // Approximation: returns the value of the last key at-or-before t
     // (AE interpolates; the fake only needs a deterministic, honest
     // read-back for contract tests — not motion-accurate sampling).
-    valueAtTime(t) {
+    // Documented signature is valueAtTime(time, preExpression); the fake
+    // never applies expressions here, matching preExpression=false.
+    valueAtTime(t, preExpression) {
       if (this.numKeys === 0) return Array.isArray(this.value) ? this.value.slice() : this.value;
       var v = this.__keys[0].value;
       for (var i = 0; i < this.__keys.length; i++) {
@@ -1363,23 +1365,26 @@ export function createAdapterFakeApp() {
     havePref(section, key) {
       return prefStore[section] !== undefined && prefStore[section][key] !== undefined;
     },
-    getPrefAsString(section, key, def) {
-      if (!this.havePref(section, key)) return def === undefined ? "" : String(def);
+    // Documented signature is getPrefAsX(sectionName, keyName[, prefType])
+    // — prefType selects the preferences file and is not modelled here.
+    // Callers apply their own default when havePref is false (Issue #336).
+    getPrefAsString(section, key) {
+      if (!this.havePref(section, key)) return "";
       const v = prefStore[section][key];
       return typeof v === "string" ? v : String(v);
     },
-    getPrefAsBool(section, key, def) {
-      if (!this.havePref(section, key)) return def === undefined ? false : def === true;
+    getPrefAsBool(section, key) {
+      if (!this.havePref(section, key)) return false;
       const v = prefStore[section][key];
       return typeof v === "boolean" ? v : v === "true" || v === 1;
     },
-    getPrefAsLong(section, key, def) {
-      if (!this.havePref(section, key)) return def === undefined ? 0 : Math.round(Number(def));
+    getPrefAsLong(section, key) {
+      if (!this.havePref(section, key)) return 0;
       const v = prefStore[section][key];
       return typeof v === "number" ? Math.round(v) : Math.round(Number(v));
     },
-    getPrefAsFloat(section, key, def) {
-      if (!this.havePref(section, key)) return def === undefined ? 0 : Number(def);
+    getPrefAsFloat(section, key) {
+      if (!this.havePref(section, key)) return 0;
       const v = prefStore[section][key];
       return typeof v === "number" ? v : Number(v);
     },
