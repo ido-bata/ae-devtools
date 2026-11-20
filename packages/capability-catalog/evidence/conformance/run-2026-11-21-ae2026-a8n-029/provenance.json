@@ -1,0 +1,51 @@
+{
+ "schema": "ae-devtools.conformance-provenance/v1",
+ "recordedAt": "2026-11-20T21:43:53.000Z",
+ "git": {
+  "head": "417c77fe08eadf4c961646196197757617faf02d",
+  "dirty": true,
+  "note": "lanes executed at 417c77fe08eadf4c961646196197757617faf02d on release-0-6-0 (v0.6.0 release candidate, PR #379 head); the only uncommitted paths during the run were this in-progress evidence directory — no tracked file differed from head. sourceDirty:true appears in cli-project-open.json for the same reason."
+ },
+ "aeA8n": {
+  "name": "@ido-bata/ae-a8n",
+  "version": "0.2.0",
+  "distTag": "pinned-dependency",
+  "distTagsAtRun": {
+   "latest": "0.3.0",
+   "next": "0.4.0"
+  },
+  "tarball": "https://registry.npmjs.org/@ido-bata/ae-a8n/-/ae-a8n-0.2.0.tgz",
+  "fileCount": 164
+ },
+ "aeDevtools": {
+  "package": "ae-devtools-cli",
+  "sourceSha": "417c77fe08eadf4c961646196197757617faf02d",
+  "invocation": "node conformance/real-run.mjs + node conformance/mcp-real-run.mjs + node devtools-cli/cli.mjs (execute project.open/doctor)"
+ },
+ "host": {
+  "installDir": "/Applications/Adobe After Effects 2026/Adobe After Effects 2026.app",
+  "aeVersion": "26.5.3x9",
+  "aeBuild": "9",
+  "os": "macOS 27.2.1",
+  "arch": "arm64",
+  "node": "v26.13.1"
+ },
+ "fixtures": {
+  "primary": "Conformance-Disposable.aep",
+  "mcp": "Conformance-MCP-Disposable.aep",
+  "note": "both created fresh inside owned sessions via project.new + project.save"
+ },
+ "artifactHashes": {
+  "Conformance-Disposable.aep": "493f5d9fb157c36a845fa83e374199f60312616883d32e5e5a855ddac339339d",
+  "Conformance-MCP-Disposable.aep": "3fbda5cc5ffaa5265611cd2756077cd3bf49562d6df7a4962f6ae883855d7373",
+  "a8n-host-ext.js": "825a5e63ebd6afb08ff7dd83a6fd6aa732fcef59e522355760815954c3bdd401",
+  "ae-a8n-0.2.0.tgz": "3c63588bb618106f4ee89716f840787b9da601977f01cca92547ba5700bda372",
+  "cli-doctor.json": "a021c15345bef438499363d75d21ae426e8dc49dced2add8bb982f311e6c322e",
+  "cli-project-open.json": "ea219938af93e6f1ba2e7ca520d18b4a277ed48eaa75530dab8575fa893657a0",
+  "harness-mcp-real-run.mjs": "3422d44f83d5eac66be5f1f3a16ca0df24fb57a6236791d9ea710f55fef8441e",
+  "harness-real-run.mjs": "2f02ffd3bd01791c880b45f543e2f97d82e5d6a30b0c2684e980e429980dd00d",
+  "mcp-stdio.jsonl": "9c467d06509c7bbba5ed1f6b8cd2a4f8e2c482a7f09d089a4374ca7d24e9d757",
+  "session-a8n-jsx.json": "eca6e1bf0ecc66a3368c1978025f4f6db9ddd903da08e5972f53ced70eed5942",
+  "trace.jsonl": "ff617372b5164c9a927a3e9f1a9d0c2914444bee3abd02b276b7e2ba02bf0112"
+ }
+}
