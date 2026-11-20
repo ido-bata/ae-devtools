@@ -37,10 +37,19 @@ export const DEVLOOP_SCHEMA = "ae-devtools.dev-loop/v1";
  * state still reports WHICH backend would be used. pin is included
  * only when a session is actually open — a closed/failed state must
  * not fabricate host identity.
+ *
+ * CAP049 version-aware metadata: for an OPEN session the response also
+ * carries `api` (the dev-loop contract version) and `host` — the
+ * version/ownership/target fields the session opener already attested
+ * in `session.meta`. Fields the opener did not attest stay null; a
+ * session without meta (fake) reports `host: null`. Nothing here opens
+ * a session, probes a host, or upgrades an evidence level.
  */
 export function sessionStatus({ session = null, sessionKind = null, opening = false, failed = false } = {}) {
   const state = session ? "open" : failed ? "failed" : opening ? "opening" : "closed";
+  const meta = session !== null && typeof session === "object" ? session.meta ?? null : null;
   return {
+    api: { devLoop: DEVLOOP_SCHEMA },
     session: {
       kind: sessionKind ?? session?.kind ?? null,
       state,
@@ -48,6 +57,21 @@ export function sessionStatus({ session = null, sessionKind = null, opening = fa
         ? {
             evidenceLevel: session.evidenceLevel ?? null,
             pin: session.pin ?? null,
+            host: meta === null ? null : {
+              aeVersion: meta.aeVersion ?? null,
+              ownership: meta.ownership ?? null,
+              aeA8nHead: meta.aeA8nHead ?? null,
+              attached: meta.attached === true,
+              ...(meta.target && typeof meta.target === "object"
+                ? {
+                    target: {
+                      pid: meta.target.identity?.pid ?? null,
+                      projectFile: meta.target.projectFile ?? null,
+                      attachApi: meta.target.attachApi ?? null,
+                    },
+                  }
+                : {}),
+            },
           }
         : {}),
     },

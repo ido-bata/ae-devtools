@@ -73,6 +73,40 @@ test("sessionStatus reports honest state without opening anything (CAP049)", () 
   assert.equal(open.session.state, "open");
   assert.equal(open.session.evidenceLevel, "fake/mock only");
   assert.deepEqual(open.session.pin, { sessionId: "s" });
+  // Fake sessions carry no host meta — host stays null, never fabricated.
+  assert.equal(open.session.host, null);
+  assert.equal(open.api.devLoop, "ae-devtools.dev-loop/v1");
+
+  // CAP049 version-aware metadata: only opener-attested values surface.
+  const attached = sessionStatus({
+    session: {
+      kind: "a8n-attached",
+      evidenceLevel: "verified on real host (attach to a running AE)",
+      pin: { sessionId: "a" },
+      meta: {
+        aeVersion: "27.0x78",
+        ownership: "attached",
+        aeA8nHead: "c104e39",
+        attached: true,
+        target: {
+          identity: { pid: 56305 },
+          projectFile: "/tmp/probe.aep",
+          attachApi: "AfterEffects.attach",
+        },
+      },
+    },
+  });
+  assert.equal(attached.session.host.aeVersion, "27.0x78");
+  assert.equal(attached.session.host.ownership, "attached");
+  assert.equal(attached.session.host.attached, true);
+  assert.deepEqual(attached.session.host.target, {
+    pid: 56305,
+    projectFile: "/tmp/probe.aep",
+    attachApi: "AfterEffects.attach",
+  });
+  // Closed/failed states never fabricate host identity.
+  assert.equal(closed.api.devLoop, "ae-devtools.dev-loop/v1");
+  assert.equal(closed.session.host, undefined);
 });
 
 test("developer-loop vertical: discover→inspect→execute→verify", async () => {
