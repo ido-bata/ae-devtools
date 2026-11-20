@@ -51,6 +51,14 @@ export const launchLog = [];
 // Read at launch() time, not import time — one fixture root serves
 // several behavior selections within a single test.
 const behavior = () => process.env.AE_FIXTURE_BEHAVIOR ?? "attached-ok";
+// Install resolution is env-gated: unset → null → the attach
+// pre-flight is skipped, so existing tests stay hermetic. Set
+// AE_FIXTURE_INSTALL_EXE to exercise the pre-flight census (paired
+// with an injected hostProcessProbe — never a real process scan).
+export const resolveInstall = async () =>
+  process.env.AE_FIXTURE_INSTALL_EXE
+    ? { executable: process.env.AE_FIXTURE_INSTALL_EXE, installDir: "/fake/install" }
+    : null;
 export const AfterEffects = Object.assign(function AfterEffects() {}, {
   launch: async (options) => {
     launchArgs.push(options ?? {});
@@ -65,7 +73,11 @@ export const AfterEffects = Object.assign(function AfterEffects() {}, {
         evidence: "fixture-evidence",
       }),
       project: () => ({
-        info: async () => ({ file: "/tmp/user-project.aep", name: "user-project", itemCount: 3 }),
+        info: async () => ({
+          file: process.env.AE_FIXTURE_PROJECT_FILE ?? "/tmp/user-project.aep",
+          name: "user-project",
+          itemCount: 3,
+        }),
       }),
       call: async () => { throw new Error("call not used in fixture tests"); },
       close: async () => { entry.closed += 1; },
@@ -87,15 +99,25 @@ async function importFixture(root) {
   return import(pathToFileURL(join(root, "dist", "index.js")).href);
 }
 
-function withBehavior(value, fn) {
-  const prev = process.env.AE_FIXTURE_BEHAVIOR;
-  process.env.AE_FIXTURE_BEHAVIOR = value;
+function withEnvVars(vars, fn) {
+  const prev = {};
+  for (const [k, v] of Object.entries(vars)) {
+    prev[k] = process.env[k];
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
   return Promise.resolve()
     .then(fn)
     .finally(() => {
-      if (prev === undefined) delete process.env.AE_FIXTURE_BEHAVIOR;
-      else process.env.AE_FIXTURE_BEHAVIOR = prev;
+      for (const [k, v] of Object.entries(prev)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
     });
+}
+
+function withBehavior(value, fn) {
+  return withEnvVars({ AE_FIXTURE_BEHAVIOR: value }, fn);
 }
 
 test("openAttachedSliceSession: attaches with narrow extensionMethods grant only", async () => {
@@ -161,6 +183,123 @@ test("openAttachedSliceSession: aeVersion pin mismatch refuses after attach", as
       });
       await s.close();
     });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* attach pre-flight + project pin (Issue #366)                        */
+/* ------------------------------------------------------------------ */
+
+const FAKE_EXE =
+  "/fake/Adobe After Effects 2027.app/Contents/MacOS/After Effects";
+const FAKE_EXE_ENV = { AE_FIXTURE_INSTALL_EXE: FAKE_EXE };
+
+test("preflight: zero AE processes refuses before any launch", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      await assert.rejects(
+        openAttachedSliceSession({
+          aeA8nRoot: root, workdir, hostProcessProbe: async () => [],
+        }),
+        (e) =>
+          e.code === "ATTACHED_TARGET_NOT_RUNNING" &&
+          /No AE process was launched/.test(e.message),
+      );
+      const { launchArgs, launchLog } = await importFixture(root);
+      assert.equal(launchArgs.length, 0, "pre-flight refusal must not call launch()");
+      assert.equal(launchLog.length, 0);
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("preflight: two instances of the same install refuse as ambiguous", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      await assert.rejects(
+        openAttachedSliceSession({
+          aeA8nRoot: root,
+          workdir,
+          hostProcessProbe: async () => [
+            { pid: 101, path: FAKE_EXE },
+            { pid: 202, path: FAKE_EXE },
+          ],
+        }),
+        (e) => e.code === "ATTACHED_TARGET_AMBIGUOUS",
+      );
+      const { launchArgs } = await importFixture(root);
+      assert.equal(launchArgs.length, 0);
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("preflight: unattributed or foreign-version rows stay inconclusive", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(FAKE_EXE_ENV, async () => {
+      // A path the OS would not disclose, and a DIFFERENT install's AE:
+      // neither proves "no target", so launch + ownership decide.
+      for (const rows of [
+        [{ pid: 1, path: null }],
+        [{ pid: 2, path: "/other/Adobe After Effects 2026.app/Contents/MacOS/After Effects" }],
+        null, // probe failure
+      ]) {
+        const s = await openAttachedSliceSession({
+          aeA8nRoot: root, workdir, hostProcessProbe: async () => rows,
+        });
+        await s.close();
+      }
+      const { launchArgs } = await importFixture(root);
+      assert.equal(launchArgs.length, 3, "inconclusive scans must still reach launch()");
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(workdir, { recursive: true, force: true });
+  }
+});
+
+test("projectFile pin: matching project opens, mismatch refuses", async () => {
+  const root = launchFixtureRoot();
+  const workdir = mkdtempSync(join(tmpdir(), "a8n-att-wd-"));
+  try {
+    await withEnvVars(
+      { ...FAKE_EXE_ENV, AE_FIXTURE_PROJECT_FILE: "/tmp/user-project.aep" },
+      async () => {
+        const ok = await openAttachedSliceSession({
+          aeA8nRoot: root,
+          workdir,
+          projectFile: "/tmp/user-project.aep",
+          hostProcessProbe: async () => [{ pid: 7, path: FAKE_EXE }],
+        });
+        assert.equal(ok.target.projectFile, "/tmp/user-project.aep");
+        await ok.close();
+
+        await assert.rejects(
+          openAttachedSliceSession({
+            aeA8nRoot: root,
+            workdir,
+            projectFile: "/tmp/other-project.aep",
+            hostProcessProbe: async () => [{ pid: 7, path: FAKE_EXE }],
+          }),
+          (e) => e.code === "ATTACHED_TARGET_MISMATCH",
+        );
+        const { launchLog } = await importFixture(root);
+        assert.equal(launchLog[1].closed, 1, "mismatch must close the attached session");
+      },
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(workdir, { recursive: true, force: true });

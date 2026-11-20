@@ -272,11 +272,15 @@ if (isMain) {
   const sessionKind = flags.session ?? "fake";
   const allowMutationOps = (multi?.["allow-mutation"] ?? []).filter((v) => typeof v === "string" && v.length > 0);
   if (!["fake", "a8n", "a8n-attached"].includes(sessionKind)) {
-    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>] [--allow-mutation <opId>]...\n");
+    process.stderr.write("usage: ae-devtools-mcp [--session fake|a8n|a8n-attached] [--ae-a8n-root <dir>] [--install-dir <dir>] [--ae-version <v>] [--allow-mutation <opId>]... [--project-file <path>]\n");
     process.exit(2);
   }
   if (allowMutationOps.length > 0 && sessionKind !== "a8n-attached") {
     process.stderr.write("ae-devtools-mcp: --allow-mutation is only valid with --session a8n-attached\n");
+    process.exit(2);
+  }
+  if (typeof flags["project-file"] === "string" && sessionKind !== "a8n-attached") {
+    process.stderr.write("ae-devtools-mcp: --project-file is only valid with --session a8n-attached\n");
     process.exit(2);
   }
   const server = createServer({
@@ -286,6 +290,7 @@ if (isMain) {
       installDir: typeof flags["install-dir"] === "string" ? flags["install-dir"] : undefined,
       aeVersion: typeof flags["ae-version"] === "string" ? flags["ae-version"] : undefined,
       mutatingOps: allowMutationOps,
+      projectFile: typeof flags["project-file"] === "string" ? flags["project-file"] : undefined,
     },
     closeTimeoutMs: parseCloseTimeoutMs(flags["close-timeout-ms"]),
   });
