@@ -13,10 +13,14 @@
  * session:
  *
  *   1. PRIMARY — `AfterEffects.attach(options)`: the attach-only API
- *      ae-a8n is adding for this contract (never launches; refuses when
- *      no attachable instance exists). The option/return shape mirrors
- *      `launch`: `{ installDir?, hostScript, sessionRoot, authorization }`
- *      in, an AfterEffects session out.
+ *      ae-a8n ships for this contract (ae-a8n #269 / PR #270 — never
+ *      launches; refuses when no attachable instance exists). The
+ *      option/return shape mirrors `launch`:
+ *      `{ installDir?, hostScript, sessionRoot, authorization,
+ *         target?: { pid } }` in, an AfterEffects session out. When the
+ *      pre-flight census identified exactly one process, its pid is
+ *      forwarded as `target.pid` so ae-a8n binds the SAME process —
+ *      a pid that no longer names an in-scope AE is refused upstream.
  *   2. TRANSITIONAL — `AfterEffects.launch(options)` on ae-a8n builds
  *      that do not yet export `attach`. The caller MUST still verify
  *      `ownership().kind === "attached"` and close+refuse otherwise;
@@ -48,11 +52,15 @@ export function hasAttachApi(AfterEffects) {
  *   hostScriptPath — built extension host script
  *   sessionRoot    — ae-a8n session root dir
  *   authorization  — ae-a8n launch authorization grant
+ *   targetPid      — optional pid pin forwarded as `target.pid` (the
+ *                    census-identified process); ignored by the
+ *                    transitional fallback, which has no attach target
+ *                    concept beyond its own census
  * @returns {Promise<object>} the ae-a8n session (AfterEffects instance)
  * @throws whatever ae-a8n throws; `attachApi` on the error is not set —
  *         callers that need provenance read `session.attachApi` instead.
  */
-export async function openAttachTarget({ AfterEffects, installDir, hostScriptPath, sessionRoot, authorization }) {
+export async function openAttachTarget({ AfterEffects, installDir, hostScriptPath, sessionRoot, authorization, targetPid }) {
   const options = {
     ...(typeof installDir === "string" && installDir.length > 0 ? { installDir } : {}),
     hostScript: hostScriptPath,
@@ -62,6 +70,9 @@ export async function openAttachTarget({ AfterEffects, installDir, hostScriptPat
   if (hasAttachApi(AfterEffects)) {
     // Attach-only: ae-a8n refuses rather than spawn when no running,
     // attachable instance exists. There is no fallback from here.
+    if (Number.isInteger(targetPid) && targetPid > 0) {
+      options.target = { pid: targetPid };
+    }
     const ae = await AfterEffects.attach(options);
     // Provenance marker for evidence: which opener actually ran.
     try { ae.attachApi = "AfterEffects.attach"; } catch { /* frozen session */ }

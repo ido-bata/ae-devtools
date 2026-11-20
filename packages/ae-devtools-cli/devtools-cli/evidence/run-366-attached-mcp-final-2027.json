@@ -1,0 +1,12 @@
+{
+  "schema": "ae-devtools.cli.error/v1",
+  "runId": "run-2026-11-20T16-37-13-037Z-a30e1123",
+  "code": "ATTACHED_TARGET_NOT_RUNNING",
+  "message": "a8n-attached found After Effects processes but none match install /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects; start that AE first or use --session a8n for a disposable owned session. No AE process was launched.",
+  "cleanup": {
+    "attempted": false,
+    "ok": null,
+    "error": null,
+    "quit": null
+  }
+}

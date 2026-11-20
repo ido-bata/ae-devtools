@@ -527,6 +527,8 @@ test("attach boundary: AfterEffects.attach is preferred when exported", async ()
         assert.equal(s.target.identity.pid, 7);
         assert.equal(s.target.identity.processStart, "start-1");
         assert.equal(s.target.identity.executable, FAKE_EXE);
+        // The census-identified pid is forwarded as the attach target pin.
+        assert.deepEqual(attachArgs[0].target, { pid: 7 });
       } finally {
         await s.close();
       }

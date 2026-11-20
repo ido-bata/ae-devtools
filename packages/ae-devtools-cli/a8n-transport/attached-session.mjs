@@ -440,6 +440,11 @@ export async function openAttachedSliceSession(options = {}) {
       installDir: optInstallDir,
       hostScriptPath,
       sessionRoot,
+      // Pin the census-identified process when we have one — ae-a8n's
+      // attach refuses if that pid no longer names an in-scope AE.
+      targetPid: matchedCensusRow !== null && Number.isInteger(matchedCensusRow.pid)
+        ? matchedCensusRow.pid
+        : null,
       // The narrowest grant that lets the trusted-execution runner reach
       // the host: only the caller-facing eval method. hostEnvironment and
       // menuCommands stay ungranted on a host we do not own.
