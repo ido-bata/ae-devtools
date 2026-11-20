@@ -53,6 +53,25 @@ export function hasFlag(flag, argv = process.argv.slice(2)) {
 }
 
 /**
+ * Value-required flag check (Issue #383). `flags` is a parseArgs()
+ * result; returns the first name in `names` that is PRESENT but carries
+ * no usable string value — a bare `--flag` parses to `true` and
+ * `--flag=` parses to `""`. Callers that map `typeof v === "string"` to
+ * "option supplied" would otherwise silently disable the option (e.g. a
+ * target pin), so pin-type flags must refuse instead. Returns null when
+ * every listed flag is absent or holds a nonempty string.
+ */
+export function missingFlagValue(flags, names) {
+  for (const name of names) {
+    if (Object.hasOwn(flags, name) &&
+        (typeof flags[name] !== "string" || flags[name].length === 0)) {
+      return name;
+    }
+  }
+  return null;
+}
+
+/**
  * String value of `--flag` from argv (default: this process's args).
  * Returns undefined when absent or when the flag was given bare
  * (boolean) — a bare flag is not a value.

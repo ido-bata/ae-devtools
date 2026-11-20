@@ -74,7 +74,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseArgs } from "./argv.mjs";
+import { parseArgs, missingFlagValue } from "./argv.mjs";
 import { discover, inspect, execute, verify, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { openSession as openSharedSession } from "../dev-loop/session-open.mjs";
 import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
@@ -358,6 +358,16 @@ async function main() {
       }
       if (typeof flags["project-file"] === "string" && sessionKind !== "a8n-attached") {
         emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: "--project-file is only valid with --session a8n-attached" });
+        return 2;
+      }
+      // Target pins must carry a value (Issue #383): a bare
+      // `--project-file` parses to `true` and `--project-file=` to "" —
+      // both map to "pin absent" in the session openers, silently
+      // unpinning a granted mutation. Refuse BEFORE the run marker and
+      // session open. `--ae-version` has the same silent-disable shape.
+      const valuelessPin = missingFlagValue(flags, ["project-file", "ae-version"]);
+      if (valuelessPin !== null) {
+        emit({ schema: "ae-devtools.cli.error/v1", code: "USAGE", message: `--${valuelessPin} requires a nonempty value` });
         return 2;
       }
 

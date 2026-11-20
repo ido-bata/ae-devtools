@@ -635,6 +635,26 @@ test("spawned server over real stdio: initialize → tools → execute → verif
   }
 });
 
+// ---- entry-flag validation (Issue #383): valueless target pins must
+// ---- refuse before the server exists — tested against the real
+// ---- spawned entry point, not just createServer ----
+
+test("spawned entry refuses valueless --project-file / --ae-version with exit 2", async () => {
+  for (const argv of [
+    ["--session", "a8n-attached", "--project-file"],
+    ["--session", "a8n-attached", "--project-file="],
+    ["--session", "a8n-attached", "--ae-version"],
+    ["--session", "fake", "--ae-version="],
+  ]) {
+    const child = spawn(process.execPath, [SERVER, ...argv], { stdio: ["ignore", "pipe", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", (d) => { stderr += d; });
+    const code = await new Promise((resolve) => child.on("exit", resolve));
+    assert.equal(code, 2, `argv ${JSON.stringify(argv)}: ${stderr}`);
+    assert.match(stderr, /requires a nonempty value/);
+  }
+});
+
 // ---- outcome normalization consistency (Issue #226) ----
 
 test("lowercase adapter outcome spellings normalize on MCP surface; session meta cannot spoof kind/evidenceLevel", async () => {

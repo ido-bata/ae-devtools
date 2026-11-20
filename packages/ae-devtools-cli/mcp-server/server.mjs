@@ -37,7 +37,7 @@ import { fileURLToPath } from "node:url";
 
 import { TOOLS, callTool, MCP_SCHEMA } from "./tools.mjs";
 import { openSession } from "./session.mjs";
-import { parseArgs } from "../devtools-cli/argv.mjs";
+import { parseArgs, missingFlagValue } from "../devtools-cli/argv.mjs";
 import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/session-close.mjs";
 import { createSurfaceGuard } from "../dev-loop/surface-guard.mjs";
 import { lazyConsentAudit } from "../trusted-execution/consent-audit.mjs";
@@ -287,6 +287,16 @@ if (isMain) {
   }
   if (typeof flags["project-file"] === "string" && sessionKind !== "a8n-attached") {
     process.stderr.write("ae-devtools-mcp: --project-file is only valid with --session a8n-attached\n");
+    process.exit(2);
+  }
+  // Target pins must carry a value (Issue #383): a bare `--project-file`
+  // parses to `true` and `--project-file=` to "" — both map to "pin
+  // absent" in the session openers, silently unpinning a granted
+  // mutation. `--ae-version` has the same silent-disable shape. Refuse
+  // before the server (and its lazy session) exists.
+  const valuelessPin = missingFlagValue(flags, ["project-file", "ae-version"]);
+  if (valuelessPin !== null) {
+    process.stderr.write(`ae-devtools-mcp: --${valuelessPin} requires a nonempty value\n`);
     process.exit(2);
   }
   const server = createServer({
