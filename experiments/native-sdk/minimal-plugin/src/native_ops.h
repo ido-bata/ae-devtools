@@ -5,10 +5,10 @@
 /*                                                                 */
 /* Original code written for this repository.                      */
 /*                                                                 */
-/* Every allowlisted op body lives in native_ops.cpp; the routing   */
-/* table in native_intake.cpp maps operationId -> IntakeExecFn.     */
-/* Adding an op = allowlist entry + arg spec + executor + one       */
-/* routing row.                                                    */
+/* Every allowlisted op body lives in native_ops.cpp; dispatch       */
+/* resolves allow->execKind through the binding table below — there  */
+/* is no second routing table. Adding an op = allowlist entry        */
+/* (opId + arg spec + execKind) + one executor + one binding row.    */
 /*******************************************************************/
 
 #ifndef AE_PROBE_NATIVE_OPS_H
@@ -19,6 +19,8 @@
 #include "native_registry.h" /* AllowEntry */
 #include "native_request.h"  /* ReqVerdict */
 
+/* IntakeMutCtx (native_request.h) is the mutation-attempt channel:
+   ProcessClaimed passes non-NULL only to mutating bindings. */
 typedef void (*IntakeExecFn)(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -26,7 +28,8 @@ typedef void (*IntakeExecFn)(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 
 void ExecNumProjects(
     const AEGP_UtilitySuite6* utilP,
@@ -35,7 +38,8 @@ void ExecNumProjects(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecDriverImplVersion(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -43,7 +47,8 @@ void ExecDriverImplVersion(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecGetTypeName(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -51,7 +56,8 @@ void ExecGetTypeName(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecItemNameOrId(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -59,7 +65,8 @@ void ExecItemNameOrId(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecCompGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -67,7 +74,8 @@ void ExecCompGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecSetItemComment(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -75,8 +83,8 @@ void ExecSetItemComment(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
-int IsItemGetterOpId(const char* opIdZ);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecItemGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -84,9 +92,8 @@ void ExecItemGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
-int IsLayerCompOpId(const char* opIdZ);
-int IsLayerGetterOpId(const char* opIdZ);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecLayerCompOp(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -94,7 +101,8 @@ void ExecLayerCompOp(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecLayerGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -102,7 +110,8 @@ void ExecLayerGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecProjectGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -110,7 +119,8 @@ void ExecProjectGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecRQItemGetter(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -118,7 +128,8 @@ void ExecRQItemGetter(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecDriverPluginInitVersion(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -126,7 +137,8 @@ void ExecDriverPluginInitVersion(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecSuppressUI(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -134,7 +146,8 @@ void ExecSuppressUI(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecHostActivated(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -142,7 +155,8 @@ void ExecHostActivated(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
 void ExecRQZeroArg(
     const AEGP_UtilitySuite6* utilP,
     const AEGP_ProjSuite6* projP,
@@ -150,6 +164,17 @@ void ExecRQZeroArg(
     AEGP_PluginID plugin_id,
     const AllowEntry* allow,
     JVal* args,
-    ReqVerdict* v);
+    ReqVerdict* v,
+    IntakeMutCtx* mut);
+
+/* Executor binding table — the single source mapping execKind to
+   (executor, mutation class). ExecForKind is the only dispatch path;
+   ExecKindIsMutating drives BOTH the consent gate and the mut ctx
+   hand-off, so classification cannot diverge. OpTableSelfCheck
+   verifies every S_ALLOWLIST execKind resolves — called once at
+   configure time and by tests. */
+IntakeExecFn ExecForKind(int kind);
+int ExecKindIsMutating(int kind);
+int OpTableSelfCheck(void);
 
 #endif /* AE_PROBE_NATIVE_OPS_H */

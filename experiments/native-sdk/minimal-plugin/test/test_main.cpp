@@ -14,6 +14,8 @@
 #include "fake_host.h"
 #include "../src/native_json.h"
 #include "../src/native_consent.h"
+#include "../src/native_registry.h"
+#include "../src/native_ops.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -4407,6 +4409,127 @@ static void TestConsentVectors()
     }
 }
 
+/* Declarative operation-metadata integrity (Issue #328 residual):
+   S_ALLOWLIST + the executor binding table are the single source for
+   opId → arg schema → executor → mutation class. These checks pin
+   the real table AND prove ValidateOpTable detects deliberately
+   corrupted tables — the counterexamples for "metadata drift passes
+   silently". */
+static void TestOpTableMetadata()
+{
+    char detail[160];
+
+    /* the shipped table is self-consistent and fully bound */
+    CHECK(ValidateOpTable(S_ALLOWLIST, S_ALLOWLIST_COUNT,
+                          detail, sizeof(detail)) == 1);
+    CHECK(OpTableSelfCheck() == 1);
+    {
+        int k;
+        for (k = 0; k < EXEC_KIND_COUNT; k++)
+            CHECK(ExecForKind(k) != NULL);
+    }
+
+    /* mutation classification has exactly one home: the binding
+       table. Exactly one kind is mutating, exactly one allowlist
+       entry uses it, and that entry is AEGP_SetItemComment — an
+       injected misclassification (getter marked mutating, or the
+       mutating op rebound to a read-only kind) fails here. */
+    {
+        int k, mutatingKinds = 0, setCommentEntries = 0;
+        for (k = 0; k < EXEC_KIND_COUNT; k++)
+            if (ExecKindIsMutating(k)) mutatingKinds++;
+        CHECK(mutatingKinds == 1);
+        CHECK(ExecKindIsMutating(EXEC_SET_ITEM_COMMENT) == 1);
+        for (k = 0; k < S_ALLOWLIST_COUNT; k++)
+        {
+            if (S_ALLOWLIST[k].execKind == EXEC_SET_ITEM_COMMENT)
+            {
+                setCommentEntries++;
+                CHECK(strcmp(S_ALLOWLIST[k].operationId,
+                             "AEGP_ItemSuite9.AEGP_SetItemComment") == 0);
+            }
+        }
+        CHECK(setCommentEntries == 1);
+        /* no other entry may bind the mutating kind */
+        CHECK(ExecKindIsMutating(EXEC_ITEM_GETTER) == 0);
+        CHECK(ExecKindIsMutating(EXEC_COMP_GETTER) == 0);
+        CHECK(ExecKindIsMutating(EXEC_RQ_ITEM_GETTER) == 0);
+    }
+
+    /* ---- corrupted-table counterexamples -------------------------- */
+    {
+        static const IntakeArgSpec goodSpec[] = {
+            { "projectIndex", ARGK_INT, 0.0, 1000000.0 },
+        };
+        AllowEntry good = {
+            "AEGP_X.AEGP_Y", "AEGP_X.AEGP_Y", goodSpec, 1,
+            EXEC_NUM_PROJECTS };
+        AllowEntry bad[4];
+        int i;
+
+        /* baseline: a minimal valid table passes */
+        CHECK(ValidateOpTable(&good, 1, detail, sizeof(detail)) == 1);
+
+        /* empty table */
+        CHECK(ValidateOpTable(NULL, 0, detail, sizeof(detail)) == 0);
+
+        /* duplicate operationId */
+        bad[0] = good; bad[1] = good;
+        CHECK(ValidateOpTable(bad, 2, detail, sizeof(detail)) == 0);
+
+        /* opRecordId must mirror operationId */
+        bad[0] = good; bad[0].opRecordId = "AEGP_X.AEGP_Z";
+        CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+
+        /* nargs>0 with NULL spec */
+        bad[0] = good; bad[0].argsSpec = NULL;
+        CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+
+        /* nargs=0 with spec present */
+        bad[0] = good; bad[0].nargs = 0;
+        CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+
+        /* execKind out of range (both directions) */
+        bad[0] = good; bad[0].execKind = -1;
+        CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+        bad[0] = good; bad[0].execKind = EXEC_KIND_COUNT;
+        CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+
+        /* arg kind out of range */
+        {
+            IntakeArgSpec badKind[] = {
+                { "x", 99, 0.0, 1.0 },
+            };
+            bad[0] = good; bad[0].argsSpec = badKind;
+            CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+        }
+
+        /* inverted integer bounds */
+        {
+            IntakeArgSpec badBounds[] = {
+                { "x", ARGK_INT, 5.0, 1.0 },
+            };
+            bad[0] = good; bad[0].argsSpec = badBounds;
+            CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+        }
+
+        /* ARGK_STR with non-positive byte bound */
+        {
+            IntakeArgSpec badStr[] = {
+                { "x", ARGK_STR, 0.0, 0.0 },
+            };
+            bad[0] = good; bad[0].argsSpec = badStr;
+            CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+        }
+
+        /* missing operationId */
+        bad[0] = good; bad[0].operationId = NULL;
+        CHECK(ValidateOpTable(bad, 1, detail, sizeof(detail)) == 0);
+
+        (void)i;
+    }
+}
+
 int main(int argc, char** argv)
 {
     /* --channel-server <root> <requestId> [deadlineMs]: drive the real
@@ -4563,6 +4686,7 @@ int main(int argc, char** argv)
     TestIntakeSetItemComment();
     TestIntakeSetItemCommentNoEntry();
     TestConsentVectors();
+    TestOpTableMetadata();
     TestIntakeUnknownOperation();
     TestIntakeStaleDeadline();
     TestIntakeDeadlineBounds();

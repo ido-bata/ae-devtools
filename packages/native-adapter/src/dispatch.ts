@@ -105,7 +105,7 @@ export const NATIVE_INTAKE_OPERATIONS = [
   "AEGP_ItemSuite9.AEGP_GetItemPixelAspectRatio",
   "AEGP_ItemSuite9.AEGP_GetItemComment",
   /* Issue #327: first mutating op — AEGP_ItemSuite9.AEGP_SetItemComment
-     (UNDOABLE). requiresConsent: the request must carry a valid §7g
+     (UNDOABLE). Mutating binding: the request must carry a valid §7g
      envelope-level consent MAC; the host verifies it after session
      attestation and before the AEGP call. */
   "AEGP_ItemSuite9.AEGP_SetItemComment",
@@ -164,8 +164,8 @@ export const NATIVE_INTAKE_OPERATIONS = [
 export type NativeIntakeOperation = (typeof NATIVE_INTAKE_OPERATIONS)[number];
 
 /** Issue #327 / contract §7g: allowlist members that require an
-    envelope-level consent MAC (`requiresConsent` in the C++
-    AllowEntry). Shape validation does not cover consent — the plug-in
+    envelope-level consent MAC (mutating executor binding
+    in the C++ allowlist table). Shape validation does not cover consent — the plug-in
     verifies the MAC host-side after session attestation; this set
     only documents which ops need one so callers know to attach it. */
 export const NATIVE_INTAKE_CONSENT_OPS: ReadonlySet<string> = new Set([
