@@ -6,6 +6,7 @@
   "scripts": {
     "build": "bun run scripts/build.ts",
     "refresh": "bun run scripts/build.ts --refresh",
+    "drift": "bun run scripts/drift.ts",
     "verify": "bun run scripts/verify.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"

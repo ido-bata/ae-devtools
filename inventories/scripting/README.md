@@ -116,7 +116,7 @@ Adobe の公式ページは「スクリプトの読み込み場所」「ファ�
 | community が「Adobe 未文書」と明記した member | 6 | `undocumented-community-research` |
 | 分類を断定できず `unresolved` にした member | 0 | 推測で埋めていない |
 | access（read/write）が不明な member | 258 | 属性のうち Type 節に read-only/read-write が無いもの。推測しない |
-| 引数リスト（signature）を取得できた member | 71 | usage 行から復元できたもの |
+| 引数リスト（signature）を取得できた callable member | 236 / 250 | usage 行または entry 内 example から復元。`null` は arity 不明（14 件） |
 | version delta のうち記号に解決できなかった行 | 5 | クラス/enum 名として書かれた行。捏造せず未解決のまま |
 | `instanceof` の挙動が文書化されたクラス | 6 | `always-false` 2 件 / `throws-undefined` 4 件 |
 
@@ -133,10 +133,10 @@ Adobe の公式ページは「スクリプトの読み込み場所」「ファ�
 
 | key | 内容 | revision |
 | --- | --- | --- |
-| `adobe-scripts` | Scripts in After Effects（読み込み・権限・起動） | `http-2026-11-12` |
-| `adobe-automation` | Automation in After Effects（自動化経路の分離） | `http-2026-11-12` |
-| `adobe-legacy-extendscript-engine` | Legacy / ExtendScript engine（ES3 と ES2018 の区別） | `http-2026-11-12` |
-| `adobe-variable-font-axes` | Variable Font Axes の scripting 例 | `http-2026-11-12` |
+| `adobe-scripts` | Scripts in After Effects（読み込み・権限・起動） | `http-2026-11-20` |
+| `adobe-automation` | Automation in After Effects（自動化経路の分離） | `http-2026-11-20` |
+| `adobe-legacy-extendscript-engine` | Legacy / ExtendScript engine（ES3 と ES2018 の区別） | `http-2026-11-20` |
+| `adobe-variable-font-axes` | Variable Font Axes の scripting 例 | `http-2026-11-20` |
 
 取得できたもの: 上記 4 ページの HTML（記号レベルの一覧は **含まれない**）。
 取得できなかったもの: **Adobe 公式の scripting 記号リファレンス**。
@@ -189,11 +189,23 @@ git に対して検査するため、手で編集してはいけない。
   "versionAdded": null,                // 原著が述べない場合は null（推測しない）
   "versionRangeStated": false,
   "access": null,                      // read | write | read-write | null
-  "signature": ["undoString"],
+  "signature": ["undoString"],         // null = arity 不明、[] = 文書化された 0 引数
+  "signatureParams": [{ "name": "undoString", "type": "string" }],
   "status": "documented",              // documented | undocumented-community-research | unresolved
   "markedUndocumented": false
 }
 ```
+
+`signature` の意味論: `null` は「arity が source から決定できない」、
+`[]` は usage 行が文字通り `member()` を示す**文書化された 0 引数**である。
+dfad 見出しの `()` は引数の有無を示さないため、署名の根拠は usage 行と
+entry 内 example の呼び出しに限る。usage 行が `()` なのに example が引数付きで
+呼ぶ entry（CC2014 追加の getSettings/setSetting 系）は証拠が矛盾するため
+`null` + note に留め、推測で補わない。`signatureExampleRef` がある entry は
+「See the example in `Owner.member()`」で他 entry の example に委譲しており、
+build 時に参照先の signature を継承する（参照先が signatured でなければ `null`）。
+`signatureParams` は Parameters 表の型を位置対応で保持するが、
+`signature` と長さが一致する場合にのみ位置対応として使える。
 
 `schemaNote` のとおり **schema は未確定**。#11 が確定させる。
 `null` は「不明」を意味し、`false` や「対応」に丸めていない。
@@ -365,6 +377,34 @@ build 時に取得済みページと照合する。文言が変わって検出�
 実際にこの機構は作業中に 3 件の誤引用（見出しの取り違え）を検出しており、
 そのうち 1 件は実際の記述位置の誤りだった。
 
+### 9.5 upstream ソースの drift 分類
+
+`bun run drift` は **全 source の現在の upstream bytes を取得し、
+`sources.lock.json` と照合して分類するだけ**の非破壊コマンドである
+（`.cache/` も lock も書き換えない）。
+
+```bash
+bun run drift          # 分類レポートのみ（exit 0）
+bun run drift --strict # drift または detector 失敗で exit 1（手動/定期ゲート用）
+```
+
+分類:
+
+- `unchanged` — lock と byte 一致。
+- `DRIFTED` → adobe 公式ページは **検出器の再実行**でさらに分類する:
+  - `content-neutral` — claim / constraint の全検出器が新 bytes でも解決する。
+    upstream の編集は本 inventory が依存する記述に触れていない。
+    取り込みは `bun run refresh` + lock diff の commit（lock diff 自体が review 記録）。
+  - `SEMANTIC-DRIFT` — 検出器が 1 件以上解決しない。upstream が依拠する記述を
+    変えた可能性があるため、**refresh 前に upstream 変更を review する**。
+    一括 accept しない。
+- commit pin の community archive（dfad）の hash 不一致は **常に `unexpected`**。
+  pin した commit が不変であるべきなので、force-push / tag 移動を疑って調査する。
+
+通常の `bun run build` は lock と一致しない bytes を拒否し、
+`bun run refresh` が唯一の明示的 accept 経路である（§9.1）。
+`drift` はその間の「review すべき変更か」を分類する層である。
+
 ---
 
 ## 10. Evidence level
@@ -390,9 +430,12 @@ build 時に取得済みページと照合する。文言が変わって検出�
    「いつから使えるか」は unknown である。
 3. **access 不明が 258 件**。属性の read/write 区分は Type 節の記述に依存しており、
    記述が無いものは `null` のままにしている。
-4. **signature は 71 件のみ**。usage 行から復元できたものだけ。
-   引数の型・必須/任意・範囲は本 inventory では構造化していない。
-5. **enum の数値は 49 件中 1 件のみ**。大半の enum は名前しか文書化されていない。
+4. **signature は callable 250 件中 236 件**。usage 行 / entry 内 example から
+   復元できたものだけで、arity 不明は `null` のまま 14 件残る。
+   引数の型は Parameters 表がある entry のみ `signatureParams` に保持し、
+   必須/任意や範囲は構造化していない。
+5. **enum は 54 件・値 339 件**。数値が文書化されるのはごく一部で、
+   大半は名前のみである。
 6. **match name を含まない**。scripting の安定識別子だが別軸のため分母外。
 7. **domain 分類はクラス単位の手写像**。`expression` / `effect` / `undo` / `file`
    が 0 なのは分類軸の都合であり、記号の不在ではない。
@@ -424,6 +467,7 @@ inventories/scripting/
 │   ├── constraints.ts           # CAP007/008: 制約と実機必須項目
 │   ├── resolve-constraints.ts   # 制約の出典解決
 │   ├── divergence.ts            # CAP008: tier 差異
+│   ├── drift.ts                 # upstream drift の分類（非破壊）
 │   ├── build.ts                 # 生成
 │   └── verify.ts                # 決定性 + commit 一致の検査
 ├── tests/
