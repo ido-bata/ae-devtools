@@ -1,6 +1,6 @@
 # Contract — native intake channel (`ae-devtools/native-channel/v1`)
 
-- Status: **Implemented for Issue #267 Slice A** (merged via PR #268, `release-0-5-0` @ `a7ac89f`), extended for **Issue #270 Stage 1** (per-operation read-only args codec + `AEGP_ItemSuite9.AEGP_GetTypeName`), implemented by `experiments/native-sdk/minimal-plugin/src/native_intake.cpp` inside the NativeProbe idle hook. Machine-readable shapes: `packages/native-adapter/src/dispatch.ts` (`NATIVE_INTAKE_*` constants, `NATIVE_INTAKE_ARG_SCHEMAS`).
+- Status: **Implemented for Issue #267 Slice A** (merged via PR #268, `release-0-5-0` @ `a7ac89f`), extended for **Issue #270 Stage 1** (per-operation read-only args codec + `AEGP_ItemSuite9.AEGP_GetTypeName`), implemented by the `experiments/native-sdk/minimal-plugin/src/native_*.cpp` modules (routing/dispatch: `native_intake.cpp`; allowlist: `native_registry.cpp`; executors: `native_ops.cpp`) inside the NativeProbe idle hook. Machine-readable shapes: `packages/native-adapter/src/dispatch.ts` (`NATIVE_INTAKE_*` constants, `NATIVE_INTAKE_ARG_SCHEMAS`).
 - Sibling contracts: [native-dispatch.md](native-dispatch.md) (the semantic `native-dispatch/v1` envelope this channel carries), [native-probe-result.md](native-probe-result.md) (in-host `op `/marker evidence), [native-adapter.md](native-adapter.md) (pre-dispatch negotiation).
 - Ownership: per ADR-0005 D7, transport / IPC / serialization / execution authorization / timeout / UNKNOWN non-resend are **ae-a8n-owned (©)**. This contract fixes only the **devtools-owned surface**: the on-disk encoding and the plug-in-side intake semantics for the first read-only vertical slice. It does not select a transport, does not mint or verify consent tokens, and does not claim process identity.
 
@@ -192,7 +192,7 @@ All are read-only getters; all stay `implemented-unverified`. Stage 2 added only
 
 ## 7a. Per-operation argument schemas (Issue #270 Stage 1)
 
-The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `packages/native-adapter/src/dispatch.ts`; the plug-in enforces the mirror in `native_intake.cpp` (`S_ALLOWLIST` arg specs). Both refuse identically — validation runs host-side before any AEGP call, so the TS schema is the client-facing contract and the C++ table is the enforcement.
+The machine-readable canonical statement is `NATIVE_INTAKE_ARG_SCHEMAS` in `packages/native-adapter/src/dispatch.ts`; the plug-in enforces the mirror in `native_registry.cpp` (`S_ALLOWLIST` arg specs). Both refuse identically — validation runs host-side before any AEGP call, so the TS schema is the client-facing contract and the C++ table is the enforcement.
 
 | operationId | args contract |
 | --- | --- |
