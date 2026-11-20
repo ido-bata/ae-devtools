@@ -25,7 +25,7 @@ AE_DEVTOOLS_NATIVE_CHANNEL=<absolute path to a prepared native channel root>
 The channel root is prepared by the owning runtime (ae-a8n side, Slice B); the plug-in **never creates directories**. Layout mirrors the ae-a8n in-AE dispatcher conventions under a distinct namespace so native requests cannot be confused with ES3 dispatcher requests:
 
 ```
-<channelRoot>/channel.json            {v:1, token, sessionAeVersion?}   (0600, preparer-written)
+<channelRoot>/channel.json            {v:1, token, consentKey?, sessionAeVersion?}   (0600, preparer-written)
 <channelRoot>/inbox/<requestId>.request.json                            (0600)
 <channelRoot>/outbox/<requestId>.result.json                            (0600, atomic publish)
 <channelRoot>/state.json              plug-in heartbeat                  (0600)
@@ -39,6 +39,7 @@ POSIX privacy is enforced per tick, fail-closed: root/`inbox`/`outbox`/`channel.
 | --- | --- |
 | `v` | `1` |
 | `token` | 64 lowercase hex chars — the channel shared secret. The plug-in compares it verbatim and **never writes it** to the debug log, result files, or `state.json` |
+| `consentKey` | optional 64 lowercase hex chars — the consent MAC key (Issue #326, §7g). Same secrecy domain as `token`: preparer-written, never logged or published. When absent, consent-requiring operations refuse `CONSENT_REQUIRED` — a channel without a consent key cannot authorize mutations |
 | `sessionAeVersion` | optional `"M.m"` pin; when present it must equal the plug-in-attested driver implementation version or every request refuses `WRONG_TARGET` |
 
 ## 3. Request — `<requestId>.request.json`
@@ -47,6 +48,7 @@ POSIX privacy is enforced per tick, fail-closed: root/`inbox`/`outbox`/`channel.
 {
   "v": 1,
   "token": "<64hex>",
+  "consent": {"v": 1, "mac": "<64hex>"},
   "timeoutMs": 30000,
   "target": "<instance>",
   "request": {
@@ -64,6 +66,7 @@ POSIX privacy is enforced per tick, fail-closed: root/`inbox`/`outbox`/`channel.
 | --- | --- |
 | `v` | `1` |
 | `token` | must equal `channel.json`'s token |
+| `consent` | optional `{"v":1,"mac":"<64hex>"}` — per-request authorization proof for consent-requiring operations (§7g). `v` must be `1`; `mac` is 64 lowercase hex. Ignored entirely for read-only operations; mandatory and verified for `requiresConsent` allowlist entries |
 | `timeoutMs` | finite number in `[0, 3600000]` (1 h ceiling); deadline = request-file mtime + `timeoutMs` (same convention as the ae-a8n dispatcher). Out-of-bounds values refuse `MALFORMED_REQUEST`; already-expired requests refuse `STALE_REQUEST` **before execution**; an unreadable mtime yields `not-sent` (freshness unproven) |
 | `target` | optional instance binding. A request naming a different instance is **not claimed** (left for its instance); the plug-in's instance id is reported in `state.json` |
 | `request` | the `native-dispatch/v1` envelope, unchanged. `requestId` must equal the file-name stem and, on this file channel, must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` (the semantic envelope keeps "non-empty string"; the file channel narrows it so names are path-safe and JSON-escape-free) |
@@ -87,7 +90,8 @@ After claim (`*.request.json` → `*.claimed` rename; one request per idle dispa
 8a. `args` satisfies the operation's declared argument schema (§7a) → `refused` `MALFORMED_REQUEST`. Runs before the duplicate check, session attestation, and any AEGP call — unpermitted input never reaches the host
 9. duplicate `requestId` (seen-ring, last 64 claimed ids) → `refused` `DUPLICATE_REQUEST`
 10. session attestation: `AEGP_GetDriverImplementationVersion` must succeed (`not-sent` otherwise — environment-proven non-dispatch), `session.aeVersion` must equal the observed `"M.m"` and any `channel.json` pin → `refused` `WRONG_TARGET`
-11. execute the allowlisted getter → `completed` (`err==0`) or `failed` (`err!=0`, `mayHaveMutated:false` — allowlisted ops are read-only getters)
+11. consent verification — **only when the allowlist entry is `requiresConsent`** (§7g): `consent` present and well-formed → `refused` `CONSENT_REQUIRED`; `channel.json` has no `consentKey` → `CONSENT_REQUIRED`; recomputed MAC ≠ presented `mac` → `refused` `CONSENT_INVALID`. Read-only entries skip this step entirely — a `consent` field on a read-only request is ignored, never an error
+12. execute the allowlisted op → `completed` or `failed`. Read-only ops: `mayHaveMutated:false` always. `requiresConsent` ops: `mayHaveMutated:false` on `completed`/`not-sent`/`refused`, `true` on `failed` after the AEGP call was attempted and on client-side `unknown`
 
 `not-sent` is the only outcome the client may re-issue (as a **new** request). `unknown` is never emitted by the plug-in: a crashed/interrupted claim leaves `*.claimed` behind and the client times out `UNKNOWN` — claimed requests are never replayed. The plug-in removes `*.claimed` only after a verdict has been published (or attempted); a crash mid-request leaves it as evidence, never re-executed. The duplicate `requestId` seen-ring is per plug-in session: after a plug-in restart the ring resets, so dedup across restarts relies on client-side requestId uniqueness (read-only allowlisted ops make a replay benign but it is still refused within a session).
 
@@ -418,9 +422,66 @@ The SDK exposes **no stable render-queue-item identifier**, and `AEGP_RQItemRefH
 | `AEGP_RQItemSuite4.AEGP_GetNumOutputModulesForRQItem` | `{projectIndex, rqItem}` | `{"numOutputModules": <int>}` |
 | `AEGP_RQItemSuite4.AEGP_GetCompFromRQItem` | `{projectIndex, rqItem}` | `{"comp": {"aeRef": {<§7b item descriptor>}}, "projectIndex": <int>}` — bound comp emitted as a descriptor, never a handle |
 
+## 7g. Mutation consent — per-request authorization proof (Issue #326)
+
+Read-only operations are gated by the channel token alone: it filters accidental writers inside the private channel directory, and a forged read is at worst information disclosure the directory's POSIX privacy already bounds. Mutating operations need more — a request hand-written into `inbox/` must not execute. `consent` is the per-request proof, verified host-side before any AEGP call.
+
+### Threat model and honest boundary
+
+- `consentKey` is a **second shared secret** in `channel.json` (same 0600/private-dir domain as `token`). Anyone who can read `channel.json` can compute valid MACs — the consent layer does not defend against an attacker already inside the channel's trust boundary; POSIX privacy is the outer boundary and stays so.
+- What consent *does* guarantee inside that boundary: (a) the request passed through the consent-issuing code path — the MAC covers the exact scope fields, so a consent minted for one request cannot be re-serialized into another (tamper-evident, replay-bound to `requestId`); (b) the plug-in enforces scope binding cryptographically rather than trusting `authorizationRef` shape; (c) consent issuance policy (when a human/agent may mutate) stays ae-a8n-owned — the plug-in only verifies proof-of-consent-protocol, never decides authorization.
+- `authorizationRef` remains the opaque grant reference for ae-a8n's own audit; `consent.mac` is the channel-verifiable proof. They are complementary, not substitutes.
+- Future hardening (documented, not implemented): asymmetric consent signatures (ae-a8n-held signing key, plug-in-held verify key) would move forgery resistance outside the shared-secret domain. Proportionate for the current single-user private-channel threat model; revisit if the channel ever crosses a trust boundary.
+
+### Wire format
+
+```json
+"consent": {"v": 1, "mac": "<64 lowercase hex>"}
+```
+
+`mac = HMAC-SHA256(key = hexDecode(consentKey), msg = utf8(canonicalConsentString))`, rendered lowercase hex.
+
+### canonicalConsentString
+
+```
+"native-consent/v1\n" ++ operationId ++ "\n" ++ requestId ++ "\n"
+  ++ canonicalJson(session) ++ "\n" ++ canonicalJson(args ?? null) ++ "\n"
+  ++ (target ?? "")
+```
+
+- `operationId`, `requestId`: the request envelope's string values verbatim.
+- `session`: the request's `session` object (`{sessionId, aeVersion, sdkRelease?}`) as canonicalJson.
+- `args`: the request's `args` value as canonicalJson; absent → `null`.
+- `target`: the envelope-level `target` string, or empty when absent.
+- Fields are `\n`-separated; every embedded string is JSON-escaped inside canonicalJson so no field can contain a raw newline — the encoding is unambiguous.
+
+### canonicalJson (restricted JSON canonical form)
+
+Both implementations (C++ plug-in, TS adapter/ae-a8n) MUST produce byte-identical output:
+
+- `null`, `true`, `false` → literals.
+- **Numbers: integers only.** A number is canonical iff `Number.isInteger(v)` and `|v| ≤ 9007199254740991`; it serializes as its decimal integer (`String(v)` / `%lld`). Any non-integer or out-of-range number makes canonicalization **fail** — the consent is then unverifiable and the request refuses `CONSENT_INVALID` (mutation arg schemas are integer-bounded anyway; floats are not consent-encodable in v1).
+- Strings → JSON string escaping identical to `JSON.stringify`: `"`→`\"`, `\`→`\\`, `\b \f \n \r \t` short escapes, other C0 controls → `\u00xx` (lowercase hex), all other characters emitted as raw UTF-8. Object keys follow the same rule.
+- Arrays → `[e0,e1,…]`; objects → `{"k0":v0,"k1":v1,…}` with **no whitespace**, keys sorted ascending by **UTF-8 byte order** (equivalently code-point order for the ASCII keys all current schemas use).
+- No other value kinds exist (the dispatch arg set is ES3-serializable already).
+
+### Verification and refusals
+
+- Applies only to allowlist entries flagged `requiresConsent`; today none exist — the first is Issue #327.
+- `consent` absent, or present but not exactly `{"v":1,"mac":"<64hex>"}` → `refused` `CONSENT_REQUIRED`.
+- `channel.json` lacks `consentKey`, or the key fails shape check → `CONSENT_REQUIRED` (fail closed — the channel cannot authorize what it cannot verify).
+- canonicalization fails (non-integer number in args) or recomputed MAC ≠ `mac` (constant-time compare) → `refused` `CONSENT_INVALID`. One code covers tampering, forgery, and scope mismatch — the MAC binds every scope field, so there is no separate "valid MAC, wrong scope" case.
+- Verification runs after session attestation and before execution; `opCalls` records no AEGP mutation call on any consent refusal.
+- `consent` on a read-only request is ignored — never an error, never logged.
+- `consentKey`/`mac` are secrets-adjacent: never written to result files, `state.json`, or the debug log (same rule as `token`).
+
+### Shared test vectors
+
+Canonical-encoder + HMAC correctness is pinned by vectors committed in `packages/native-adapter/tests/` and mirrored in the C++ intake tests — both sides must produce identical MACs for identical inputs, and any divergence is a contract bug, not an implementation detail.
+
 ## 8. Non-goals / explicit limitations
 
-- No mutation/write operations; no consent-token issuance, storage, or verification (`authorizationRef` is opaque). The concrete mutation-path design — authorization scope, audit trail, `UNKNOWN`/reconciliation semantics on this channel — is fixed in [trusted-execution.md §8](../design/trusted-execution.md#8-native-channel-mutation-path--concrete-design-issue-318-follow-up) (design only, not implemented).
+- No mutation/write operations yet; consent-token *issuance policy* and `authorizationRef` grant verification remain ae-a8n-owned. The channel-side consent *proof* (HMAC verification, §7g) is implemented for `requiresConsent` allowlist entries — none exist until Issue #327. The concrete mutation-path design — authorization scope, audit trail, `UNKNOWN`/reconciliation semantics — is fixed in [trusted-execution.md §8](../design/trusted-execution.md#8-native-channel-mutation-path--concrete-design-issue-318-follow-up).
 - No transport selection, no fallback policy beyond what the channel contract fixes, and no second transport in ae-devtools. The ae-a8n-owned client side (channel preparation, token issuance, request publication, result collection) is implemented in ae-a8n `src/driver/native-channel.ts` under ae-a8n Issue #238 (Slice B; merged to ae-a8n `release-0-4-0` via PR ae-a8n#239 `ba4ae1b`, including an opt-in interop test that runs the real client against `probe_test --channel-server`). A devtools-side fake E2E (`experiments/native-sdk/minimal-plugin/test/e2e_channel.ts` + `probe_test --channel-server`) already proves the file-channel vertical slice — external request → claim → allowlisted getter → atomic result → contract validation — at fake/mock level; the real ae-a8n client has since been verified against the same channel via ae-a8n's opt-in interop test (`AE_DEVTOOLS_PROBE_TEST=<probe_test> npx vitest run test/native-channel-interop.test.ts`), completing the Slice B fake-level vertical slice on both sides.
 - File-channel privacy is not authentication — same limitation as the ae-a8n dispatcher, documented not hidden.
 - `sessionId` is shape-validated only; the plug-in cannot prove which client process supplied it.
