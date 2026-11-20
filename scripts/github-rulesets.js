@@ -19,6 +19,8 @@
  * description of what is enforced and why.
  */
 import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const REPO = process.env.GH_REPO ?? "ido-bata/ae-devtools";
 /** GitHub Actions' app id: required checks must come from it, not any app. */
@@ -53,7 +55,7 @@ function ghApi(args, input) {
   });
 }
 
-function desiredRulesets() {
+export function desiredRulesets() {
   const checksFor = (extra = []) =>
     [...CI_CHECKS, ...extra].map((context) => ({
       context,
@@ -137,12 +139,27 @@ function desiredRulesets() {
   ];
 }
 
-function listRulesets() {
-  const out = ghApi([`repos/${REPO}/rulesets?includes_parents=false`, "--paginate"]);
-  return JSON.parse(out);
+export function listRulesets() {
+  // --paginate concatenates page bodies into one stream that is NOT
+  // valid single JSON once more than one page exists; --slurp wraps
+  // each page as an array element so the result is always parseable.
+  const out = ghApi([`repos/${REPO}/rulesets?includes_parents=false`, "--paginate", "--slurp"]);
+  const pages = JSON.parse(out);
+  return pages.flat();
 }
 
-function normalize(rs) {
+// The list endpoint returns ruleset summaries; the full rules /
+// conditions / bypass_actors detail needed for an honest equality
+// check only comes from the per-ruleset GET.
+export function getRuleset(id) {
+  return JSON.parse(ghApi([`repos/${REPO}/rulesets/${id}`]));
+}
+
+export function rulesetKey(rs) {
+  return `${rs.target}:${rs.name}`;
+}
+
+export function normalize(rs) {
   return {
     name: rs.name,
     target: rs.target,
@@ -153,7 +170,7 @@ function normalize(rs) {
   };
 }
 
-function sameRuleset(a, b) {
+export function sameRuleset(a, b) {
   return (
     a.name === b.name &&
     a.target === b.target &&
@@ -164,14 +181,19 @@ function sameRuleset(a, b) {
   );
 }
 
+// Match by name AND target: a tag ruleset that happens to share a
+// branch ruleset's name must never be selected for update.
+export function matchExisting(existing, want) {
+  return existing.find((rs) => rulesetKey(rs) === rulesetKey(want)) ?? null;
+}
+
 async function main() {
   const apply = process.argv.includes("--apply");
   const desired = desiredRulesets();
-  const existing = listRulesets();
-  const byName = new Map(existing.map((rs) => [rs.name, rs]));
+  // Dry-run prints the desired payloads only — no API reads needed.
+  const existing = apply ? listRulesets() : [];
 
   for (const want of desired) {
-    const cur = byName.get(want.name);
     const payload = {
       name: want.name,
       target: want.target,
@@ -185,7 +207,16 @@ async function main() {
       console.log(JSON.stringify(payload, null, 2));
       continue;
     }
-    if (cur && sameRuleset(normalize(cur), normalize({ ...want, rules: want.rules.map((r) => ({ ...r, parameters: r.parameters ?? undefined })) }))) {
+    const summary = matchExisting(existing, want);
+    // The list endpoint returns summaries; fetch the complete ruleset
+    // before the equality check or `unchanged` could be declared on
+    // partial data.
+    const cur = summary === null ? null : getRuleset(summary.id);
+    const wantNorm = normalize({
+      ...want,
+      rules: want.rules.map((r) => ({ ...r, parameters: r.parameters ?? undefined })),
+    });
+    if (cur && sameRuleset(normalize(cur), wantNorm)) {
       console.log(`unchanged: ${want.name}`);
       continue;
     }
@@ -200,13 +231,17 @@ async function main() {
   if (apply) {
     const after = listRulesets();
     for (const want of desired) {
-      const found = after.find((rs) => rs.name === want.name);
+      const found = matchExisting(after, want);
       console.log(`readback: ${want.name} -> ${found ? `id ${found.id}, enforcement ${found.enforcement}` : "MISSING"}`);
     }
   }
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
-  process.exit(1);
-});
+const invokedAsScript =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedAsScript) {
+  main().catch((err) => {
+    console.error(err.message ?? err);
+    process.exit(1);
+  });
+}

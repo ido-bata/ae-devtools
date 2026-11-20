@@ -49,6 +49,10 @@ jobs:
           done
           exit "$fail"
 
+      - name: github-rulesets contract tests
+        # Pure decision logic only — no GitHub API access (Issue #361).
+        run: node --test scripts/github-rulesets.test.mjs
+
   skills-lock:
     name: skills-lock (vendored skills vs skills-lock.json)
     runs-on: ubuntu-latest
