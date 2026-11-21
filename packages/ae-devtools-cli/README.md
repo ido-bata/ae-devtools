@@ -12,10 +12,17 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 
 ```sh
 npm install @ido-bata/ae-devtools-cli          # registry latest
-npm install @ido-bata/ae-devtools-cli@0.5.0    # this release, once published
+npm install @ido-bata/ae-devtools-cli@0.7.0    # this release, once published
 # tarball / local checkout からも可:
-npm install ./ae-devtools-cli-0.5.0.tgz
+npm install ./ae-devtools-cli-0.7.0.tgz
 ```
+
+### Migrating to 0.7.0
+
+- The `@ido-bata/ae-a8n` pin is `0.5.0`, which ships `AfterEffects.attach`.
+  Registry installs of this version can now use the a8n-attached session
+  lane; on the previous pin (`0.2.0`) it was refused up front with
+  `ATTACHED_TARGET_UNSUPPORTED` (#395).
 
 ### Migrating to 0.5.0
 
