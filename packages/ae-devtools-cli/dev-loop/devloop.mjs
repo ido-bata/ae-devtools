@@ -178,7 +178,7 @@ export async function verify(input = {}) {
   const {
     runner, pin, projectIdentity, consentProvider, trustedScriptOptIn,
     scriptProvenance, readOpId = "read.projectSummary", readArgs = {}, requestId,
-    hostProjectGuard, hostProjectGuardRequired,
+    hostProjectGuard, hostProjectGuardRequired, consentAudit,
   } = input ?? {};
   const op = (() => { try { return getOperation(readOpId); } catch { return null; } })();
   if (!op || op.mutating) {
@@ -190,9 +190,14 @@ export async function verify(input = {}) {
       : `readOpId '${readOpId}' is a mutating op; verify requires a read-only op`;
     return { status: "refused", stage: "adapter", reason: "VERIFY_REQUIRES_READ_OP", detail, opId: readOpId };
   }
+  // Explicit forward list — consentAudit MUST be here: verify dispatches
+  // are execute-class dispatches and their consent decisions are audit
+  // events (Issue #403). confirmRender/confirmDestructive/targetGuard
+  // are intentionally absent: verify only admits non-mutating ops, and
+  // runOperation's confirm gates and targetGuard never fire for them.
   return runOperation({
     opId: readOpId, args: readArgs, runner, pin, projectIdentity,
     consentProvider, trustedScriptOptIn, scriptProvenance, requestId,
-    hostProjectGuard, hostProjectGuardRequired,
+    hostProjectGuard, hostProjectGuardRequired, consentAudit,
   });
 }
