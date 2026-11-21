@@ -1,0 +1,47 @@
+{
+  "schema": "ae-devtools.vscode-iso-attempt/v1",
+  "issue": 172,
+  "ticket": 366,
+  "attemptedAt": "2026-11-21T00:04:10Z",
+  "host": "macOS (MacBook, VS Code 1.146.0, isolated --extensions-dir/--user-data-dir, workspace /tmp/vscode-iso)",
+  "packagedVsix": "ae-devtools-vscode-extension-0.0.0.vsix built by scripts/package-vsix.mjs from branch 172 @ release-0.7.0 base",
+  "config": {
+    "session": "a8n",
+    "aeA8nRoot": "/Users/rebui/work/ae-a8n",
+    "aeA8nHead": "716dada4c9c7ceaf8f6e32e02b40875f32af7070 (ae-a8n 0.5.0, branch 267)"
+  },
+  "driver": "tests/qa-driver variant (mode=seq172, /tmp copy only — repo driver unchanged): discover -> execute(read.projectSummary,{}) -> execute(read.itemById,{id:999999}) -> verify; QuickInput opId/args and consent modals settled via macOS AX (sanctioned by qa-driver README); notifications captured via AX 'entire contents' polling",
+  "aeLaunchNote": "Owned AE 2027 instance was blocked at birth by dvaui Thor-language warning dialogs (missing /Library/Application Support/Adobe/After Effects/27.0/AMT/application.xml — custom-drawn, invisible to AX). Dismissed via System Events frontmost + Return key (ae2027-dismisser.log). User's AE 2026 instance untouched.",
+  "observed": {
+    "extensionInstalled": true,
+    "lanes": {
+      "discover": "settled — registry metadata, no session opened (notification: 'AE DevTools: ok (evidence: registry metadata — no dispatch)' via AX dump)",
+      "execute-success": "ae-devtools.execute -> QuickInput opId 'read.projectSummary' + args '{}' -> consent Allow -> dispatched req-mcp-1 read.projectSummary COMPLETED on owned AE 2027 (run-guard + consent-audit)",
+      "execute-failure": "ae-devtools.execute -> opId 'read.itemById' + args '{\"id\":999999}' -> consent Allow -> dispatched req-mcp-2 read.itemById FAILED ('Item Not Found') — dispatch-store state=failed",
+      "verify": "ae-devtools.verify -> consent Allow -> req-mcp-3 read.projectSummary COMPLETED; notification 'AE DevTools: COMPLETED (evidence: verified on real host (macOS))' captured in AX dump",
+      "problemsPanel": "publishDiagnostics landed: vscode.languages.getDiagnostics() at exec-itembyid settle showed uri 'ae-devtools:diagnostics/script-exception' count=1, message 'Error: After Effects エラー: 内部確認に失敗しました。{Item Not Found} [source position: no-map]', source 'ae-devtools · script-exception', severity Error, range line 247. Problems panel opened via workbench.actions.view.problems. Subsequent clean verify published an empty plan and cleared the entry (Issue #302 semantics observed live)."
+    },
+    "session": "a8n owned launch, aeVersion 27.0x78, ownership 'owned', aeA8nHead 716dada — run-guard marker run-2026-11-21T00-05-42-829Z-1e782d67 (self-removed on clean close; reconstructed copy in run-guard-marker.json)",
+    "cleanTeardown": "Cmd+Q graceful quit -> deactivate -> controller.close -> session close -> app.quit; AE 2027 exited, run-guard marker removed (status was 'open' while live)"
+  },
+  "evidenceLevel": "verified on real host — discover/execute(success)/execute(failure)/verify all dispatched through the real VSCode command path on an owned AE 2027 session; Problems-panel diagnostics publish observed for a real failure outcome (mappingStatus 'no-map' — unmapped case)",
+  "remainingGaps": [
+    "source-map 'mapped' diagnostics case not exercised (only no-map observed; would need a jsx sourcemap scenario)",
+    "per-lane notification toasts for discover/exec-summary/exec-itembyid were cleared by the 25s driver clearer before AX polling; outcomes corroborated by run-guard requests[], dispatch-store and consent-audit instead — verify toast text was captured",
+    "qa-driver repo file unchanged; seq172 multi-lane mode exists only as a /tmp copy (mode.txt committed for provenance)"
+  ],
+  "artifacts": {
+    "runDir": "run-20261121T0004Z/",
+    "qaResults": "run-20261121T0004Z/qa-results-seq172.json",
+    "axDump": "run-20261121T0004Z/ax-dump-final.txt",
+    "exthostLog": "run-20261121T0004Z/exthost-log-090409/exthost.log",
+    "runGuard": "run-20261121T0004Z/run-guard-marker.json",
+    "dispatchStore": [
+      "run-20261121T0004Z/dispatch-store-readitembyid-FAILED.json",
+      "run-20261121T0004Z/dispatch-store-readprojectsummary-verify-COMPLETED.json"
+    ],
+    "consentAudit": "run-20261121T0004Z/consent-audit.jsonl",
+    "dismisserLog": "run-20261121T0004Z/ae2027-dismisser.log",
+    "mode": "run-20261121T0004Z/mode.txt"
+  }
+}

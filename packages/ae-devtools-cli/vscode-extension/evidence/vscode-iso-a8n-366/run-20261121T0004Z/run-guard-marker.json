@@ -1,0 +1,68 @@
+{
+  "_provenance": "Reconstructed verbatim from the live run-guard marker observed at 2026-11-21T00:07Z via cat before VSCode quit. The marker self-removes on clean session close (guard.end(\"closed\")), which is itself evidence of clean teardown — the file no longer exists on disk.",
+  "schema": "ae-devtools.cli.run-guard/v1",
+  "runId": "run-2026-11-21T00-05-42-829Z-1e782d67",
+  "surface": "vscode",
+  "pid": 12890,
+  "pidStartStamp": "Sat Nov 21 09:04:09 2026",
+  "startedAt": "2026-11-21T00:05:42.835Z",
+  "argv": [],
+  "sessionKind": "a8n",
+  "status": "open",
+  "session": {
+    "kind": "a8n",
+    "evidenceLevel": "verified on real host (macOS)",
+    "meta": {
+      "aeVersion": "27.0x78",
+      "ownership": "owned",
+      "aeA8nHead": "716dada4c9c7ceaf8f6e32e02b40875f32af7070"
+    },
+    "ownership": {
+      "kind": "owned",
+      "evidence": null
+    },
+    "installDir": null,
+    "appPath": null,
+    "tracePath": null,
+    "workdir": null
+  },
+  "requests": [
+    {
+      "requestId": "req-mcp-1",
+      "method": "read.projectSummary",
+      "event": "dispatched",
+      "at": "2026-11-21T00:05:47.016Z"
+    },
+    {
+      "requestId": "req-mcp-1",
+      "method": "read.projectSummary",
+      "event": "resolved",
+      "at": "2026-11-21T00:05:47.207Z"
+    },
+    {
+      "requestId": "req-mcp-2",
+      "method": "read.itemById",
+      "event": "dispatched",
+      "at": "2026-11-21T00:07:02.877Z"
+    },
+    {
+      "requestId": "req-mcp-2",
+      "method": "read.itemById",
+      "event": "resolved",
+      "at": "2026-11-21T00:07:03.142Z"
+    },
+    {
+      "requestId": "req-mcp-3",
+      "method": "read.projectSummary",
+      "event": "dispatched",
+      "at": "2026-11-21T00:07:37.959Z"
+    },
+    {
+      "requestId": "req-mcp-3",
+      "method": "read.projectSummary",
+      "event": "resolved",
+      "at": "2026-11-21T00:07:38.288Z"
+    }
+  ],
+  "markerPath": "/var/folders/1l/fmlzfnk57zndv1pxwwkw6xrc0000gn/T/ae-devtools-cli-runs/run-2026-11-21T00-05-42-829Z-1e782d67.json"
+}
