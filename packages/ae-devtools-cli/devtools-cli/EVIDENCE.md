@@ -155,8 +155,28 @@ this loop, MCP/VSCode surfaces on the attached session.
   window not on-screen, AX sees 0 windows). No dispatch completed,
   no Problems-panel diagnostics were produced. Evidence:
   `vscode-extension/evidence/vscode-iso-a8n-366/`. Status:
-  **BLOCKED (environmental)** — needs an unlocked GUI session to
-  settle consent, then Problems-panel verification.
+  superseded by the 2026-11-21 real-host run below.
+- VSCode real-host run (issue #172, branch 172, 2026-11-21T00:04Z):
+  same isolated instance, packaged VSIX rebuilt from the release
+  branch, `session:"a8n"` + `aeA8nRoot` → owned AE 2027 launch
+  (aeVersion 27.0x78, ownership `owned`). All lanes settled through
+  the real command path with AX-driven QuickInput/consent:
+  `discover` (registry metadata), `execute` `read.projectSummary`
+  (req-mcp-1 COMPLETED), `execute` `read.itemById` id=999999
+  (req-mcp-2 FAILED "Item Not Found"), `verify` (req-mcp-3
+  COMPLETED, toast "verified on real host (macOS)"). The failed
+  execute published a real diagnostic into the Problems panel
+  (`ae-devtools:diagnostics/script-exception`, mappingStatus
+  `no-map`); a subsequent clean verify cleared it per the
+  authoritative-plan rule (#302). Owned-launch caveat: AE 2027 birth
+  was blocked by dvaui Thor-language warning dialogs (missing
+  `/Library/.../AMT/application.xml`, invisible to AX); dismissed via
+  frontmost+Return (`run-20261121T0004Z/ae2027-dismisser.log`).
+  Evidence: `vscode-extension/evidence/vscode-iso-a8n-366/
+  attempt-2026-11-21-realhost.json` + `run-20261121T0004Z/`.
+  Status: **verified on real host** for discover/execute/verify +
+  Problems-panel publish (unmapped case); source-map `mapped`
+  diagnostics case remains unexercised.
 
 ## 2026-11-21 — attach-only hardening (branch 374, issue #374)
 

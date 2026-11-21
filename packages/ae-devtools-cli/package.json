@@ -1,6 +1,6 @@
 {
   "name": "@ido-bata/ae-devtools-cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Developer CLI, JSX/TypeScript toolchain, MCP server and extension devkits for After Effects scripting/extension/native development",
   "type": "module",
   "engines": {
@@ -60,7 +60,7 @@
     "check:syntax": "node scripts/check-syntax.mjs"
   },
   "dependencies": {
-    "@ido-bata/ae-a8n": "0.2.0",
+    "@ido-bata/ae-a8n": "0.5.0",
     "acorn": "^8.19.0",
     "esbuild": "0.28.2",
     "typescript": "5.9.3",

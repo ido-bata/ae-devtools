@@ -1,0 +1,62 @@
+{
+ "schema": "ae-devtools.conformance-record/v1",
+ "recordVersion": 1,
+ "capabilityIds": [
+  "ae.scripting.app.newProject",
+  "ae.scripting.app.open",
+  "ae.scripting.Project.save",
+  "ae.scripting.ItemCollection.addComp",
+  "ae.scripting.Item.remove",
+  "ae.scripting.Project.activeItem",
+  "ae.scripting.Item.name",
+  "ae.scripting.Item.id",
+  "ae.scripting.Item.typeName"
+ ],
+ "platform": {
+  "os": "darwin",
+  "osVersion": "27.2.1",
+  "arch": "arm64"
+ },
+ "aeVersion": {
+  "version": "26.5.3x9",
+  "build": "9"
+ },
+ "sdkBuild": null,
+ "sdkBuildStatus": "not-applicable",
+ "verification": "verified-real-host",
+ "result": "PASS",
+ "catalogBinding": {
+  "kind": "real-host",
+  "ref": "packages/capability-catalog/evidence/conformance/run-2026-11-21-ae2026-a8n-030",
+  "platform": "darwin"
+ },
+ "sourceSha": "da69185f2147f9225e1942c33efc592b070da092",
+ "runId": "run-2026-11-21-ae2026-a8n-030",
+ "artifactHashes": {
+  "Conformance-Disposable.aep": "f3e40154dc46d6998ad7c1b3e2fb08f16589c4f81dcf8ce1d8f0748681fc4421",
+  "Conformance-MCP-Disposable.aep": "b6317107231c9d06b4cc43d7a36e95e83b56ae5d7cdc3ed695cb355752c69014",
+  "a8n-host-ext.js": "84fe0c5e2b8c676e397f9f102ab7f4d7f48373d0c4d088b82076056ab7fe5f9c",
+  "ae-a8n-0.5.0.tgz": "dd936bd88b140c5c812c8d7639c95a64d8045b2d2a4a1164e2e582acc63b5150",
+  "cli-doctor.json": "74b1cee86f7e939ab33d3734a05cf4c9d54e37d95d22b441a43f70f2f9ff0b0d",
+  "cli-project-open.json": "b4889be66c6f6b786fc3b4e80b8a02db3974c4f4bfd3075abda9d2c858ee8fe5",
+  "harness-mcp-real-run.mjs": "3422d44f83d5eac66be5f1f3a16ca0df24fb57a6236791d9ea710f55fef8441e",
+  "harness-real-run.mjs": "2f02ffd3bd01791c880b45f543e2f97d82e5d6a30b0c2684e980e429980dd00d",
+  "mcp-stdio.jsonl": "1833c5608d7f094e47134fdba49d4696f37e596eae963f2abc0c110b9f7f6c21",
+  "provenance.json": "6236fd6ff0287e414f1e786424f2b17458edec4d3019b4b2de50c928702f3dbc",
+  "session-a8n-jsx.json": "74aed4e8df6a29c77c6b68b60f563d4ebc794d6afc5348856dc330907db95c46",
+  "trace.jsonl": "3cd58ba2118ad6eb37c641f9588e5c4c750bdab2b93a58df900fc714bd09c3f7"
+ },
+ "environment": {
+  "disposableProject": true,
+  "sideEffects": "none-observed",
+  "sessionRef": "owned ae-a8n sessions only: conformance/real-run.mjs, conformance/mcp-real-run.mjs, devtools-cli execute project.open; each launched its own AE 2026 instance (installDir-pinned) and closed with unsavedChanges=refuse after restoring saved state; no pre-existing AE instance or user project was touched. A first attempt timed out on app.info readiness while an AE 2026 first-launch dialog was pending; the owned instance was relaunched cleanly and the recorded lanes all ran on the successful session. The user's AE 2027 instance was never touched."
+ },
+ "dimensions": {
+  "script": "PASS",
+  "transport": "PASS",
+  "ownership": "PASS",
+  "timeout": "PASS",
+  "undo": "PASS"
+ },
+ "recordedAt": "2026-11-21T05:49:00.000Z"
+}

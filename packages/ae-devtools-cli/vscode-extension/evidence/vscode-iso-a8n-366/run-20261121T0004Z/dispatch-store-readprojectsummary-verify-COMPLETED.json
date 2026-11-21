@@ -1,0 +1,11 @@
+{
+  "schema": "ae-devtools.dispatch-store/v1",
+  "key": "73f11224a30723d8ea0a224a088162587814f4b3e10745ab3eac48b104d257b2",
+  "state": "completed",
+  "requestId": "req-mcp-3",
+  "operationId": "read.projectSummary",
+  "dispatchedAt": "2026-11-21T00:07:37.962Z",
+  "settledAt": "2026-11-21T00:07:38.287Z",
+  "outcome": "COMPLETED",
+  "resolution": null
+}

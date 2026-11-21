@@ -1,0 +1,82 @@
+{
+  "startedAt": "2026-11-21T00:04:10.194Z",
+  "steps": [
+    {
+      "step": "driver-activated",
+      "at": "2026-11-21T00:04:10.228Z"
+    },
+    {
+      "step": "mode",
+      "at": "2026-11-21T00:04:10.228Z",
+      "mode": "seq172"
+    },
+    {
+      "step": "discover-triggered",
+      "at": "2026-11-21T00:04:10.228Z"
+    },
+    {
+      "step": "discover",
+      "at": "2026-11-21T00:04:35.235Z",
+      "settled": true
+    },
+    {
+      "step": "exec-summary-triggered",
+      "at": "2026-11-21T00:04:35.287Z"
+    },
+    {
+      "step": "exec-summary",
+      "at": "2026-11-21T00:05:50.236Z",
+      "settled": true
+    },
+    {
+      "step": "exec-itembyid-triggered",
+      "at": "2026-11-21T00:05:50.583Z"
+    },
+    {
+      "step": "exec-itembyid",
+      "at": "2026-11-21T00:07:05.240Z",
+      "settled": true
+    },
+    {
+      "step": "verify-triggered",
+      "at": "2026-11-21T00:07:05.260Z"
+    },
+    {
+      "step": "verify",
+      "at": "2026-11-21T00:07:55.240Z",
+      "settled": true
+    },
+    {
+      "step": "problems-panel-opened",
+      "at": "2026-11-21T00:07:55.407Z"
+    },
+    {
+      "step": "done",
+      "at": "2026-11-21T00:07:58.410Z"
+    }
+  ],
+  "notes": [],
+  "problems_discover": [],
+  "problems_exec-summary": [],
+  "problems_exec-itembyid": [
+    {
+      "uri": "ae-devtools:diagnostics/script-exception",
+      "count": 1,
+      "items": [
+        {
+          "message": "Error: After Effects エラー: 内部確認に失敗しました。{Item Not Found} [source position: no-map]",
+          "source": "ae-devtools · script-exception",
+          "severity": 0,
+          "range": {
+            "start": {
+              "line": 247,
+              "character": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "problems_verify": [],
+  "problems_final": []
+}

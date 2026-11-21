@@ -28,7 +28,7 @@ After Effects の **スクリプト／エクステンション開発そのもの
 
 ## 現在の状態
 
-`packages/ae-devtools-cli`（`@ido-bata/ae-devtools-cli@0.5.0`）として CLI + JSX toolchain +
+`packages/ae-devtools-cli`（`@ido-bata/ae-devtools-cli@0.7.0`）として CLI + JSX toolchain +
 capability catalog + conformance gate が shipped 済み（fake-level 検証 +
 macOS arm64 / AE 26.5 の verified-real-host 証跡あり。Windows・配布・
 実 editor 受入は未検証）。shipped 済みの範囲を超えて **未確定 / 未検証** のままの領域:
