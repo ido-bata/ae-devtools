@@ -62,7 +62,7 @@ export function aeA8nContractError({ source, version, missing }) {
       (version ? `@${version}` : "") +
       ` is missing ${missing.join(", ")} — required: ${CONTRACT_DESCRIPTION}. ` +
       "ae-a8n@0.1.0-alpha.2 and earlier predate these fixes " +
-      "(@ido-bata/ae-a8n@0.2.0 under the `next` dist-tag satisfies them); " +
+      "(the pinned @ido-bata/ae-a8n dependency satisfies them); " +
       "pass --ae-a8n-root <ae-a8n checkout> to override the pinned dependency.",
   );
   error.code = "AE_A8N_CONTRACT_UNSUPPORTED";

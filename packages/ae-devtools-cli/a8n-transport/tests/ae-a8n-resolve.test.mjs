@@ -15,9 +15,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { resolveAeA8n } from "../ae-a8n-resolve.mjs";
 
@@ -73,12 +74,15 @@ test("resolveAeA8n: missing dist/index.js rejects (fail closed)", async () => {
 });
 
 test("resolveAeA8n: npm branch resolves the pinned dependency", async () => {
+  const pkg = JSON.parse(readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json"), "utf8"));
+  const pinned = pkg.dependencies["@ido-bata/ae-a8n"];
   const r = await resolveAeA8n({});
   assert.equal(r.source, "npm:@ido-bata/ae-a8n");
-  assert.equal(r.version, "0.2.0");
+  assert.equal(r.version, pinned);
   assert.equal(typeof r.AfterEffects, "function");
   assert.match(r.cliPath, /dist[\\/]cli\.js$/);
   assert.match(r.entry, /ae-a8n/);
   // npm installs attest version, not a git head
-  assert.equal(r.head, "0.2.0");
+  assert.equal(r.head, pinned);
 });
