@@ -152,6 +152,28 @@ test("execute/verify on null input produce structured refusals, not TypeErrors",
   assert.equal(typeof v.reason, "string");
 });
 
+test("verify forwards consentAudit — verify dispatches record consent decisions (Issue #403)", async () => {
+  const f = fixture();
+  const entries = [];
+  const consentAudit = {
+    recordConsentDecision(entry) { entries.push(entry); },
+  };
+  const v = await verify({ ...f, consentAudit, requestId: "req-verify-1" });
+  assert.equal(v.outcome, "COMPLETED");
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].decision, "approved");
+  assert.equal(entries[0].opId, "read.projectSummary");
+  assert.equal(entries[0].requestId, "req-verify-1");
+  assert.equal(entries[0].mutating, false);
+});
+
+test("verify surfaces a malformed consentAudit as CONSENT_AUDIT_INVALID (Issue #403)", async () => {
+  const f = fixture();
+  const v = await verify({ ...f, consentAudit: { bogus: true } });
+  assert.equal(v.status, "refused");
+  assert.equal(v.reason, "CONSENT_AUDIT_INVALID");
+});
+
 test("execute adds no approval path: denial still refuses before transport", async () => {
   const f = fixture();
   const origSend = f.transport.send.bind(f.transport);
