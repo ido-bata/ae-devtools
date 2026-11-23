@@ -19,6 +19,7 @@
  *                 [--consent grant|deny] [--out <evidence.json>]
  *                 [--close-timeout-ms <n>]
  *   node cli.mjs verify [--read-op <opId>] [--args '<json>'] [same session flags]
+ *                 [--supervision-wait-ms <n>]
  *   node cli.mjs runs            — list run-guard markers (residue detection)
  *   node cli.mjs reap <runId> [--confirm] — recover a stale owned leftover
  *   node cli.mjs diagnose <record.json|marker|runId>
@@ -31,6 +32,15 @@
  * (--out evidence file, bare diagnostics record, or surviving run
  * marker) and reports fresh resolution. Both are read-only; neither
  * adds a dispatch path.
+ *
+ * Supervision (Issue #408): a8n/a8n-attached sessions expose the ae-a8n
+ * session root; the durable `ae-a8n.supervision/v1` state is read
+ * (never written, never probed) into `evidence.supervision` and the
+ * diagnostics block. For UNKNOWN outcomes only, `--supervision-wait-ms`
+ * (default 5000, 0 disables) gives the monitor a BOUNDED window — also
+ * capped by the phase's own deadline — to classify a blocking state
+ * before the evidence is recorded. monitor-lost/degraded/unavailable
+ * health is reported verbatim, never as healthy.
  *
  * Sessions:
  *   fake — codec-faithful vm host (FAKE/MOCK evidence only)
@@ -81,6 +91,7 @@ import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/sessio
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
+import { supervisionSnapshotForSession, awaitSupervisionClassification } from "../dev-loop/supervision.mjs";
 import { aeDevtoolsSourceRef } from "./real-run-kit.mjs";
 import { createConsentAudit } from "../trusted-execution/consent-audit.mjs";
 
@@ -462,6 +473,28 @@ async function main() {
           : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary", readArgs: args });
         evidence.result = result;
         evidence.outcome = normalizedOutcome(result);
+        // Durable supervision snapshot (Issue #408): read-only consume of
+        // the ae-a8n supervision contract for a8n sessions. For UNKNOWN
+        // outcomes the monitor gets a BOUNDED window (flag or 5s default,
+        // 0 disables; also capped by the phase deadline) to classify a
+        // blocking state — there is no unbounded wait path.
+        let supervisionSnap = supervisionSnapshotForSession(state.session);
+        if (isUnknownOutcome(result) && state.session?.sessionRoot) {
+          const rawWait = flags["supervision-wait-ms"];
+          const waitMs = rawWait === undefined
+            ? 5_000
+            : (rawWait === "0" ? 0 : positiveMsFlag(rawWait) ?? 0);
+          if (waitMs > 0) {
+            const waited = await awaitSupervisionClassification(state.session, { timeoutMs: waitMs });
+            if (waited.snapshot !== null) supervisionSnap = waited.snapshot;
+            evidence.supervisionWait = {
+              timeoutMs: waitMs,
+              timedOut: waited.timedOut,
+              deadlineExceeded: waited.deadlineExceeded,
+            };
+          }
+        }
+        if (supervisionSnap !== null) evidence.supervision = supervisionSnap;
         // Additive failure diagnostics (Issue #103): a unified
         // ae-devtools.diagnostics/v1 record plus sourcemap resolution.
         // Completed runs carry no block; failures always do — an
@@ -477,6 +510,7 @@ async function main() {
             outcome: failState,
             session: state.session,
             requestId,
+            supervision: supervisionSnap,
             mapDir: typeof flags["map-dir"] === "string" ? flags["map-dir"] : undefined,
           });
         }

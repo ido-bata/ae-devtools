@@ -45,6 +45,12 @@ import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFile
 import { join } from "node:path";
 
 import { ATTESTATION_SOURCE, GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
+import {
+  supervisionEscalation,
+  supervisionSnapshot,
+  stricterVerdict,
+  supervisionBlocksClean,
+} from "../a8n-transport/supervision.mjs";
 
 export const SCHEMA = "ae-devtools.recovery-orchestrator/v2";
 export { ATTESTATION_SOURCE, GUARD_SCHEMA };
@@ -647,6 +653,23 @@ export function authorizeRecovery({ marker, requestId, method, probes }) {
  * `recovery` is ae-a8n's HostRecovery (MacHostRecovery in production).
  * The original request is NEVER resent — the driver waits for its result.
  * `ownerId` comes from the verified run proof, not from a flag.
+ *
+ * `readSupervision` (Issue #408) is an optional injected reader for the
+ * ae-a8n durable supervision report (`ae-a8n.supervision/v1`,
+ * a8n-transport/supervision.mjs). When supplied it is called once BEFORE
+ * and once AFTER the recovery attempt; both snapshots are recorded on the
+ * result and the AFTER report (falling back to BEFORE) may ESCALATE the
+ * verdict — never downgrade it:
+ *
+ *   - health monitor-lost/unavailable or corrupt state → "unknown"
+ *     (a dead monitor is never read as a healthy target)
+ *   - phase needs-human/quarantined → "quarantined" with the structured
+ *     human request (dialog, reason, options, resume path) attached
+ *   - phase blocked/recovering → "await-original" (bounded wait; the
+ *     phase deadline is recorded, never an indefinite wait)
+ *
+ * The orchestrator still never presses a dialog itself and never
+ * implements GUI probing — supervision is consumed, not re-owned.
  */
 export async function runTimeoutRecovery({
   recovery,
@@ -656,7 +679,10 @@ export async function runTimeoutRecovery({
   timeoutMs,
   ownerId,
   screenshotDir,
+  readSupervision = null,
 }) {
+  const supervisionBefore =
+    typeof readSupervision === "function" ? await readSupervision().catch(() => null) : null;
   const before = observeScreen({ gui, screenshotDir, requestId });
   let outcome;
   try {
@@ -669,6 +695,15 @@ export async function runTimeoutRecovery({
     };
   }
   const after = observeScreen({ gui, screenshotDir, requestId: `${requestId}-post` });
+  const supervisionAfter =
+    typeof readSupervision === "function" ? await readSupervision().catch(() => null) : null;
+  // The freshest trustworthy supervision report decides escalation;
+  // BEFORE is the fallback when AFTER could not be read.
+  const supervisionReport = supervisionAfter ?? supervisionBefore;
+  const verdict = stricterVerdict(
+    verdictForRecovery(outcome),
+    supervisionEscalation(supervisionReport),
+  );
   return {
     schema: SCHEMA,
     kind: "timeout-recovery",
@@ -685,7 +720,11 @@ export async function runTimeoutRecovery({
       screenshotPath: outcome.screenshotPath ?? null,
     },
     after,
-    verdict: verdictForRecovery(outcome),
+    supervision: {
+      before: supervisionSnapshot(supervisionBefore),
+      after: supervisionSnapshot(supervisionAfter),
+    },
+    verdict,
     rules: [
       "the timed-out request is never resent — its result may still arrive",
       "a quarantined or refused state is reported, never retried",
@@ -727,6 +766,13 @@ function verdictForRecovery(outcome) {
  * (ae-a8n `censusRunnerInSession`); `session` records whether uid/asid
  * were confirmed. An unconfirmed session degrades the census channel to
  * unavailable → unknown, never clean.
+ *
+ * `supervision` (Issue #408) is an optional ae-a8n SupervisionReport read
+ * from the session's durable state (a8n-transport/supervision.mjs). It is
+ * recorded on the result as `supervision`, and it GATES the "clean"
+ * verdict: degraded/monitor-lost/unavailable observation health or a
+ * still-blocking phase means the GUI state is not provably unobstructed,
+ * so "clean" degrades to "unknown" — monitor-lost is never healthy.
  */
 export function verifyHostExit({
   pid,
@@ -740,6 +786,7 @@ export function verifyHostExit({
   collectEvidence = collectCrashEvidence,
   reportsDirs,
   sentryDirs,
+  supervision = null,
 }) {
   const result = {
     schema: SCHEMA,
@@ -754,6 +801,10 @@ export function verifyHostExit({
     },
     verdict: "unknown",
     reasons: [],
+    // Additive supervision snapshot (Issue #408): the durable
+    // ae-a8n.supervision/v1 report for the session dir, or null when no
+    // report was supplied. Recorded on EVERY outcome, not only clean.
+    supervision: supervisionSnapshot(supervision),
   };
   result.channels.windows.pidAttribution = session?.pidAttribution ?? null;
 
@@ -866,6 +917,20 @@ export function verifyHostExit({
       result.verdict = "clean";
       result.reasons.push("process gone, census clean, evidence collected, no correlated crash reports");
     }
+  }
+  // Supervision gate (Issue #408): "clean" asserts the GUI is provably
+  // unobstructed — that claim requires ok observation health AND a
+  // running/resumed phase. monitor-lost/degraded/unavailable health or
+  // a still-blocking phase degrades clean to unknown; it is never read
+  // as healthy. Other verdicts already carry their own honesty and are
+  // not rewritten here.
+  if (result.verdict === "clean" && supervisionBlocksClean(supervision)) {
+    result.verdict = "unknown";
+    result.reasons.push(
+      "supervision observation does not prove a clean GUI state " +
+        `(health=${supervision?.health ?? supervision?.doc?.observationHealth ?? "?"}, ` +
+        `phase=${supervision?.doc?.phase ?? "?"}) — monitor-lost/degraded is never clean`,
+    );
   }
   return result;
 }

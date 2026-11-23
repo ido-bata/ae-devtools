@@ -30,6 +30,7 @@
 import { discover, inspect, execute, verify, sessionStatus, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
+import { supervisionSnapshotForSession } from "../dev-loop/supervision.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
 
@@ -148,14 +149,25 @@ async function failureDiagnostics({ result, session, requestId }) {
   if (state === null) return null;
   try {
     const collectors = await diagnosticsCollectors();
+    // Durable supervision snapshot (Issue #408): read-only consume of
+    // the ae-a8n supervision contract; attached sessions get the same
+    // view — this never mutates the host.
+    const supervision = supervisionSnapshotForSession(session);
     const record = recordFromExecuteResult({
       result,
       outcome: state,
       session: { kind: session.kind, pin: session.pin },
       requestId,
+      supervision,
       collectors,
     });
-    return record === null ? null : { status: "ok", records: [record] };
+    return record === null
+      ? null
+      : {
+          status: "ok",
+          records: [record],
+          ...(supervision !== null ? { supervision } : {}),
+        };
   } catch (e) {
     return { status: "unavailable", reason: String(e?.message ?? e), records: [] };
   }
