@@ -15,12 +15,20 @@
  *   <sessionDir>/monitor.lease.json     — the monitor lease record
  *
  * `sessionDir` is the ae-a8n session root (`slice.sessionRoot` for a8n
- * sessions). The published npm `@ido-bata/ae-a8n` (0.5.0) predates the
- * supervision API, so this module implements the documented decode /
- * health re-evaluation rules itself — the durable FILE is the contract,
- * not the npm export surface. When a resolved ae-a8n build DOES export
- * `supervisionReport`/`readSupervisionState`, callers may prefer it;
- * `supportsSupervisionApi(mod)` reports which path is available.
+ * sessions). The durable FILE is the contract, not the npm export
+ * surface: this module deliberately implements the documented decode /
+ * health re-evaluation rules itself so reads keep working for attached
+ * sessions, post-mortem session dirs, and `--ae-a8n-root` builds that
+ * predate or postdate any single npm pin. The pinned
+ * `@ido-bata/ae-a8n@0.6.0` DOES export the public supervision API
+ * (`supervisionReport`, `readSupervisionState`, `decodeSupervisionDoc`,
+ * `evaluateObservationHealth`, `waitForSupervisionPhase`,
+ * `ae.supervisionState()`); `supportsSupervisionApi(mod)` reports
+ * whether a resolved build offers it. The local decoder is a
+ * line-for-line port of ae-a8n `state.ts` — same validation, same
+ * bounded-wait invariant — and `waitForSupervisionPhase` here adds a
+ * phase-deadline bound the ae-a8n helper does not have, so it is not a
+ * drop-in replacement.
  *
  * Honesty rules (mirroring ae-a8n state.ts):
  *
