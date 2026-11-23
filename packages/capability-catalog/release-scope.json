@@ -1,6 +1,6 @@
 {
   "schema": "ae-devtools.release-scope/v1",
-  "release": "0.7.0",
+  "release": "0.8.0",
   "supportedRelease": {
     "state": "recorded",
     "releases": ["26.5"],
