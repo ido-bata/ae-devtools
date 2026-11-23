@@ -85,6 +85,29 @@ function base(ctx, kind, severity, message, outcome) {
 }
 
 /**
+ * Additive supervision suffix for record messages (Issue #408): when a
+ * result carries the durable supervision snapshot, the phase + health +
+ * needs-human detail ride the message so diagnostics consumers see the
+ * same state every other surface reports. Absent supervision adds
+ * nothing — the record contract is unchanged.
+ */
+function supervisionSuffix(result) {
+  const s = result?.supervision;
+  // timeout-recovery nests {before, after}; exit-verification carries the
+  // snapshot directly on result.supervision.
+  const sup = s !== null && typeof s === "object" && ("before" in s || "after" in s)
+    ? (s.after ?? s.before ?? null)
+    : s;
+  if (sup === null || sup === undefined || typeof sup !== "object") return "";
+  const parts = [`supervision=${sup.phase ?? sup.status ?? "?"}`];
+  if (sup.health) parts.push(`health=${sup.health}`);
+  if (sup.needsHuman) {
+    parts.push(`needs-human: ${sup.needsHuman.reason ?? "human action required"}`);
+  }
+  return ` [${parts.join("; ")}]`;
+}
+
+/**
  * exit-verification result → diagnostics record(s). Always exactly one
  * record: every verdict is either a finding or an explicit acceptance.
  */
@@ -99,7 +122,7 @@ export function exitVerificationToDiagnostics(result, ctx = {}) {
       ctx,
       VERDICT_KIND[verdict],
       VERDICT_SEVERITY[verdict],
-      `exit-verification ${verdict} (expectation ${result.expectation ?? "?"}, pid ${result.pid ?? "?"}): ${reasons || "no reasons recorded"}`,
+      `exit-verification ${verdict} (expectation ${result.expectation ?? "?"}, pid ${result.pid ?? "?"}): ${reasons || "no reasons recorded"}${supervisionSuffix(result)}`,
       verdict,
     ),
   ];
@@ -121,7 +144,7 @@ export function timeoutRecoveryToDiagnostics(result, ctx = {}) {
       ctx,
       "transport-outcome",
       VERDICT_SEVERITY[verdict],
-      `timeout-recovery ${verdict} for ${result.method ?? "?"} (request ${result.requestId ?? "?"}): ${detail || "no outcome detail"} — original request is never resent`,
+      `timeout-recovery ${verdict} for ${result.method ?? "?"} (request ${result.requestId ?? "?"}): ${detail || "no outcome detail"} — original request is never resent${supervisionSuffix(result)}`,
       verdict,
     ),
   ];

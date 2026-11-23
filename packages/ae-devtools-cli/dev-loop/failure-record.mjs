@@ -50,12 +50,17 @@ function pinSession(pin) {
  *   session    — { kind, pin? } session descriptor; kind drives the
  *                evidence label, pin feeds the record's session block
  *   requestId  — dispatch request id when the caller has one
+ *   supervision— optional ae-a8n supervision snapshot
+ *                (dev-loop/supervision.mjs supervisionSnapshotForSession,
+ *                Issue #408): attached verbatim as record.supervision so
+ *                every surface reports the same phase/health/needs-human
+ *                state. Additive — absent supervision changes nothing.
  *   collectors — { fromAeError, fromTransportOutcome } from
  *                diagnostics/collectors.mjs (injected, see header)
  * @returns {object|null} canonical diagnostics record, or null when
  *          the result is not failure-shaped
  */
-export function recordFromExecuteResult({ result, outcome, session, requestId, collectors } = {}) {
+export function recordFromExecuteResult({ result, outcome, session, requestId, supervision, collectors } = {}) {
   const state = failureOutcome(result, outcome);
   if (state === null) return null;
   if (
@@ -101,6 +106,15 @@ export function recordFromExecuteResult({ result, outcome, session, requestId, c
       },
       { ctx },
     );
+  }
+
+  // Additive supervision snapshot (Issue #408): the durable
+  // ae-a8n.supervision/v1 state observed for this session — phase,
+  // observation health and the structured needs-human request. The
+  // diagnostics schema allows forward-compatible fields; consumers
+  // that predate supervision simply ignore it.
+  if (supervision !== null && supervision !== undefined && typeof supervision === "object") {
+    record.supervision = supervision;
   }
 
   // Evidence label honesty: "fake" only for fake sessions; "real-host"

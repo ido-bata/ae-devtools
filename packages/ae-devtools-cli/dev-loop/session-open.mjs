@@ -86,6 +86,10 @@ export async function openSession(kind = "fake", options = {}) {
       runner: s.runner,
       pin: s.pin,
       close: () => s.close(),
+      // ae-a8n session root — the directory the durable supervision
+      // contract (supervision.json) lives in. Read-only consumers use
+      // it; it grants no mutation authority (Issue #408/#410).
+      sessionRoot: typeof s.sessionRoot === "string" ? s.sessionRoot : null,
       meta: {
         aeVersion: s.info?.version ?? null,
         ownership: s.ownership?.kind ?? null,
@@ -136,6 +140,8 @@ export async function openSession(kind = "fake", options = {}) {
       runner: s.runner,
       pin: s.pin,
       close: () => s.close(),
+      // ae-a8n session root — see a8n-attached above (Issue #408).
+      sessionRoot: typeof s.sessionRoot === "string" ? s.sessionRoot : null,
       meta: {
         aeVersion: s.info?.version ?? null,
         ownership: s.ownership?.kind ?? null,

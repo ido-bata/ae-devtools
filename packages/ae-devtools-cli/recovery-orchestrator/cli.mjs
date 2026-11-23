@@ -19,6 +19,15 @@
  *        [--reports-dir d]... [--sentry-dir d]...
  *        [--ae-a8n-root <dir>]
  *
+ * Supervision (Issue #408): observe/recover/verify-exit accept
+ * --session-root <dir> naming the ae-a8n session directory that holds
+ * the durable `ae-a8n.supervision/v1` state (supervision.json +
+ * monitor.lease.json). `recover` also derives it from the run marker's
+ * recorded workdir when the flag is absent. The report is consumed
+ * read-only — this CLI never starts a monitor and never presses a
+ * dialog; a monitor-lost/degraded/needs-human state escalates the
+ * verdict instead of being read as healthy.
+ *
  * Authorization model:
  *
  *   observe       — read-only. Needs only a resolvable GUI session. Never
@@ -58,6 +67,7 @@ import {
   verifyHostExit,
 } from "./orchestrator.mjs";
 import { resolveAeA8n } from "../a8n-transport/ae-a8n-resolve.mjs";
+import { supervisionReport } from "../a8n-transport/supervision.mjs";
 import {
   RUNS_DIR,
   RUN_ID_RE,
@@ -237,6 +247,25 @@ function guiLeaseState(a8n, session) {
   }
 }
 
+/**
+ * Resolve the ae-a8n session directory holding durable supervision
+ * state (Issue #408). Explicit --session-root wins; `recover` falls
+ * back to the run marker's recorded workdir (session.mjs lays the
+ * session root out as <workdir>/a8n-session). Returns null when no
+ * directory can be proven — supervision then reads as absent, never
+ * as healthy.
+ */
+function supervisionDirFor(flags, marker = null) {
+  if (typeof flags["session-root"] === "string" && flags["session-root"].length > 0) {
+    return flags["session-root"];
+  }
+  const workdir = marker?.session?.workdir;
+  if (typeof workdir === "string" && workdir.length > 0) {
+    return join(workdir, "a8n-session");
+  }
+  return null;
+}
+
 function targetFromFlags(flags) {
   const target = {};
   if (Number.isFinite(Number(flags.pid))) target.pid = Number(flags.pid);
@@ -334,6 +363,12 @@ async function main() {
     const allowConsole = flags["allow-console"] === true;
     const shotDir = typeof flags["shot-dir"] === "string" ? flags["shot-dir"] : undefined;
     const timeoutMs = Number.isFinite(Number(flags["timeout-ms"])) ? Number(flags["timeout-ms"]) : 30_000;
+    // Durable supervision state for this run's session (Issue #408):
+    // read before AND after the attempt inside runTimeoutRecovery; the
+    // report can only escalate the verdict (needs-human → quarantined,
+    // monitor-lost → unknown), never downgrade it.
+    const supDir = supervisionDirFor(flags, loaded.marker);
+    const readSupervision = supDir === null ? null : () => supervisionReport(supDir);
 
     const gui = new a8n.MacGuiRecovery({ session, pid, screenshotDir: shotDir, allowConsoleSession: allowConsole });
     const recovery = new a8n.MacHostRecovery({
@@ -346,6 +381,7 @@ async function main() {
       recovery, gui, requestId, method, timeoutMs,
       ownerId: auth.ownerId,
       screenshotDir: shotDir,
+      readSupervision,
     });
     // Evidence, not authorization: the ae-a8n GUI lease state before the
     // attempt. MacHostRecovery.attempt acquires the lease itself; this
@@ -366,7 +402,14 @@ async function main() {
   if (cmd === "observe") {
     const gui = new a8n.MacGuiRecovery({ session, pid, screenshotDir: shotDir, allowConsoleSession: allowConsole });
     const state = observeScreen({ gui, screenshotDir: shotDir, requestId: "observe" });
-    emit({ schema: "ae-devtools.recovery-orchestrator.observe/v1", ...state });
+    // Additive supervision snapshot when --session-root names the
+    // session dir (Issue #408); absent otherwise — never fabricated.
+    const supDir = supervisionDirFor(flags);
+    emit({
+      schema: "ae-devtools.recovery-orchestrator.observe/v1",
+      ...state,
+      ...(supDir !== null ? { supervision: supervisionReport(supDir) } : {}),
+    });
     return state.ok ? 0 : 1;
   }
 
@@ -384,6 +427,7 @@ async function main() {
       }
     }
     const expectation = flags.expectation === "crash" ? "crash" : "exit";
+    const supDir = supervisionDirFor(flags);
     const result = verifyHostExit({
       pid,
       pidAlive,
@@ -402,6 +446,10 @@ async function main() {
       since: typeof flags.since === "string" ? flags.since : null,
       reportsDirs: multi["reports-dir"].length ? multi["reports-dir"] : undefined,
       sentryDirs: multi["sentry-dir"].length ? multi["sentry-dir"] : undefined,
+      // Durable supervision report when --session-root names the session
+      // dir (Issue #408): recorded on the result and gating "clean" —
+      // monitor-lost/degraded is never a clean bill.
+      supervision: supDir !== null ? supervisionReport(supDir) : null,
     });
     emit(result);
     return result.verdict === "clean" || result.verdict === "crash-verified" ? 0 : 1;

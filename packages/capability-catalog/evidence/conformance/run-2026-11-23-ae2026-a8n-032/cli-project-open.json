@@ -1,0 +1,72 @@
+{
+  "schema": "ae-devtools.cli.run/v1",
+  "runId": "run-2026-11-23T15-41-08-304Z-d5218fe3",
+  "command": "execute",
+  "sourceSha": "7f43db33e521eb2bd7d0d0ebccae87a8b3d6b8c2",
+  "sourceDirty": false,
+  "opId": "project.open",
+  "requestId": "req-run-2026-11-23T15-41-08-304Z-d5218fe3-project.open",
+  "session": {
+    "aeVersion": "26.5.3x9",
+    "ownership": "owned",
+    "aeA8nHead": "0.6.0",
+    "kind": "a8n",
+    "evidenceLevel": "verified on real host (macOS)",
+    "policy": null
+  },
+  "at": "2026-11-23T15:41:16.174Z",
+  "result": {
+    "requestId": "req-run-2026-11-23T15-41-08-304Z-d5218fe3-project.open",
+    "operationId": "project.open",
+    "outcome": "COMPLETED",
+    "requestState": "ACKED",
+    "mayHaveMutated": true,
+    "result": {
+      "ok": true,
+      "project": "/tmp/run-032/real/Conformance-Disposable.aep"
+    },
+    "contractOutcome": "completed",
+    "retry": "quarantine",
+    "opId": "project.open",
+    "mutating": true,
+    "destructive": true
+  },
+  "outcome": "COMPLETED",
+  "supervision": {
+    "status": "observed",
+    "source": "state",
+    "schemaVersion": "ae-a8n.supervision/v1",
+    "phase": "running",
+    "health": "degraded",
+    "healthDetail": null,
+    "blocking": null,
+    "pendingRequests": [
+      {
+        "id": "66bcc74e-b43d-4820-8a0f-0ce6879eb52d",
+        "method": "aeDevtools.trustedEval",
+        "since": "2026-11-23T15:41:16.486Z",
+        "state": "in-flight",
+        "transport": "script-invocation"
+      }
+    ],
+    "deadline": null,
+    "enteredAt": "2026-11-23T15:41:13.131Z",
+    "updatedAt": "2026-11-23T15:41:18.603Z",
+    "monitor": {
+      "ownerId": "ae-a8n-session",
+      "pid": 52698,
+      "pidStart": null,
+      "acquiredAt": "2026-11-23T15:41:13.128Z",
+      "heartbeatAt": "2026-11-23T15:41:17.345Z"
+    },
+    "needsHuman": null,
+    "readAt": "2026-11-23T15:41:18.607Z"
+  },
+  "evidenceFile": "/tmp/run-032/evidence/cli-project-open.json",
+  "cleanup": {
+    "attempted": true,
+    "ok": true,
+    "error": null,
+    "quit": null
+  }
+}

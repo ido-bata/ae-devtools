@@ -12,10 +12,20 @@ fake-level evidence として記録され、real-host 検証済みとは表示�
 
 ```sh
 npm install @ido-bata/ae-devtools-cli          # registry latest
-npm install @ido-bata/ae-devtools-cli@0.7.0    # this release, once published
+npm install @ido-bata/ae-devtools-cli@0.8.0    # this release, once published
 # tarball / local checkout からも可:
-npm install ./ae-devtools-cli-0.7.0.tgz
+npm install ./ae-devtools-cli-0.8.0.tgz
 ```
+
+### Migrating to 0.8.0
+
+- The `@ido-bata/ae-a8n` pin moves to `0.6.0`, which publishes the GUI
+  supervision contract (`ae.supervisionState()`, `AfterEffects.rebuild()`,
+  `startDetachedSupervisor()`, `ae-a8n supervise status|watch`, durable
+  `supervision.json`, `A8N_VERSION`). Consumers keep reading the durable
+  `ae-a8n.supervision/v1` state file — it remains the cross-version /
+  attached-session contract — but the public API is now available on the
+  pinned dependency (#408–#410 consumer integration).
 
 ### Migrating to 0.7.0
 
@@ -53,7 +63,7 @@ npm install ./ae-devtools-cli-0.7.0.tgz
   satisfying the capability contract** (#102 handshake exports +
   #103/#105 fixes). ae-a8n `<=0.1.0-alpha.2` predates them and is refused
   up front (`AE_A8N_CONTRACT_UNSUPPORTED`; check `ae-devtools doctor` →
-  `aeA8n.contractOk`). The pin is `@ido-bata/ae-a8n@0.5.0`; override
+  `aeA8n.contractOk`). The pin is `@ido-bata/ae-a8n@0.6.0`; override
   with `--ae-a8n-root <checkout>`.
   The `fake` session is unaffected.
 
@@ -114,7 +124,7 @@ ae-devtools execute <opId> --session a8n --ae-a8n-root <local-a8n-checkout> --co
 解決される ae-a8n が必要 contract（#102 handshake export。#103/#105
 修正を祖先に持つ）を満たさない場合は launch 前に
 `AE_A8N_CONTRACT_UNSUPPORTED` で refuse される — `ae-devtools doctor`
-の `aeA8n.contractOk` で事前確認できる。npm pin は `@ido-bata/ae-a8n@0.5.0`
+の `aeA8n.contractOk` で事前確認できる。npm pin は `@ido-bata/ae-a8n@0.6.0`
 で contract を満たす。`<=0.1.0-alpha.2` を
 解決した場合は launch 前に refuse される。別 build を使う場合は
 `--ae-a8n-root <ae-a8n checkout>` で override できる。
@@ -136,7 +146,7 @@ AE / GUI 不要で consumer 環境でも動く。
 `observe` / `recover` / `verify-exit` は real-host 前提:
 
 - ae-a8n #109（GUI 観測）/#111（GUI lease + dialog class）の export を
-  含む ae-a8n が必要。npm pin の `@ido-bata/ae-a8n@0.5.0` はこれらを
+  含む ae-a8n が必要。npm pin の `@ido-bata/ae-a8n@0.6.0` はこれらを
   同梱するため `--ae-a8n-root` なしで解決される。古い ae-a8n を
   使う場合のみ `--ae-a8n-root <built-ae-a8n>` を指定する。
 - `recover` は devtools-cli の run marker
