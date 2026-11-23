@@ -31,9 +31,10 @@ import { discover, inspect, execute, verify, sessionStatus, DEVLOOP_SCHEMA } fro
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
 import {
-  supervisionSnapshotForSession,
   supervisionSnapshotForDir,
   awaitSupervisionPhaseForDir,
+  guardedSupervisionSnapshot,
+  attachedTargetGuardVerdict,
 } from "../dev-loop/supervision.mjs";
 import { sessionDirFor } from "../a8n-transport/supervision.mjs";
 
@@ -168,10 +169,10 @@ async function failureDiagnostics({ result, session, requestId }) {
   if (state === null) return null;
   try {
     const collectors = await diagnosticsCollectors();
-    // Durable supervision snapshot (Issue #408): read-only consume of
-    // the ae-a8n supervision contract; attached sessions get the same
-    // view — this never mutates the host.
-    const supervision = supervisionSnapshotForSession(session);
+    // Durable supervision snapshot (Issue #408/#410): read-only consume
+    // of the ae-a8n supervision contract; attached sessions get the same
+    // view behind the target-identity guard — this never mutates.
+    const supervision = await guardedSupervisionSnapshot(session);
     const record = recordFromExecuteResult({
       result,
       outcome: state,
@@ -345,6 +346,12 @@ export async function callTool(name, args = {}, ctx = {}) {
     case "ae_session": {
       const peek = typeof ctx.peekSession === "function" ? ctx.peekSession() : {};
       const openSession = peek.session ?? null;
+      // Additive supervision snapshot (Issue #409/#410): when a session
+      // is already open its durable ae-a8n supervision state rides
+      // along — the same report ae_supervision returns, behind the
+      // attached-target guard. Absent when no session is open or the
+      // session has no ae-a8n root (fake). Read-only.
+      const sup = openSession !== null ? await guardedSupervisionSnapshot(openSession) : null;
       return toolResult({
         schema: MCP_SCHEMA,
         evidenceLevel: "metadata only — this call never opens a session",
@@ -354,16 +361,7 @@ export async function callTool(name, args = {}, ctx = {}) {
           opening: peek.opening === true,
           failed: peek.failed === true,
         }),
-        // Additive supervision snapshot (Issue #409): when a session is
-        // already open its durable ae-a8n supervision state rides along —
-        // the same report ae_supervision returns. Absent when no session
-        // is open or the session has no ae-a8n root (fake). Read-only.
-        ...(openSession !== null
-          ? (() => {
-              const sup = supervisionSnapshotForSession(openSession);
-              return sup !== null ? { supervision: sup } : {};
-            })()
-          : {}),
+        ...(sup !== null ? { supervision: sup } : {}),
         api: { mcp: MCP_SCHEMA, devLoop: DEVLOOP_SCHEMA },
       });
     }
@@ -388,13 +386,41 @@ export async function callTool(name, args = {}, ctx = {}) {
       let snapshot = null;
       let wait = null;
       if (dir !== null) {
-        if (waitMs > 0) {
+        // Attached sessions (Issue #410): the durable state file is only
+        // served while the session's target identity re-validates —
+        // checked before AND after any bounded wait, so a session
+        // change / PID reuse / second instance mid-wait fails closed.
+        const guardCheck = async () =>
+          openSession !== null && explicitRoot === null
+            ? attachedTargetGuardVerdict(openSession)
+            : { ok: true, code: null, detail: null };
+        const before = await guardCheck();
+        if (!before.ok) {
+          snapshot = {
+            status: "unavailable",
+            source: "target-guard",
+            code: before.code,
+            reason: `attached target re-validation failed (${before.code}): ${before.detail} — the durable supervision state may describe a different After Effects instance`,
+            readAt: new Date().toISOString(),
+          };
+        } else if (waitMs > 0) {
           const outcome = await awaitSupervisionPhaseForDir(dir, {
             timeoutMs: waitMs,
             phases: phases !== null && phases.length > 0 ? phases : undefined,
           });
-          snapshot = outcome.snapshot;
+          const after = await guardCheck();
+          snapshot = after.ok ? outcome.snapshot : {
+            status: "unavailable",
+            source: "target-guard",
+            code: after.code,
+            reason: `attached target re-validation failed after wait (${after.code}): ${after.detail}`,
+            readAt: new Date().toISOString(),
+          };
           wait = { timeoutMs: waitMs, timedOut: outcome.timedOut, deadlineExceeded: outcome.deadlineExceeded };
+        } else if (openSession !== null && explicitRoot === null) {
+          // Session-bound read goes through the guarded snapshot so the
+          // report is only served for a proven attached target.
+          snapshot = await guardedSupervisionSnapshot(openSession);
         } else {
           snapshot = supervisionSnapshotForDir(dir);
         }
