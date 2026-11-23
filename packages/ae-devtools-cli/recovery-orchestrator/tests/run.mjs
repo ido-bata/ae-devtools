@@ -985,6 +985,178 @@ t("crashEvidenceToDiagnostics: incomplete collection -> warning, empty complete 
   assert.deepEqual(empty, []);
 });
 
+// ------------------------------------------------ supervision verdicts (Issue #408)
+// Fake level only: supervision reports are built as plain objects matching
+// the ae-a8n.supervision/v1 contract consumed by a8n-transport/supervision.mjs.
+// No AE, no monitor, no GUI.
+
+function supDoc(overrides = {}) {
+  return {
+    schemaVersion: "ae-a8n.supervision/v1",
+    sessionId: "sess-1",
+    phase: "running",
+    observationHealth: "ok",
+    blocking: null,
+    pendingRequests: [],
+    enteredAt: "2026-11-20T11:59:00.000Z",
+    deadline: null,
+    evidence: [],
+    monitor: {
+      ownerId: "mon-1", pid: 1, pidStart: null,
+      acquiredAt: "2026-11-20T11:58:00.000Z", heartbeatAt: new Date().toISOString(),
+    },
+    history: [],
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function supReport(docOverrides = {}, reportOverrides = {}) {
+  const doc = supDoc(docOverrides);
+  return {
+    status: "observed",
+    source: "state",
+    doc,
+    health: doc.observationHealth,
+    healthDetail: null,
+    readAt: new Date().toISOString(),
+    ...reportOverrides,
+  };
+}
+
+await at("runTimeoutRecovery: needs-human supervision escalates to quarantined with structured detail", async () => {
+  const report = supReport({
+    phase: "needs-human",
+    deadline: "2026-11-20T12:10:00.000Z",
+    blocking: {
+      host: "none",
+      detail: "sign-in dialog is up",
+      windows: [{
+        title: "Sign In", role: "AXWindow", subrole: "AXDialog", blocking: true,
+        tier: "human-required", dialogClass: "sign-in", code: "A8N-AUTH-001",
+        texts: ["Please sign in"], buttons: ["Cancel", "Sign In"],
+      }],
+    },
+  });
+  const r = await runTimeoutRecovery({
+    recovery: fakeRecovery({ recovered: true, outcome: "dismissed", evidence: "pressed OK" }),
+    gui: fakeGui({ windows: [win("x")] }),
+    requestId: "req-1", method: "app.info", timeoutMs: 1000,
+    ownerId: "run:run-test-1",
+    readSupervision: async () => report,
+  });
+  // Recovery claimed dismissed → await-original, but supervision says a
+  // human must act: escalation wins, never downgrade.
+  assert.equal(r.verdict, "quarantined");
+  assert.equal(r.supervision.after.phase, "needs-human");
+  assert.equal(r.supervision.after.needsHuman.phase, "needs-human");
+  assert.deepEqual(r.supervision.after.needsHuman.options.sort(), ["Cancel", "Sign In"]);
+  assert.match(r.supervision.after.needsHuman.resumePath, /supervision status/);
+  assert.match(r.supervision.after.needsHuman.requiredAction, /human/i);
+});
+
+await at("runTimeoutRecovery: monitor-lost/unavailable health escalates to unknown, never clean", async () => {
+  for (const health of ["monitor-lost", "unavailable"]) {
+    const report = supReport({ phase: "running" }, { health });
+    const r = await runTimeoutRecovery({
+      recovery: fakeRecovery({ recovered: true, outcome: "dismissed" }),
+      gui: fakeGui({}), requestId: "r", method: "m", timeoutMs: 1, ownerId: "o",
+      readSupervision: async () => report,
+    });
+    assert.equal(r.verdict, "unknown", `${health} must not be read as recovered`);
+    assert.equal(r.supervision.after.health, health);
+  }
+});
+
+await at("runTimeoutRecovery: blocked phase maps to await-original within deadline", async () => {
+  const report = supReport({ phase: "blocked", deadline: "2026-11-20T12:05:00.000Z" });
+  // Base verdict await-original (recovered) + supervision blocked →
+  // still await-original: the request may complete inside the deadline.
+  const r = await runTimeoutRecovery({
+    recovery: fakeRecovery({ recovered: true, outcome: "dismissed" }),
+    gui: fakeGui({}), requestId: "r", method: "m", timeoutMs: 1, ownerId: "o",
+    readSupervision: async () => report,
+  });
+  assert.equal(r.verdict, "await-original");
+  assert.equal(r.supervision.after.phase, "blocked");
+  assert.equal(r.supervision.after.deadline, "2026-11-20T12:05:00.000Z");
+});
+
+await at("runTimeoutRecovery: blocked supervision never downgrades an unknown verdict", async () => {
+  const report = supReport({ phase: "blocked", deadline: "2026-11-20T12:05:00.000Z" });
+  const r = await runTimeoutRecovery({
+    recovery: fakeRecovery({ recovered: false, outcome: "still-blocked", evidence: "dialog remains" }),
+    gui: fakeGui({}), requestId: "r", method: "m", timeoutMs: 1, ownerId: "o",
+    readSupervision: async () => report,
+  });
+  assert.equal(r.verdict, "unknown");
+});
+
+await at("runTimeoutRecovery: corrupt supervision state escalates to unknown", async () => {
+  const r = await runTimeoutRecovery({
+    recovery: fakeRecovery({ recovered: true, outcome: "dismissed" }),
+    gui: fakeGui({}), requestId: "r", method: "m", timeoutMs: 1, ownerId: "o",
+    readSupervision: async () => ({ status: "unavailable", source: "corrupt", reason: "bad json", readAt: new Date().toISOString() }),
+  });
+  assert.equal(r.verdict, "unknown");
+});
+
+await at("runTimeoutRecovery: absent supervision does not change the verdict", async () => {
+  const r = await runTimeoutRecovery({
+    recovery: fakeRecovery({ recovered: true, outcome: "dismissed" }),
+    gui: fakeGui({}), requestId: "r", method: "m", timeoutMs: 1, ownerId: "o",
+    readSupervision: async () => null,
+  });
+  assert.equal(r.verdict, "await-original");
+  assert.equal(r.supervision.after, null);
+});
+
+t("verifyHostExit: degraded/monitor-lost supervision never allows clean", () => {
+  const base = {
+    pid: 4242, pidAlive: () => false, census: CENSUS_CLEAN, session: SESSION_OK,
+    evidenceDir: tmp(), collectEvidence: fakeEvidence({}), expectation: "exit",
+  };
+  for (const [doc, health] of [
+    [{ phase: "running" }, "degraded"],
+    [{ phase: "running" }, "monitor-lost"],
+    [{ phase: "blocked", deadline: "2999-01-01T00:00:00.000Z" }, "ok"],
+  ]) {
+    const r = verifyHostExit({ ...base, supervision: supReport(doc, { health }) });
+    assert.equal(r.verdict, "unknown", `health=${health} phase=${doc.phase}`);
+    assert.equal(r.supervision.status, "observed");
+  }
+  // ok + running stays clean — the gate only blocks untrustworthy observation.
+  const clean = verifyHostExit({ ...base, supervision: supReport() });
+  assert.equal(clean.verdict, "clean");
+});
+
+t("verifyHostExit: corrupt supervision state is unknown, not clean", () => {
+  const r = verifyHostExit({
+    pid: 4242, pidAlive: () => false, census: CENSUS_CLEAN, session: SESSION_OK,
+    evidenceDir: tmp(), collectEvidence: fakeEvidence({}), expectation: "exit",
+    supervision: { status: "unavailable", source: "corrupt", reason: "bad json", readAt: new Date().toISOString() },
+  });
+  assert.equal(r.verdict, "unknown");
+});
+
+t("supervision diagnostics suffix carries phase/health/needs-human", () => {
+  const report = supReport({
+    phase: "needs-human",
+    deadline: "2026-11-20T12:10:00.000Z",
+    blocking: { host: "none", detail: "license dialog", windows: [] },
+  });
+  const r = verifyHostExit({
+    pid: 4242, pidAlive: () => false, census: CENSUS_CLEAN, session: SESSION_OK,
+    evidenceDir: tmp(), collectEvidence: fakeEvidence({}), expectation: "exit",
+    supervision: report,
+  });
+  assert.equal(r.verdict, "unknown"); // needs-human blocks clean
+  const [rec] = exitVerificationToDiagnostics(r, {});
+  assert.match(rec.message, /supervision=needs-human/);
+  assert.match(rec.message, /needs-human: license dialog/);
+  validateDiagnosticsRecord(rec);
+});
+
 t("diagnostics converters refuse unknown verdicts instead of guessing", () => {
   assert.throws(() => exitVerificationToDiagnostics({ verdict: "looks-fine", reasons: [] }, {}), /unknown verdict/);
   assert.throws(() => recoveryActionFor("looks-fine"), /unknown verdict/);

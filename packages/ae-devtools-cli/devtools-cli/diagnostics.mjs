@@ -69,7 +69,7 @@ export function loadDiagnosticsLibs() {
  * status "error" — the two are distinct so consumers can tell "module
  * not installed" from "module ran but failed".
  */
-export async function buildFailureDiagnostics({ result, outcome, session, requestId, mapDir } = {}) {
+export async function buildFailureDiagnostics({ result, outcome, session, requestId, supervision, mapDir } = {}) {
   const block = {
     schema: DIAGNOSTICS_BLOCK_SCHEMA,
     status: "ok",
@@ -77,6 +77,10 @@ export async function buildFailureDiagnostics({ result, outcome, session, reques
     records: [],
     resolutions: [],
     mapDir: typeof mapDir === "string" ? mapDir : null,
+    // Additive supervision snapshot (Issue #408): the durable
+    // ae-a8n.supervision/v1 state for the session — same block every
+    // surface reports; absent when the session has no supervision.
+    ...(supervision !== null && supervision !== undefined ? { supervision } : {}),
   };
   const libs = await loadDiagnosticsLibs();
   if (libs.error) {
@@ -89,7 +93,7 @@ export async function buildFailureDiagnostics({ result, outcome, session, reques
     // includes the evidence-label honesty rule, so no post-hoc fixup
     // is needed here.
     const record = recordFromExecuteResult({
-      result, outcome, session, requestId,
+      result, outcome, session, requestId, supervision,
       collectors: libs.collectors,
     });
     if (record !== null) {
