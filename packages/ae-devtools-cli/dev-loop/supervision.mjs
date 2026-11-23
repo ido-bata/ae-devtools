@@ -18,6 +18,7 @@
  */
 import {
   supervisionForSession,
+  supervisionReport,
   supervisionSnapshot,
   supervisionStatePath,
   waitForSupervisionPhase,
@@ -47,6 +48,45 @@ export const BLOCKING_SUPERVISION_PHASES = Object.freeze([
 export function supervisionSnapshotForSession(session, options = {}) {
   const report = supervisionForSession(session, options);
   return report === null ? null : supervisionSnapshot(report);
+}
+
+/**
+ * Read the supervision snapshot for an explicit ae-a8n session
+ * directory (Issue #409): the same durable contract the session-bound
+ * path uses, for surfaces that name the dir directly (CLI
+ * `--session-root`, MCP `ae_supervision.sessionRoot`). Read-only —
+ * never opens a session, never touches AE.
+ */
+export function supervisionSnapshotForDir(sessionDir, options = {}) {
+  if (typeof sessionDir !== "string" || sessionDir.length === 0) return null;
+  return supervisionSnapshot(supervisionReport(sessionDir, options));
+}
+
+/**
+ * Bounded wait on an explicit session dir (Issue #409): same contract
+ * as awaitSupervisionClassification but dir-addressed, for surfaces
+ * that never opened a session.
+ * @returns {Promise<{timedOut:boolean, deadlineExceeded:boolean,
+ *   snapshot:object|null}>}
+ */
+export async function awaitSupervisionPhaseForDir(sessionDir, {
+  timeoutMs = 5_000,
+  intervalMs = 250,
+  phases = BLOCKING_SUPERVISION_PHASES,
+} = {}) {
+  if (typeof sessionDir !== "string" || sessionDir.length === 0) {
+    return { timedOut: false, deadlineExceeded: false, snapshot: null };
+  }
+  const outcome = await waitForSupervisionPhase(sessionDir, {
+    phases,
+    timeoutMs,
+    intervalMs,
+  });
+  return {
+    timedOut: outcome.timedOut,
+    deadlineExceeded: outcome.deadlineExceeded,
+    snapshot: supervisionSnapshot(outcome.report),
+  };
 }
 
 /**

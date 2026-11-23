@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -989,6 +989,105 @@ t("diagnose refuses marker-lookup traversal ids", () => {
   assert.equal(r.code, 2);
   assert.equal(r.body.schema, "ae-devtools.cli.diagnose/v1");
   assert.ok(r.body.notes.some((n) => n.includes("no such file or run marker")), JSON.stringify(r.body.notes));
+});
+
+// ------------------------------------------------ supervision status (Issue #409)
+// Fake level only: durable ae-a8n.supervision/v1 files in temp dirs.
+// The CLI supervision command reads files — no session, no AE.
+
+function writeSupDoc(dir, overrides = {}) {
+  const doc = {
+    schemaVersion: "ae-a8n.supervision/v1",
+    sessionId: "s1",
+    phase: "running",
+    observationHealth: "ok",
+    blocking: null,
+    pendingRequests: [],
+    enteredAt: new Date().toISOString(),
+    deadline: null,
+    evidence: [],
+    monitor: {
+      ownerId: "m", pid: 1, pidStart: null,
+      acquiredAt: new Date().toISOString(), heartbeatAt: new Date().toISOString(),
+    },
+    history: [],
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+  writeFileSync(join(dir, "supervision.json"), `${JSON.stringify(doc, null, 2)}\n`);
+}
+
+t("supervision --session-root reports the durable report, needs-human verbatim", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-cli-"));
+  writeSupDoc(dir, {
+    phase: "needs-human",
+    deadline: new Date(Date.now() + 60_000).toISOString(),
+    blocking: {
+      host: "none", detail: "sign-in required",
+      windows: [{
+        title: "Sign In", role: "AXWindow", subrole: "AXDialog", blocking: true,
+        tier: "human-required", dialogClass: "sign-in", code: "X",
+        texts: [], buttons: ["Cancel", "Sign In"],
+      }],
+    },
+  });
+  const r = run(["supervision", "--session-root", dir]);
+  assert.equal(r.code, 0);
+  assert.equal(r.body.schema, "ae-devtools.cli.supervision/v1");
+  assert.equal(r.body.resolvedFrom, "session-root");
+  assert.equal(r.body.supervision.status, "observed");
+  assert.equal(r.body.supervision.phase, "needs-human");
+  assert.equal(r.body.supervision.needsHuman.reason, "sign-in required");
+  assert.deepEqual(r.body.supervision.needsHuman.options.sort(), ["Cancel", "Sign In"]);
+  assert.match(r.body.supervision.needsHuman.resumePath, /supervision status/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+t("supervision --workdir derives <workdir>/a8n-session; absent state is unavailable", () => {
+  const workdir = mkdtempSync(join(tmpdir(), "ae-sup-wd-"));
+  const sessionDir = join(workdir, "a8n-session");
+  mkdirSync(sessionDir, { recursive: true });
+  const absent = run(["supervision", "--workdir", workdir]);
+  assert.equal(absent.code, 1);
+  assert.equal(absent.body.resolvedFrom, "workdir");
+  assert.equal(absent.body.supervision.status, "unavailable");
+  assert.equal(absent.body.supervision.source, "absent");
+  writeSupDoc(sessionDir);
+  const observed = run(["supervision", "--workdir", workdir]);
+  assert.equal(observed.code, 0);
+  assert.equal(observed.body.supervision.phase, "running");
+  rmSync(workdir, { recursive: true, force: true });
+});
+
+t("supervision without a resolvable dir is a usage error", () => {
+  const r = run(["supervision"]);
+  assert.equal(r.code, 2);
+  assert.equal(r.body.code, "USAGE");
+});
+
+t("supervision absent/corrupt state exits 1, never reports healthy", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-none-"));
+  const absent = run(["supervision", "--session-root", dir]);
+  assert.equal(absent.code, 1);
+  assert.equal(absent.body.supervision.status, "unavailable");
+  assert.equal(absent.body.supervision.source, "absent");
+  writeFileSync(join(dir, "supervision.json"), "not json");
+  const corrupt = run(["supervision", "--session-root", dir]);
+  assert.equal(corrupt.code, 1);
+  assert.equal(corrupt.body.supervision.source, "corrupt");
+  rmSync(dir, { recursive: true, force: true });
+});
+
+t("supervision --wait-ms is bounded: running phase times out honestly", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-wait-"));
+  writeSupDoc(dir);
+  const started = Date.now();
+  const r = run(["supervision", "--session-root", dir, "--wait-ms", "200", "--wait-phases", "blocked,needs-human"]);
+  assert.equal(r.code, 0);
+  assert.equal(r.body.wait.timedOut, true);
+  assert.equal(r.body.supervision.phase, "running");
+  assert.ok(Date.now() - started < 10_000);
+  rmSync(dir, { recursive: true, force: true });
 });
 
 await finish("tests passed");
