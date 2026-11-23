@@ -358,6 +358,117 @@ test("ae_session carries the supervision snapshot when a session with a root is 
   await c.server.close();
 });
 
+// ------------------------------------------------ attached supervision (Issue #410)
+// Read-only report access for explicit-attached sessions, fail-closed on
+// target-identity drift. Fake level only: session objects are shaped
+// like the stripped a8n-attached session; the guard is a stub — the
+// real revalidateTarget census/pid/project checks are covered by
+// a8n-transport/tests/attached-session.test.mjs.
+
+function fakeAttachedSession(dir, { guard } = {}) {
+  // Codec-faithful fake host underneath: read dispatches complete so the
+  // session can be opened; mutating ops are refused by session policy
+  // BEFORE the runner is ever invoked.
+  const base = openFakeSession();
+  return {
+    kind: "a8n-attached",
+    evidenceLevel: "verified on real host (attach to a running AE)",
+    sessionRoot: dir,
+    policy: { readOnly: true, mode: "attached", mutation: { allowedOps: [] } },
+    targetGuard: guard ?? (async () => ({ ok: true })),
+    runner: base.runner,
+    pin: base.pin,
+    meta: { aeVersion: "26.5-fake", ownership: "attached", attached: true },
+    close: async () => {},
+  };
+}
+
+test("ae_supervision on attached session: passing guard serves report, no dispatch", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-att-"));
+  writeSupervisionDoc(dir, { phase: "running" });
+  const s = fakeAttachedSession(dir);
+  const c = makeClient({ sessionFactory: async () => s });
+  // Open the session first via a read dispatch.
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_supervision", arguments: {},
+  }));
+  assert.equal(payload.resolvedFrom, "open-session");
+  assert.equal(payload.supervision.status, "observed");
+  assert.equal(payload.supervision.phase, "running");
+  rmSync(dir, { recursive: true, force: true });
+  await c.server.close();
+});
+
+test("ae_supervision on attached session: failed target guard fails closed", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-att-fail-"));
+  writeSupervisionDoc(dir, { phase: "needs-human", deadline: new Date(Date.now() + 60_000).toISOString() });
+  const s = fakeAttachedSession(dir, {
+    guard: async () => ({ ok: false, code: "ATTACHED_TARGET_AMBIGUOUS", detail: "2 AE processes match" }),
+  });
+  const c = makeClient({ sessionFactory: async () => s });
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_supervision", arguments: {},
+  }));
+  assert.equal(payload.supervision.status, "unavailable");
+  assert.equal(payload.supervision.source, "target-guard");
+  assert.equal(payload.supervision.code, "ATTACHED_TARGET_AMBIGUOUS");
+  // The durable phase must not leak through a failed guard.
+  assert.equal(payload.supervision.phase ?? null, null);
+  rmSync(dir, { recursive: true, force: true });
+  await c.server.close();
+});
+
+test("ae_supervision on attached session without targetGuard fails closed", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-att-noguard-"));
+  writeSupervisionDoc(dir);
+  const s = fakeAttachedSession(dir);
+  s.targetGuard = null;
+  const c = makeClient({ sessionFactory: async () => s });
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_supervision", arguments: {},
+  }));
+  assert.equal(payload.supervision.status, "unavailable");
+  assert.equal(payload.supervision.code, "ATTACHED_TARGET_UNGUARDED");
+  rmSync(dir, { recursive: true, force: true });
+  await c.server.close();
+});
+
+test("attached read-only session: mutating op refused before dispatch, supervision rides diagnostics", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-att-mut-"));
+  writeSupervisionDoc(dir, {
+    phase: "needs-human",
+    deadline: new Date(Date.now() + 60_000).toISOString(),
+    blocking: { host: "none", detail: "modal needs a human", windows: [] },
+  });
+  const s = fakeAttachedSession(dir);
+  const c = makeClient({ sessionFactory: async () => s });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "item.addComp", args: { name: "x" }, consent: "grant" },
+  }));
+  assert.equal(isError, true);
+  assert.equal(payload.result.status, "refused");
+  assert.equal(payload.result.reason, "READ_ONLY_SESSION");
+  // The refusal never reached the runner — supervision still reports
+  // the human-required state as structured diagnostics.
+  assert.equal(payload.diagnostics.supervision.phase, "needs-human");
+  assert.equal(payload.diagnostics.supervision.needsHuman.reason, "modal needs a human");
+  rmSync(dir, { recursive: true, force: true });
+  await c.server.close();
+});
+
 test("ae_execute without consent is refused BEFORE any session opens (default deny)", async () => {
   const { factory, calls } = countingSessionFactory();
   const c = makeClient({ sessionFactory: factory });

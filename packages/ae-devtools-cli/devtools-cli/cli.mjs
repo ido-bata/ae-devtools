@@ -103,7 +103,7 @@ import { closeSessionWithTimeout, parseCloseTimeoutMs } from "../dev-loop/sessio
 import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, noteSessionProcess, processStartStamp, attachEvidence, RUNS_DIR, ATTESTATION_SOURCE } from "./session-guard.mjs";
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
-import { supervisionSnapshotForSession, awaitSupervisionClassification } from "../dev-loop/supervision.mjs";
+import { awaitSupervisionClassification, guardedSupervisionSnapshot, attachedTargetGuardVerdict } from "../dev-loop/supervision.mjs";
 import {
   supervisionReport,
   supervisionSnapshot,
@@ -550,12 +550,14 @@ async function main() {
           : await verify({ ...shared, readOpId: flags["read-op"] ?? "read.projectSummary", readArgs: args });
         evidence.result = result;
         evidence.outcome = normalizedOutcome(result);
-        // Durable supervision snapshot (Issue #408): read-only consume of
-        // the ae-a8n supervision contract for a8n sessions. For UNKNOWN
-        // outcomes the monitor gets a BOUNDED window (flag or 5s default,
-        // 0 disables; also capped by the phase deadline) to classify a
-        // blocking state — there is no unbounded wait path.
-        let supervisionSnap = supervisionSnapshotForSession(state.session);
+        // Durable supervision snapshot (Issue #408/#410): read-only
+        // consume of the ae-a8n supervision contract for a8n sessions.
+        // Attached sessions are served only while their target identity
+        // re-validates (session change / PID reuse fails closed). For
+        // UNKNOWN outcomes the monitor gets a BOUNDED window (flag or
+        // 5s default, 0 disables; also capped by the phase deadline) to
+        // classify a blocking state — there is no unbounded wait path.
+        let supervisionSnap = await guardedSupervisionSnapshot(state.session);
         if (isUnknownOutcome(result) && state.session?.sessionRoot) {
           const rawWait = flags["supervision-wait-ms"];
           const waitMs = rawWait === undefined
@@ -563,7 +565,20 @@ async function main() {
             : (rawWait === "0" ? 0 : positiveMsFlag(rawWait) ?? 0);
           if (waitMs > 0) {
             const waited = await awaitSupervisionClassification(state.session, { timeoutMs: waitMs });
-            if (waited.snapshot !== null) supervisionSnap = waited.snapshot;
+            // Re-validate the attached target after the wait — a guard
+            // failure discards the snapshot rather than serving state
+            // that may describe a different AE instance.
+            const afterGuard = await attachedTargetGuardVerdict(state.session);
+            if (waited.snapshot !== null && afterGuard.ok) supervisionSnap = waited.snapshot;
+            else if (!afterGuard.ok) {
+              supervisionSnap = {
+                status: "unavailable",
+                source: "target-guard",
+                code: afterGuard.code,
+                reason: `attached target re-validation failed after wait (${afterGuard.code}): ${afterGuard.detail}`,
+                readAt: new Date().toISOString(),
+              };
+            }
             evidence.supervisionWait = {
               timeoutMs: waitMs,
               timedOut: waited.timedOut,

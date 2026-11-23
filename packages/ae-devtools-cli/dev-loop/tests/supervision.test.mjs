@@ -12,6 +12,9 @@ import { test } from "node:test";
 import {
   supervisionSnapshotForSession,
   awaitSupervisionClassification,
+  isAttachedSession,
+  attachedTargetGuardVerdict,
+  guardedSupervisionSnapshot,
 } from "../supervision.mjs";
 import { supervisionStatePath } from "../../a8n-transport/supervision.mjs";
 import { recordFromExecuteResult } from "../failure-record.mjs";
@@ -94,6 +97,83 @@ test("awaitSupervisionClassification: no session root returns immediately", asyn
   const r = await awaitSupervisionClassification({ kind: "fake" }, { timeoutMs: 60_000 });
   assert.equal(r.snapshot, null);
   assert.equal(r.timedOut, false);
+});
+
+// ------------------------------------------------ attached sessions (Issue #410)
+// Read-only report access for explicit-attached sessions: the durable
+// report is served ONLY while the session's target identity
+// re-validates. Session change / PID reuse / second instance /
+// missing guard all fail closed — never a possibly-stale report.
+
+function attachedSession(dir, { guard, policy } = {}) {
+  return {
+    kind: "a8n-attached",
+    evidenceLevel: "verified on real host (attach to a running AE)",
+    sessionRoot: dir,
+    policy: policy ?? { readOnly: true, mode: "attached", mutation: { allowedOps: [] } },
+    targetGuard: guard ?? (async () => ({ ok: true })),
+    runner: { call: async () => { throw new Error("runner must never be invoked by supervision reads"); } },
+    pin: null,
+    close: async () => {},
+  };
+}
+
+test("isAttachedSession: kind and policy shapes, owned sessions excluded", () => {
+  assert.equal(isAttachedSession(attachedSession(tmp())), true);
+  assert.equal(isAttachedSession({ kind: "a8n", policy: null }), false);
+  assert.equal(isAttachedSession({ kind: "fake", policy: { readOnly: true } }), true);
+  assert.equal(isAttachedSession(null), false);
+});
+
+test("guardedSupervisionSnapshot: attached + passing guard serves the report", async () => {
+  const dir = tmp();
+  writeDoc(dir, { phase: "blocked", deadline: new Date(Date.now() + 60_000).toISOString() });
+  const snap = await guardedSupervisionSnapshot(attachedSession(dir));
+  assert.equal(snap.status, "observed");
+  assert.equal(snap.phase, "blocked");
+});
+
+test("guardedSupervisionSnapshot: failing guard fails closed — stale report never served", async () => {
+  const dir = tmp();
+  writeDoc(dir, { phase: "needs-human", deadline: new Date(Date.now() + 60_000).toISOString() });
+  const snap = await guardedSupervisionSnapshot(attachedSession(dir, {
+    guard: async () => ({ ok: false, code: "ATTACHED_TARGET_CHANGED", detail: "pid changed 111 -> 222" }),
+  }));
+  assert.equal(snap.status, "unavailable");
+  assert.equal(snap.source, "target-guard");
+  assert.equal(snap.code, "ATTACHED_TARGET_CHANGED");
+  assert.match(snap.reason, /pid changed/);
+  // The durable phase must NOT leak through a failed guard.
+  assert.equal(snap.phase ?? null, null);
+});
+
+test("guardedSupervisionSnapshot: attached session without targetGuard fails closed", async () => {
+  const dir = tmp();
+  writeDoc(dir);
+  const s = attachedSession(dir);
+  s.targetGuard = null;
+  const snap = await guardedSupervisionSnapshot(s);
+  assert.equal(snap.status, "unavailable");
+  assert.equal(snap.code, "ATTACHED_TARGET_UNGUARDED");
+});
+
+test("guardedSupervisionSnapshot: owned a8n session reads unguarded; fake is null", async () => {
+  const dir = tmp();
+  writeDoc(dir);
+  const owned = { kind: "a8n", sessionRoot: dir, policy: null, targetGuard: null };
+  const snap = await guardedSupervisionSnapshot(owned);
+  assert.equal(snap.status, "observed");
+  assert.equal(snap.phase, "running");
+  assert.equal(await guardedSupervisionSnapshot({ kind: "fake" }), null);
+});
+
+test("attachedTargetGuardVerdict: non-attached is trivially ok; throwing guard is honest", async () => {
+  assert.deepEqual(await attachedTargetGuardVerdict({ kind: "a8n" }), { ok: true, code: null, detail: null });
+  const s = attachedSession(tmp(), { guard: async () => { throw new Error("census boom"); } });
+  const v = await attachedTargetGuardVerdict(s);
+  assert.equal(v.ok, false);
+  assert.equal(v.code, "ATTACHED_TARGET_UNVERIFIED");
+  assert.match(v.detail, /census boom/);
 });
 
 test("recordFromExecuteResult attaches supervision snapshot additively", () => {
