@@ -30,7 +30,12 @@
 import { discover, inspect, execute, verify, sessionStatus, DEVLOOP_SCHEMA } from "../dev-loop/devloop.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { recordFromExecuteResult } from "../dev-loop/failure-record.mjs";
-import { supervisionSnapshotForSession } from "../dev-loop/supervision.mjs";
+import {
+  supervisionSnapshotForSession,
+  supervisionSnapshotForDir,
+  awaitSupervisionPhaseForDir,
+} from "../dev-loop/supervision.mjs";
+import { sessionDirFor } from "../a8n-transport/supervision.mjs";
 
 export const MCP_SCHEMA = "ae-devtools.mcp/v1";
 
@@ -97,6 +102,20 @@ export const TOOLS = [
     description:
       "Report session/API metadata: configured session kind, whether a session is open/opening/failed/closed in this server process, and the evidence level of an open session. Metadata only — never opens a session and never dispatches.",
     inputSchema: { ...OBJECT, properties: {}, additionalProperties: false },
+  },
+  {
+    name: "ae_supervision",
+    description:
+      "Read the ae-a8n GUI-supervision status for a session (ae-a8n.supervision/v1 durable report): phase, observation health, pending requests, and the structured needs-human request (blocking dialog, reason, options, required action, resume path) when a human must act. Read-only — never opens a session, never dispatches, never probes the GUI. Pass sessionRoot to read a specific ae-a8n session dir; otherwise the already-open session's supervision state is reported. monitor-lost/degraded/unavailable health is reported verbatim, never as healthy.",
+    inputSchema: {
+      ...OBJECT,
+      properties: {
+        sessionRoot: { ...STRING, description: "ae-a8n session directory holding supervision.json (optional; defaults to the open session's root)" },
+        waitMs: { type: "number", description: "Optional bounded wait (ms) for the phase to reach waitPhases; also capped by the phase deadline. 0/absent = single read." },
+        waitPhases: { type: "array", items: { ...STRING }, description: "Phases to wait for when waitMs is set (default: blocked/recovering/needs-human/quarantined)" },
+      },
+      additionalProperties: false,
+    },
   },
 ];
 
@@ -325,16 +344,75 @@ export async function callTool(name, args = {}, ctx = {}) {
     }
     case "ae_session": {
       const peek = typeof ctx.peekSession === "function" ? ctx.peekSession() : {};
+      const openSession = peek.session ?? null;
       return toolResult({
         schema: MCP_SCHEMA,
         evidenceLevel: "metadata only — this call never opens a session",
         ...sessionStatus({
-          session: peek.session ?? null,
+          session: openSession,
           sessionKind: ctx.sessionKind ?? null,
           opening: peek.opening === true,
           failed: peek.failed === true,
         }),
+        // Additive supervision snapshot (Issue #409): when a session is
+        // already open its durable ae-a8n supervision state rides along —
+        // the same report ae_supervision returns. Absent when no session
+        // is open or the session has no ae-a8n root (fake). Read-only.
+        ...(openSession !== null
+          ? (() => {
+              const sup = supervisionSnapshotForSession(openSession);
+              return sup !== null ? { supervision: sup } : {};
+            })()
+          : {}),
         api: { mcp: MCP_SCHEMA, devLoop: DEVLOOP_SCHEMA },
+      });
+    }
+    case "ae_supervision": {
+      // Read-only durable supervision status (Issue #409). Resolution:
+      // explicit args.sessionRoot wins; otherwise the ALREADY-OPEN
+      // session's root is used — this tool never opens a session, so a
+      // closed server reports an honest unavailable, not a fabricated
+      // state. Attached sessions get the identical read-only view.
+      const peek = typeof ctx.peekSession === "function" ? ctx.peekSession() : {};
+      const openSession = peek.session ?? null;
+      const explicitRoot = typeof args.sessionRoot === "string" && args.sessionRoot.length > 0
+        ? args.sessionRoot
+        : null;
+      const dir = explicitRoot ?? (openSession !== null ? sessionDirFor(openSession) : null);
+      const waitMs = Number.isFinite(Number(args.waitMs)) && Number(args.waitMs) > 0
+        ? Number(args.waitMs)
+        : 0;
+      const phases = Array.isArray(args.waitPhases)
+        ? args.waitPhases.filter((p) => typeof p === "string" && p.length > 0)
+        : null;
+      let snapshot = null;
+      let wait = null;
+      if (dir !== null) {
+        if (waitMs > 0) {
+          const outcome = await awaitSupervisionPhaseForDir(dir, {
+            timeoutMs: waitMs,
+            phases: phases !== null && phases.length > 0 ? phases : undefined,
+          });
+          snapshot = outcome.snapshot;
+          wait = { timeoutMs: waitMs, timedOut: outcome.timedOut, deadlineExceeded: outcome.deadlineExceeded };
+        } else {
+          snapshot = supervisionSnapshotForDir(dir);
+        }
+      }
+      return toolResult({
+        schema: MCP_SCHEMA,
+        evidenceLevel: "read-only durable state — no session opened, nothing dispatched",
+        resolvedFrom: explicitRoot !== null ? "sessionRoot" : openSession !== null ? "open-session" : null,
+        ...(openSession !== null ? { session: sessionBlock(openSession) } : {}),
+        supervision: snapshot ?? {
+          status: "unavailable",
+          source: null,
+          reason: explicitRoot === null && openSession === null
+            ? "no session is open in this server and no sessionRoot was given; pass sessionRoot to read a specific ae-a8n session dir"
+            : "the resolved session has no ae-a8n supervision state",
+          readAt: new Date().toISOString(),
+        },
+        ...(wait !== null ? { wait } : {}),
       });
     }
     default:

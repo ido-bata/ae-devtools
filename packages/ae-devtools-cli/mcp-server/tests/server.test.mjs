@@ -18,7 +18,7 @@ import { createServer, SERVER_NAME } from "../server.mjs";
 import { loadTrustedCodec, createJsxRunner } from "../../trusted-execution/runner.mjs";
 import { openFakeSession } from "../../devtools-cli/fake-session.mjs";
 import { reapRun } from "../../devtools-cli/session-guard.mjs";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -133,7 +133,7 @@ test("tools/list exposes the dev-loop tools including ae_session", async () => {
   const c = makeClient();
   const res = await c.request("tools/list");
   const names = res.result.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_session", "ae_verify"]);
+  assert.deepEqual(names, ["ae_discover", "ae_execute", "ae_inspect", "ae_session", "ae_supervision", "ae_verify"]);
   for (const t of res.result.tools) {
     assert.equal(t.inputSchema.type, "object");
     assert.ok(t.description.length > 0);
@@ -249,6 +249,112 @@ test("ae_session reports failed state after a rejected session open", async () =
   }));
   assert.equal(payload.session.state, "failed");
   assert.equal(payload.session.evidenceLevel, undefined);
+  await c.server.close();
+});
+
+// ------------------------------------------------ supervision (Issue #409)
+// Fake level only: durable ae-a8n.supervision/v1 files in temp dirs.
+// No AE, no monitor, no GUI — the tool reads files, nothing else.
+
+function writeSupervisionDoc(dir, overrides = {}) {
+  const doc = {
+    schemaVersion: "ae-a8n.supervision/v1",
+    sessionId: "s1",
+    phase: "running",
+    observationHealth: "ok",
+    blocking: null,
+    pendingRequests: [],
+    enteredAt: new Date().toISOString(),
+    deadline: null,
+    evidence: [],
+    monitor: {
+      ownerId: "m", pid: 1, pidStart: null,
+      acquiredAt: new Date().toISOString(), heartbeatAt: new Date().toISOString(),
+    },
+    history: [],
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+  writeFileSync(join(dir, "supervision.json"), `${JSON.stringify(doc, null, 2)}\n`);
+  return doc;
+}
+
+test("ae_supervision reads an explicit sessionRoot — same snapshot shape as every surface", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-mcp-"));
+  writeSupervisionDoc(dir, {
+    phase: "needs-human",
+    deadline: new Date(Date.now() + 60_000).toISOString(),
+    blocking: {
+      host: "none", detail: "license dialog is up",
+      windows: [{
+        title: "License", role: "AXWindow", subrole: "AXDialog", blocking: true,
+        tier: "human-required", dialogClass: "license", code: "X",
+        texts: [], buttons: ["OK"],
+      }],
+    },
+  });
+  const { factory, calls } = countingSessionFactory();
+  const c = makeClient({ sessionFactory: factory });
+  const { payload, isError } = toolPayload(await c.request("tools/call", {
+    name: "ae_supervision", arguments: { sessionRoot: dir },
+  }));
+  assert.equal(isError, false);
+  assert.equal(calls.count, 0, "ae_supervision must never open a session");
+  assert.equal(payload.resolvedFrom, "sessionRoot");
+  assert.equal(payload.supervision.status, "observed");
+  assert.equal(payload.supervision.phase, "needs-human");
+  // Structured needs-human detail rides every surface verbatim.
+  assert.equal(payload.supervision.needsHuman.reason, "license dialog is up");
+  assert.deepEqual(payload.supervision.needsHuman.options, ["OK"]);
+  assert.match(payload.supervision.needsHuman.resumePath, /supervision status/);
+  rmSync(dir, { recursive: true, force: true });
+  await c.server.close();
+});
+
+test("ae_supervision without session or sessionRoot reports honest unavailable", async () => {
+  const { factory, calls } = countingSessionFactory();
+  const c = makeClient({ sessionFactory: factory });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_supervision", arguments: {},
+  }));
+  assert.equal(payload.supervision.status, "unavailable");
+  assert.match(payload.supervision.reason, /no sessionRoot/);
+  assert.equal(calls.count, 0);
+  await c.server.close();
+});
+
+test("ae_supervision uses the open session's root; fake session has none", async () => {
+  const c = makeClient();
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_supervision", arguments: {},
+  }));
+  assert.equal(payload.resolvedFrom, "open-session");
+  // fake sessions have no ae-a8n session root — honest unavailable,
+  // never a fabricated running state.
+  assert.equal(payload.supervision.status, "unavailable");
+  await c.server.close();
+});
+
+test("ae_session carries the supervision snapshot when a session with a root is open", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-sess-"));
+  writeSupervisionDoc(dir, { phase: "blocked", deadline: new Date(Date.now() + 60_000).toISOString() });
+  const s = fakeA8nSession();
+  s.sessionRoot = dir;
+  const c = makeClient({ sessionFactory: async () => s });
+  await c.request("tools/call", {
+    name: "ae_execute",
+    arguments: { opId: "read.projectSummary", consent: "grant" },
+  });
+  const { payload } = toolPayload(await c.request("tools/call", {
+    name: "ae_session", arguments: {},
+  }));
+  assert.equal(payload.supervision.phase, "blocked");
+  assert.equal(payload.supervision.health, "ok");
+  rmSync(dir, { recursive: true, force: true });
   await c.server.close();
 });
 
@@ -643,7 +749,7 @@ test("spawned server over real stdio: initialize → tools → execute → verif
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
 
     const list = await request("tools/list");
-    assert.equal(list.result.tools.length, 5);
+    assert.equal(list.result.tools.length, 6);
 
     const ex = await request("tools/call", {
       name: "ae_execute",

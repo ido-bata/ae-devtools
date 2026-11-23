@@ -199,6 +199,18 @@ export function createController(options = {}) {
       return tool("ae_session", {});
     },
 
+    /**
+     * ae-a8n GUI-supervision status (Issue #409): the same durable
+     * ae-a8n.supervision/v1 report the CLI `supervision` command and
+     * MCP `ae_supervision` return — phase, observation health, and the
+     * structured needs-human request. Read-only: never opens a session,
+     * never dispatches, never probes the GUI; attached sessions get the
+     * identical view with no ownership or mutation grant.
+     */
+    supervision(args = {}) {
+      return tool("ae_supervision", args);
+    },
+
     /** Op schema/metadata — never executes, never opens a session. */
     inspect(opId) {
       return tool("ae_inspect", { opId });
