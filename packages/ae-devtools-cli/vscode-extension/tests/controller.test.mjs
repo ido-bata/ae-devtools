@@ -8,7 +8,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -72,6 +72,38 @@ test("sessionStatus reports closed then open state without dispatching itself (C
   assert.equal(after.session.evidenceLevel, "fake/mock only");
   assert.ok(after.session.pin && typeof after.session.pin === "object");
   assert.equal(spy.calls.length, 1);
+});
+
+test("supervision reports the durable ae-a8n report read-only (Issue #409)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ae-sup-vsc-"));
+  writeFileSync(join(dir, "supervision.json"), `${JSON.stringify({
+    schemaVersion: "ae-a8n.supervision/v1",
+    sessionId: "s1", phase: "needs-human", observationHealth: "ok",
+    blocking: { host: "none", detail: "modal up", windows: [] },
+    pendingRequests: [],
+    enteredAt: new Date().toISOString(),
+    deadline: new Date(Date.now() + 60_000).toISOString(),
+    evidence: [],
+    monitor: { ownerId: "m", pid: 1, pidStart: null, acquiredAt: new Date().toISOString(), heartbeatAt: new Date().toISOString() },
+    history: [], updatedAt: new Date().toISOString(),
+  }, null, 2)}\n`);
+  const spy = factorySpy();
+  const c = createController({ sessionFactory: spy.factory, ui: recordingUi() });
+  const res = await c.supervision({ sessionRoot: dir });
+  assert.equal(res.schema, EXTENSION_SCHEMA);
+  assert.equal(res.command, "ae_supervision");
+  assert.equal(res.supervision.phase, "needs-human");
+  assert.equal(res.supervision.needsHuman.reason, "modal up");
+  assert.equal(spy.calls.length, 0, "supervision must never open a session");
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("supervision without session or sessionRoot is honest unavailable", async () => {
+  const spy = factorySpy();
+  const c = createController({ sessionFactory: spy.factory, ui: recordingUi() });
+  const res = await c.supervision();
+  assert.equal(res.supervision.status, "unavailable");
+  assert.equal(spy.calls.length, 0);
 });
 
 test("inspect returns op metadata; unknown op is a typed result, never executes", async () => {

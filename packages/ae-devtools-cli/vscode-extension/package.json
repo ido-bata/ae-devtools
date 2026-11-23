@@ -18,6 +18,7 @@
     "onCommand:ae-devtools.execute",
     "onCommand:ae-devtools.verify",
     "onCommand:ae-devtools.sessionStatus",
+    "onCommand:ae-devtools.supervision",
     "onCommand:ae-devtools.debug.setup",
     "onCommand:ae-devtools.debug.attach"
   ],
@@ -46,6 +47,11 @@
       {
         "command": "ae-devtools.sessionStatus",
         "title": "AE DevTools: Session Status",
+        "category": "AE DevTools"
+      },
+      {
+        "command": "ae-devtools.supervision",
+        "title": "AE DevTools: Supervision Status",
         "category": "AE DevTools"
       },
       {

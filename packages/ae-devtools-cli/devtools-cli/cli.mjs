@@ -24,6 +24,9 @@
  *   node cli.mjs reap <runId> [--confirm] — recover a stale owned leftover
  *   node cli.mjs diagnose <record.json|marker|runId>
  *                 [--map-dir d] [--jsx p] [--jsx-map p] [--bundle-map p]
+ *   node cli.mjs supervision [--session-root <dir> | --workdir <dir> |
+ *                 --run-id <id>] [--wait-ms <n>] [--wait-phases <csv>]
+ *                 — read-only ae-a8n supervision status (Issue #409)
  *
  * Failure diagnostics (Issue #103): a failed/refused execute or verify
  * adds an additive `diagnostics` block to the evidence record —
@@ -41,6 +44,15 @@
  * capped by the phase's own deadline — to classify a blocking state
  * before the evidence is recorded. monitor-lost/degraded/unavailable
  * health is reported verbatim, never as healthy.
+ *
+ * Supervision status (Issue #409): `supervision` reads the SAME durable
+ * `ae-a8n.supervision/v1` report every other surface consumes — CLI,
+ * MCP `ae_supervision`, VSCode. It never opens a session, never
+ * dispatches, never probes the GUI: the session directory is named
+ * explicitly (--session-root), derived from a run workdir
+ * (--workdir → <workdir>/a8n-session), or recovered from a surviving
+ * run marker (--run-id). Attached sessions get the identical read-only
+ * view — reading the report grants no ownership and no mutation.
  *
  * Sessions:
  *   fake — codec-faithful vm host (FAKE/MOCK evidence only)
@@ -92,6 +104,11 @@ import { beginRun, markSession, endRun, listRuns, reapRun, recordRequestEvent, n
 import { buildFailureDiagnostics, runDiagnose } from "./diagnostics.mjs";
 import { failureOutcome, normalizedOutcome, isUnknownOutcome } from "../dev-loop/outcomes.mjs";
 import { supervisionSnapshotForSession, awaitSupervisionClassification } from "../dev-loop/supervision.mjs";
+import {
+  supervisionReport,
+  supervisionSnapshot,
+  waitForSupervisionPhase,
+} from "../a8n-transport/supervision.mjs";
 import { aeDevtoolsSourceRef } from "./real-run-kit.mjs";
 import { createConsentAudit } from "../trusted-execution/consent-audit.mjs";
 
@@ -321,6 +338,66 @@ async function main() {
       const { code, payload } = await runDiagnose(target, flags, { dir: RUNS_DIR });
       emit(payload);
       return code;
+    }
+    case "supervision": {
+      // Read-only ae-a8n supervision status (Issue #409). Resolves the
+      // session dir WITHOUT opening a session: explicit --session-root
+      // wins, --workdir maps to the canonical <workdir>/a8n-session
+      // layout, --run-id recovers the workdir from a surviving run
+      // marker. --wait-ms/--wait-phases give the monitor a BOUNDED
+      // window (also capped by the phase deadline) to reach a phase —
+      // there is no unbounded wait path.
+      let supDir = null;
+      let resolvedFrom = null;
+      if (typeof flags["session-root"] === "string" && flags["session-root"].length > 0) {
+        supDir = flags["session-root"];
+        resolvedFrom = "session-root";
+      } else if (typeof flags.workdir === "string" && flags.workdir.length > 0) {
+        supDir = join(flags.workdir, "a8n-session");
+        resolvedFrom = "workdir";
+      } else if (typeof flags["run-id"] === "string" && flags["run-id"].length > 0) {
+        const runs = await listRuns({ dir: RUNS_DIR });
+        const marker = runs.find((r) => r.runId === flags["run-id"]) ?? null;
+        const workdir = marker?.session?.workdir;
+        if (typeof workdir === "string" && workdir.length > 0) {
+          supDir = join(workdir, "a8n-session");
+          resolvedFrom = "run-marker";
+        }
+      }
+      if (supDir === null) {
+        emit({
+          schema: "ae-devtools.cli.error/v1",
+          code: "USAGE",
+          message: "supervision requires --session-root <dir>, --workdir <dir>, or --run-id <id>",
+        });
+        return 2;
+      }
+      const waitMsRaw = flags["wait-ms"];
+      const waitMs = waitMsRaw === undefined ? 0 : (waitMsRaw === "0" ? 0 : positiveMsFlag(waitMsRaw) ?? 0);
+      const phases = typeof flags["wait-phases"] === "string" && flags["wait-phases"].length > 0
+        ? flags["wait-phases"].split(",").map((s) => s.trim()).filter((s) => s.length > 0)
+        : null;
+      let report;
+      let wait = null;
+      if (waitMs > 0 && phases !== null) {
+        const outcome = await waitForSupervisionPhase(supDir, { phases, timeoutMs: waitMs });
+        report = outcome.report;
+        wait = { timeoutMs: waitMs, timedOut: outcome.timedOut, deadlineExceeded: outcome.deadlineExceeded };
+      } else {
+        report = supervisionReport(supDir);
+      }
+      const snapshot = supervisionSnapshot(report);
+      emit({
+        schema: "ae-devtools.cli.supervision/v1",
+        resolvedFrom,
+        sessionDir: supDir,
+        supervision: snapshot,
+        ...(wait !== null ? { wait } : {}),
+        evidenceLevel: "read-only durable state — no session opened, nothing dispatched",
+      });
+      // Exit nonzero only when the report itself is unavailable —
+      // needs-human/blocked are observed states, not command failures.
+      return snapshot?.status === "observed" ? 0 : 1;
     }
     case "discover": {
       emit({ schema: DEVLOOP_SCHEMA, evidenceLevel: "registry metadata — no dispatch", ...discover({ domain: flags.domain ?? null }) });
@@ -588,7 +665,7 @@ async function main() {
       return code;
     }
     default:
-      process.stderr.write("usage: cli.mjs <doctor|discover|inspect|execute|verify|runs|reap|diagnose> ...\n");
+      process.stderr.write("usage: cli.mjs <doctor|discover|inspect|execute|verify|runs|reap|diagnose|supervision> ...\n");
       return 2;
   }
 }
