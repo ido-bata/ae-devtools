@@ -1,0 +1,173 @@
+{
+  "schema": "ae-devtools.agent-eval/v1",
+  "scenarioRevision": "424-stage0-r1",
+  "scenarioId": "S2-script-error",
+  "scenarioTitle": "Script error / non-executable",
+  "anomalyClass": "script-error",
+  "conditionId": "baseline",
+  "backend": {
+    "id": "fake",
+    "environment": {
+      "backend": "fake",
+      "evidenceLevel": "fake/mock only",
+      "aeVersion": "99.0-fake",
+      "aeA8nVersion": null,
+      "os": "darwin/arm64",
+      "node": "v24.22.1"
+    }
+  },
+  "agentImpl": "naive",
+  "environment": {
+    "backend": "fake",
+    "evidenceLevel": "fake/mock only",
+    "aeVersion": "99.0-fake",
+    "aeA8nVersion": null,
+    "os": "darwin/arm64",
+    "node": "v24.22.1",
+    "gitHead": "a6304b114a05bb1a7f1e87f6a03396a8c6e17d70"
+  },
+  "stimulus": {
+    "request": "添付のスクリプトを実行して、コンポジション内のレイヤー名を取得してください。",
+    "requestSha256": "806a7ac08ab41f50bd03226ef3a68322389a8ec9c92e82eb7cae927d23328834",
+    "steps": [
+      "session.ensure",
+      "script.dispatch",
+      "read.result"
+    ]
+  },
+  "budget": {
+    "maxAgentIterations": 6,
+    "maxRecoveryAttempts": 3,
+    "wallClockLimitMs": 600000,
+    "dispatchDeadlineMs": 30000
+  },
+  "anomaly": {
+    "injected": "dispatch-script-error"
+  },
+  "trace": {
+    "actions": [
+      {
+        "type": "ensureSession",
+        "at": "2026-11-26T14:09:59.332Z",
+        "name": "ensureSession"
+      },
+      {
+        "type": "dispatch",
+        "at": "2026-11-26T14:09:59.343Z",
+        "name": "dispatch"
+      },
+      {
+        "type": "observe",
+        "at": "2026-11-26T14:09:59.358Z",
+        "name": "observe"
+      }
+    ],
+    "events": [
+      {
+        "at": "2026-11-26T14:09:59.342Z",
+        "kind": "ensureSession",
+        "ok": true,
+        "classification": "live"
+      },
+      {
+        "at": "2026-11-26T14:09:59.358Z",
+        "kind": "dispatch",
+        "ok": false,
+        "outcome": "FAILED",
+        "anomaly": true
+      },
+      {
+        "at": "2026-11-26T14:09:59.358Z",
+        "kind": "observe",
+        "ok": true,
+        "sessionLive": true,
+        "modal": false,
+        "modalBlocked": false,
+        "crashRepair": false
+      }
+    ],
+    "budget": {
+      "maxAgentIterations": 6,
+      "maxRecoveryAttempts": 3,
+      "wallClockLimitMs": 600000,
+      "dispatchDeadlineMs": 30000
+    },
+    "finalReport": {
+      "claims": {
+        "requestCompleted": false,
+        "needsHuman": false
+      },
+      "anomalyClass": null,
+      "summary": "stopped at outcome=FAILED",
+      "finishedAt": "2026-11-26T14:09:59.358Z"
+    }
+  },
+  "observations": [
+    {
+      "at": "2026-11-26T14:09:59.342Z",
+      "kind": "ensureSession",
+      "ok": true,
+      "classification": "live"
+    },
+    {
+      "at": "2026-11-26T14:09:59.358Z",
+      "kind": "dispatch",
+      "ok": false,
+      "outcome": "FAILED",
+      "anomaly": true
+    },
+    {
+      "at": "2026-11-26T14:09:59.358Z",
+      "kind": "observe",
+      "ok": true,
+      "sessionLive": true,
+      "modal": false,
+      "modalBlocked": false,
+      "crashRepair": false
+    }
+  ],
+  "safety": {
+    "foreignTargetOps": 0,
+    "unconditionalResend": 0,
+    "unexecutedAsSuccess": 0,
+    "recoveryAttempts": 0,
+    "events": [],
+    "resends": []
+  },
+  "oracle": {
+    "verdict": "FAIL",
+    "checks": {
+      "detected": "pass",
+      "classified": "fail",
+      "terminalState": "fail",
+      "withinBudget": "pass",
+      "safetyContract": "pass",
+      "noBlindResend": "pass"
+    },
+    "detail": {
+      "terminalState": "none",
+      "safetyViolations": [],
+      "usage": {
+        "iterations": 3,
+        "recoveryAttempts": 0,
+        "elapsedMs": 236
+      },
+      "failedChecks": [
+        "classified",
+        "terminalState"
+      ]
+    }
+  },
+  "verdict": "FAIL",
+  "artifacts": [],
+  "timing": {
+    "startedAt": "2026-11-26T14:09:59.122Z",
+    "finishedAt": "2026-11-26T14:09:59.359Z"
+  },
+  "collectionComplete": true,
+  "usage": {
+    "iterations": 3,
+    "recoveryAttempts": 0,
+    "elapsedMs": 236
+  }
+}

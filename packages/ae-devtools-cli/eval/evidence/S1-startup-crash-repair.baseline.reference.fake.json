@@ -1,0 +1,212 @@
+{
+  "schema": "ae-devtools.agent-eval/v1",
+  "scenarioRevision": "424-stage0-r1",
+  "scenarioId": "S1-startup-crash-repair",
+  "scenarioTitle": "Startup crash-repair",
+  "anomalyClass": "startup-crash-repair",
+  "conditionId": "baseline",
+  "backend": {
+    "id": "fake",
+    "environment": {
+      "backend": "fake",
+      "evidenceLevel": "fake/mock only",
+      "aeVersion": "99.0-fake",
+      "aeA8nVersion": null,
+      "os": "darwin/arm64",
+      "node": "v24.22.1"
+    }
+  },
+  "agentImpl": "reference",
+  "environment": {
+    "backend": "fake",
+    "evidenceLevel": "fake/mock only",
+    "aeVersion": "99.0-fake",
+    "aeA8nVersion": null,
+    "os": "darwin/arm64",
+    "node": "v24.22.1",
+    "gitHead": "a6304b114a05bb1a7f1e87f6a03396a8c6e17d70"
+  },
+  "stimulus": {
+    "request": "After Effects を起動してプロジェクトを開き、コンポジションの一覧と各秒数を教えてください。",
+    "requestSha256": "3de8978cda312fa1223680d2892648f65dee5e9ce223870922e00bd931d48fa2",
+    "steps": [
+      "session.open",
+      "project.openOrNew",
+      "read.compSummary"
+    ]
+  },
+  "budget": {
+    "maxAgentIterations": 6,
+    "maxRecoveryAttempts": 3,
+    "wallClockLimitMs": 600000,
+    "dispatchDeadlineMs": 30000
+  },
+  "anomaly": {
+    "injected": "first-open-crash-repair"
+  },
+  "trace": {
+    "actions": [
+      {
+        "type": "openSession",
+        "at": "2026-11-26T14:09:57.519Z",
+        "name": "openSession"
+      },
+      {
+        "type": "classify",
+        "at": "2026-11-26T14:09:57.707Z",
+        "anomalyClass": "startup-crash-repair"
+      },
+      {
+        "type": "recover",
+        "at": "2026-11-26T14:09:57.708Z",
+        "method": "session.relaunch",
+        "target": "owned"
+      },
+      {
+        "type": "recover",
+        "at": "2026-11-26T14:09:57.708Z",
+        "name": "recover"
+      },
+      {
+        "type": "openSession",
+        "at": "2026-11-26T14:09:57.708Z",
+        "name": "openSession"
+      },
+      {
+        "type": "readCompSummary",
+        "at": "2026-11-26T14:09:57.708Z",
+        "name": "readCompSummary"
+      },
+      {
+        "type": "observe",
+        "at": "2026-11-26T14:09:57.717Z",
+        "name": "observe"
+      }
+    ],
+    "events": [
+      {
+        "at": "2026-11-26T14:09:57.707Z",
+        "kind": "openSession",
+        "ok": false,
+        "classification": "startup-crash-repair",
+        "anomaly": true
+      },
+      {
+        "at": "2026-11-26T14:09:57.708Z",
+        "kind": "recover",
+        "ok": true
+      },
+      {
+        "at": "2026-11-26T14:09:57.708Z",
+        "kind": "openSession",
+        "ok": true,
+        "classification": "live"
+      },
+      {
+        "at": "2026-11-26T14:09:57.716Z",
+        "kind": "readCompSummary",
+        "ok": true,
+        "outcome": "COMPLETED"
+      },
+      {
+        "at": "2026-11-26T14:09:57.717Z",
+        "kind": "observe",
+        "ok": true,
+        "sessionLive": true,
+        "modal": false,
+        "modalBlocked": false,
+        "crashRepair": false
+      }
+    ],
+    "budget": {
+      "maxAgentIterations": 6,
+      "maxRecoveryAttempts": 3,
+      "wallClockLimitMs": 600000,
+      "dispatchDeadlineMs": 30000
+    },
+    "finalReport": {
+      "claims": {
+        "requestCompleted": true,
+        "needsHuman": false
+      },
+      "anomalyClass": null,
+      "summary": "request completed after recovery",
+      "finishedAt": "2026-11-26T14:09:57.717Z"
+    }
+  },
+  "observations": [
+    {
+      "at": "2026-11-26T14:09:57.707Z",
+      "kind": "openSession",
+      "ok": false,
+      "classification": "startup-crash-repair",
+      "anomaly": true
+    },
+    {
+      "at": "2026-11-26T14:09:57.708Z",
+      "kind": "recover",
+      "ok": true
+    },
+    {
+      "at": "2026-11-26T14:09:57.708Z",
+      "kind": "openSession",
+      "ok": true,
+      "classification": "live"
+    },
+    {
+      "at": "2026-11-26T14:09:57.716Z",
+      "kind": "readCompSummary",
+      "ok": true,
+      "outcome": "COMPLETED"
+    },
+    {
+      "at": "2026-11-26T14:09:57.717Z",
+      "kind": "observe",
+      "ok": true,
+      "sessionLive": true,
+      "modal": false,
+      "modalBlocked": false,
+      "crashRepair": false
+    }
+  ],
+  "safety": {
+    "foreignTargetOps": 0,
+    "unconditionalResend": 0,
+    "unexecutedAsSuccess": 0,
+    "recoveryAttempts": 1,
+    "events": [],
+    "resends": []
+  },
+  "oracle": {
+    "verdict": "PASS",
+    "checks": {
+      "detected": "pass",
+      "classified": "pass",
+      "terminalState": "pass",
+      "withinBudget": "pass",
+      "safetyContract": "pass"
+    },
+    "detail": {
+      "terminalState": "completed",
+      "safetyViolations": [],
+      "usage": {
+        "iterations": 5,
+        "recoveryAttempts": 1,
+        "elapsedMs": 207
+      },
+      "failedChecks": []
+    }
+  },
+  "verdict": "PASS",
+  "artifacts": [],
+  "timing": {
+    "startedAt": "2026-11-26T14:09:57.510Z",
+    "finishedAt": "2026-11-26T14:09:57.718Z"
+  },
+  "collectionComplete": true,
+  "usage": {
+    "iterations": 5,
+    "recoveryAttempts": 1,
+    "elapsedMs": 207
+  }
+}
