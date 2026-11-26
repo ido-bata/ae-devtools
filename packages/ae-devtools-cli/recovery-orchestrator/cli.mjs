@@ -72,6 +72,7 @@ import {
   RUNS_DIR,
   RUN_ID_RE,
   pidAlive,
+  pidLiveness,
   processStartStampSync,
 } from "../devtools-cli/session-guard.mjs";
 import { parseArgs } from "../devtools-cli/argv.mjs";
@@ -191,10 +192,11 @@ function sessionFromFlags(a8n, flags) {
 /**
  * Confirm the claimed GUI session and the target pid's attribution via
  * ae-a8n's live surfaces. Delegates to orchestrator.confirmGuiSession;
- * the pid-alive probe is the shared session-guard pidAlive (Issue #253
- * item 2: alive only on kill-success/EPERM — stricter than ae-a8n's
- * ESRCH-only defaultPidAlive, which stays inside ae-a8n's own lease
- * inspection below).
+ * the pid probe is the shared session-guard pidLiveness tri-state
+ * (Issue #423: alive/dead/unknown stay distinct — "unknown" refuses
+ * instead of being recorded as dead). pidAlive stays injected for the
+ * legacy boolean contract; ae-a8n's own defaultPidAlive (ESRCH-only
+ * death) stays inside ae-a8n's lease inspection below.
  */
 function confirmSession(a8n, flags, pid) {
   const uid = Number(flags["session-uid"]);
@@ -203,6 +205,7 @@ function confirmSession(a8n, flags, pid) {
     deps: {
       readGuiSession: (u) => a8n.readGuiSession(u),
       listAppInstances: () => a8n.listAppInstances(),
+      pidLiveness,
       pidAlive,
     },
     uid, asid, pid,
@@ -334,7 +337,7 @@ async function main() {
       marker: loaded.marker,
       requestId,
       method,
-      probes: { pidAlive, pidStartStamp: processStartStampSync },
+      probes: { pidLiveness, pidAlive, pidStartStamp: processStartStampSync },
     });
     if (!auth.ok) return fail("RECOVERY_REFUSED", auth.reason, { runId: flags["run-id"] });
 
@@ -431,6 +434,7 @@ async function main() {
     const result = verifyHostExit({
       pid,
       pidAlive,
+      pidLiveness,
       census,
       session: sessionCheck.confirmed
         ? {

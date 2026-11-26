@@ -44,7 +44,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ATTESTATION_SOURCE, GUARD_SCHEMA, latestRequestEvent } from "../devtools-cli/session-guard.mjs";
+import { ATTESTATION_SOURCE, GUARD_SCHEMA, latestRequestEvent, livenessValue } from "../devtools-cli/session-guard.mjs";
 import {
   supervisionEscalation,
   supervisionSnapshot,
@@ -404,6 +404,28 @@ export function observeScreen({ gui, screenshotDir, requestId }) {
 // ------------------------------------------------------------ session confirm
 
 /**
+ * Resolve a pid's liveness through the injected probes. `pidLiveness`
+ * (tri-state "alive"|"dead"|"unknown") is preferred; the legacy boolean
+ * `pidAlive` is still accepted — true maps to "alive", false to "dead"
+ * (a boolean cannot express "unknown"; legacy injectors keep their
+ * historical meaning). An absent/broken probe yields "unknown", never
+ * a guessed state.
+ */
+function probeLiveness(probes, pid) {
+  try {
+    if (typeof probes?.pidLiveness === "function") {
+      return livenessValue(probes.pidLiveness(pid));
+    }
+    if (typeof probes?.pidAlive === "function") {
+      return probes.pidAlive(pid) ? "alive" : "dead";
+    }
+  } catch {
+    // A throwing probe proves nothing.
+  }
+  return "unknown";
+}
+
+/**
  * Confirm the claimed GUI session AND the target pid's attribution to it.
  *
  * Two independent facts, kept separate on purpose:
@@ -422,7 +444,8 @@ export function observeScreen({ gui, screenshotDir, requestId }) {
  *      is not attributable still refuses.
  *
  * `deps` are injected for testing: `readGuiSession(uid)`,
- * `listAppInstances()`, `pidAlive(pid)`.
+ * `listAppInstances()`, and a liveness probe — `pidLiveness(pid)`
+ * (tri-state, preferred) or legacy `pidAlive(pid)` (boolean).
  */
 export function confirmGuiSession({ deps, uid, asid, pid }) {
   if (!Number.isFinite(uid)) return { confirmed: false, reason: "--session-uid missing or invalid" };
@@ -445,14 +468,15 @@ export function confirmGuiSession({ deps, uid, asid, pid }) {
     return { confirmed: false, reason: `claimed asid ${asid} but uid ${uid} GUI session is asid ${live.asid}` };
   }
 
-  // Pid attribution is only defined for a live process.
-  let alive;
-  try {
-    alive = deps.pidAlive(pid);
-  } catch (error) {
-    return { confirmed: false, reason: `pid liveness probe failed: ${String(error?.message ?? error)}` };
+  // Pid attribution is only defined for a live process. "unknown"
+  // liveness is NOT "dead": recording pidAttribution "dead" on an
+  // unproven probe would launder a probe failure into exit evidence
+  // (Issue #423) — refuse instead.
+  const pidState = probeLiveness(deps, pid);
+  if (pidState === "unknown") {
+    return { confirmed: false, reason: `pid ${pid} liveness could not be proven — session membership unproven` };
   }
-  if (!alive) {
+  if (pidState === "dead") {
     return {
       confirmed: true,
       session: live,
@@ -554,9 +578,14 @@ export function loadRunMarker(file) {
  * Authorize a recovery attempt against a loaded marker.
  *
  * `probes` are injected so the whole check is testable without live
- * processes: `pidAlive(pid)` and `pidStartStamp(pid)` (ps lstart string
- * or null). Both must be supplied — there is no "skip the liveness check"
- * path.
+ * processes: a liveness probe — `pidLiveness(pid)` returning
+ * "alive"|"dead"|"unknown" (preferred) or legacy `pidAlive(pid)`
+ * boolean — and `pidStartStamp(pid)` (ps lstart string or null).
+ * Authorization requires PROOF of "alive" for both the runner and the
+ * AE process: "dead" means residue (reap/adopt, not GUI recovery) and
+ * "unknown" (unexpected errno, unreadable stamp, broken probe) refuses
+ * — unproven is never alive (Issue #423). A recorded start stamp that
+ * probes null is likewise unproven identity, not a pass.
  */
 export function authorizeRecovery({ marker, requestId, method, probes }) {
   if (TERMINAL_MARKER_STATUSES.has(marker.status)) {
@@ -595,25 +624,43 @@ export function authorizeRecovery({ marker, requestId, method, probes }) {
 
   // Runner liveness: the process that owns this run must still be alive
   // with the same start stamp, or this marker is residue for `reap`, not
-  // a live authorization.
-  if (!probes.pidAlive(marker.pid)) {
+  // a live authorization. Only proven "alive" authorizes — "dead" is
+  // residue and "unknown" is unproven (Issue #423).
+  const runnerState = probeLiveness(probes, marker.pid);
+  if (runnerState === "dead") {
     return { ok: false, reason: `run ${marker.runId} runner pid ${marker.pid} is dead — residue goes through reap/adopt, not GUI recovery` };
   }
+  if (runnerState !== "alive") {
+    return { ok: false, reason: `run ${marker.runId} runner pid ${marker.pid} liveness is '${runnerState}' — the owning runner cannot be proven alive` };
+  }
+  // A missing stamp probe reads as "unreadable" — identity unproven,
+  // never silently skipped.
+  const stampProbe = typeof probes?.pidStartStamp === "function" ? probes.pidStartStamp : () => null;
   if (marker.pidStartStamp) {
-    const now = probes.pidStartStamp(marker.pid);
-    if (now !== null && now !== marker.pidStartStamp) {
+    const now = stampProbe(marker.pid);
+    if (now === null) {
+      return { ok: false, reason: `run ${marker.runId} runner pid ${marker.pid} start stamp is unreadable — process identity unproven` };
+    }
+    if (now !== marker.pidStartStamp) {
       return { ok: false, reason: `run ${marker.runId} runner pid ${marker.pid} was reused (start stamp changed) — marker is stale` };
     }
   }
 
   // AE process liveness + identity: same pid AND same start stamp, or the
   // pid was reused by a different process.
-  if (!probes.pidAlive(proc.aePid)) {
+  const aeState = probeLiveness(probes, proc.aePid);
+  if (aeState === "dead") {
     return { ok: false, reason: `recorded aePid ${proc.aePid} is dead — nothing to recover` };
   }
+  if (aeState !== "alive") {
+    return { ok: false, reason: `recorded aePid ${proc.aePid} liveness is '${aeState}' — the target process cannot be proven alive` };
+  }
   if (proc.aePidStartStamp) {
-    const now = probes.pidStartStamp(proc.aePid);
-    if (now !== null && now !== proc.aePidStartStamp) {
+    const now = stampProbe(proc.aePid);
+    if (now === null) {
+      return { ok: false, reason: `aePid ${proc.aePid} start stamp is unreadable — process identity unproven` };
+    }
+    if (now !== proc.aePidStartStamp) {
       return { ok: false, reason: `aePid ${proc.aePid} was reused (start stamp changed) — recorded process is gone` };
     }
   }
@@ -777,6 +824,7 @@ function verdictForRecovery(outcome) {
 export function verifyHostExit({
   pid,
   pidAlive,
+  pidLiveness: pidLivenessProbe = null,
   census = null,
   session = null,
   evidenceDir = null,
@@ -809,10 +857,20 @@ export function verifyHostExit({
   result.channels.windows.pidAttribution = session?.pidAttribution ?? null;
 
   // --- channel 1: process liveness -------------------------------------
+  // Tri-state probe preferred (Issue #423): "clean"/"crash-verified"
+  // require a PROVEN dead process — an unexpected probe error is
+  // "unknown", never laundered into "dead". The legacy boolean
+  // `pidAlive` cannot express unknown; false maps to "dead" for
+  // backward compatibility of injected test doubles.
   try {
-    result.channels.process.state = pidAlive(pid) ? "alive" : "dead";
+    result.channels.process.state = typeof pidLivenessProbe === "function"
+      ? livenessValue(pidLivenessProbe(pid))
+      : (pidAlive(pid) ? "alive" : "dead");
   } catch (error) {
     result.channels.process.detail = `pid liveness probe failed: ${String(error?.message ?? error)}`;
+  }
+  if (result.channels.process.state === "unknown" && result.channels.process.detail === null) {
+    result.channels.process.detail = "pid liveness could not be proven (unexpected probe result)";
   }
   if (result.channels.process.state === "alive") {
     result.channels.windows.state = "skipped";

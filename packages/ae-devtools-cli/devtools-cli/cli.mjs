@@ -298,7 +298,8 @@ async function main() {
         runsDir: RUNS_DIR,
         runs: runs.map((r) => ({
           runId: r.runId, status: r.status, sessionKind: r.sessionKind,
-          runnerAlive: r.runnerAlive, reapable: r.reapable,
+          runnerAlive: r.runnerAlive, runnerLiveness: r.runnerLiveness ?? null,
+          reapable: r.reapable,
           reapBlockReason: r.reapBlockReason ?? null,
           ownership: r.session?.ownership?.kind ?? null,
         })),

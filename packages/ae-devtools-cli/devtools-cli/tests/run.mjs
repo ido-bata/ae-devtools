@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   beginRun, markSession, endRun, listRuns, reapRun, noteSessionProcess,
-  attachEvidence, pidAlive, processStartStampSync, ATTESTATION_SOURCE,
+  attachEvidence, pidAlive, pidLiveness, livenessValue, processStartStampSync, ATTESTATION_SOURCE,
 } from "../session-guard.mjs";
 import { failureOutcome, isFailureResult, normalizedOutcome, isUnknownOutcome } from "../../dev-loop/outcomes.mjs";
 import { parseArgs, arg as argvArg, hasFlag } from "../argv.mjs";
@@ -463,6 +463,144 @@ await at("guard: single AE candidate that is NOT the attested pid is never quit"
     assert.equal(v.verdict, "REFUSED");
     assert.equal(v.reason, "PID_NOT_ATTESTED");
     assert.equal(v.attestedPid, 4242);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---- liveness tri-state contract (Issue #423) ----
+// reap requires PROOF of runner death (ESRCH). "unknown" — unexpected
+// errno, unreadable start stamp, invalid pid — must refuse BEFORE any
+// process scan or osascript, and must leave the marker in place.
+
+async function attestedResidueMarker(dir) {
+  const { runId } = await beginRun({ dir, sessionKind: "a8n" });
+  markSession(dir, runId, {
+    kind: "a8n", ownership: { kind: "owned", evidence: "t" },
+    installDir: "/Applications/Adobe After Effects 2027",
+    appPath: "/Applications/Adobe After Effects 2027/Adobe After Effects 2027.app",
+  });
+  endRun(dir, runId, "close-failed");
+  noteSessionProcess(dir, runId, {
+    aePid: 4242,
+    aePidStartStamp: "stamp-ae",
+    guiSession: { uid: 501, asid: 42 },
+    attestation: {
+      source: ATTESTATION_SOURCE,
+      ownershipKind: "owned",
+      ownershipEvidence: "probe answered in owned session",
+    },
+  });
+  // Pin the runner start stamp so stamp-probe behavior is deterministic
+  // regardless of whether the test host's `ps` succeeds inside beginRun.
+  const mf = join(dir, `${runId}.json`);
+  const m = JSON.parse(readFileSync(mf, "utf8"));
+  m.pidStartStamp = "stamp-runner";
+  writeFileSync(mf, JSON.stringify(m));
+  return runId;
+}
+
+t("guard: reap refuses RUNNER_LIVENESS_UNKNOWN on unexpected probe errno — no scan, no quit, marker kept", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    const runId = await attestedResidueMarker(dir);
+    const errno = (code) => (pid) => { const e = new Error("x"); e.code = code; throw e; };
+    let execCalls = 0;
+    const exec = async () => { execCalls += 1; return { stdout: "" }; };
+    for (const kill of [errno("EINVAL"), () => { throw new Error("no code"); }]) {
+      const v = await reapRun(runId, { dir, confirm: true, aliveFn: kill, exec });
+      assert.equal(v.verdict, "REFUSED");
+      assert.equal(v.reason, "RUNNER_LIVENESS_UNKNOWN");
+      assert.equal(v.pid, process.pid);
+    }
+    assert.equal(execCalls, 0, "reap must not scan or quit when runner liveness is unknown");
+    assert.ok(existsSync(join(dir, `${runId}.json`)), "marker must be retained on refusal");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("guard: reap refuses when runner is alive but start stamp unreadable — unknown, not reuse", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    const runId = await attestedResidueMarker(dir);
+    // Runner pid alive; recorded stamp exists; ps cannot read it →
+    // identity unproven → refuse (previously this stayed RUNNER_ALIVE;
+    // now it is explicitly UNKNOWN and still refuses).
+    const v = await reapRun(runId, {
+      dir, confirm: true,
+      aliveFn: () => "alive",
+      stampFn: async () => null,
+      exec: async () => { throw new Error("must not exec"); },
+    });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "RUNNER_LIVENESS_UNKNOWN");
+    assert.ok(existsSync(join(dir, `${runId}.json`)));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("guard: reap refuses ATTESTED_PID_LIVENESS_UNKNOWN instead of declaring CLEAN", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    const runId = await attestedResidueMarker(dir);
+    // Runner proven dead (ESRCH); no AE candidates under the install;
+    // the attested aePid's own liveness probe errors unexpectedly.
+    const v = await reapRun(runId, {
+      dir, confirm: true,
+      aliveFn: (pid) => (pid === 4242
+        ? (() => { const e = new Error("x"); e.code = "EINVAL"; throw e; })()
+        : "dead"),
+      exec: async (cmd, args) => {
+        if (cmd === "ps" && args[0] === "-axo") return { stdout: "" };
+        return { stdout: "" };
+      },
+    });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "ATTESTED_PID_LIVENESS_UNKNOWN");
+    assert.equal(v.attestedPid, 4242);
+    assert.ok(existsSync(join(dir, `${runId}.json`)), "marker must NOT be closed on unknown");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("guard: reap refuses PID_IDENTITY_UNKNOWN when attested stamp is unreadable", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    const runId = await attestedResidueMarker(dir);
+    const exec = async (cmd, args) => {
+      if (cmd === "ps" && args[0] === "-axo") {
+        return { stdout: "  4242 /Applications/Adobe After Effects 2027/Adobe After Effects 2027.app/Contents/MacOS/After Effects\n" };
+      }
+      return { stdout: "" };
+    };
+    const v = await reapRun(runId, {
+      dir, confirm: true,
+      aliveFn: () => "dead",
+      stampFn: async () => null, // ps cannot read the live candidate's stamp
+      exec,
+    });
+    assert.equal(v.verdict, "REFUSED");
+    assert.equal(v.reason, "PID_IDENTITY_UNKNOWN");
+    assert.ok(existsSync(join(dir, `${runId}.json`)));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+t("guard: listRuns reports RUNNER_LIVENESS_UNKNOWN and not reapable", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-test-"));
+  try {
+    await attestedResidueMarker(dir);
+    const errno = (pid) => { const e = new Error("x"); e.code = "EINVAL"; throw e; };
+    const runs = await listRuns({ dir, aliveFn: errno, stampFn: async () => null });
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].runnerLiveness, "unknown");
+    assert.equal(runs[0].runnerAlive, false);
+    assert.equal(runs[0].reapable, false);
+    assert.equal(runs[0].reapBlockReason, "RUNNER_LIVENESS_UNKNOWN");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -957,23 +1095,49 @@ await at("guard: reap passes the quit target via osascript argv, never interpola
   }
 });
 
-// ---- pidAlive canonical semantics (Issue #253 item 2) ----
-// The guard and the recovery orchestrator share this probe; the pinned
-// rule is "alive only on kill-success or EPERM" — stricter than
-// ae-a8n's ESRCH-only defaultPidAlive. A non-ESRCH kill error must NOT
-// count as alive: unproven liveness is the unsafe direction for
-// quit/recovery authorization.
+// ---- pidLiveness canonical semantics (Issues #253 item 2, #423) ----
+// The guard and the recovery orchestrator share this probe. alive/dead/
+// unknown are three DISTINCT states: "alive" only on kill-success or
+// EPERM, "dead" ONLY on ESRCH, and EVERY other outcome — unexpected
+// errno, a thrown non-errno, an invalid pid — is "unknown". Paths that
+// require death proof (reap, verify-exit) must refuse on "unknown";
+// paths that require alive proof (authorizeRecovery) must refuse on
+// anything but "alive". pidAlive remains the boolean "proven alive"
+// view for alive-only consumers.
 
-t("guard: pidAlive — success and EPERM alive, ESRCH/other errors dead", () => {
+t("guard: pidLiveness — success/EPERM alive, ESRCH dead, everything else unknown", () => {
+  const errno = (code) => () => { const e = new Error("x"); e.code = code; throw e; };
+  assert.equal(pidLiveness(1234, () => {}), "alive");
+  assert.equal(pidLiveness(1234, errno("EPERM")), "alive");
+  assert.equal(pidLiveness(1234, errno("ESRCH")), "dead");
+  assert.equal(pidLiveness(1234, errno("EINVAL")), "unknown");
+  assert.equal(pidLiveness(1234, () => { throw new Error("no code"); }), "unknown");
+  assert.equal(pidLiveness(0, () => {}), "unknown");
+  assert.equal(pidLiveness(-1, () => {}), "unknown");
+  assert.equal(pidLiveness(1.5, () => {}), "unknown");
+  assert.equal(pidLiveness("1234", () => {}), "unknown");
+  assert.equal(pidLiveness(NaN, () => {}), "unknown");
+});
+
+t("guard: pidAlive is the proven-alive boolean view of pidLiveness", () => {
+  const errno = (code) => () => { const e = new Error("x"); e.code = code; throw e; };
   assert.equal(pidAlive(1234, () => {}), true);
-  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "EPERM"; throw e; }), true);
-  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "ESRCH"; throw e; }), false);
-  assert.equal(pidAlive(1234, () => { const e = new Error("x"); e.code = "EINVAL"; throw e; }), false);
+  assert.equal(pidAlive(1234, errno("EPERM")), true);
+  assert.equal(pidAlive(1234, errno("ESRCH")), false);
+  assert.equal(pidAlive(1234, errno("EINVAL")), false);
   assert.equal(pidAlive(1234, () => { throw new Error("no code"); }), false);
   assert.equal(pidAlive(0, () => {}), false);
   assert.equal(pidAlive(-1, () => {}), false);
   assert.equal(pidAlive(1.5, () => {}), false);
   assert.equal(pidAlive("1234", () => {}), false);
+});
+
+t("guard: livenessValue normalizes tri-state and legacy boolean probes", () => {
+  assert.equal(livenessValue("alive"), "alive");
+  assert.equal(livenessValue("dead"), "dead");
+  assert.equal(livenessValue("unknown"), "unknown");
+  assert.equal(livenessValue(true), "alive");
+  assert.equal(livenessValue(false), "dead");
 });
 
 t("guard: processStartStampSync returns trimmed stamp or null", () => {
