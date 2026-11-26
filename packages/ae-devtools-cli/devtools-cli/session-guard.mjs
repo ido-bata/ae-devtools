@@ -32,7 +32,9 @@
  *   recovery-orchestrator workstream, not this file.
  *
  * Reap rules (fail-closed, mirrors ae-a8n ownership semantics):
- *   - runner pid alive            → refuse (the owner may still clean up)
+ *   - runner liveness "alive"    → refuse (the owner may still clean up)
+ *   - runner liveness "unknown"  → refuse (unproven is never dead —
+ *     reap/authorize require PROOF, not the absence of contradiction)
  *   - runner pid dead + pid reuse → refuse unless start-time evidence matches
  *   - ownership.kind !== "owned"  → report only, NEVER quit (attached/unknown
  *     hosts belong to someone else; ae-a8n pendingLaunch stays provenance)
@@ -73,25 +75,65 @@ export const RUNS_DIR = process.env.AE_DEVTOOLS_CLI_RUNS_DIR
 export const RUN_ID_RE = /^run-[A-Za-z0-9-]+$/;
 
 /**
- * pid liveness. Canonical rule (Issue #253 item 2): a pid counts as
- * ALIVE only when kill(pid, 0) succeeds or fails with EPERM (the
- * process exists but is not ours to signal). ESRCH proves death; ANY
- * other error (EINVAL, unexpected errno) counts as dead because
- * liveness is unproven — "dead unless proven alive" is the fail-closed
- * direction for quit/recovery authorization. This is deliberately
- * stricter than ae-a8n's defaultPidAlive (ESRCH-only death); the
- * orchestrator's authorizeRecovery probes and the guard's
- * reap/listRuns share THIS judgment — the divergence the issue
- * resolved in favor of session-guard semantics.
+ * Tri-state pid liveness — the canonical judgment (Issue #423).
+ *
+ *   "alive"   — kill(pid, 0) succeeded, or failed with EPERM: the process
+ *               exists (EPERM means it is not ours to signal, but it is
+ *               provably there).
+ *   "dead"    — kill(pid, 0) failed with ESRCH: the ONE errno that proves
+ *               no such process exists.
+ *   "unknown" — EVERYTHING else: an unexpected errno (EINVAL, …), a
+ *               thrown non-errno, an invalid pid argument. Liveness is
+ *               unproven and must never be read as either alive or dead.
+ *
+ * This deliberately differs from BOTH previous local readings:
+ * ae-a8n's defaultPidAlive treats every non-ESRCH error as alive
+ * ("alive unless proven dead" — safe for lease inspection, but it can
+ * never prove death); the old pidAlive here treated every non-EPERM
+ * error as dead ("dead unless proven alive" — UNSAFE for reap, where a
+ * probe failure could be mistaken for a dead runner and authorize a
+ * quit). alive/dead/unknown are three distinct states; consumers pick
+ * the proof they require:
+ *
+ *   - reap / verify-exit need DEATH proof  → proceed only on "dead"
+ *   - recover authorization needs ALIVE proof → proceed only on "alive"
+ *   - anything else                          → refuse / report unknown
  */
-export function pidAlive(pid, kill = process.kill.bind(process)) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
+export function pidLiveness(pid, kill = process.kill.bind(process)) {
+  if (!Number.isInteger(pid) || pid <= 0) return "unknown";
   try {
     kill(pid, 0);
-    return true;
+    return "alive";
   } catch (e) {
-    return e?.code === "EPERM";
+    if (e?.code === "EPERM") return "alive";
+    if (e?.code === "ESRCH") return "dead";
+    return "unknown";
   }
+}
+
+/**
+ * Boolean view of pidLiveness: true ONLY when liveness is proven "alive".
+ * Kept for callers that only need the alive proof (session confirmation,
+ * ae-a8n lease probe fallback). Callers that require death proof must use
+ * pidLiveness — `false` here conflates "dead" and "unknown".
+ */
+export function pidAlive(pid, kill = process.kill.bind(process)) {
+  return pidLiveness(pid, kill) === "alive";
+}
+
+/**
+ * Normalize an injected liveness probe result. Probes may return the
+ * tri-state string ("alive"|"dead"|"unknown", preferred) or a legacy
+ * boolean (true = alive, false = dead — a boolean cannot express
+ * "unknown", so legacy injectors keep their historical meaning).
+ */
+export function livenessValue(probeResult) {
+  if (probeResult === "alive" || probeResult === "dead" || probeResult === "unknown") return probeResult;
+  if (probeResult === true) return "alive";
+  if (probeResult === false) return "dead";
+  // Anything else — null, undefined, numbers, arbitrary objects — is not
+  // a liveness answer at all: "unknown", never a guessed state.
+  return "unknown";
 }
 
 /** Raw `ps lstart` string for pid-reuse detection; null when unreadable. */
@@ -308,13 +350,57 @@ export function endRun(dir, runId, status) {
 }
 
 /**
- * Classify every marker. `aliveFn(pid)` decides runner liveness; when the
- * marker recorded a pidStartStamp, a live pid whose stamp differs is PID
- * reuse and counts as dead.
+ * Call an injected liveness probe defensively: a probe that throws
+ * proves nothing — the result is "unknown", never a crash and never a
+ * guessed state.
+ */
+function probeLivenessSafe(aliveFn, pid) {
+  try {
+    return livenessValue(aliveFn(pid));
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
+ * Resolve the RUNNING runner's effective liveness for a marker, including
+ * the PID-reuse downgrade: a pid proven "alive" whose recorded start
+ * stamp no longer matches is reuse — the recorded runner is gone, so the
+ * residue is reapable ("dead" for our purposes). An alive pid whose
+ * stamp CANNOT be read is "unknown": it may be the recorded runner or a
+ * reuser, and neither death nor continued ownership is proven.
+ *
+ * `aliveFn(pid)` may return "alive"|"dead"|"unknown" (preferred) or a
+ * legacy boolean. Shared by listRuns and reapRun so the reported
+ * reapable flag can never disagree with the reap verdict.
+ */
+async function runnerLiveness(marker, { aliveFn = pidLiveness, stampFn = processStartStamp } = {}) {
+  let state = probeLivenessSafe(aliveFn, marker.pid);
+  if (state === "alive" && marker.pidStartStamp && stampFn) {
+    let stamp = null;
+    try {
+      stamp = await stampFn(marker.pid);
+    } catch {
+      stamp = null; // unreadable stamp → unknown below
+    }
+    if (stamp === null) {
+      state = "unknown";
+    } else if (stamp !== marker.pidStartStamp) {
+      state = "dead"; // pid reuse — the recorded runner is gone
+    }
+  }
+  return state;
+}
+
+/**
+ * Classify every marker. `aliveFn(pid)` decides runner liveness
+ * (tri-state preferred, legacy boolean accepted); when the marker
+ * recorded a pidStartStamp, a live pid whose stamp differs is PID
+ * reuse and counts as dead, while an unreadable stamp is "unknown".
  */
 export async function listRuns({
   dir = RUNS_DIR,
-  aliveFn = pidAlive,
+  aliveFn = pidLiveness,
   stampFn = processStartStamp,
 } = {}) {
   let files = [];
@@ -328,11 +414,7 @@ export async function listRuns({
     const runId = f.replace(/\.json$/, "");
     const marker = readMarker(dir, runId);
     if (marker === null) continue;
-    let runnerAlive = aliveFn(marker.pid);
-    if (runnerAlive && marker.pidStartStamp && stampFn) {
-      const now = await stampFn(marker.pid);
-      if (now !== null && now !== marker.pidStartStamp) runnerAlive = false;
-    }
+    const runnerState = await runnerLiveness(marker, { aliveFn, stampFn });
     const owned = marker.session?.ownership?.kind === "owned";
     // reapable must mirror reap()'s gates, not just ownership: without
     // ae-a8n attestation and an app/install identity reap always
@@ -343,19 +425,22 @@ export async function listRuns({
       typeof att?.ownershipEvidence === "string" && att.ownershipEvidence.length > 0 &&
       Number.isInteger(marker.session?.process?.aePid);
     const hasAppIdentity = marker.session?.appPath != null || marker.session?.installDir != null;
-    const reapBlockReason = runnerAlive
+    const reapBlockReason = runnerState === "alive"
       ? "RUNNER_ALIVE"
-      : owned !== true
-        ? "OWNERSHIP_NOT_OWNED"
-        : !attested
-          ? "NO_A8N_ATTESTATION"
-          : !hasAppIdentity
-            ? "NO_APP_IDENTITY"
-            : null;
+      : runnerState === "unknown"
+        ? "RUNNER_LIVENESS_UNKNOWN"
+        : owned !== true
+          ? "OWNERSHIP_NOT_OWNED"
+          : !attested
+            ? "NO_A8N_ATTESTATION"
+            : !hasAppIdentity
+              ? "NO_APP_IDENTITY"
+              : null;
     runs.push({
       ...marker,
       markerPath: markerPath(dir, runId),
-      runnerAlive,
+      runnerAlive: runnerState === "alive",
+      runnerLiveness: runnerState,
       reapable: reapBlockReason === null && marker.status !== "closed",
       reapBlockReason,
     });
@@ -391,7 +476,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export async function reapRun(runId, {
   dir = RUNS_DIR,
   confirm = false,
-  aliveFn = pidAlive,
+  aliveFn = pidLiveness,
   stampFn = processStartStamp,
   exec = execFileAsync,
   now = () => Date.now(),
@@ -406,12 +491,21 @@ export async function reapRun(runId, {
   if (marker === null) return { runId, verdict: "NO_MARKER" };
   if (marker.status === "closed") return { runId, verdict: "ALREADY_CLOSED" };
 
-  let runnerAlive = aliveFn(marker.pid);
-  if (runnerAlive && marker.pidStartStamp && stampFn) {
-    const stamp = await stampFn(marker.pid);
-    if (stamp !== null && stamp !== marker.pidStartStamp) runnerAlive = false;
+  // Reap requires PROOF the runner is dead (ESRCH), not merely "not
+  // proven alive". "alive" refuses because the owner may still clean
+  // up; "unknown" (unexpected errno, unreadable start stamp, invalid
+  // pid) refuses because unproven is never dead (Issue #423).
+  const runnerState = await runnerLiveness(marker, { aliveFn, stampFn });
+  if (runnerState === "alive") {
+    return { runId, verdict: "REFUSED", reason: "RUNNER_ALIVE", pid: marker.pid };
   }
-  if (runnerAlive) return { runId, verdict: "REFUSED", reason: "RUNNER_ALIVE", pid: marker.pid };
+  if (runnerState === "unknown") {
+    return {
+      runId, verdict: "REFUSED", reason: "RUNNER_LIVENESS_UNKNOWN", pid: marker.pid,
+      pidStartStamp: marker.pidStartStamp ?? null,
+      note: "runner pid liveness/identity could not be proven (unexpected probe error or unreadable start stamp) — refusing to treat unknown as dead",
+    };
+  }
 
   const ownership = marker.session?.ownership;
   if (!ownership || ownership.kind !== "owned") {
@@ -455,12 +549,21 @@ export async function reapRun(runId, {
   if (candidates.length === 0) {
     // No AE under the recorded install — but the attested pid itself may
     // still be alive somewhere the path-based scan cannot see. Declaring
-    // CLEAN then would be a lie.
-    if (aliveFn(proc.aePid)) {
+    // CLEAN then would be a lie, and so would declaring it on an
+    // UNPROVEN liveness: only a proven-dead attested pid allows CLEAN.
+    const aeState = probeLivenessSafe(aliveFn, proc.aePid);
+    if (aeState === "alive") {
       return {
         runId, verdict: "REFUSED", reason: "ATTESTED_PID_ALIVE_UNMATCHED",
         attestedPid: proc.aePid,
         note: "the attested aePid is still alive but was not found under the recorded install path — refusing to declare clean",
+      };
+    }
+    if (aeState === "unknown") {
+      return {
+        runId, verdict: "REFUSED", reason: "ATTESTED_PID_LIVENESS_UNKNOWN",
+        attestedPid: proc.aePid,
+        note: "the attested aePid's liveness could not be proven (unexpected probe error) — refusing to declare clean on unknown",
       };
     }
     endRun(dir, runId, "closed");
@@ -485,8 +588,24 @@ export async function reapRun(runId, {
     };
   }
   if (proc.aePidStartStamp && stampFn) {
-    const stamp = await stampFn(candidate.pid);
-    if (stamp === null || stamp !== proc.aePidStartStamp) {
+    let stamp = null;
+    try {
+      stamp = await stampFn(candidate.pid);
+    } catch {
+      stamp = null; // unreadable stamp → identity unknown below
+    }
+    if (stamp === null) {
+      // The pid is alive (found by the scan) but its start stamp cannot
+      // be read — identity is unproven, which is NOT the same as proven
+      // reuse. Both refuse; the reasons stay distinct for forensics.
+      return {
+        runId, verdict: "REFUSED", reason: "PID_IDENTITY_UNKNOWN",
+        candidate,
+        attestedPid: proc.aePid,
+        note: "the attested pid's start stamp could not be read — process identity unproven, refusing to quit",
+      };
+    }
+    if (stamp !== proc.aePidStartStamp) {
       return {
         runId, verdict: "REFUSED", reason: "PID_REUSED",
         candidate,

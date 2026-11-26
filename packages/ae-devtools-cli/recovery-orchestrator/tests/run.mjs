@@ -362,6 +362,58 @@ t("authorizeRecovery refuses dead runner, reused runner pid, dead/reused aePid",
   assert.match(authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: reusedAe }).reason, /aePid 4242 was reused/);
 });
 
+t("authorizeRecovery refuses liveness 'unknown' for runner and aePid (Issue #423)", () => {
+  const tri = (state) => ({ ...liveProbes, pidLiveness: () => state });
+  for (const state of ["unknown", "dead"]) {
+    const r = authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: tri(state) });
+    assert.equal(r.ok, false);
+    assert.match(r.reason, state === "dead" ? /runner pid 1000 is dead/ : /runner pid 1000 liveness is 'unknown'/);
+  }
+  // Runner alive but AE liveness unknown → still refused before any GUI op.
+  const probes = {
+    pidLiveness: (pid) => (pid === 1000 ? "alive" : "unknown"),
+    pidStartStamp: liveProbes.pidStartStamp,
+  };
+  const r = authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /aePid 4242 liveness is 'unknown'/);
+  // A throwing liveness probe is unknown, never a crash or a pass.
+  const throwing = { ...liveProbes, pidLiveness: () => { throw new Error("probe exploded"); } };
+  assert.equal(authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: throwing }).ok, false);
+});
+
+t("authorizeRecovery refuses when a recorded start stamp probes unreadable", () => {
+  // Runner alive, stamp recorded, ps cannot read it → identity unproven.
+  const noRunnerStamp = { ...liveProbes, pidStartStamp: (pid) => (pid === 4242 ? "stamp-ae" : null) };
+  assert.match(
+    authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: noRunnerStamp }).reason,
+    /runner pid 1000 start stamp is unreadable/,
+  );
+  // Same for the AE pid.
+  const noAeStamp = { ...liveProbes, pidStartStamp: (pid) => (pid === 1000 ? "stamp-runner" : null) };
+  assert.match(
+    authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: noAeStamp }).reason,
+    /aePid 4242 start stamp is unreadable/,
+  );
+  // A missing stamp probe entirely reads as unreadable, not skipped.
+  const noStampProbe = { pidAlive: liveProbes.pidAlive };
+  assert.match(
+    authorizeRecovery({ marker: marker(), requestId: "req-1", method: "op.x", probes: noStampProbe }).reason,
+    /start stamp is unreadable/,
+  );
+});
+
+t("confirmGuiSession refuses pid liveness 'unknown' instead of recording dead", () => {
+  const deps = {
+    readGuiSession: () => ({ uid: 501, asid: 42, username: "u", kind: "Aqua" }),
+    listAppInstances: () => [],
+    pidLiveness: () => "unknown",
+  };
+  const r = confirmGuiSession({ deps, uid: 501, asid: 42, pid: 4242 });
+  assert.equal(r.confirmed, false);
+  assert.match(r.reason, /liveness could not be proven/);
+});
+
 t("authorizeRecovery refuses markers without ae-a8n attestation provenance", () => {
   const noAtt = marker();
   delete noAtt.session.process.attestation;
@@ -453,6 +505,24 @@ t("verifyHostExit: alive process is residue regardless of other channels", () =>
   const r = verifyHostExit({ pid: 1, pidAlive: () => true, census: CENSUS_CLEAN, session: SESSION_OK });
   assert.equal(r.verdict, "residue");
   assert.equal(r.channels.windows.state, "skipped");
+});
+
+t("verifyHostExit: pid liveness 'unknown' is unknown, never clean (Issue #423)", () => {
+  const r = verifyHostExit({
+    pid: 4242, pidLiveness: () => "unknown",
+    census: CENSUS_CLEAN, session: SESSION_OK,
+    evidenceDir: tmp(), target: {}, collectEvidence: fakeEvidence({ correlated: 0 }),
+  });
+  assert.equal(r.channels.process.state, "unknown");
+  assert.equal(r.verdict, "unknown");
+  // Legacy boolean probe still maps false → dead for injected doubles.
+  const legacy = verifyHostExit({
+    pid: 4242, pidAlive: () => false,
+    census: CENSUS_CLEAN, session: SESSION_OK,
+    evidenceDir: tmp(), target: {}, collectEvidence: fakeEvidence({ correlated: 0 }),
+  });
+  assert.equal(legacy.channels.process.state, "dead");
+  assert.equal(legacy.verdict, "clean");
 });
 
 t("verifyHostExit: dead + unconfirmed session is unknown, never clean", () => {
