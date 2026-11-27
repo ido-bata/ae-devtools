@@ -21,6 +21,8 @@
 | [ADR-0014-linear-profile.md](ADR-0014-linear-profile.md) | Linear profile を optional release planning control plane として使う場合の契約 | **Proposed** | 2026-09-18 |
 | [ADR-0015-deliverable-unit-release-cadence.md](ADR-0015-deliverable-unit-release-cadence.md) | deliverable-unit release cadence / ticket PR の継続統合 / freeze→batch verification | **Proposed** | 2026-11-16 |
 | [ADR-0016-session-open-and-fake-host-boundary.md](ADR-0016-session-open-and-fake-host-boundary.md) | session-open 単一実装 / fake host 2 系統の境界 / consent semantics SoT | **Proposed** | 2026-11-18 |
+| [ADR-0017-evidence-source-binding.md](ADR-0017-evidence-source-binding.md) | Real-Host Evidence Source Binding（real-run 証跡の source SHA 束縛） | **Accepted** | 2026-11-18 |
+| [ADR-0018-a8n-standard-recovery-delegation.md](ADR-0018-a8n-standard-recovery-delegation.md) | ae-a8n 標準復旧への委譲と互換 adapter 撤去（維持・委譲・削除マップ / 撤去版・最小要求版の提案） | **Proposed** | 2026-11-27 |
 
 ## ADR 作成ガイド
 

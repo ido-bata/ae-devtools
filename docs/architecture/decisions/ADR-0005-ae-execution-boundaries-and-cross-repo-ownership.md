@@ -348,6 +348,15 @@ ADR-0001（devtools）の Proposed 状態、ae-a8n/ae-test 側 ADR の内容。
 6. **Adobe の third-party external-ExtendScript 姿勢。** ADR-0001 Risks と同型の未解決。
    Close に必要な evidence: Adobe の公式 statement（存在しない間は risk として残置）。
 
+## Addendum
+
+- 2026-11-27: 復旧・supervision 領域について D2/D3/D7 の適用を精緻化した
+  [ADR-0018-a8n-standard-recovery-delegation.md](ADR-0018-a8n-standard-recovery-delegation.md)
+  （#432、親 #425 T001）を追加。supervision/GUI 観測・分類・復旧操作・
+  terminate/rebuild・nextActions の canonical owner は ae-a8n（#340/#341/#342、
+  `release-0-7-0`）であり、devtools は run marker・diagnostics・verdict 写像・
+  consent 層を維持する。本 ADR の D1–D7 本文と Status は変更しない。
+
 ## Evidence
 
 （access date: 2026-11-12）
